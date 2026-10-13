@@ -6,8 +6,20 @@ firing starts a fresh session in this environment, works on branch
 
 | Routine | When | What it does |
 |---|---|---|
-| **T212 demo: trading ops** | Weekdays 10:07 London | `trading/ops_run.sh`: tests → `run --execute` (trades only if a rebalance is due) → report → commit journal. Sends a push notification on anything noteworthy. |
+| **T212 demo: trading ops** | Weekdays 10:07 London. **Status: awaiting owner approval** (see below). | `trading/ops_run.sh`: tests → `run --execute` (trades only if a rebalance is due) → report → commit journal. Sends a push notification on anything noteworthy. |
 | **T212 demo: research loop** | Daily, 01:13 and 13:13 London | Follows [`../research/LOOP.md`](../research/LOOP.md): picks the next agenda item, researches it, applies the [promotion gate](../research/PROMOTION_GATE.md), logs results, commits. |
+
+### Ops routine setup (needs the owner)
+
+Unattended sessions only run `bash trading/ops_run.sh` when they read the allow rule in
+[`.claude/settings.json`](../.claude/settings.json). That requires a session that starts **with
+this repo attached**. In the claude.ai routines UI, create a routine with:
+repo `GreensideComps/agent-skills`, branch `claude/trading212-agent-skills-r71zy3`, the same
+environment, schedule weekdays 10:07 Europe/London, and the prompt *"Run `bash trading/ops_run.sh`
+and report the result. Demo only; never weaken safety checks."* A fresh routine session without the
+repo attached gets blocked by the permission classifier (verified 2026-10-13).
+
+Until then, run it by hand from any session with the repo: `bash trading/ops_run.sh`.
 
 ## Stopping things
 
