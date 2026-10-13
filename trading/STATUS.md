@@ -1,79 +1,69 @@
-# System status: factual audit (2026-10-13, ~13:30 UTC)
+# System status: factual audit (updated 2026-10-13 ~13:45 UTC)
 
-"Verified" means observed directly (API responses, git commits, run logs). A schedule or a config file existing is not
-treated as proof that something runs.
+"Verified" means observed directly (API responses, git commits, run output). A schedule or config file existing is not
+proof that anything runs. Assumptions and unknowns are labelled.
 
-## 1. What runs automatically today
+## 1. Scheduled automation
 
-| Component | Schedule | State | Evidence of execution |
+| Component | Schedule | Verified state | Evidence of a successful run |
 |---|---|---|---|
-| Routine **T212 demo: trading ops** (`trig_015u78BVGNK8bFDbg26cwcn8`) | Weekdays 10:07 Europe/London | **Enabled, never run in its current form.** First run 2026-10-14 10:07 BST. | None yet. Each run commits `ops: trading run …` to the branch, which is how success is verified. |
-| Routine **T212 demo: research loop** (`trig_019cbvFKHAnfuPE24Bqexu9L`) | Daily 01:13 and 13:13 Europe/London | **Enabled, never run in its current form.** First run 2026-10-14 01:13 BST. | None yet. Each run should commit `research: …`, a `LOG.md` row and an experiment record. |
-| One-off check-in (`trig_01LAoMGvBxfcUNQXqgpKp17w`) | 2026-10-14 09:35 UTC | Pending | Will inspect both routines' first runs and report |
-| **Daily intelligence report + email** | none | **Not scheduled.** Runs only when invoked; email not configured. | `reports/daily/2026-10-13.md` produced manually |
+| Routine **T212 demo: research loop** (`trig_019cbvFKHAnfuPE24Bqexu9L`) | 01:13 and 13:13 Europe/London | Enabled; `last_run` empty; next run 2026-10-14 00:13 UTC | **None yet.** Not operational until a `research:` commit lands from it. |
+| Routine **T212 demo: trading ops** (`trig_015u78BVGNK8bFDbg26cwcn8`) | Weekdays 10:07 Europe/London | Enabled; `last_run` empty; next run 2026-10-14 09:07 UTC | **None yet.** Not operational until an `ops: trading run` commit lands from it. |
+| Check-ins (`trig_01QT1tG9RkecCbTkwPMDUn11`, `trig_01LAoMGvBxfcUNQXqgpKp17w`) | 2026-10-14 00:50 and 09:35 UTC | Pending | Each will inspect the run, fix failures and update this file |
+| **Daily report + email** | none | **Not scheduled.** No GitHub workflows exist in the repo (GitHub API: `total_count: 0`), and no routine runs it. | Report produced manually: `reports/daily/2026-10-13.md` |
 
-Both routines fire into one Claude session (`T212 demo: trading ops (scheduled, v2)`) that was created with the repo as its
-source and `claude/trading212-agent-skills-r71zy3` as its output branch. That session gives them the allow rule in
-`.claude/settings.json` and the right to push.
+Both routines fire into the session `session_01F4uFy8TB6eMUyemT5Ba7e8`, which has the repo attached and an output branch
+(needed for `.claude/settings.json` allow rules and for pushing). Earlier history: one fresh-session routine was blocked by
+the permission classifier, and one research test run could not push (403). Its P1/P2 results are recorded as `PENDING_RERUN` (E006/E007).
 
-## 2. Research routine and push notifications
+**Push notifications:** unverified. Earlier test sessions called the push-notification tool 3 times (12:16–12:19 UTC);
+whether anything reached your phone is unknown. Those session logs are no longer retrievable.
 
-- **Research:** one earlier test run (a fresh routine session, 2026-10-13 12:19 UTC) did real work on P1 and P2 but **could not
-  push** (git 403: the repo wasn't attached to that session). Its results are lost and recorded as `PENDING_RERUN` (E006/E007).
-  The current routine targets a session with push access. **Not yet verified.**
-- **Push notifications:** **unverified.** One test routine session called the push-notification tool (2026-10-13 12:16 UTC);
-  whether it reached your phone is unknown. The current routines are bound to a persistent session, so routine-level push
-  settings don't apply. They rely on the session calling the push-notification tool. Please confirm whether you received any.
+## 2. Email delivery
 
-## 3. Why the trading routine "looked disabled", and what enabling it needs
+| Item | State |
+|---|---|
+| Credentials | **Not configured.** No `REPORT_EMAIL_*` or `RESEND_API_KEY` in the environment. **This blocks a real delivery test. Needs you** (steps in `REPORTING.md`). |
+| Delivery semantics | `sent` = accepted only. The bot polls Resend `GET /emails/{id}` and records `confirmed_delivered` / `confirmed_failed` / `unconfirmed`. Only `confirmed_delivered` is PASS. |
+| Failure handling, live | **Verified 13:30 UTC** against the real Resend API with an invalid key: recorded `failed` (HTTP 401, not retried), nothing recorded as sent or delivered. Evidence: `reports/verification/2026-10-13-email-failure-test.md` |
+| Failure handling, after acceptance | Bounce, failure, suppression, complaint, delay: unit-tested with a simulated provider (113 tests pass) |
+| Successful real delivery | **Not proven.** Do not treat email as working until `email-status` shows `confirmed_delivered`. |
 
-It is **enabled**, but has not yet run successfully under the schedule. The history:
-1. A fresh-session routine (no repo attached) was **blocked by the auto-mode permission classifier** when it ran
-   `bash trading/ops_run.sh` ("real-world transactions").
-2. Fix: a narrow allow rule `Bash(bash trading/ops_run.sh)` in `.claude/settings.json`. That file is only read by sessions
-   that start with the repo attached, so the routine was rebound to such a session, now also with an output branch so it can push.
-3. Manual "run now" from this session (`fire_trigger`) and creating extra sessions (`create_session`) were **blocked by the
-   classifier**. So the first real test is the scheduled 10:07 run on 2026-10-14.
+Outbound SMTP (465/587) is blocked from Claude cloud sessions, while HTTPS email APIs are reachable (tested 2026-10-13).
 
-**To verify sooner:** press **Run now** on the routine in claude.ai → Routines, or add `"mcp__claude-code-remote__fire_trigger"` to
-`permissions.allow` in `.claude/settings.json` yourself. Claude may not change its own permissions.
-**If the 10:07 run is still blocked:** the remaining option is to create the routine yourself in the claude.ai Routines UI with
-the repo and branch selected (exact settings in `RUNBOOK.md`).
-No permission changes were made in this milestone.
+## 3. Report vs account reconciliation
 
-## 4. Reporting, reconciliation and performance tracking
+**Verified 13:33 UTC:** `verify-report` re-fetched the raw API through the read-only client and re-derived every figure with
+separate code (`t212bot/verify.py`). **37 pass, 0 fail**: cash, holdings and quantities, cost basis, all 3 orders (fill
+price, net value, fees), deposits, fees by type, quantities = Σ fills, cash ledger (£100.00 − £98.48 buys = £1.52),
+TWR (−0.71%) and max drawdown (−0.72%). Evidence: `reports/verification/2026-10-13-report-vs-account.md`.
 
-| Capability | Before this milestone | Now |
-|---|---|---|
-| Portfolio report | `PERFORMANCE.md`: account vs shadow portfolios, fill slippage | + **daily intelligence report** (`reports/daily/`), 9 sections, provenance-labelled |
-| Transaction reconciliation | Fills matched to orders (slippage) | + **R1–R5 identities**: total, positions, cash ledger, gain, quantities. All PASS on the live demo account today. |
-| Performance | Snapshot values vs shadows | + deposits/withdrawals, net contributions, **time-weighted return**, high-water mark, drawdown, fees by type, dividends |
-| Research reporting | `LOG.md` text | + structured **experiment registry** (`research/experiments/E001–E007`), with every number generated from committed CSVs |
-| Withdrawal advice | none | **Adviser**: £0 by default, opt-in rules, scenarios, selling plan, separate ISA/GIA notes, de-duplicated notifications |
+- **Explained difference, not an error:** position cost basis totals £98.41, while buy fills total £98.48. The £0.07 gap is the
+  FX fee on the USD-listed IWMO buy. It's included in the fill's `netValue` but not in the position cost.
+- **Bug found and fixed:** the report's TWR sorted snapshots by (time, value), so two snapshots with the *same* timestamp
+  were ordered by value. Now sorted by time only, with a regression test. Live data had no tied timestamps (checked), so
+  the published figures were unaffected.
 
-## 5. Email delivery infrastructure
+**Recommendation-only adviser, verified statically:** the adviser module has no client, order or network code; the
+read-only client allowlist contains only GET methods; and the cached official OpenAPI spec has 17 paths, none for
+withdrawals, transfers or deposits. Today's recommendation: £0, no notification.
 
-- **Available:** nothing usable unattended. No email credentials exist in the environment. **Outbound SMTP is blocked** from
-  these cloud sessions (ports 465/587 time out), while HTTPS email APIs (Resend, Mailgun, Postmark, SendGrid) are reachable.
-  The claude.ai Gmail connector here can create drafts but not send, and routines carry no connectors anyway.
-- **Implemented:** a provider-agnostic sender (Resend over HTTPS, SMTP for machines that allow it, and an outbox for dry runs).
-  It has retries, a delivery ledger, idempotency keys, a crash-safe lock and a UK-local schedule gate. All are covered by tests
-  with simulated providers.
-- **Real email test: NOT done.** It's blocked on credentials. A `--send` attempt today correctly recorded `outbox` ("NOT emailed")
-  and exited with code 3. Delivery must not be considered working until you add the variables in `REPORTING.md` and confirm an email arrived.
+## 4. Scheduler decision
 
-## 6. What remains incomplete
+Recommended: **GitHub Actions for the daily report**, with the Claude routines kept for trading and research. Comparison and
+exact setup are in `REPORTING.md` → "Scheduling". **Not active:** it needs you to add secrets and commit the workflow to `master`.
 
-1. **Email:** add the Resend key and addresses, then run the real test and confirm receipt. *(Needs you.)*
-2. **Report schedule:** choose option A, B or C in `REPORTING.md`. *(Needs you: creating routines or workflows wasn't part of this milestone.)*
-3. **Routines:** first scheduled runs tonight and tomorrow are unverified. The check-in at 09:35 UTC tomorrow will report.
-4. **Research:** E006/E007 (P1/P2) need a verifiable re-run.
-5. **Push notifications:** delivery to your phone is unconfirmed.
-6. **Adviser:** `account_type` is assumed `GIA` (the API can't tell), and flexible-ISA status is unknown. Confirm both if you ever use an ISA.
-7. **Statistical power:** live results are far too short to judge the strategy. The report says so every day.
+## 5. Open items
 
-## Safety boundaries kept in this milestone
+1. **Email credentials** (you), then a real test that ends in `confirmed_delivered`.
+2. **Report scheduler** (you): GitHub Actions setup steps in `REPORTING.md`.
+3. **First routine runs:** research 00:13 UTC and ops 09:07 UTC on 2026-10-14. Unverified until the check-ins report.
+4. **E006/E007** (P1/P2) need a verifiable re-run (the research routine is instructed to do it).
+5. **Push notifications:** confirm whether you received any.
+6. **Adviser:** `account_type` is assumed GIA (the API can't tell), and flexible-ISA status is unknown.
+7. **Statistical power:** less than one day of live data. Nothing about strategy quality can be concluded yet.
 
-Practice account only. No live access. No orders placed, changed or cancelled. No routines or permissions created or modified.
-Reporting code uses a read-only client that cannot reach order methods, and the adviser has no client at all. The test
-`test_adviser_cannot_trade_or_move_money` enforces both.
+## Safety boundaries kept
+
+Practice account only; no live access. No orders placed, changed or cancelled in this milestone. No routines, workflows or
+permissions created or modified. No automated withdrawals (the API has no endpoint for them).

@@ -43,7 +43,7 @@ scheduled cloud routines (see [`RUNBOOK.md`](RUNBOOK.md)).
 
 ```bash
 cd trading
-python3 -m pytest -q                       # 101 tests, offline (fake T212 server, fake email provider)
+python3 -m pytest -q                       # 113 tests, offline (fake T212 server, fake email provider)
 python3 -m t212bot status                  # account + dry-run plan, no orders
 python3 -m t212bot run                     # snapshot, reconcile, plan (dry run)
 python3 -m t212bot run --execute           # ...and trade if a rebalance is due
@@ -54,6 +54,8 @@ python3 -m t212bot daily-report [--send]   # daily intelligence report (read-onl
 python3 -m t212bot daily-report --sample   # EXAMPLE-DATA sample report
 python3 -m t212bot advise                  # withdrawal recommendation (never acts)
 python3 -m t212bot email-check             # email configuration check
+python3 -m t212bot email-status            # latest delivery, re-checked with the provider
+python3 -m t212bot verify-report           # independent report-vs-raw-API verification
 ```
 
 Requires `T212_API_KEY`, `T212_API_SECRET` and `T212_ENV=demo`, plus Python 3.11+, pandas and numpy.
@@ -77,6 +79,7 @@ t212bot/intel.py       daily intelligence report: collect -> compute -> render -
 t212bot/emailer.py     Resend/SMTP/outbox delivery, retries, ledger, lock, DST-aware schedule gate
 t212bot/daily.py       orchestration + exit codes for schedulers
 t212bot/research_feed.py experiment registry / agenda / log reader
+t212bot/verify.py      independent report-vs-account verifier (separate code path)
 reports/               dated reports, metrics JSON, delivery log, adviser state
 journal/               committed history of every decision, order and fill
 ops_run.sh             what the scheduled routine runs
