@@ -1,0 +1,24 @@
+{
+ "id": "E006",
+ "title": "Volatility-managed momentum sleeve",
+ "date": "2026-10-13",
+ "agenda_item": "P1",
+ "hypothesis": "see research/AGENDA.md",
+ "rationale": "see research/AGENDA.md",
+ "data": [],
+ "methodology": "",
+ "benchmark": "champion momentum_tilt_v1",
+ "costs": "",
+ "in_sample": "",
+ "out_of_sample": "",
+ "results": null,
+ "robustness": [],
+ "limitations": [
+  "A test run on 2026-10-13 reported rejection (DSR 0.86-0.90) but its code and outputs were never pushed (git 403), so they are unverified; to be re-run by the research loop."
+ ],
+ "trials": 0,
+ "decision": "PENDING_RERUN",
+ "decision_detail": "A test run on 2026-10-13 reported rejection (DSR 0.86-0.90) but its code and outputs were never pushed (git 403), so they are unverified; to be re-run by the research loop.",
+ "promoted": false,
+ "evidence": []
+}

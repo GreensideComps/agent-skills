@@ -42,7 +42,45 @@ def main(argv=None) -> int:
     r.add_argument("--force", action="store_true", help="rebalance to target even if no trigger fired")
     sub.add_parser("reconcile")
     sub.add_parser("report")
+    d = sub.add_parser("daily-report", help="generate the daily intelligence report (read-only)")
+    d.add_argument("--send", action="store_true", help="email it (REPORT_EMAIL_* env vars)")
+    d.add_argument("--force", action="store_true", help="send even if already delivered today")
+    d.add_argument("--respect-schedule", action="store_true", help="only run if the UK-local report time has passed and today's report is not yet delivered")
+    d.add_argument("--sample", action="store_true", help="render the EXAMPLE-DATA sample report (no API calls)")
+    sub.add_parser("advise", help="print today's withdrawal recommendation (read-only)")
+    sub.add_parser("email-check", help="validate email configuration without sending")
     a = ap.parse_args(argv)
+
+    if a.cmd == "daily-report" and a.sample:
+        return _sample()
+    if a.cmd == "daily-report":
+        from . import daily
+        try:
+            res = daily.run(send=a.send, force=a.force, respect_schedule=a.respect_schedule)
+        except Exception as e:
+            print(f"FAILED: {type(e).__name__}: {e}", file=sys.stderr)
+            return 1
+        print(json.dumps({k: v for k, v in res.items() if k != "alerts"}, indent=1, default=str))
+        for al in res.get("alerts", []):
+            print(f"{al['level']}: {al['msg']}", file=sys.stderr)
+        return res["exit"]
+    if a.cmd == "advise":
+        from . import daily
+        res = daily.run(send=False)
+        print(res["adviser"])
+        return 0
+    if a.cmd == "email-check":
+        from . import emailer
+        cfg = emailer.load_config()
+        probs = cfg.problems()
+        print(repr(cfg))
+        if cfg.provider == "outbox":
+            print("NOT CONFIGURED FOR DELIVERY: provider is 'outbox' - reports are written to trading/reports/outbox/ and NOT emailed. "
+                  "Set REPORT_EMAIL_PROVIDER=resend (or smtp) and its variables; see trading/REPORTING.md.")
+            return 3
+        print("OK - configuration complete (this does not prove delivery; run `daily-report --send --force` and check your inbox)"
+              if not probs else "PROBLEMS: " + "; ".join(probs))
+        return 0 if not probs else 3
 
     cfg = load_strategy()
     j = Journal()
@@ -72,6 +110,22 @@ def main(argv=None) -> int:
     for k in ("placed", "reconciled"):
         if res.get(k):
             print(k + ":", json.dumps(res[k], indent=1, default=str))
+    return 0
+
+
+def _sample() -> int:
+    from datetime import datetime, timezone
+    from . import intel, sample
+    from .config import load_strategy
+    import json as _j
+    now = datetime.now(timezone.utc)
+    S = sample.sample_inputs(now)
+    acfg = _j.loads((intel.ROOT / "config" / "adviser.json").read_text())
+    M, _ = intel.compute(S["acct"], S["snaps"], S["events"], load_strategy().name, acfg, {}, intel.research_bundle(),
+                         S["market"], S["prev"], S["delivery"], now, example=True)
+    M["meta"]["report_date"] = "SAMPLE"
+    paths = intel.store(M, name="SAMPLE_daily_report")
+    print(paths["md"])
     return 0
 
 

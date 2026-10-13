@@ -1,0 +1,68 @@
+{
+ "id": "E003",
+ "title": "Persistence of factor premia (momentum, value, profitability)",
+ "date": "2026-10-13",
+ "agenda_item": "Round 1",
+ "hypothesis": "Published long-short factor premia persist after publication and in developed markets.",
+ "rationale": "Behavioural under-reaction (momentum); risk/mispricing (value, profitability).",
+ "data": [
+  "Ken French US and Developed factor files"
+ ],
+ "methodology": "Annualised mean and t-stat by sub-period, gross of costs.",
+ "benchmark": "zero premium",
+ "costs": "none (gross long-short; not directly investable)",
+ "in_sample": "1927-1989 / 1990-2010",
+ "out_of_sample": "2011-2026",
+ "results": [
+  {
+   "factor": "US momentum (UMD)",
+   "1927-1989": "+8.5% (t=4.1)",
+   "1990-2010": "+7.2% (t=1.8)",
+   "2011-2026": "+2.8% (t=0.8)"
+  },
+  {
+   "factor": "US value (HML)",
+   "1927-1989": "+5.6% (t=3.4)",
+   "1990-2010": "+3.6% (t=1.5)",
+   "2011-2026": "-0.4% (t=-0.1)"
+  },
+  {
+   "factor": "US profitability (RMW)",
+   "1927-1989": "+2.0% (t=1.9)",
+   "1990-2010": "+5.0% (t=2.2)",
+   "2011-2026": "+2.1% (t=1.1)"
+  },
+  {
+   "factor": "Dev momentum (WML)",
+   "1927-1989": "",
+   "1990-2010": "+7.5% (t=2.3)",
+   "2011-2026": "+5.3% (t=2.1)"
+  },
+  {
+   "factor": "Dev value (HML)",
+   "1927-1989": "",
+   "1990-2010": "+5.3% (t=2.8)",
+   "2011-2026": "+0.4% (t=0.2)"
+  },
+  {
+   "factor": "Dev profitability (RMW)",
+   "1927-1989": "",
+   "1990-2010": "+4.4% (t=3.7)",
+   "2011-2026": "+2.6% (t=2.0)"
+  }
+ ],
+ "robustness": [
+  "US and Developed samples"
+ ],
+ "limitations": [
+  "long-short and gross: not what a £100 long-only account can hold"
+ ],
+ "trials": 6,
+ "decision": "MOMENTUM_SUPPORTED",
+ "decision_detail": "Developed momentum still t≈2.1 after 2010; value premium ≈0.",
+ "promoted": false,
+ "evidence": [
+  "research/output/factor_premia_by_period.csv",
+  "research/run_factors.py"
+ ]
+}

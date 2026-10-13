@@ -1,0 +1,38 @@
+{
+  "_comment": "Withdrawal adviser settings. Recommendations only - the adviser can never sell, transfer or withdraw. Every opt-in rule is OFF by default, so the default recommendation is GBP 0 unless you configure a reason to take money out.",
+  "account_type": "GIA",
+  "objective": "long_term_compounding",
+  "liquidity_needs": [],
+  "liquidity_need_lead_days": 90,
+  "max_capital_at_risk_gbp": null,
+  "profit_lock": {
+    "enabled": false,
+    "min_gain_pct_of_contributions": 0.5,
+    "harvest_fraction_of_new_gains": 0.25
+  },
+  "min_meaningful_withdrawal_gbp": 25.0,
+  "min_meaningful_withdrawal_pct_of_value": 0.05,
+  "cash_buffer_pct": 0.015,
+  "sell_cost_pct": {"GBP": 0.001, "OTHER": 0.0025},
+  "horizon_years": 10,
+  "scenarios": {
+    "_source": "Assumptions, not forecasts. Base sits below the research's measured long-run nominal equity CAGRs (world equity in GBP: 8.1%/yr 1992-2010, 11.1%/yr 2011-2026; US market 1927-2026 about 10%/yr in USD). Adverse is a lost decade (US 2000-2009 was about -1%/yr). The shock row is a 40% fall, comparable to 2008-09 in GBP terms.",
+    "conservative": 0.03,
+    "base": 0.06,
+    "adverse": -0.01,
+    "shock_drawdown": -0.40
+  },
+  "notify": {
+    "min_days_between_same_recommendation": 30,
+    "amount_change_threshold_gbp": 10.0
+  },
+  "gia_tax": {
+    "_comment": "UK Capital Gains Tax applies to gains realised by selling in a General Investment Account. Check HMRC for the current annual exempt amount; the value below is only used to flag when realised gains approach it.",
+    "annual_exempt_amount_gbp": 3000
+  },
+  "isa": {
+    "_comment": "Only used when account_type is ISA. Whether withdrawn ISA money can be replaced without using allowance depends on the provider offering a flexible ISA; set to true/false once confirmed with Trading 212.",
+    "flexible_isa": null,
+    "annual_allowance_gbp": 20000
+  }
+}

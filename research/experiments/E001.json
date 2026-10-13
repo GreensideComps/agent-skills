@@ -1,0 +1,174 @@
+{
+ "id": "E001",
+ "title": "Asset-allocation timing: trend, dual momentum, rotation, risk parity, vol targeting",
+ "date": "2026-10-13",
+ "agenda_item": "Round 1",
+ "hypothesis": "Rules that time or rotate between equities, bonds, gold and cash beat buy-and-hold world equity after costs.",
+ "rationale": "Time-series momentum (under-reaction/herding), cross-asset momentum, volatility clustering.",
+ "data": [
+  "Yahoo Finance adjusted closes (UCITS ETFs + US mutual-fund proxies), cleaned for unit flips",
+  "Ken French Data Library (CRSP, survivorship-free)",
+  "FRED: GBP/USD, UK 3m interbank",
+  "Monthly GBP total returns 1992-2026"
+ ],
+ "methodology": "36 pre-declared configs in 6 families; per-family winner chosen on in-sample Sharpe only; signals use data to month-end t, trade t+1.",
+ "benchmark": "World equity buy-and-hold (OOS CAGR 0.1111, Sharpe 0.857, maxDD -0.1548)",
+ "costs": "0.05-0.25% one-way spread by asset; 0.15% FX fee on non-GBP lines; stressed x3/x5",
+ "in_sample": "1992-01..2010-12",
+ "out_of_sample": "2011-01..2026-09",
+ "results": [
+  {
+   "family": "benchmark",
+   "selected_on_IS_sharpe": "60/40 WORLD/BOND",
+   "IS": {
+    "CAGR": 0.0866,
+    "Sharpe": 0.372,
+    "maxDD": -0.2229,
+    "DSR": 0.594
+   },
+   "OOS": {
+    "CAGR": 0.074,
+    "Sharpe": 0.808,
+    "maxDD": -0.1091,
+    "dCAGR_vs_world": -0.0371,
+    "p_CAGR": 1.0,
+    "dSharpe_vs_world": -0.049,
+    "p_Sharpe": 0.697
+   }
+  },
+  {
+   "family": "trend_abs",
+   "selected_on_IS_sharpe": "TSMOM L=8 safe=BOND",
+   "IS": {
+    "CAGR": 0.1218,
+    "Sharpe": 0.62,
+    "maxDD": -0.1577,
+    "DSR": 0.886
+   },
+   "OOS": {
+    "CAGR": 0.0756,
+    "Sharpe": 0.623,
+    "maxDD": -0.1679,
+    "dCAGR_vs_world": -0.0356,
+    "p_CAGR": 0.997,
+    "dSharpe_vs_world": -0.235,
+    "p_Sharpe": 0.981
+   }
+  },
+  {
+   "family": "trend_sma",
+   "selected_on_IS_sharpe": "SMA L=10 safe=BOND",
+   "IS": {
+    "CAGR": 0.1252,
+    "Sharpe": 0.616,
+    "maxDD": -0.1686,
+    "DSR": 0.887
+   },
+   "OOS": {
+    "CAGR": 0.0809,
+    "Sharpe": 0.671,
+    "maxDD": -0.1931,
+    "dCAGR_vs_world": -0.0302,
+    "p_CAGR": 0.995,
+    "dSharpe_vs_world": -0.187,
+    "p_Sharpe": 0.942
+   }
+  },
+  {
+   "family": "gem",
+   "selected_on_IS_sharpe": "GEM L=12 safe=BOND",
+   "IS": {
+    "CAGR": 0.1326,
+    "Sharpe": 0.621,
+    "maxDD": -0.2214,
+    "DSR": 0.892
+   },
+   "OOS": {
+    "CAGR": 0.1231,
+    "Sharpe": 0.918,
+    "maxDD": -0.1319,
+    "dCAGR_vs_world": 0.012,
+    "p_CAGR": 0.147,
+    "dSharpe_vs_world": 0.061,
+    "p_Sharpe": 0.251
+   }
+  },
+  {
+   "family": "rotation",
+   "selected_on_IS_sharpe": "ROT K=1 L=12",
+   "IS": {
+    "CAGR": 0.1706,
+    "Sharpe": 0.718,
+    "maxDD": -0.2168,
+    "DSR": 0.955
+   },
+   "OOS": {
+    "CAGR": 0.0807,
+    "Sharpe": 0.479,
+    "maxDD": -0.2766,
+    "dCAGR_vs_world": -0.0305,
+    "p_CAGR": 0.801,
+    "dSharpe_vs_world": -0.38,
+    "p_Sharpe": 0.94
+   }
+  },
+  {
+   "family": "inverse_vol",
+   "selected_on_IS_sharpe": "InvVol WORLD/BOND/GOLD L=12",
+   "IS": {
+    "CAGR": 0.097,
+    "Sharpe": 0.732,
+    "maxDD": -0.0603,
+    "DSR": 0.966
+   },
+   "OOS": {
+    "CAGR": 0.0487,
+    "Sharpe": 0.649,
+    "maxDD": -0.0983,
+    "dCAGR_vs_world": -0.0624,
+    "p_CAGR": 0.998,
+    "dSharpe_vs_world": -0.209,
+    "p_Sharpe": 0.778
+   }
+  },
+  {
+   "family": "vol_target",
+   "selected_on_IS_sharpe": "VolTarget 15% L=6",
+   "IS": {
+    "CAGR": 0.0754,
+    "Sharpe": 0.213,
+    "maxDD": -0.4261,
+    "DSR": 0.33
+   },
+   "OOS": {
+    "CAGR": 0.1064,
+    "Sharpe": 0.828,
+    "maxDD": -0.1548,
+    "dCAGR_vs_world": -0.0047,
+    "p_CAGR": 0.949,
+    "dSharpe_vs_world": -0.029,
+    "p_Sharpe": 0.955
+   }
+  }
+ ],
+ "robustness": [
+  "costs x3/x5 (GEM)",
+  "one-day execution lag (GEM)",
+  "8-regime breakdown",
+  "1927-2026 US trend check (E002)"
+ ],
+ "limitations": [
+  "OOS period mostly a bull market",
+  "pre-2012 data uses proxies; bond proxy weakest (corr 0.78)",
+  "monthly sampling understates intra-month drawdowns"
+ ],
+ "trials": 36,
+ "decision": "REJECTED",
+ "decision_detail": "No family beat world equity significantly OOS; GEM-12 +1.2%/yr p=0.15 kept as shadow portfolio C only.",
+ "promoted": false,
+ "evidence": [
+  "research/output/allocation_selected.csv",
+  "research/output/allocation_all_configs.csv",
+  "research/run_allocation.py"
+ ]
+}

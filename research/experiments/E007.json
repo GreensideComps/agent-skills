@@ -1,0 +1,24 @@
+{
+ "id": "E007",
+ "title": "Momentum sleeve with trend filter",
+ "date": "2026-10-13",
+ "agenda_item": "P2",
+ "hypothesis": "see research/AGENDA.md",
+ "rationale": "see research/AGENDA.md",
+ "data": [],
+ "methodology": "",
+ "benchmark": "champion momentum_tilt_v1",
+ "costs": "",
+ "in_sample": "",
+ "out_of_sample": "",
+ "results": null,
+ "robustness": [],
+ "limitations": [
+  "A test run on 2026-10-13 reported rejection (lower OOS CAGR) but its code and outputs were never pushed (git 403), so they are unverified; to be re-run."
+ ],
+ "trials": 0,
+ "decision": "PENDING_RERUN",
+ "decision_detail": "A test run on 2026-10-13 reported rejection (lower OOS CAGR) but its code and outputs were never pushed (git 403), so they are unverified; to be re-run.",
+ "promoted": false,
+ "evidence": []
+}

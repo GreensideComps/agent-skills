@@ -1,0 +1,89 @@
+{
+ "id": "E004",
+ "title": "Tradeable MSCI World factor UCITS ETFs vs MSCI World",
+ "date": "2026-10-13",
+ "agenda_item": "Round 1",
+ "hypothesis": "Factor ETFs (momentum, quality, value, min-vol) beat MSCI World net of fees.",
+ "rationale": "As E003.",
+ "data": [
+  "Yahoo: IWFM/IWFQ/IWFV/MINV/SWDA GBP lines 2014-11..2026-09"
+ ],
+ "methodology": "Monthly GBP returns, paired block bootstrap vs SWDA.",
+ "benchmark": "SWDA (MSCI World)",
+ "costs": "fund OCF included in prices; spreads ignored (buy-and-hold)",
+ "in_sample": "academic evidence pre-2014 (E003)",
+ "out_of_sample": "2014-11..2026-09",
+ "results": [
+  {
+   "etf": "WORLD_ETF",
+   "CAGR": 0.1299,
+   "vol": 0.1166,
+   "Sharpe": 0.9542,
+   "maxDD": -0.1495,
+   "dCAGR": null,
+   "p_CAGR": null,
+   "dSharpe": null,
+   "p_Sharpe": null
+  },
+  {
+   "etf": "MOM",
+   "CAGR": 0.1559,
+   "vol": 0.1411,
+   "Sharpe": 0.97,
+   "maxDD": -0.1515,
+   "dCAGR": 0.026,
+   "p_CAGR": 0.0887,
+   "dSharpe": 0.0159,
+   "p_Sharpe": 0.4543
+  },
+  {
+   "etf": "QUALITY",
+   "CAGR": 0.128,
+   "vol": 0.1151,
+   "Sharpe": 0.947,
+   "maxDD": -0.1366,
+   "dCAGR": -0.0019,
+   "p_CAGR": 0.605,
+   "dSharpe": -0.0072,
+   "p_Sharpe": 0.548
+  },
+  {
+   "etf": "VALUE",
+   "CAGR": 0.1211,
+   "vol": 0.1319,
+   "Sharpe": 0.7979,
+   "maxDD": -0.2132,
+   "dCAGR": -0.0087,
+   "p_CAGR": 0.5977,
+   "dSharpe": -0.1568,
+   "p_Sharpe": 0.7593
+  },
+  {
+   "etf": "MINVOL",
+   "CAGR": 0.0907,
+   "vol": 0.099,
+   "Sharpe": 0.731,
+   "maxDD": -0.1321,
+   "dCAGR": -0.0391,
+   "p_CAGR": 0.94,
+   "dSharpe": -0.2239,
+   "p_Sharpe": 0.8547
+  }
+ ],
+ "robustness": [
+  "CAPM alpha t=1.21; excess falls to ≈0 without the 6 best months (REPORT.md 4b)"
+ ],
+ "limitations": [
+  "12 years only",
+  "concentrated in a few months",
+  "momentum crash risk not observed in sample"
+ ],
+ "trials": 5,
+ "decision": "PROMOTED",
+ "decision_detail": "Momentum chosen as the 50% tilt in champion momentum_tilt_v1 (not statistically proven; p=0.09).",
+ "promoted": true,
+ "evidence": [
+  "research/output/factor_etfs_vs_world.csv",
+  "research/run_factors.py"
+ ]
+}

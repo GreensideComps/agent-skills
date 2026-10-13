@@ -185,6 +185,24 @@ class T212Client:
             path = nxt
         return items
 
+    def _paged(self, path: str, key: str, max_pages: int) -> list[dict]:
+        items: list[dict] = []
+        for _ in range(max_pages):
+            page = self._request("GET", path, key) or {}
+            items.extend(page.get("items", []))
+            nxt = page.get("nextPagePath")
+            if not nxt:
+                break
+            path = nxt
+        return items
+
+    def history_transactions(self, limit: int = 50, max_pages: int = 20) -> list[dict]:
+        """Deposits, withdrawals, fees, transfers (account currency)."""
+        return self._paged(f"/api/v0/equity/history/transactions?limit={int(limit)}", "history_transactions", max_pages)
+
+    def history_dividends(self, limit: int = 50, max_pages: int = 20) -> list[dict]:
+        return self._paged(f"/api/v0/equity/history/dividends?limit={int(limit)}", "history_dividends", max_pages)
+
     def exchanges(self) -> list[dict]:
         return self._request("GET", "/api/v0/equity/metadata/exchanges", "exchanges")
 

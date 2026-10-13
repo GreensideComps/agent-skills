@@ -49,6 +49,10 @@ class FakeT212:
         self.get_status: list[int] = []
         self.raise_on_post = False
         self.buy_reserve = 0.0                    # extra cash held on market buys
+        self.transactions = [{"type": "DEPOSIT", "amount": cash, "currency": "GBP",
+                              "dateTime": (NOW - timedelta(days=1)).isoformat().replace("+00:00", "Z"), "reference": "dep-1"}]
+        self.dividends: list[dict] = []
+        self.get_calls: list[str] = []
 
     def px_gbp(self, t):
         p = self.fill_px[t]
@@ -77,6 +81,11 @@ class FakeT212:
         return Response(200, {}, json.dumps(obj).encode())
 
     def _get(self, path):
+        self.get_calls.append(path)
+        if "/equity/history/transactions" in path:
+            return self._ok({"items": self.transactions, "nextPagePath": None})
+        if "/equity/history/dividends" in path:
+            return self._ok({"items": self.dividends, "nextPagePath": None})
         if path.endswith("/equity/account/summary"):
             v = self.value()
             return self._ok({"id": 1, "currency": "GBP", "totalValue": round(self.cash + v, 2),
@@ -88,7 +97,7 @@ class FakeT212:
                 cp = self.fill_px[t] * (100 if self.ccy[t] == "GBX" else 1)
                 out.append({"instrument": {"ticker": t, "currency": self.ccy[t]}, "quantity": q,
                             "quantityAvailableForTrading": q, "currentPrice": cp,
-                            "walletImpact": {"currency": "GBP", "currentValue": q * self.px_gbp(t)}})
+                            "walletImpact": {"currency": "GBP", "currentValue": round(q * self.px_gbp(t), 2), "unrealizedProfitLoss": 0.0}})
             return self._ok(out)
         if path.endswith("/equity/orders"):
             return self._ok(self.pending)
@@ -136,7 +145,8 @@ class FakeT212:
         self.history.append({"order": order, "fill": {"id": oid * 10, "price": self.fill_px[t], "quantity": q,
                              "filledAt": NOW.isoformat(), "type": "TRADE",
                              "walletImpact": {"currency": "GBP", "fxRate": 1 / self.gbpusd if self.ccy[t] == "USD" else 1,
-                                              "netValue": gross * (1 + fee), "realisedProfitLoss": 0, "taxes": []}}})
+                                              "netValue": gross * (1 + fee) if q > 0 else gross * (1 - fee), "realisedProfitLoss": 0,
+                                              "taxes": [{"name": "CURRENCY_CONVERSION_FEE", "quantity": -gross * fee}] if fee else []}}})
         return Response(200, {}, json.dumps({**order, "status": "NEW", "filledQuantity": 0}).encode())
 
 

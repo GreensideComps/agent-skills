@@ -5,7 +5,8 @@ An automated, demo-only trading system that runs the strategy selected in
 and fill, tracks itself against shadow portfolios, and is operated by
 scheduled cloud routines (see [`RUNBOOK.md`](RUNBOOK.md)).
 
-**Live status:** see [`PERFORMANCE.md`](PERFORMANCE.md), regenerated on every run.
+**Live status:** see [`PERFORMANCE.md`](PERFORMANCE.md) (regenerated on every run), the daily reports in [`reports/daily/`](reports/daily/), and [`STATUS.md`](STATUS.md) for what is and isn't operational.
+**Daily intelligence report, email and withdrawal adviser:** see [`REPORTING.md`](REPORTING.md).
 
 ## What it trades now
 
@@ -42,13 +43,17 @@ scheduled cloud routines (see [`RUNBOOK.md`](RUNBOOK.md)).
 
 ```bash
 cd trading
-python3 -m pytest -q                       # 54 tests, offline (fake T212 server)
+python3 -m pytest -q                       # 101 tests, offline (fake T212 server, fake email provider)
 python3 -m t212bot status                  # account + dry-run plan, no orders
 python3 -m t212bot run                     # snapshot, reconcile, plan (dry run)
 python3 -m t212bot run --execute           # ...and trade if a rebalance is due
 python3 -m t212bot run --execute --force   # rebalance to target now
 python3 -m t212bot reconcile               # match orders to fills
 python3 -m t212bot report                  # regenerate PERFORMANCE.md
+python3 -m t212bot daily-report [--send]   # daily intelligence report (read-only), optional email
+python3 -m t212bot daily-report --sample   # EXAMPLE-DATA sample report
+python3 -m t212bot advise                  # withdrawal recommendation (never acts)
+python3 -m t212bot email-check             # email configuration check
 ```
 
 Requires `T212_API_KEY`, `T212_API_SECRET` and `T212_ENV=demo`, plus Python 3.11+, pandas and numpy.
@@ -64,6 +69,15 @@ t212bot/executor.py    run orchestration: preflight → plan → sells → re-pl
 t212bot/journal.py     append-only events.jsonl, snapshots.csv, state.json
 t212bot/shadow.py      shadow portfolios at daily closes
 t212bot/report.py      PERFORMANCE.md
+t212bot/readonly.py    read-only facade (reporting/adviser cannot reach order methods)
+t212bot/performance.py contribution-adjusted returns, fees, HWM/drawdown, reconciliation R1-R5
+t212bot/adviser.py     withdrawal adviser (pure, recommendation-only) + notification de-dup
+t212bot/wrappers.py    ISA/GIA notes, kept apart from the investment maths
+t212bot/intel.py       daily intelligence report: collect -> compute -> render -> store
+t212bot/emailer.py     Resend/SMTP/outbox delivery, retries, ledger, lock, DST-aware schedule gate
+t212bot/daily.py       orchestration + exit codes for schedulers
+t212bot/research_feed.py experiment registry / agenda / log reader
+reports/               dated reports, metrics JSON, delivery log, adviser state
 journal/               committed history of every decision, order and fill
 ops_run.sh             what the scheduled routine runs
 tests/                 fake T212 server + safety, planner, executor, report tests

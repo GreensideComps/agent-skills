@@ -28,6 +28,14 @@ must be conservative, reproducible and honest.
 - A shadow challenger with at least 20 trading days of clean tracking, passing every stage, and with no promotion yet this quarter → promote per Stage 4. Run `cd trading && python3 -m pytest -q` before committing. **Never place orders from the research loop**; the ops routine trades the new targets at its next run.
 
 ## 4. Record
+- **Write a structured experiment record** at `research/experiments/E###.json` (next free number). It must have these fields:
+  `id, title, date, agenda_item, hypothesis, rationale, data, methodology, benchmark, costs, in_sample, out_of_sample, results,
+  robustness, limitations, trials, decision, decision_detail, promoted, evidence`. `decision` is one of REJECTED, PROMOTED,
+  SHADOW, INSURANCE_ONLY, AWAITING_EVIDENCE, NO_CHANGE, BLOCKED, PENDING_RERUN. Every number in `results` must be read
+  from the CSV your script wrote, never typed by hand. `evidence` lists those files and the script. The daily report summarises
+  this registry, so a missing or invalid record shows up as a health warning. Validate it with
+  `cd trading && python3 -m pytest -q tests/test_m2_intelligence.py -k registry`.
+- If you re-ran E006 or E007 (P1/P2), replace the PENDING_RERUN record in place with the verified result.
 - Append to `research/LOG.md`: date, item, what was run, the key numbers, the decision, and the trial count.
 - Update the item in `AGENDA.md`. Update `REPORT.md` only when something changes the overall conclusion.
 - Commit with the message `research: <item> - <decision>` and push (rebase on conflict, retry up to 4 times).

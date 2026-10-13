@@ -1,0 +1,50 @@
+# Daily intelligence report via GitHub Actions (OPTION B in trading/REPORTING.md).
+# Not active until copied to .github/workflows/daily-report.yml and secrets are added.
+# Read-only towards Trading 212: the report never places orders.
+name: t212-daily-report
+on:
+  schedule:
+    - cron: "5 5-9 * * *"        # hourly 05:05-09:05 UTC; --respect-schedule sends once after 07:30 UK time (GMT or BST)
+  workflow_dispatch: {}
+permissions:
+  contents: write                # to commit reports/ and journal/ back to the branch
+concurrency:
+  group: t212-daily-report       # never two runs at once
+  cancel-in-progress: false
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: claude/trading212-agent-skills-r71zy3
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install pandas numpy
+      - name: Generate and send report
+        working-directory: trading
+        env:
+          T212_ENV: demo
+          T212_API_KEY: ${{ secrets.T212_API_KEY }}
+          T212_API_SECRET: ${{ secrets.T212_API_SECRET }}
+          REPORT_EMAIL_PROVIDER: resend
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          REPORT_EMAIL_TO: ${{ secrets.REPORT_EMAIL_TO }}
+          REPORT_EMAIL_FROM: ${{ secrets.REPORT_EMAIL_FROM }}
+        run: |
+          set +e
+          python -m t212bot daily-report --send --respect-schedule
+          rc=$?
+          echo "exit code $rc"
+          # 4 = not due / already sent: success for the scheduler
+          if [ $rc -eq 4 ]; then exit 0; fi
+          exit $rc
+      - name: Commit report history
+        if: always()
+        run: |
+          git config user.name "t212-report-bot"
+          git config user.email "t212-report-bot@users.noreply.github.com"
+          git add trading/reports trading/journal || true
+          git diff --cached --quiet || (git commit -m "report: daily intelligence $(date -u +%F)" && git push)
