@@ -260,7 +260,8 @@
   "Daily correlation with the real ETP is only 0.59 because the ETP trades on London hours",
   "In-sample (1986-2005) the filter did not prevent a -92% drawdown in the dot-com crash",
   "Out-of-sample period was an unusually strong one for the Nasdaq",
-  "Fails the promotion gate's Sharpe and drawdown tests against 1x Nasdaq"
+  "Fails the promotion gate's Sharpe and drawdown tests against 1x Nasdaq",
+  "Real-fund check (actual LQQ3.L prices in GBP, live rule, 2013-2026): 17.8%/yr vs 20.4%/yr for 1x Nasdaq in GBP and 37.1%/yr for LQQ3 held; it trailed 1x Nasdaq over the last 10, 5, 3 and 1 years. The simulated out-of-sample edge does not show up on the real fund's recent history."
  ],
  "trials": 3,
  "decision": "PROMOTED",
@@ -270,6 +271,136 @@
   "research/h03_leveraged_trend.py",
   "research/output/h03_leveraged_trend.csv",
   "research/output/h03_validation.csv",
-  "research/output/h03_yearly.csv"
+  "research/output/h03_yearly.csv",
+  "research/output/h03_real_fund_windows.csv",
+  "research/output/h03_real_fund_yearly.csv"
+ ],
+ "real_fund_check": [
+  {
+   "window": "since 2013",
+   "series": "3x + SMA100 (live rule, real LQQ3, GBP)",
+   "total_return": 8.4425,
+   "CAGR": 0.1778,
+   "maxDD": -0.6312
+  },
+  {
+   "window": "since 2013",
+   "series": "LQQ3 held (GBP)",
+   "total_return": 74.7413,
+   "CAGR": 0.3707,
+   "maxDD": -0.7916
+  },
+  {
+   "window": "since 2013",
+   "series": "Nasdaq-100 1x (QQQ, GBP)",
+   "total_return": 11.785,
+   "CAGR": 0.2041,
+   "maxDD": -0.2982
+  },
+  {
+   "window": "last 10y",
+   "series": "3x + SMA100 (live rule, real LQQ3, GBP)",
+   "total_return": 4.0815,
+   "CAGR": 0.1767,
+   "maxDD": -0.6312
+  },
+  {
+   "window": "last 10y",
+   "series": "LQQ3 held (GBP)",
+   "total_return": 16.8856,
+   "CAGR": 0.3347,
+   "maxDD": -0.7916
+  },
+  {
+   "window": "last 10y",
+   "series": "Nasdaq-100 1x (QQQ, GBP)",
+   "total_return": 4.318,
+   "CAGR": 0.1821,
+   "maxDD": -0.2982
+  },
+  {
+   "window": "last 5y",
+   "series": "3x + SMA100 (live rule, real LQQ3, GBP)",
+   "total_return": 0.545,
+   "CAGR": 0.0911,
+   "maxDD": -0.6312
+  },
+  {
+   "window": "last 5y",
+   "series": "LQQ3 held (GBP)",
+   "total_return": 0.8471,
+   "CAGR": 0.1308,
+   "maxDD": -0.7916
+  },
+  {
+   "window": "last 5y",
+   "series": "Nasdaq-100 1x (QQQ, GBP)",
+   "total_return": 1.1919,
+   "CAGR": 0.1702,
+   "maxDD": -0.2982
+  },
+  {
+   "window": "last 3y",
+   "series": "3x + SMA100 (live rule, real LQQ3, GBP)",
+   "total_return": 0.6256,
+   "CAGR": 0.1761,
+   "maxDD": -0.436
+  },
+  {
+   "window": "last 3y",
+   "series": "LQQ3 held (GBP)",
+   "total_return": 1.6273,
+   "CAGR": 0.3805,
+   "maxDD": -0.5839
+  },
+  {
+   "window": "last 3y",
+   "series": "Nasdaq-100 1x (QQQ, GBP)",
+   "total_return": 0.9608,
+   "CAGR": 0.252,
+   "maxDD": -0.2523
+  },
+  {
+   "window": "last 1y",
+   "series": "3x + SMA100 (live rule, real LQQ3, GBP)",
+   "total_return": -0.1233,
+   "CAGR": null,
+   "maxDD": -0.4329
+  },
+  {
+   "window": "last 1y",
+   "series": "LQQ3 held (GBP)",
+   "total_return": 0.0768,
+   "CAGR": null,
+   "maxDD": -0.4777
+  },
+  {
+   "window": "last 1y",
+   "series": "Nasdaq-100 1x (QQQ, GBP)",
+   "total_return": 0.2541,
+   "CAGR": null,
+   "maxDD": -0.1166
+  },
+  {
+   "window": "2026 YTD",
+   "series": "3x + SMA100 (live rule, real LQQ3, GBP)",
+   "total_return": 0.2828,
+   "CAGR": null,
+   "maxDD": -0.309
+  },
+  {
+   "window": "2026 YTD",
+   "series": "LQQ3 held (GBP)",
+   "total_return": 0.4481,
+   "CAGR": null,
+   "maxDD": -0.309
+  },
+  {
+   "window": "2026 YTD",
+   "series": "Nasdaq-100 1x (QQQ, GBP)",
+   "total_return": 0.253,
+   "CAGR": null,
+   "maxDD": -0.1166
+  }
  ]
 }

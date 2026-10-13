@@ -106,15 +106,55 @@ def main():
 
     # yearly returns of the main candidates (what a holder would have lived through)
     rt, _ = strategy(r1, r3, rf, level, 200)
-    Y = pd.DataFrame({"Nasdaq 1x": r1, "3x hold": r3, "3x + SMA200": rt}).dropna()
+    rt100, _ = strategy(r1, r3, rf, level, 100)
+    Y = pd.DataFrame({"Nasdaq 1x": r1, "3x hold": r3, "3x + SMA100": rt100, "3x + SMA200": rt}).dropna()
     Y = (1 + Y).groupby(Y.index.year).prod() - 1
     Y.to_csv(OUT / "h03_yearly.csv")
 
+    real_fund_check(rf)
     pd.set_option("display.width", 250)
     cols = ["config", "period", "start", "CAGR", "Sharpe", "maxDD", "worst_year", "best_year", "growth_of_100", "time_in_market", "switches_per_year"]
     print(T[cols].round(3).to_string(index=False))
     print("validation:", {k: round(x, 4) if isinstance(x, float) else x for k, x in v.items()})
     print(Y.round(3).tail(22).to_string())
+
+
+def real_fund_check(rf):
+    """The live rule (QQQ > 100-day SMA, acted on the next London day) on the real LQQ3.L prices in GBP,
+    with 0.15% per switch, vs holding LQQ3.L and holding the 1x Nasdaq (QQQ in GBP is not available,
+    so 1x is shown in USD). Trailing windows end at the last available close."""
+    px = yahoo("LQQ3.L")["adjclose"]
+    px = px[px.index >= "2013-01-01"].where(lambda x: x > 0).dropna()
+    r = px.pct_change()
+    r = r[r.abs() < 0.35].dropna()  # Yahoo LSE unit-flip glitches
+    q = yahoo("QQQ")["adjclose"]
+    on = (q > q.rolling(100).mean()).astype(float)
+    # US close of day t is known before the London open of t+1: hold over London close t+1 -> t+2
+    pos = on.reindex(r.index, method="ffill").shift(2).fillna(0.0)
+    strat = pos * r - pos.diff().abs().fillna(0) * SWITCH_COST
+    q1 = q.pct_change().reindex(r.index).fillna(0.0)
+    fx = yahoo("GBPUSD=X")["close"].reindex(r.index).ffill()  # USD per GBP (FRED is not reachable from the cloud session)
+    q1_gbp = (1 + q1) / (1 + fx.pct_change().fillna(0.0)) - 1
+    end = r.index[-1]
+    rows = []
+    for label, start in (("since 2013", r.index[0]), ("last 10y", end - pd.DateOffset(years=10)),
+                         ("last 5y", end - pd.DateOffset(years=5)), ("last 3y", end - pd.DateOffset(years=3)),
+                         ("last 1y", end - pd.DateOffset(years=1)), ("2026 YTD", pd.Timestamp("2026-01-01"))):
+        sl = lambda x: x[x.index > start]
+        for name, x in (("3x + SMA100 (live rule, real LQQ3, GBP)", strat), ("LQQ3 held (GBP)", r), ("Nasdaq-100 1x (QQQ, GBP)", q1_gbp)):
+            x = sl(x)
+            eq = (1 + x).cumprod()
+            yrs = len(x) / 252
+            rows.append({"window": label, "series": name, "start": str(x.index[0].date()), "end": str(x.index[-1].date()),
+                         "total_return": eq.iloc[-1] - 1, "CAGR": eq.iloc[-1] ** (1 / yrs) - 1 if yrs >= 1 else None,
+                         "maxDD": (eq / eq.cummax() - 1).min(), "pounds_from_500": 500 * eq.iloc[-1]})
+    T = pd.DataFrame(rows)
+    T.to_csv(OUT / "h03_real_fund_windows.csv", index=False)
+    yearly = pd.DataFrame({"3x + SMA100 real LQQ3": strat, "LQQ3 held": r, "Nasdaq 1x GBP": q1_gbp})
+    yearly = (1 + yearly).groupby(yearly.index.year).prod() - 1
+    yearly.to_csv(OUT / "h03_real_fund_yearly.csv")
+    print(T.round(3).to_string(index=False))
+    print(yearly.round(3).to_string())
 
 
 if __name__ == "__main__":
