@@ -4,6 +4,8 @@
 > (3x Nasdaq-100 with a 100-day trend filter, E009) at the owner's request. Old journal archived. Signal on 2026-10-13:
 > QQQ 3.1% above its 100-day average, so the next London-session run would buy LQQ3 with the cash.
 > Not yet verified: a dry run of the new strategy against the live account (blocked by the session's permission check).
+> Check-in routines deleted at the owner's request (2026-10-13); the trading-ops and research routines continue.
+> Owner rule considered and rejected on evidence (E010): flat at every close. The strategy holds overnight.
 > Sections below describe the pre-reset £100 period.
 
 "Verified" means observed directly (API responses, git commits, run output). A schedule or config file existing is not

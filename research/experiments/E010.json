@@ -1,0 +1,70 @@
+{
+ "id": "E010",
+ "title": "LQQ3: London-session vs overnight returns (flat-at-close rule)",
+ "date": "2026-10-13",
+ "agenda_item": "Owner request: never hold positions over a market close",
+ "hypothesis": "A 3x Nasdaq ETP held only while London is open (flat at every close) keeps most of the return.",
+ "rationale": "Tests the cost of the owner's proposed flat-at-close constraint before building it.",
+ "data": [
+  "Yahoo daily OHLC LQQ3.L 2013-2026",
+  "QQQ adjusted close (trend signal)"
+ ],
+ "methodology": "Daily open->close vs close->next-open returns; 0.15% per side on each round trip; trend variant uses QQQ > 100-day SMA known before the open.",
+ "benchmark": "LQQ3 close-to-close buy-and-hold",
+ "costs": "0.15% per side",
+ "in_sample": "none (no fitting)",
+ "out_of_sample": "2013-01-03..2026-10-13",
+ "results": [
+  {
+   "rule": "open_to_close_every_day",
+   "CAGR": -0.5379,
+   "maxDD": -1.0,
+   "avg_daily": -0.0029,
+   "days": 3459
+  },
+  {
+   "rule": "open_to_close_trend_on_only",
+   "CAGR": -0.4684,
+   "maxDD": -0.9998,
+   "avg_daily": -0.0024,
+   "days": 3459
+  },
+  {
+   "rule": "open_to_close_no_costs",
+   "CAGR": -0.0145,
+   "maxDD": -0.6722,
+   "avg_daily": 0.0001,
+   "days": 3459
+  },
+  {
+   "rule": "overnight_only",
+   "CAGR": 0.3893,
+   "maxDD": -0.5672,
+   "avg_daily": 0.0018,
+   "days": 3459
+  },
+  {
+   "rule": "close_to_close_hold",
+   "CAGR": 0.369,
+   "maxDD": -0.7916,
+   "avg_daily": 0.0019,
+   "days": 3459
+  }
+ ],
+ "robustness": [
+  "with and without costs",
+  "with and without the trend filter"
+ ],
+ "limitations": [
+  "Yahoo LSE open prices can be stale first trades",
+  "daily bars only"
+ ],
+ "trials": 2,
+ "decision": "REJECTED",
+ "decision_detail": "Flat-at-close loses heavily: almost all of LQQ3's return arrives overnight (it includes the US afternoon), and a daily round trip's spread exceeds the daytime gain. Owner chose to keep holding overnight.",
+ "promoted": false,
+ "evidence": [
+  "research/h04_intraday_vs_overnight.py",
+  "research/output/h04_intraday_vs_overnight.csv"
+ ]
+}
