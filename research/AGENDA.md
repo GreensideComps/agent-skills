@@ -6,7 +6,7 @@ ideas are appended with a priority and a pre-registration. Status values:
 `OPEN`, `IN PROGRESS`, `DONE: rejected`, `DONE: promising → shadow`, `DONE: promoted`, `BLOCKED (reason)`.
 
 **Champion:** `momentum_tilt_v1` (50% VWRPl_EQ / 50% IWMOl_EQ), live since 2026-10-13.
-**Trial counter (all hypotheses, all configs, for deflated Sharpe):** 71 (53 round 1 + 18 in E006/E007, 2026-10-13).
+**Trial counter (all hypotheses, all configs, for deflated Sharpe):** 75 (53 round 1 + 18 in E006/E007 + 4 in E008, 2026-10-13).
 
 ---
 

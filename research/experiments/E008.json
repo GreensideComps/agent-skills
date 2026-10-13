@@ -1,0 +1,77 @@
+{
+ "id": "E008",
+ "title": "US-open breakout day trading with 3x Nasdaq-100 ETPs (LQQ3/LQQS)",
+ "date": "2026-10-13",
+ "agenda_item": "Owner request: day trading with leveraged funds",
+ "hypothesis": "A mechanical US-open opening-range breakout, traded long/short with 3x Nasdaq ETPs during the LSE/US overlap, beats holding.",
+ "rationale": "Mechanical stand-in for discretionary intraday index trading as practised by retail day traders; opening-range momentum is a documented intraday pattern.",
+ "data": [
+  "Yahoo 5-minute bars: QQQ (signal), LQQ3.L and LQQS.L (fills), last ~60 days"
+ ],
+ "methodology": "Range = first 15 or 30 min after 09:30 NY; first 5m close beyond range -> 3x long/short ETP; stop on close back beyond the opposite side; flat by 15:25 London; one trade per day.",
+ "benchmark": "holding LQQ3 over the same window; cash",
+ "costs": "0.15% per side (base), 0.30% (stress); no commission on Trading 212; GBX lines so no FX fee",
+ "in_sample": "none (no fitting)",
+ "out_of_sample": "2026-07-21..2026-10-13",
+ "results": [
+  {
+   "or_min": 15,
+   "cost_per_side": 0.0015,
+   "trades": 51,
+   "win_rate": 0.333,
+   "avg_trade": -0.0019,
+   "total_return": -0.0935,
+   "max_drawdown": -0.1301,
+   "benchmark_hold_LQQ3": 0.1186
+  },
+  {
+   "or_min": 15,
+   "cost_per_side": 0.003,
+   "trades": 51,
+   "win_rate": 0.255,
+   "avg_trade": -0.0049,
+   "total_return": -0.2221,
+   "max_drawdown": -0.2284,
+   "benchmark_hold_LQQ3": 0.1186
+  },
+  {
+   "or_min": 30,
+   "cost_per_side": 0.0015,
+   "trades": 40,
+   "win_rate": 0.275,
+   "avg_trade": -0.0028,
+   "total_return": -0.106,
+   "max_drawdown": -0.1062,
+   "benchmark_hold_LQQ3": 0.1186
+  },
+  {
+   "or_min": 30,
+   "cost_per_side": 0.003,
+   "trades": 40,
+   "win_rate": 0.125,
+   "avg_trade": -0.0058,
+   "total_return": -0.2071,
+   "max_drawdown": -0.2025,
+   "benchmark_hold_LQQ3": 0.1186
+  }
+ ],
+ "robustness": [
+  "two range lengths",
+  "costs x2"
+ ],
+ "limitations": [
+  "~40 trading days only: cannot prove or disprove an edge",
+  "5-minute closes, not tick fills; real spreads on 3x ETPs vary",
+  "LSE/US overlap is only ~2 hours a day",
+  "a discretionary trader's rules cannot be reproduced exactly"
+ ],
+ "trials": 4,
+ "decision": "REJECTED",
+ "decision_detail": "Lost money in every variant over the sample, while simply holding LQQ3 gained; most trades were small losses eaten by spread.",
+ "promoted": false,
+ "evidence": [
+  "research/h02_intraday_orb.py",
+  "research/output/h02_orb_summary.csv",
+  "research/output/h02_orb_trades.csv"
+ ]
+}
