@@ -1,0 +1,18 @@
+{
+ "buy_reserve": {
+  "lower": 0.0416,
+  "source": "demo 2026-10-13: \u00a350.70 free; VWRPl_EQ buys of 0.3361 and 0.3327 sh rejected, 0.319 sh (\u00a346.71) accepted",
+  "upper": 0.0854
+ },
+ "inception": {
+  "total_value_gbp": 100.0,
+  "ts_utc": "2026-10-13T09:18:07+00:00"
+ },
+ "last_rebalance_month": "2026-10",
+ "last_rebalance_utc": "2026-10-13T09:25:02+00:00",
+ "qty_decimals": {
+  "IWMOl_EQ": 4,
+  "VWRPl_EQ": 4
+ },
+ "strategy": "momentum_tilt_v1"
+}

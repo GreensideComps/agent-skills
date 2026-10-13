@@ -1,0 +1,30 @@
+{
+  "name": "momentum_tilt_v1",
+  "targets": {
+    "VWRPl_EQ": 0.5,
+    "IWMOl_EQ": 0.5
+  },
+  "yahoo_symbols": {
+    "VWRPl_EQ": "VWRP.L",
+    "IWMOl_EQ": "IWMO.L",
+    "VUAGl_EQ": "VUAG.L",
+    "VXUSl_EQ": "VXUS.L",
+    "VAGSl_EQ": "VAGS.L"
+  },
+  "cash_buffer_pct": 0.015,
+  "drift_band_abs": 0.05,
+  "deploy_cash_threshold_pct": 0.015,
+  "annual_rebalance_month": 1,
+  "annual_rebalance_min_drift": 0.01,
+  "min_trade_gbp": 1.0,
+  "fx_fee": 0.0015,
+  "default_qty_decimals": 4,
+  "open_buffer_minutes": 15,
+  "close_buffer_minutes": 15,
+  "max_price_divergence": 0.03,
+  "max_orders_per_run": 10,
+  "shadow_portfolios": {
+    "A_benchmark_vwrp": {"type": "static", "targets": {"VWRPl_EQ": 1.0}},
+    "C_gem12": {"type": "gem12", "us": "VUAGl_EQ", "intl": "VXUSl_EQ", "bond": "VAGSl_EQ"}
+  }
+}
