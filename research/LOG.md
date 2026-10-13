@@ -7,3 +7,4 @@
 | 2026-10-13 | Owner request: day trading (E008) | `h02_intraday_orb.py`: US-open breakout on 3x Nasdaq ETPs, 4 variants, ~40 trading days | Total return -22.2% to -9.3%; holding LQQ3 +11.9% | REJECTED | 75 |
 | 2026-10-13 | Owner request: leveraged trend (E009) | `h03_leveraged_trend.py`: 3x Nasdaq-100 + SMA{100,150,200} filter, 1986-2026, costs, validated vs QQQ3.L | OOS CAGR 20.7% vs 16.0% (1x); maxDD -59%; IS maxDD -92% | PROMOTED by owner override (fails gate on Sharpe and drawdown) | 78 |
 | 2026-10-13 | Owner request: flat at close (E010) | `h04_intraday_vs_overnight.py`: LQQ3 open->close vs overnight, 2013-2026 | Open->close daily -53.8%/yr after spread; overnight only +38.9%/yr | REJECTED; owner keeps overnight holding | 80 |
+| 2026-10-13 | Owner request: gold day trading (E011) | `h05_gold_daytrade.py`: 4 intraday rules x 1x/3x x costs, SGLN hourly ~3y | Every rule lost money after costs at every cost level | REJECTED | 92 |
