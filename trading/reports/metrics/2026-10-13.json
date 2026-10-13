@@ -1,8 +1,8 @@
 {
  "meta": {
   "report_date": "2026-10-13",
-  "generated_utc": "2026-10-13T13:20:39+00:00",
-  "generated_uk": "2026-10-13 14:20 BST",
+  "generated_utc": "2026-10-13T13:47:22+00:00",
+  "generated_uk": "2026-10-13 14:47 BST",
   "environment": "PRACTICE (demo) account - demo.trading212.com; live trading is disabled in code",
   "strategy": "momentum_tilt_v1",
   "example": false
@@ -11,63 +11,63 @@
   "summary": {
    "ok": true,
    "error": null,
-   "at": "2026-10-13T13:20:39+00:00"
+   "at": "2026-10-13T13:47:22+00:00"
   },
   "positions": {
    "ok": true,
    "error": null,
-   "at": "2026-10-13T13:20:40+00:00"
+   "at": "2026-10-13T13:47:22+00:00"
   },
   "pending": {
    "ok": true,
    "error": null,
-   "at": "2026-10-13T13:20:41+00:00"
+   "at": "2026-10-13T13:47:23+00:00"
   },
   "orders": {
    "ok": true,
    "error": null,
-   "at": "2026-10-13T13:20:41+00:00"
+   "at": "2026-10-13T13:47:23+00:00"
   },
   "transactions": {
    "ok": true,
    "error": null,
-   "at": "2026-10-13T13:20:42+00:00"
+   "at": "2026-10-13T13:47:24+00:00"
   },
   "dividends": {
    "ok": true,
    "error": null,
-   "at": "2026-10-13T13:20:42+00:00"
+   "at": "2026-10-13T13:47:25+00:00"
   }
  },
  "alerts": [],
  "account": {
   "currency": "GBP",
-  "total_value": 99.29,
+  "total_value": 99.55,
   "cash_available": 1.52,
   "cash_reserved": 0.0,
   "cash_in_pies": 0.0,
-  "invested_value": 97.77,
+  "invested_value": 98.03,
   "holdings": [
    {
     "ticker": "VWRPl_EQ",
     "name": "Vanguard FTSE All-World (Acc)",
     "quantity": 0.3359,
-    "price": 145.901,
+    "price": 146.202,
     "currency": "GBP",
-    "value_gbp": 49.01,
-    "weight": 0.4936,
-    "unrealized_pl_gbp": -0.17,
+    "value_gbp": 49.11,
+    "weight": 0.4933,
+    "unrealized_pl_gbp": -0.07,
     "cost_gbp": 49.18
    },
    {
     "ticker": "IWMOl_EQ",
     "name": "iShares Edge MSCI World Momentum Factor (Acc)",
     "quantity": 0.5568,
-    "price": 116.05,
+    "price": 116.4,
     "currency": "USD",
-    "value_gbp": 48.76,
-    "weight": 0.4911,
-    "unrealized_pl_gbp": -0.47,
+    "value_gbp": 48.92,
+    "weight": 0.4914,
+    "unrealized_pl_gbp": -0.31,
     "cost_gbp": 49.23
    }
   ]
@@ -76,16 +76,16 @@
   {
    "name": "R1 total = cash + investments",
    "status": "PASS",
-   "detail": "total value: expected \u00a399.29, actual \u00a399.29, diff \u00a3+0.00 (tol \u00a30.05)",
-   "expected": 99.29,
-   "actual": 99.29
+   "detail": "total value: expected \u00a399.55, actual \u00a399.55, diff \u00a3+0.00 (tol \u00a30.05)",
+   "expected": 99.55,
+   "actual": 99.55
   },
   {
    "name": "R2 investments = \u03a3 positions",
    "status": "PASS",
-   "detail": "investments value: expected \u00a397.77, actual \u00a397.77, diff \u00a3+0.00 (tol \u00a30.05)",
-   "expected": 97.77,
-   "actual": 97.77
+   "detail": "investments value: expected \u00a398.03, actual \u00a398.03, diff \u00a3+0.00 (tol \u00a30.05)",
+   "expected": 98.03,
+   "actual": 98.03
   },
   {
    "name": "R3 cash ledger",
@@ -97,9 +97,9 @@
   {
    "name": "R4 gain = P&L components",
    "status": "PASS",
-   "detail": "investment gain: expected \u00a3-0.71, actual \u00a3-0.71, diff \u00a3+0.00 (tol \u00a30.05)",
-   "expected": -0.71,
-   "actual": -0.71
+   "detail": "investment gain: expected \u00a3-0.45, actual \u00a3-0.45, diff \u00a3-0.00 (tol \u00a30.05)",
+   "expected": -0.45,
+   "actual": -0.45
   },
   {
    "name": "R5 holdings = \u03a3 fills",
@@ -114,7 +114,7 @@
   "withdrawals": 0.0,
   "net_contributions": 100.0,
   "realized_pl": 0.0,
-  "unrealized_pl": -0.64,
+  "unrealized_pl": -0.38,
   "trading_fees": 0.07,
   "fees_by_type": {
    "CURRENCY_CONVERSION_FEE": 0.07
@@ -122,12 +122,12 @@
   "account_fees": 0.0,
   "dividends": 0.0,
   "interest": 0.0,
-  "investment_gain": -0.71,
-  "twr_since_inception": -0.0071,
+  "investment_gain": -0.45,
+  "twr_since_inception": -0.0045,
   "hwm_index": 1.0,
-  "drawdown_from_hwm": -0.0071,
+  "drawdown_from_hwm": -0.0045,
   "max_drawdown": -0.0072,
-  "twr_periods": 11,
+  "twr_periods": 12,
   "first_snapshot": "2026-10-13T09:18:07+00:00",
   "unclassified_transactions": 0
  },
@@ -330,7 +330,7 @@
     "as_of": "2026-10-13"
    },
    "B_live_rules_at_close": {
-    "value": 99.83,
+    "value": 99.82,
     "return": -0.00175,
     "as_of": "2026-10-13"
    }
@@ -338,26 +338,26 @@
  },
  "risk": {
   "weights": {
-   "VWRPl_EQ": 0.4936,
-   "IWMOl_EQ": 0.4911
+   "VWRPl_EQ": 0.4933,
+   "IWMOl_EQ": 0.4914
   },
   "cash_weight": 0.0153,
   "largest_position": [
    "VWRPl_EQ",
-   0.4936
+   0.4933
   ],
   "hhi": 0.4848,
   "effective_positions": 2.06,
   "listing_currency_weights": {
-   "GBP": 0.4936,
-   "USD": 0.4911
+   "GBP": 0.4933,
+   "USD": 0.4914
   },
   "est_annual_vol": 0.1625,
   "est_daily_vol": 0.01024,
   "est_var95_1d_pct": 0.01684,
   "vol_window_days": 250,
   "estimate_basis": "target weights x last 252 daily GBP total returns (public prices); not a forecast",
-  "drawdown_from_hwm": -0.0071,
+  "drawdown_from_hwm": -0.0045,
   "material_changes": [
    "No previous report to compare against (first report)."
   ]
@@ -1164,14 +1164,14 @@
   "as_of": "2026-10-13",
   "amount_gbp": 0.0,
   "reason_code": "NO_DEFENSIBLE_REASON",
-  "headline": "Your portfolio has decreased by \u00a30.71 after adjusting for deposits and withdrawals. I recommend withdrawing \u00a30 because there is no investment gain to take.",
-  "gain_gbp": -0.71,
+  "headline": "Your portfolio has decreased by \u00a30.45 after adjusting for deposits and withdrawals. I recommend withdrawing \u00a30 because there is no investment gain to take.",
+  "gain_gbp": -0.45,
   "explanation": [
    "There is no investment gain to take: the account is at or below the money you put in."
   ],
   "calculation": [
-   "Total value \u00a399.29 \u2212 net contributions \u00a3100.00 = investment gain \u00a3-0.71.",
-   "Time-weighted return since inception -0.71% (deposits/withdrawals excluded)."
+   "Total value \u00a399.55 \u2212 net contributions \u00a3100.00 = investment gain \u00a3-0.45.",
+   "Time-weighted return since inception -0.45% (deposits/withdrawals excluded)."
   ],
   "assumptions": [
    "Scenario annual returns are assumptions, not forecasts: conservative 3%, base 6%, adverse -1% for 10 years; shock = immediate -40% fall. Assumptions, not forecasts. Base sits below the research's measured long-run nominal equity CAGRs (world equity in GBP: 8.1%/yr 1992-2010, 11.1%/yr 2011-2026; US market 1927-2026 about 10%/yr in USD). Adverse is a lost decade (US 2000-2009 was about -1%/yr). The shock row is a 40% fall, comparable to 2008-09 in GBP terms.",
@@ -1182,21 +1182,21 @@
   "scenarios": [
    {
     "withdraw_gbp": 0.0,
-    "remaining_now_gbp": 99.29,
-    "conservative_portfolio_in_10y": 133.44,
+    "remaining_now_gbp": 99.55,
+    "conservative_portfolio_in_10y": 133.79,
     "conservative_compounding_cost": 0.0,
-    "base_portfolio_in_10y": 177.81,
+    "base_portfolio_in_10y": 178.28,
     "base_compounding_cost": 0.0,
-    "adverse_portfolio_in_10y": 89.8,
+    "adverse_portfolio_in_10y": 90.03,
     "adverse_compounding_cost": 0.0,
     "shock_loss_avoided_on_withdrawn": 0.0
    }
   ],
   "effect": {
-   "remaining_value_gbp": 99.29,
-   "remaining_gain_gbp": -0.71,
-   "base_case_value_in_10y_if_retained": 177.81,
-   "base_case_value_in_10y_after_withdrawal": 177.81
+   "remaining_value_gbp": 99.55,
+   "remaining_gain_gbp": -0.45,
+   "base_case_value_in_10y_if_retained": 178.28,
+   "base_case_value_in_10y_after_withdrawal": 178.28
   },
   "selling_required_gbp": 0.0,
   "sell_plan": [],
@@ -1204,12 +1204,14 @@
   "wrapper_notes": [],
   "candidates": [],
   "safety": "Recommendation only. Nothing is sold, transferred or withdrawn without your explicit action.",
-  "events": [],
+  "events": [
+   "new investment-gain high (\u00a3-0.45)"
+  ],
   "notify": false,
   "notify_reason": "\u00a30 recommendation - reported in the daily report only",
   "_state_inputs": {
-   "gain": -0.7099999999999937,
-   "drawdown": -0.007100000000000106,
+   "gain": -0.45000000000000284,
+   "drawdown": -0.0045000000000000595,
    "net": 100.0
   }
  },
@@ -1217,32 +1219,32 @@
   {
    "check": "API summary",
    "status": "PASS",
-   "detail": "read at 2026-10-13T13:20:39+00:00"
+   "detail": "read at 2026-10-13T13:47:22+00:00"
   },
   {
    "check": "API positions",
    "status": "PASS",
-   "detail": "read at 2026-10-13T13:20:40+00:00"
+   "detail": "read at 2026-10-13T13:47:22+00:00"
   },
   {
    "check": "API pending",
    "status": "PASS",
-   "detail": "read at 2026-10-13T13:20:41+00:00"
+   "detail": "read at 2026-10-13T13:47:23+00:00"
   },
   {
    "check": "API orders",
    "status": "PASS",
-   "detail": "read at 2026-10-13T13:20:41+00:00"
+   "detail": "read at 2026-10-13T13:47:23+00:00"
   },
   {
    "check": "API transactions",
    "status": "PASS",
-   "detail": "read at 2026-10-13T13:20:42+00:00"
+   "detail": "read at 2026-10-13T13:47:24+00:00"
   },
   {
    "check": "API dividends",
    "status": "PASS",
-   "detail": "read at 2026-10-13T13:20:42+00:00"
+   "detail": "read at 2026-10-13T13:47:25+00:00"
   },
   {
    "check": "Reconciliation",
@@ -1295,14 +1297,26 @@
   "report_date": "2026-10-13",
   "status": "outbox",
   "to_hash": "e3b0c44298fc",
-  "ts_utc": "2026-10-13T13:20:29+00:00"
+  "ts_utc": "2026-10-13T13:20:45+00:00"
  },
  "delivery": {
-  "status": "outbox",
-  "provider": "outbox",
-  "detail": "written to /home/user/agent-skills/trading/reports/outbox/d43a1d8ea8b997b0.eml - NOT emailed (no provider configured)",
+  "status": "sent",
+  "provider": "resend",
+  "detail": "accepted by provider",
   "attempts": 1,
-  "key": "d43a1d8ea8b997b0a6909ca9f6f559f01f473bc31060b7ba8c9cd640b7757475",
-  "provider_id": "/home/user/agent-skills/trading/reports/outbox/d43a1d8ea8b997b0.eml"
+  "key": "c1e7a98f9d1d8f33d088a57f4cc98e6651224047eb1d518a1e6551226c8a23f1",
+  "provider_id": "01a13584-a89b-7ad2-82e8-27b2a8100ee5"
+ },
+ "delivery_confirmation": {
+  "report_date": "2026-10-13",
+  "kind": "daily",
+  "provider": "resend",
+  "key": "c1e7a98f9d1d8f33d088a57f4cc98e6651224047eb1d518a1e6551226c8a23f1",
+  "provider_id": "01a13584-a89b-7ad2-82e8-27b2a8100ee5",
+  "ts_utc": "2026-10-13T13:47:40+00:00",
+  "status": "confirmed_delivered",
+  "provider_event": "delivered",
+  "detail": "provider last_event='delivered'",
+  "attempts": 0
  }
 }

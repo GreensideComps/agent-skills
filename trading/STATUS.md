@@ -23,11 +23,11 @@ whether anything reached your phone is unknown. Those session logs are no longer
 
 | Item | State |
 |---|---|
-| Credentials | **Not configured.** No `REPORT_EMAIL_*` or `RESEND_API_KEY` in the environment. **This blocks a real delivery test. Needs you** (steps in `REPORTING.md`). |
+| Credentials | **Configured** (Resend; From `onboarding@resend.dev`; To set). `email-check` OK. |
 | Delivery semantics | `sent` = accepted only. The bot polls Resend `GET /emails/{id}` and records `confirmed_delivered` / `confirmed_failed` / `unconfirmed`. Only `confirmed_delivered` is PASS. |
 | Failure handling, live | **Verified 13:30 UTC** against the real Resend API with an invalid key: recorded `failed` (HTTP 401, not retried), nothing recorded as sent or delivered. Evidence: `reports/verification/2026-10-13-email-failure-test.md` |
 | Failure handling, after acceptance | Bounce, failure, suppression, complaint, delay: unit-tested with a simulated provider (113 tests pass) |
-| Successful real delivery | **Not proven.** Do not treat email as working until `email-status` shows `confirmed_delivered`. |
+| Successful real delivery | **Verified 13:47 UTC:** today's report sent to the owner address; Resend reports `delivered`, `email-status` exit 0. Evidence: `reports/verification/2026-10-13-real-delivery-test.md`. Inbox vs spam placement: check once. |
 
 Outbound SMTP (465/587) is blocked from Claude cloud sessions, while HTTPS email APIs are reachable (tested 2026-10-13).
 
@@ -55,7 +55,7 @@ exact setup are in `REPORTING.md` → "Scheduling". **Not active:** it needs you
 
 ## 5. Open items
 
-1. **Email credentials** (you), then a real test that ends in `confirmed_delivered`.
+1. ~~Email credentials and real test~~: done 13:47 UTC (`confirmed_delivered`). Confirm the email is in your inbox, not spam.
 2. **Report scheduler** (you): GitHub Actions setup steps in `REPORTING.md`.
 3. **First routine runs:** research 00:13 UTC and ops 09:07 UTC on 2026-10-14. Unverified until the check-ins report.
 4. **E006/E007** (P1/P2) need a verifiable re-run (the research routine is instructed to do it).
