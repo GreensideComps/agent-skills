@@ -112,3 +112,36 @@ def gem_nav(book: PriceBook, roles: dict[str, str], start: date, capital: float)
         px = book.gbp_tr(roles[holding]).asof(d)
         nav.append((d, units * px))
     return pd.Series(dict(nav), name="nav"), log
+
+
+def signal_nav(book: PriceBook, symbols: dict[str, str], signal: dict, start: date, capital: float) -> tuple[pd.Series, list[dict]]:
+    """Same trend rule as the live bot, traded at daily closes: on day d hold `on_targets` if the
+    signal symbol's close on the previous trading day was above its N-day SMA, else cash (flat).
+    Each switch costs COST (+FX_FEE on USD lines) on the traded value."""
+    sig = book.get(signal["symbol"])["adjclose"]
+    on_series = (sig > sig.rolling(int(signal["window"])).mean()).where(sig.rolling(int(signal["window"])).count() >= int(signal["window"]))
+    on_t, off_t = signal["on_targets"], signal.get("off_targets") or {}
+    legs = sorted(set(on_t) | set(off_t))
+    px = {t: book.gbp_tr(symbols[t]) for t in legs}
+    days = px[legs[0]].index if legs else sig.index
+    days = days[days >= pd.Timestamp(start)]
+    nav, log = [], []
+    units, cash, holding = {}, capital, None
+    for d in days:
+        prev = on_series[on_series.index < d].dropna()
+        if prev.empty:
+            continue
+        want = "on" if bool(prev.iloc[-1]) else "off"
+        if want != holding:
+            value = cash + sum(u * px[t].asof(d) * (1 - COST - (FX_FEE if book.get(symbols[t]).attrs.get("currency") == "USD" else 0))
+                               for t, u in units.items())
+            tg = on_t if want == "on" else off_t
+            units = {}
+            for t, w in tg.items():
+                fee = COST + (FX_FEE if book.get(symbols[t]).attrs.get("currency") == "USD" else 0)
+                units[t] = value * w * (1 - fee) / px[t].asof(d)
+            cash = value * (1 - sum(tg.values()))
+            log.append({"date": d.date().isoformat(), "signal_asof": prev.index[-1].date().isoformat(), "hold": want})
+            holding = want
+        nav.append((d, cash + sum(u * px[t].asof(d) for t, u in units.items())))
+    return pd.Series(dict(nav), name="nav"), log

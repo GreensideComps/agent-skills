@@ -5,8 +5,8 @@ The research routine works through this file top-down: it picks the highest-prio
 ideas are appended with a priority and a pre-registration. Status values:
 `OPEN`, `IN PROGRESS`, `DONE: rejected`, `DONE: promising → shadow`, `DONE: promoted`, `BLOCKED (reason)`.
 
-**Champion:** `momentum_tilt_v1` (50% VWRPl_EQ / 50% IWMOl_EQ), live since 2026-10-13.
-**Trial counter (all hypotheses, all configs, for deflated Sharpe):** 75 (53 round 1 + 18 in E006/E007 + 4 in E008, 2026-10-13).
+**Champion:** `nasdaq3x_trend_sma100_v1` (100% `LQQ3l_EQ` 3x Nasdaq-100 while QQQ > its 100-day SMA, else cash), from the 2026-10-13 reset to £500. Owner-directed override of the promotion gate (E009). Previous champion `momentum_tilt_v1` (50/50 VWRP/IWMO) is now shadow D.
+**Trial counter (all hypotheses, all configs, for deflated Sharpe):** 78 (53 round 1 + 18 in E006/E007 + 4 in E008 + 3 in E009, 2026-10-13).
 
 ---
 

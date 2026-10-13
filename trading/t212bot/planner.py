@@ -88,7 +88,7 @@ def plan_rebalance(cash_gbp: float, holdings: dict[str, Holding], prices_gbp: di
 
     reasons = []
     cash_w = cash_gbp / total
-    if cash_w > cfg.cash_buffer_pct + cfg.deploy_cash_threshold_pct:
+    if cfg.targets and cash_w > cfg.cash_buffer_pct + cfg.deploy_cash_threshold_pct:  # all-cash target: cash is the goal
         reasons.append(f"uninvested cash {cash_w:.1%} > {cfg.cash_buffer_pct + cfg.deploy_cash_threshold_pct:.1%}")
     if max_drift > cfg.drift_band_abs:
         worst = max(drift, key=lambda t: abs(drift[t]))

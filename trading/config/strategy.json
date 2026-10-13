@@ -1,8 +1,7 @@
 {
-  "name": "momentum_tilt_v1",
+  "name": "nasdaq3x_trend_sma100_v1",
   "targets": {
-    "VWRPl_EQ": 0.5,
-    "IWMOl_EQ": 0.5
+    "LQQ3l_EQ": 1.0
   },
   "yahoo_symbols": {
     "VWRPl_EQ": "VWRP.L",
@@ -10,7 +9,8 @@
     "VUAGl_EQ": "VUAG.L",
     "VXUSl_EQ": "VXUS.L",
     "VAGSl_EQ": "VAGS.L",
-    "IWFM_EQ": "IWFM.L"
+    "IWFM_EQ": "IWFM.L",
+    "LQQ3l_EQ": "LQQ3.L"
   },
   "cash_buffer_pct": 0.015,
   "drift_band_abs": 0.05,
@@ -22,7 +22,7 @@
   "default_qty_decimals": 4,
   "open_buffer_minutes": 15,
   "close_buffer_minutes": 15,
-  "max_price_divergence": 0.03,
+  "max_price_divergence": 0.05,
   "max_orders_per_run": 10,
   "shadow_portfolios": {
     "A_benchmark_vwrp": {
@@ -31,11 +31,35 @@
         "VWRPl_EQ": 1.0
       }
     },
+    "D_prev_champion_50_50": {
+      "type": "static",
+      "targets": {
+        "VWRPl_EQ": 0.5,
+        "IWMOl_EQ": 0.5
+      }
+    },
+    "E_lqq3_buy_and_hold": {
+      "type": "static",
+      "targets": {
+        "LQQ3l_EQ": 1.0
+      }
+    },
     "C_gem12": {
       "type": "gem12",
       "us": "VUAGl_EQ",
       "intl": "VXUSl_EQ",
       "bond": "VAGSl_EQ"
     }
+  },
+  "signal": {
+    "type": "sma_trend",
+    "symbol": "QQQ",
+    "window": 100,
+    "max_age_days": 5,
+    "on_targets": {
+      "LQQ3l_EQ": 1.0
+    },
+    "off_targets": {},
+    "evidence": "research/h03_leveraged_trend.py, research/experiments/E009.json"
   }
 }

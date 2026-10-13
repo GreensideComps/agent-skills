@@ -55,3 +55,23 @@ def test_report_renders(tmp_path, cfg):
     data = report.build(j, cfg, book=book())
     md = report.render(data)
     assert "Value since inception" in md and "A_benchmark_vwrp" in md and "meaningful" in md
+
+
+def test_signal_nav_switches_to_cash_and_back():
+    from t212bot.shadow import COST, PriceBook, signal_nav
+    idx = pd.bdate_range("2026-01-01", periods=200)
+    sig = pd.Series(100.0 + 0.1 * pd.RangeIndex(200).to_numpy(), index=idx)   # gentle uptrend
+    sig.iloc[150:170] = 50.0          # trend breaks for 20 days
+    etf = pd.Series(10.0, index=idx)
+    etf.iloc[150:170] = 8.0           # the leveraged fund falls while the signal is off
+    frames = {"QQQ": pd.DataFrame({"close": sig, "adjclose": sig}), "LQQ3.L": pd.DataFrame({"close": etf, "adjclose": etf})}
+    for f in frames.values():
+        f.attrs["currency"] = "GBP"
+    b = PriceBook(loader=lambda s: frames[s])
+    spec = {"symbol": "QQQ", "window": 100, "on_targets": {"LQQ3l_EQ": 1.0}, "off_targets": {}}
+    nav, log = signal_nav(b, {"LQQ3l_EQ": "LQQ3.L"}, spec, idx[120].date(), 100.0)
+    assert [x["hold"] for x in log] == ["on", "off", "on"]
+    # the signal acts the day after the break, so the first down day is taken in full (10 -> 8),
+    # then the shadow sits in cash and rebuys at 10; three trades pay COST each
+    assert log[1]["date"] == idx[151].date().isoformat() and log[2]["date"] == idx[171].date().isoformat()
+    assert nav.iloc[-1] == pytest.approx(80 * (1 - COST) ** 3, rel=1e-9)

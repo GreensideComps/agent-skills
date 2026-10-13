@@ -71,16 +71,29 @@ class StrategyConfig:
     max_price_divergence: float = 0.03
     max_orders_per_run: int = 10
     shadow_portfolios: dict = field(default_factory=dict)
+    # Optional trend signal (see signals.py). When set, `targets` is replaced at run time
+    # by signal["on_targets"] or signal["off_targets"] (which may be empty = all cash).
+    signal: dict | None = None
 
     def __post_init__(self):
-        s = sum(self.targets.values())
-        if not (0 < s <= 1 + 1e-9):
-            raise SafetyError(f"target weights must sum to (0, 1], got {s}")
-        if any(w < 0 for w in self.targets.values()):
-            raise SafetyError("negative target weights (shorting) are not allowed")
-        missing = set(self.targets) - set(self.yahoo_symbols)
-        if missing:
-            raise SafetyError(f"no reference-price symbol for {sorted(missing)}")
+        sets = [self.targets]
+        if self.signal is not None:
+            if self.signal.get("type") != "sma_trend":
+                raise SafetyError(f"unsupported signal type {self.signal.get('type')!r}")
+            if int(self.signal.get("window", 0)) < 20 or not self.signal.get("symbol"):
+                raise SafetyError("sma_trend signal needs a symbol and a window of at least 20 days")
+            sets += [self.signal.get("on_targets") or {}, self.signal.get("off_targets") or {}]
+        for tg in sets:
+            s = sum(tg.values())
+            # a signal strategy may hold all cash (empty targets); a static one may not
+            lo_ok = s > 0 or (self.signal is not None and not tg)
+            if not (lo_ok and s <= 1 + 1e-9):
+                raise SafetyError(f"target weights must sum to (0, 1], got {s}")
+            if any(w < 0 for w in tg.values()):
+                raise SafetyError("negative target weights (shorting) are not allowed")
+            missing = set(tg) - set(self.yahoo_symbols)
+            if missing:
+                raise SafetyError(f"no reference-price symbol for {sorted(missing)}")
 
 
 def load_strategy(path: Path = CONFIG_PATH) -> StrategyConfig:

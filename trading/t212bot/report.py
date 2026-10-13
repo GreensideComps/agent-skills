@@ -10,7 +10,7 @@ import pandas as pd
 
 from .config import ROOT, StrategyConfig
 from .journal import Journal
-from .shadow import PriceBook, gem_nav, static_nav
+from .shadow import PriceBook, gem_nav, signal_nav, static_nav
 
 REPORT_PATH = ROOT / "PERFORMANCE.md"
 
@@ -48,7 +48,15 @@ def build(j: Journal, cfg: StrategyConfig, book: PriceBook | None = None) -> dic
             shadows[name] = nav
             out[f"{name}_log"] = log
     # same-rules shadow of the live strategy at closing prices (implementation shortfall)
-    shadows["B_live_rules_at_close"] = static_nav(book, cfg.yahoo_symbols, cfg.targets, start, capital)
+    if cfg.signal:
+        nav, log = signal_nav(book, cfg.yahoo_symbols, cfg.signal, start, capital)
+        shadows["B_live_rules_at_close"] = nav
+        out["B_live_rules_at_close_log"] = log
+        # rough research figure for a 3x index position that is in the market ~75% of the time, vs world equity
+        out["tracking_error_vs_world"] = 0.45
+    else:
+        shadows["B_live_rules_at_close"] = static_nav(book, cfg.yahoo_symbols, cfg.targets, start, capital)
+        out["tracking_error_vs_world"] = 0.075 * 0.5  # momentum ETF TE vs world, halved by the 50% tilt
     out["shadows"] = shadows
     out["start"] = start
     out["capital"] = capital
@@ -73,7 +81,7 @@ def render(data: dict) -> str:
           "| Portfolio | Value now | Return | Notes |", "|---|---|---|---|"]
     if len(acct):
         L.append(f"| **B (real demo account)** | £{acct.iloc[-1]:.2f} | {acct.iloc[-1] / cap - 1:+.2%} | real fills, real costs |")
-    notes = {"B_live_rules_at_close": "same targets, frictionless-ish fills at daily close",
+    notes = {"B_live_rules_at_close": "same rules (incl. trend signal), fills at daily close",
              "A_benchmark_vwrp": "100% VWRP at daily close", "C_gem12": "GEM-12 dual momentum at daily close"}
     for k, s in data["shadows"].items():
         if len(s):
@@ -95,13 +103,13 @@ def render(data: dict) -> str:
         days = (b.index[-1] - b.index[0]).days
         yrs = max(days / 365.25, 1 / 365.25)
         diff = (b.iloc[-1] / cap - 1) - (a.iloc[-1] / cap - 1)
-        te = 0.075  # research estimate of momentum-tilt tracking error vs world (annualised)
-        se = te * math.sqrt(yrs) * 0.5  # 50% tilt halves tracking error
+        te = data.get("tracking_error_vs_world", 0.0375)  # annualised, research estimate
+        se = te * math.sqrt(yrs)
         t = diff / se if se > 0 else float("nan")
         L += [f"- Days live: **{days}**. Difference vs 100% VWRP: **{diff:+.2%}**.",
               f"- Expected noise (1 s.e.) over this period from tracking error alone: ±{se:.2%} → t ≈ {t:.2f}.",
-              "- |t| < 2 means the difference is indistinguishable from luck. Research estimates ~50+ years "
-              "would be needed to confirm a 2%/yr edge, so treat short-run results as tests of the plumbing, not the strategy.", ""]
+              "- |t| < 2 means the difference is indistinguishable from luck. Short-run results test the plumbing, "
+              "not the strategy.", ""]
     else:
         L += ["- Not enough history yet.", ""]
     return "\n".join(L)

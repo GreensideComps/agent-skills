@@ -12,10 +12,12 @@ scheduled cloud routines (see [`RUNBOOK.md`](RUNBOOK.md)).
 
 | | |
 |---|---|
-| Strategy | `momentum_tilt_v1`: 50% `VWRPl_EQ` (FTSE All-World) + 50% `IWMOl_EQ` (MSCI World Momentum) |
-| Why | The only premium in the research with 100 years of survivorship-free evidence, post-publication persistence in developed markets (t=2.1, 2011–2026) and a positive tradeable out-of-sample result (+2.6%/yr vs MSCI World, p=0.09). The 50/50 split keeps a world-index core against momentum crashes. |
-| Rebalancing | Checked every weekday. Trades only when a holding drifts beyond ±5 percentage points, uninvested cash exceeds 3%, or once a year in January |
-| Benchmarks (shadow) | A = 100% VWRP; C = GEM-12 dual momentum; B-at-close = same rules at daily closes, which isolates execution cost |
+| Strategy | `nasdaq3x_trend_sma100_v1`: 100% `LQQ3l_EQ` (WisdomTree Nasdaq-100 3x Daily Leveraged, GBX) while QQQ's last close is above its 100-day average; otherwise 100% cash |
+| Why | Owner asked for higher returns using leveraged funds (2026-10-13, account reset to £500). Backtest 2006–2026: 20.7%/yr vs 16.0% for the plain Nasdaq-100, max drawdown −59%. 1986–2005: −92% drawdown through the dot-com crash. See `research/experiments/E009.json`. |
+| Risk | **High.** A 3x daily fund can lose most of its value in a crash, and the trend filter reacts only after the fall has started. Expect years of −40% to −50%. |
+| Trading | Checked every weekday at 10:07 London. Switches in or out when the signal flips (about 10 times a year in the backtest) and tops up uninvested cash above 3% |
+| Benchmarks (shadow) | A = 100% VWRP; D = previous 50/50 VWRP/IWMO strategy; E = LQQ3 held through everything; C = GEM-12; B-at-close = same trend rules at daily closes |
+| Previous period | £100 `momentum_tilt_v1` (50/50 VWRP/IWMO), archived in `journal/archive/2026-10-13_pre_reset_100gbp/` |
 
 ## Safety design
 
@@ -23,7 +25,7 @@ scheduled cloud routines (see [`RUNBOOK.md`](RUNBOOK.md)).
 |---|---|
 | Touching real money | The only reachable host is `demo.trading212.com`, hard-coded. `T212_ENV` must equal `demo`. The live URL does not appear anywhere in the package (enforced by a test). |
 | Duplicate orders (API is not idempotent) | Order POSTs are never retried after a timeout, 5xx or network error. The bot reconciles against pending orders and history, journals the result and stops. Only HTTP 429 (rejected before processing) and validation 400s are retried. |
-| Runaway trading | Long-only and no leverage (config validation). At most 10 orders per run. No trading while any order is pending. Trades below £1 are skipped. |
+| Runaway trading | Long-only, no borrowing or margin (config validation); the 3x exposure comes only from the fund itself, so losses can never exceed the money in the account. At most 10 orders per run. No trading while any order is pending. Trades below £1 are skipped. |
 | Bad prices | Quotes must be under 1 hour old when trading, and within 3% of Trading 212's own `currentPrice` for held positions. The quote's currency must match the instrument's. |
 | Thin markets | Trades only inside the instrument's T212 working schedule, excluding the first and last 15 minutes |
 | Selling what isn't there | Sells are capped at `quantityAvailableForTrading` |

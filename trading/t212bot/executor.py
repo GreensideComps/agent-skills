@@ -1,6 +1,7 @@
 """Orchestrates one bot run with every safety check in the path to an order."""
 from __future__ import annotations
 
+import dataclasses
 import json
 import re
 import time
@@ -13,6 +14,7 @@ from .config import ROOT, SafetyError, StrategyConfig, kill_switch_engaged
 from .journal import Journal, utcnow
 from .market import YahooQuotes, check_against_t212, check_fresh, to_gbp, tradable_now
 from .planner import Holding, plan_rebalance, round_down
+from .signals import resolve_targets
 
 TERMINAL = {"FILLED", "CANCELLED", "REJECTED", "REPLACED"}
 CACHE = ROOT / "cache"
@@ -26,8 +28,9 @@ class Bot:
     def __init__(self, client: T212Client, cfg: StrategyConfig, journal: Journal,
                  quotes: YahooQuotes | None = None, now=utcnow, sleep=time.sleep,
                  instruments: list[dict] | None = None, exchanges: list[dict] | None = None,
-                 env: dict | None = None, kill_file: Path | None = None):
+                 env: dict | None = None, kill_file: Path | None = None, daily_loader=None):
         self.c, self.cfg, self.j = client, cfg, journal
+        self._daily_loader = daily_loader
         self.q = quotes or YahooQuotes()
         self.now, self.sleep = now, sleep
         self._instruments, self._exchanges = instruments, exchanges
@@ -269,12 +272,26 @@ class Bot:
                     out.append(rec)
         return out
 
+    def _resolve_signal(self, state: dict) -> StrategyConfig:
+        """Static strategies pass through; a trend strategy gets today's targets.
+        Any data problem raises SafetyError before an order can be planned."""
+        if self.cfg.signal is None:
+            return self.cfg
+        if self._daily_loader is None:
+            from .shadow import yahoo_daily
+            self._daily_loader = yahoo_daily
+        targets, info = resolve_targets(self.cfg, self.now().date(), self._daily_loader)
+        prev = state.get("signal_on")
+        self.j.event("signal", targets=targets, changed=prev is not None and prev != info["on"], **info)
+        state["signal_on"] = info["on"]
+        return dataclasses.replace(self.cfg, targets=targets)
+
     # ------------------------------------------------------------ main
     def run(self, execute: bool = False, force: bool = False) -> dict:
-        j, cfg = self.j, self.cfg
+        j = self.j
         state = j.load_state()
-        state.setdefault("strategy", cfg.name)
-        j.event("run_start", execute=execute, force=force, strategy=cfg.name)
+        state.setdefault("strategy", self.cfg.name)
+        j.event("run_start", execute=execute, force=force, strategy=self.cfg.name)
 
         summary = self.c.account_summary()
         positions = self.c.positions() or []
@@ -296,6 +313,12 @@ class Bot:
             j.save_state(state)
             return {"status": "skipped", "reason": "pending orders exist"}
 
+        try:
+            cfg = self._resolve_signal(state)
+        except Exception as e:  # never trade on a broken or stale signal; still keep the snapshot
+            j.event("run_failed", reason=f"signal: {e}")
+            j.save_state(state)
+            raise SafetyError(f"signal unavailable, not trading: {e}") from None
         meta = self.instruments()
         pos_by = {p["instrument"]["ticker"]: p for p in positions}
         tickers = sorted(set(cfg.targets) | set(pos_by))
