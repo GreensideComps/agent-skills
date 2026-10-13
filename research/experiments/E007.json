@@ -1,24 +1,131 @@
 {
  "id": "E007",
  "title": "Momentum sleeve with trend filter",
- "date": "2026-10-13",
  "agenda_item": "P2",
- "hypothesis": "see research/AGENDA.md",
- "rationale": "see research/AGENDA.md",
- "data": [],
- "methodology": "",
- "benchmark": "champion momentum_tilt_v1",
- "costs": "",
- "in_sample": "",
- "out_of_sample": "",
- "results": null,
- "robustness": [],
- "limitations": [
-  "A test run on 2026-10-13 reported rejection (lower OOS CAGR) but its code and outputs were never pushed (git 403), so they are unverified; to be re-run."
+ "hypothesis": "Moving the momentum sleeve to the market (or cash) when the market is below its 10-month SMA beats a static 50/50.",
+ "rationale": "Momentum crashes happen in rebounds after bear markets; a trend filter on the market flags those states.",
+ "methodology": "Variants to_mkt / to_cash at SMA10, pick by in-sample Sharpe; SMA 8 and 12 as neighbours; Stage 2 gate in both markets.",
+ "results": [
+  {
+   "market": "US",
+   "pick_on_IS_sharpe": "P2 SMA10 to_cash",
+   "oos": "2001-01..2026-08",
+   "CAGR": 0.0932,
+   "Sharpe": 0.659,
+   "maxDD": -0.2927,
+   "champion_CAGR": 0.0947,
+   "champion_Sharpe": 0.559,
+   "champion_maxDD": -0.4933,
+   "dCAGR": -0.0015,
+   "p_CAGR": 0.533,
+   "dSharpe": 0.101,
+   "p_Sharpe": 0.103,
+   "DSR_active": 0.064,
+   "regime_wins_of_3": 2,
+   "P_dd50_10y": 0.034,
+   "champion_P_dd50_10y": 0.183,
+   "tests": {
+    "oos_beats": false,
+    "dsr_ge_0_90": false,
+    "costs_x3": false,
+    "neighbours": true,
+    "maxdd_within_5pp": true,
+    "p_dd50_not_higher": true,
+    "regimes_2_of_3": true
+   },
+   "PASS": false
+  },
+  {
+   "market": "DEV",
+   "pick_on_IS_sharpe": "P2 SMA10 to_cash",
+   "oos": "2006-01..2026-08",
+   "CAGR": 0.0826,
+   "Sharpe": 0.58,
+   "maxDD": -0.3754,
+   "champion_CAGR": 0.0916,
+   "champion_Sharpe": 0.536,
+   "champion_maxDD": -0.5316,
+   "dCAGR": -0.009,
+   "p_CAGR": 0.69,
+   "dSharpe": 0.045,
+   "p_Sharpe": 0.293,
+   "DSR_active": 0.029,
+   "regime_wins_of_3": 2,
+   "P_dd50_10y": 0.006,
+   "champion_P_dd50_10y": 0.167,
+   "tests": {
+    "oos_beats": false,
+    "dsr_ge_0_90": false,
+    "costs_x3": false,
+    "neighbours": true,
+    "maxdd_within_5pp": true,
+    "p_dd50_not_higher": true,
+    "regimes_2_of_3": true
+   },
+   "PASS": false
+  }
  ],
- "trials": 0,
- "decision": "PENDING_RERUN",
- "decision_detail": "A test run on 2026-10-13 reported rejection (lower OOS CAGR) but its code and outputs were never pushed (git 403), so they are unverified; to be re-run.",
+ "tradeable_check": [
+  {
+   "config": "CHAMPION 50/50",
+   "exec_lag_days": 0,
+   "CAGR": 0.1406,
+   "maxDD": -0.2377,
+   "avg_mom_weight": 0.5
+  },
+  {
+   "config": "CHAMPION 50/50",
+   "exec_lag_days": 1,
+   "CAGR": 0.1393,
+   "maxDD": -0.2377,
+   "avg_mom_weight": 0.5
+  },
+  {
+   "config": "P2 SMA10 to_mkt",
+   "exec_lag_days": 0,
+   "CAGR": 0.14,
+   "maxDD": -0.2508,
+   "avg_mom_weight": 0.416
+  },
+  {
+   "config": "P2 SMA10 to_mkt",
+   "exec_lag_days": 1,
+   "CAGR": 0.1419,
+   "maxDD": -0.2478,
+   "avg_mom_weight": 0.416
+  }
+ ],
+ "trials": 12,
+ "decision": "INSURANCE_ONLY",
+ "decision_detail": "Failed Stage 2: costs_x3, dsr_ge_0_90, oos_beats. Not a return enhancer, but cuts out-of-sample drawdowns by 10pp+ in both markets (US maxDD -29.3% vs -49.3%, CAGR -0.15%/yr; DEV maxDD -37.5% vs -53.2%, CAGR -0.90%/yr).",
+ "date": "2026-10-13",
+ "data": [
+  "Ken French Data Library (CRSP / Bloomberg, survivorship-free): F-F_Research_Data_Factors, 6_Portfolios_ME_Prior_12_2, Developed_3_Factors, Developed_6_Portfolios_ME_Prior_12_2 (value-weighted, USD, to 2026-08)",
+  "Yahoo adjusted closes VWRL.L and IWFM.L (GBP/GBX) 2014-11..2026-08 for the tradeable check"
+ ],
+ "benchmark": "champion momentum_tilt_v1 proxy: 50% market + 50% large-cap top-30% momentum (BIG HiPRIOR), monthly rebalance",
+ "costs": "OCF MKT 0.22%, MOM 0.30% p.a.; one-way trading MKT 0.10%, MOM 0.35% (incl. 0.15% FX), cash 0.05%; stress x3",
+ "in_sample": "US 1927-07..2000-12; Developed 1991-06..2005-12",
+ "out_of_sample": "US 2001-01..2026-08; Developed 2006-01..2026-08",
+ "robustness": [
+  "costs x3",
+  "neighbouring parameters",
+  "3 sub-period regimes",
+  "bootstrap P(>=50% drawdown in 10y)",
+  "deflated Sharpe of active return vs champion, across all configs of this run",
+  "tradeable ETF check with next-day execution (h01_tradeable.csv)"
+ ],
+ "limitations": [
+  "USD academic portfolios, not GBP; both arms share the currency so the comparison is fair, levels are not",
+  "BIG HiPRIOR is a proxy for MSCI World Momentum (different weighting and rebalance rules)",
+  "Monthly sampling; the one-day lag is tested only on the 2014-2026 ETF sample",
+  "An unpushed run on 2026-10-13 tried an unknown number of configs; they are not in the trial count"
+ ],
  "promoted": false,
- "evidence": []
+ "evidence": [
+  "research/h01_momentum_sleeve.py",
+  "research/output/h01_gate.csv",
+  "research/output/h01_all_configs.csv",
+  "research/output/h01_tradeable.csv"
+ ]
 }

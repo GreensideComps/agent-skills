@@ -6,23 +6,24 @@ ideas are appended with a priority and a pre-registration. Status values:
 `OPEN`, `IN PROGRESS`, `DONE: rejected`, `DONE: promising → shadow`, `DONE: promoted`, `BLOCKED (reason)`.
 
 **Champion:** `momentum_tilt_v1` (50% VWRPl_EQ / 50% IWMOl_EQ), live since 2026-10-13.
-**Trial counter (all hypotheses, all configs, for deflated Sharpe):** 53 as of round 1.
+**Trial counter (all hypotheses, all configs, for deflated Sharpe):** 71 (53 round 1 + 18 in E006/E007, 2026-10-13).
 
 ---
 
 ## P1: Volatility-managed momentum sleeve
-- **Status:** OPEN
+- **Status:** DONE: rejected (2026-10-13, E006)
 - **Rationale:** Momentum crashes are predictable from momentum's own recent volatility (Barroso & Santa-Clara 2015; Daniel & Moskowitz 2016). Scaling momentum exposure down when its realised volatility is high has raised the Sharpe ratio in published tests.
 - **Implementation:** each month, momentum sleeve weight = clip(target_vol / realised_vol(IWMO − VWRP, 6m), 0.25, 0.75). The rest goes to VWRP. Long-only, no leverage.
 - **Data:** Ken French US 10 momentum deciles (1927–2026) and Developed WML (1990–2026) for history; IWFM/IWMO 2014–2026 for the tradeable check.
 - **Pre-registered grid:** target_vol ∈ {6%, 8%, 10%} on relative returns; lookback ∈ {6} months. In-sample to 2000, out-of-sample 2001–2026 for US; Developed in-sample 1991–2005, out-of-sample 2006–2026.
-- **Log:** (none yet)
+- **Status update:** DONE: rejected (2026-10-13, E006, `research/h01_momentum_sleeve.py`)
+- **Log:** 2026-10-13: momentum proxy = Ken French large-cap top-30% momentum (BIG HiPRIOR). Out-of-sample vs champion: US dCAGR +0.04% (p=0.45), Developed +0.24% (p=0.19); deflated Sharpe of the active return 0.21 / 0.46. In practice the rule mostly holds 70–75% momentum, i.e. it is a bigger static tilt, not crash timing. Fails: oos_beats, DSR, costs ×3 (US), neighbours (US).
 
 ## P2: Momentum sleeve with an absolute trend filter (crash insurance)
-- **Status:** OPEN
+- **Status:** DONE: insurance only (2026-10-13, E007)
 - **Rationale:** Trend filters halved drawdowns over a century (round 1). Applying one only to the high-beta sleeve might keep most of the premium while cutting crash risk.
 - **Rule:** if world equity's 10-month SMA signal is off, the momentum sleeve moves to VWRP. A variant moves it to cash (ERNS).
-- **Log:** (none yet)
+- **Log:** 2026-10-13 (E007): in-sample pick = to-cash variant in both markets. Out-of-sample CAGR is *lower* than the champion (US -0.15%/yr, Developed -0.90%/yr), so it fails the gate. But max drawdown falls from -49% to -29% (US) and -53% to -38% (Developed), and the bootstrap chance of a ≥50% fall within 10 years drops from 18% to 3% (US). Classified INSURANCE_ONLY: a candidate only if the owner prefers smaller drawdowns over return.
 
 ## P3: Cheaper or better momentum vehicle
 - **Status:** DONE: no change now (2026-10-13). Revisit on the next full rebalance, or if capital > £1,000.

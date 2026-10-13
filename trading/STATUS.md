@@ -14,7 +14,7 @@ proof that anything runs. Assumptions and unknowns are labelled.
 
 Both routines fire into the session `session_01F4uFy8TB6eMUyemT5Ba7e8`, which has the repo attached and an output branch
 (needed for `.claude/settings.json` allow rules and for pushing). Earlier history: one fresh-session routine was blocked by
-the permission classifier, and one research test run could not push (403). Its P1/P2 results are recorded as `PENDING_RERUN` (E006/E007).
+the permission classifier, and one research test run could not push (403). Its P1/P2 results were re-run and committed on 2026-10-13 (E006/E007).
 
 **Push notifications:** unverified. Earlier test sessions called the push-notification tool 3 times (12:16–12:19 UTC);
 whether anything reached your phone is unknown. Those session logs are no longer retrievable.
@@ -58,7 +58,8 @@ exact setup are in `REPORTING.md` → "Scheduling". **Not active:** it needs you
 1. ~~Email credentials and real test~~: done 13:47 UTC (`confirmed_delivered`). Confirm the email is in your inbox, not spam.
 2. **Report scheduler** (you): GitHub Actions setup steps in `REPORTING.md`.
 3. **First routine runs:** research 00:13 UTC and ops 09:07 UTC on 2026-10-14. Unverified until the check-ins report.
-4. **E006/E007** (P1/P2) need a verifiable re-run (the research routine is instructed to do it).
+4. ~~E006/E007 re-run~~: done 2026-10-13 ~18:30 UTC with committed code (`research/h01_momentum_sleeve.py`). P1 rejected; P2 insurance only. Champion unchanged.
+8. **Fixed:** a safety test read the API spec from the gitignored `trading/cache/`, so it failed in every fresh container. Because `ops_run.sh` skips trading when any test fails, the scheduled ops run would have refused to trade. The official spec (17 paths, none that move money) is now committed at `trading/spec/t212_openapi.yaml`; 114/114 tests pass on a clean checkout.
 5. **Push notifications:** confirm whether you received any.
 6. **Adviser:** `account_type` is assumed GIA (the API can't tell), and flexible-ISA status is unknown.
 7. **Statistical power:** less than one day of live data. Nothing about strategy quality can be concluded yet.
