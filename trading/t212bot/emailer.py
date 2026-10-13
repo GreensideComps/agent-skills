@@ -30,6 +30,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 import os
 import smtplib
 import ssl
@@ -55,6 +56,10 @@ UK = ZoneInfo("Europe/London")
 EVENTS_DELIVERED = {"delivered", "opened", "clicked"}
 EVENTS_FAILED = {"bounced", "failed", "complained", "suppressed", "canceled"}
 EVENTS_PENDING = {"sent", "queued", "scheduled", "delivery_delayed"}
+
+
+ADDR_RE = re.compile(r"^[^\s<>@]+@[^\s<>@]+\.[^\s<>@]+$")
+SENDER_RE = re.compile(r"^(?:[^\s<>@]+@[^\s<>@]+\.[^\s<>@]+|[^<>@]+ <[^\s<>@]+@[^\s<>@]+\.[^\s<>@]+>)$")
 
 
 class PermanentEmailError(RuntimeError):
@@ -99,6 +104,10 @@ class EmailConfig:
                 p.append("REPORT_EMAIL_TO not set")
             if not self.sender:
                 p.append("REPORT_EMAIL_FROM not set")
+            elif not SENDER_RE.match(self.sender.strip()):
+                p.append("REPORT_EMAIL_FROM must be 'addr@domain' or 'Name <addr@domain>' (angle brackets required when a name is given)")
+            if self.to and not ADDR_RE.match(self.to.strip()):
+                p.append("REPORT_EMAIL_TO is not a single email address")
         if self.provider == "resend" and not self.resend_key:
             p.append("RESEND_API_KEY not set")
         if self.provider == "smtp" and not (self.smtp_host and self.smtp_user and self.smtp_password):

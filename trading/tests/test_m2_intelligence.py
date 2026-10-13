@@ -286,6 +286,13 @@ def _msg():
     return emailer.Email("s", "text", "<p>html</p>", "owner@example.com", "Bot <bot@example.com>")
 
 
+def test_sender_and_recipient_format_validated():
+    assert not _cfg(REPORT_EMAIL_FROM="T212 Bot <onboarding@resend.dev>").problems()
+    assert not _cfg(REPORT_EMAIL_FROM="onboarding@resend.dev").problems()
+    assert any("angle brackets" in x for x in _cfg(REPORT_EMAIL_FROM="T212 Bot onboarding@resend.dev").problems())
+    assert any("REPORT_EMAIL_TO" in x for x in _cfg(REPORT_EMAIL_TO="a@b.com, c@d.com").problems())
+
+
 def test_config_problems_and_secret_redaction():
     assert "RESEND_API_KEY not set" in _cfg(RESEND_API_KEY="").problems()
     assert "re_test" not in repr(_cfg())
