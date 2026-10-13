@@ -6,10 +6,10 @@ firing starts a fresh session in this environment, works on branch
 
 | Routine | When | What it does |
 |---|---|---|
-| **T212 demo: trading ops** | Weekdays 10:07 London. **Status: awaiting owner approval** (see below). | `trading/ops_run.sh`: tests → `run --execute` (trades only if a rebalance is due) → report → commit journal. Sends a push notification on anything noteworthy. |
+| **T212 demo: trading ops** | Weekdays 10:07 London, in dedicated session `T212 demo: trading ops (scheduled)` (repo attached, so the allow rule applies). Active since 2026-10-13; first run 2026-10-14. | `trading/ops_run.sh`: tests → `run --execute` (trades only if a rebalance is due) → report → commit journal. Sends a push notification on anything noteworthy. |
 | **T212 demo: research loop** | Daily, 01:13 and 13:13 London | Follows [`../research/LOOP.md`](../research/LOOP.md): picks the next agenda item, researches it, applies the [promotion gate](../research/PROMOTION_GATE.md), logs results, commits. |
 
-### Ops routine setup (needs the owner)
+### Ops routine setup (done 2026-10-13: routine bound to a session with the repo attached)
 
 Unattended sessions only run `bash trading/ops_run.sh` when they read the allow rule in
 [`.claude/settings.json`](../.claude/settings.json). That requires a session that starts **with
