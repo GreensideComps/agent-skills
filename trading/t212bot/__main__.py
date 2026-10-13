@@ -92,7 +92,7 @@ def main(argv=None) -> int:
                "dividends": ro.history_dividends()}
         fetched = datetime.now(timezone.utc).isoformat(timespec="seconds")
         rows = verify.verify(M, raw, verify.load_snapshots(root / "journal" / "snapshots.csv"))
-        safety = verify.adviser_safety(root / "cache" / "t212_openapi.yaml")
+        safety = verify.adviser_safety(root / "spec" / "t212_openapi.yaml")
         out = root / "reports" / "verification" / f"{date}-report-vs-account.md"
         out.parent.mkdir(parents=True, exist_ok=True)
         out.write_text(verify.render(date, M, rows, safety, fetched))

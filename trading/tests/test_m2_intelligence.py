@@ -526,7 +526,7 @@ def test_verify_report_catches_tampered_figures(deployed, journal, tmp_path):
 
 def test_adviser_and_api_cannot_move_money():
     from t212bot import verify
-    rows = verify.adviser_safety(Path(__file__).resolve().parent.parent / "cache" / "t212_openapi.yaml")
+    rows = verify.adviser_safety(Path(__file__).resolve().parent.parent / "spec" / "t212_openapi.yaml")
     assert all(r["status"] == "PASS" for r in rows), rows
 
 
