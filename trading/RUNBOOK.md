@@ -1,25 +1,22 @@
 # Runbook: continuous operation
 
-Two scheduled cloud routines keep the system running without prompts. Each
-firing starts a fresh session in this environment, works on branch
-`claude/trading212-agent-skills-r71zy3`, and commits its results back.
+Two scheduled cloud routines keep the system running without prompts. Both fire into
+one dedicated session, **`T212 demo: trading ops (scheduled, v2)`**. It was created with this repo as
+its source **and** `claude/trading212-agent-skills-r71zy3` as its output branch, which gives it two things:
+- it reads [`.claude/settings.json`](../.claude/settings.json), so the allow rule for `bash trading/ops_run.sh` applies;
+- the git proxy lets it push.
 
 | Routine | When | What it does |
 |---|---|---|
-| **T212 demo: trading ops** | Weekdays 10:07 London, in dedicated session `T212 demo: trading ops (scheduled)` (repo attached, so the allow rule applies). Active since 2026-10-13; first run 2026-10-14. | `trading/ops_run.sh`: tests → `run --execute` (trades only if a rebalance is due) → report → commit journal. Sends a push notification on anything noteworthy. |
-| **T212 demo: research loop** | Daily, 01:13 and 13:13 London | Follows [`../research/LOOP.md`](../research/LOOP.md): picks the next agenda item, researches it, applies the [promotion gate](../research/PROMOTION_GATE.md), logs results, commits. |
+| **T212 demo: trading ops** | Weekdays 10:07 London | `trading/ops_run.sh`: tests → `run --execute` (trades only if a rebalance is due) → report → commit journal |
+| **T212 demo: research loop** | Daily 01:13 and 13:13 London | Follows [`../research/LOOP.md`](../research/LOOP.md): next agenda item → rigorous test → [promotion gate](../research/PROMOTION_GATE.md) → log → commit |
 
-### Ops routine setup (done 2026-10-13: routine bound to a session with the repo attached)
+### Lessons from setup (2026-10-13)
+- A fresh routine session with no repo attached: the classifier blocks `ops_run.sh`, and `git push` gets a 403 (the repo isn't an authorised source). The first research test run lost its P1/P2 results this way.
+- A session needs **both** source and output branch set for unattended trading plus pushing.
+- Manual "fire now" and creating extra sessions may be blocked by the permission classifier. The owner can use "Run now" in claude.ai → Routines instead.
 
-Unattended sessions only run `bash trading/ops_run.sh` when they read the allow rule in
-[`.claude/settings.json`](../.claude/settings.json). That requires a session that starts **with
-this repo attached**. In the claude.ai routines UI, create a routine with:
-repo `GreensideComps/agent-skills`, branch `claude/trading212-agent-skills-r71zy3`, the same
-environment, schedule weekdays 10:07 Europe/London, and the prompt *"Run `bash trading/ops_run.sh`
-and report the result. Demo only; never weaken safety checks."* A fresh routine session without the
-repo attached gets blocked by the permission classifier (verified 2026-10-13).
-
-Until then, run it by hand from any session with the repo: `bash trading/ops_run.sh`.
+Run by hand from any session that has the repo: `bash trading/ops_run.sh`.
 
 ## Stopping things
 
