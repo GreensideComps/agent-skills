@@ -135,7 +135,7 @@ Trend filter state: world equity is 7.2% above its 10-month average (risk-on).
 - Pre-2012 data uses proxies (US mutual funds, Ken French indices, a synthetic hedged-bond series). The bond proxy is the weakest (correlation 0.78).
 - Month-end sampling understates intra-month drawdowns.
 - GEM's GBP 12-month signal was very close this month (19.9% vs 18.6%), and **VXUS only started trading on 2026-08-18**: its spreads are unknown and probably wider than assumed.
-- `IWMOl_EQ` is USD-denominated, so it carries the FX fee both ways and GBP/USD currency risk. The GBP line (IWFM) isn't offered on Trading 212.
+- `IWMOl_EQ` is the USD-quoted line, so every trade pays the 0.15% FX fee. The quote currency doesn't change the underlying currency exposure. **Correction (2026-10-13):** the GBX line of the same fund *is* on Trading 212 as `IWFM_EQ` (same ISIN IE00BP3QZ825); the first search missed it because it doesn't use the `l_EQ` suffix. Switching the existing holding doesn't pay at £100 (about £0.10–0.15 of spread vs about £0.01/yr of FX saved), but any future full rebalance should use `IWFM_EQ`. See AGENDA P3.
 - The demo account may fill more favourably than live trading would.
 
 ## 8. Blockers

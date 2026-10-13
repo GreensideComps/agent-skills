@@ -25,10 +25,10 @@ ideas are appended with a priority and a pre-registration. Status values:
 - **Log:** (none yet)
 
 ## P3: Cheaper or better momentum vehicle
-- **Status:** OPEN
+- **Status:** DONE: no change now (2026-10-13). Revisit on the next full rebalance, or if capital > £1,000.
 - **Rationale:** IWMO costs a 0.15% FX fee each way. A GBP/GBX-listed world momentum ETF on Trading 212, or one with lower costs or better tracking, is a pure implementation gain.
 - **Task:** search `instruments.json` for momentum UCITS ETFs (e.g. Xtrackers, Invesco, JPM, Amundi), then compare tracking against the MSCI World Momentum index, OCF, spread proxy and currency line.
-- **Log:** (none yet)
+- **Log:** 2026-10-13: Trading 212 lists the same iShares fund (IE00BP3QZ825) as `IWFM_EQ` (GBX, no FX fee), alongside `IWMOl_EQ` (USD) and `IS3Rd_EQ` (EUR). Xtrackers MSCI World Momentum is listed as `XDEMl_EQ` (GBX). Note: GBX/GBP tickers are not always `…l_EQ`, so search by name and currency, not suffix. A switch from IWMO to IWFM costs about £0.10–0.15 in spread (the exit FX fee is paid either way) and saves the 0.15% fee only on future rebalance trades (≈£0.01/yr at £100), so it breaks even only after more than 10 years. **Decision:** keep IWMO and use `IWFM_EQ` (Yahoo `IWFM.L`) at the next full rebalance. Open follow-up: compare XDEM vs IWFM (different index methodology? OCF and tracking).
 
 ## P4: Quality + momentum combination
 - **Status:** OPEN

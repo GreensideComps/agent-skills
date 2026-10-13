@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(bash trading/ops_run.sh)",
+      "Bash(cd trading && python3 -m t212bot status)",
+      "Bash(cd trading && python3 -m t212bot report)",
+      "Bash(cd trading && python3 -m t212bot reconcile)",
+      "Bash(cd trading && python3 -m pytest -q)"
+    ]
+  }
+}
