@@ -49,6 +49,8 @@ def main(argv=None) -> int:
     d.add_argument("--sample", action="store_true", help="render the EXAMPLE-DATA sample report (no API calls)")
     sub.add_parser("advise", help="print today's withdrawal recommendation (read-only)")
     sub.add_parser("email-check", help="validate email configuration without sending")
+    vr = sub.add_parser("verify-report", help="re-fetch raw API data and independently check a stored report")
+    vr.add_argument("--date", default=None)
     es = sub.add_parser("email-status", help="show the latest delivery and re-check it with the provider")
     es.add_argument("--kind", default="daily")
     a = ap.parse_args(argv)
@@ -71,6 +73,34 @@ def main(argv=None) -> int:
         res = daily.run(send=False)
         print(res["adviser"])
         return 0
+    if a.cmd == "verify-report":
+        from datetime import datetime, timezone
+        from pathlib import Path
+        from . import verify
+        from .readonly import ReadOnlyClient
+        root = Path(__file__).resolve().parent.parent
+        mdir = root / "reports" / "metrics"
+        date = a.date or max(p.stem for p in mdir.glob("20*.json"))
+        M = json.loads((mdir / f"{date}.json").read_text())
+        try:
+            ro = ReadOnlyClient(T212Client(load_credentials()))
+        except SafetyError as e:
+            print(f"SAFETY: {e}", file=sys.stderr)
+            return 2
+        raw = {"summary": ro.account_summary(), "positions": ro.positions(), "pending": ro.pending_orders(),
+               "orders": ro.history_orders(limit=50, max_pages=5), "transactions": ro.history_transactions(),
+               "dividends": ro.history_dividends()}
+        fetched = datetime.now(timezone.utc).isoformat(timespec="seconds")
+        rows = verify.verify(M, raw, verify.load_snapshots(root / "journal" / "snapshots.csv"))
+        safety = verify.adviser_safety(root / "cache" / "t212_openapi.yaml")
+        out = root / "reports" / "verification" / f"{date}-report-vs-account.md"
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_text(verify.render(date, M, rows, safety, fetched))
+        fails = [r for r in rows + safety if r["status"] == "FAIL"]
+        print(f"{out}\n{'ALL CHECKS PASS' if not fails else str(len(fails)) + ' DISCREPANCIES'}")
+        for r in fails:
+            print(f"FAIL {r['check']}: report {r['report']} vs {r['independent']} {r['note']}", file=sys.stderr)
+        return 0 if not fails else 2
     if a.cmd == "email-status":
         from . import emailer
         last = emailer.last_delivery(kind=a.kind)

@@ -40,6 +40,7 @@ class FakeT212:
         self.fill_px = fill_px or {"VWRPl_EQ": 146.40, "IWMOl_EQ": 116.95, "SGLNl_EQ": 61.40}
         self.ccy = {i["ticker"]: i["currencyCode"] for i in INSTRUMENTS}
         self.gbpusd = gbpusd
+        self.cost = {t: q * self.px_gbp(t) for t, q in self.pos.items()}   # ticker -> GBP cost basis (excl. FX fee)
         self.pending: list[dict] = []
         self.history: list[dict] = []
         self.posts: list[dict] = []
@@ -90,14 +91,17 @@ class FakeT212:
             v = self.value()
             return self._ok({"id": 1, "currency": "GBP", "totalValue": round(self.cash + v, 2),
                              "cash": {"availableToTrade": round(self.cash, 2), "reservedForOrders": 0, "inPies": 0},
-                             "investments": {"currentValue": round(v, 2), "totalCost": 0, "realizedProfitLoss": 0, "unrealizedProfitLoss": 0}})
+                             "investments": {"currentValue": round(v, 2), "totalCost": round(sum(self.cost.values()), 2),
+                                             "realizedProfitLoss": 0, "unrealizedProfitLoss": round(v - sum(self.cost.values()), 2)}})
         if path.endswith("/equity/positions"):
             out = []
             for t, q in self.pos.items():
                 cp = self.fill_px[t] * (100 if self.ccy[t] == "GBX" else 1)
                 out.append({"instrument": {"ticker": t, "currency": self.ccy[t]}, "quantity": q,
                             "quantityAvailableForTrading": q, "currentPrice": cp,
-                            "walletImpact": {"currency": "GBP", "currentValue": round(q * self.px_gbp(t), 2), "unrealizedProfitLoss": 0.0}})
+                            "walletImpact": {"currency": "GBP", "currentValue": round(q * self.px_gbp(t), 2),
+                                             "totalCost": round(self.cost.get(t, 0), 2),
+                                             "unrealizedProfitLoss": round(q * self.px_gbp(t) - self.cost.get(t, 0), 2)}})
             return self._ok(out)
         if path.endswith("/equity/orders"):
             return self._ok(self.pending)
@@ -134,9 +138,12 @@ class FakeT212:
         if q > 0 and gross * (1 + fee) * (1 + self.buy_reserve) > self.cash + 1e-9:
             return Response(400, {}, b'{"code":"InsufficientFreeForStocksBuy"}')
         self.cash += -gross * (1 + fee) if q > 0 else gross * (1 - fee)
+        before = self.pos.get(t, 0)
+        self.cost[t] = self.cost.get(t, 0) + gross if q > 0 else self.cost.get(t, 0) * (1 + q / before)   # cost excludes FX fee, like T212
         self.pos[t] = self.pos.get(t, 0) + q
         if abs(self.pos[t]) < 1e-12:
             del self.pos[t]
+            self.cost.pop(t, None)
         oid = self.next_id
         self.next_id += 1
         order = {"id": oid, "ticker": t, "quantity": q, "filledQuantity": q, "status": "FILLED", "type": "MARKET",

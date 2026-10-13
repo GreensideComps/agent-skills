@@ -125,7 +125,8 @@ class Perf:
 
 
 def time_weighted(snapshots: list[tuple[datetime, float]], flows: list[CashFlow]) -> Perf:
-    snaps = sorted((t, v) for t, v in snapshots if v is not None)
+    # sort by time only: a stable sort keeps journal order for equal timestamps (sorting the tuples would order ties by value)
+    snaps = sorted(((t, v) for t, v in snapshots if v is not None), key=lambda x: x[0])
     if len(snaps) < 2:
         return Perf(None, [(snaps[0][0].isoformat(), 1.0)] if snaps else [], None if not snaps else 1.0, 0.0 if snaps else None, 0.0 if snaps else None, 0)
     idx, hwm, mdd = 1.0, 1.0, 0.0

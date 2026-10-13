@@ -483,3 +483,47 @@ def test_report_with_credentials_missing_still_produced(journal, tmp_path):
                     research={"experiments": [], "agenda": [], "log": [], "registry_problems": []}, now=NOW)
     assert out["exit"] == 2 and Path(out["paths"]["md"]).exists()
     assert "missing, not zero" in Path(out["paths"]["md"]).read_text()
+
+
+# ================================================================ independent report verification
+
+def _raw(fake):
+    ro = ReadOnlyClient(T212Client(Credentials("k", "s"), transport=fake, sleep=lambda s: None))
+    return {"summary": ro.account_summary(), "positions": ro.positions(), "pending": ro.pending_orders(),
+            "orders": ro.history_orders(limit=50, max_pages=5), "transactions": ro.history_transactions(),
+            "dividends": ro.history_dividends()}
+
+
+def test_verify_report_matches_raw_account(deployed, journal, tmp_path):
+    from t212bot import verify
+    out = _run(deployed, journal, tmp_path, send=False, now=NOW + timedelta(hours=1))
+    M = json.loads(Path(out["paths"]["json"]).read_text())
+    rows = verify.verify(M, _raw(deployed), verify.load_snapshots(journal.root / "snapshots.csv"))
+    fails = [r for r in rows if r["status"] == "FAIL"]
+    assert not fails, fails
+    assert any(r["check"].startswith("Order ") for r in rows) and any("Σ fills" in r["check"] for r in rows)
+
+
+def test_verify_report_catches_tampered_figures(deployed, journal, tmp_path):
+    from t212bot import verify
+    out = _run(deployed, journal, tmp_path, send=False, now=NOW + timedelta(hours=1))
+    M = json.loads(Path(out["paths"]["json"]).read_text())
+    M["account"]["cash_available"] += 1.00
+    M["performance"]["trading_fees"] += 0.05
+    M["orders"]["verified_all"][0]["fill_price"] += 0.5
+    M["account"]["holdings"][0]["quantity"] += 0.001
+    failed = {r["check"] for r in verify.verify(M, _raw(deployed), []) if r["status"] == "FAIL"}
+    assert "Cash available" in failed and "Trading fees total" in failed
+    assert any(c.startswith("Order ") for c in failed) and any(c.endswith(": quantity") for c in failed)
+
+
+def test_adviser_and_api_cannot_move_money():
+    from t212bot import verify
+    rows = verify.adviser_safety(Path(__file__).resolve().parent.parent / "cache" / "t212_openapi.yaml")
+    assert all(r["status"] == "PASS" for r in rows), rows
+
+
+def test_twr_equal_timestamps_keep_journal_order():
+    t = NOW
+    snaps = [(t, 100.0), (t, 99.0), (t + timedelta(hours=1), 99.0)]      # ties must not be re-ordered by value
+    assert perf.time_weighted(snaps, []).twr == pytest.approx(-0.01)
