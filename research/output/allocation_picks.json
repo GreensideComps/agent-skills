@@ -1,0 +1,9 @@
+{
+ "benchmark": "60/40 WORLD/BOND",
+ "trend_abs": "TSMOM L=8 safe=BOND",
+ "trend_sma": "SMA L=10 safe=BOND",
+ "gem": "GEM L=12 safe=BOND",
+ "rotation": "ROT K=1 L=12",
+ "inverse_vol": "InvVol WORLD/BOND/GOLD L=12",
+ "vol_target": "VolTarget 15% L=6"
+}
