@@ -15,7 +15,7 @@ scheduled cloud routines (see [`RUNBOOK.md`](RUNBOOK.md)).
 | Strategy | `nasdaq3x_trend_sma100_v1`: 100% `LQQ3l_EQ` (WisdomTree Nasdaq-100 3x Daily Leveraged, GBX) while QQQ's last close is above its 100-day average; otherwise 100% cash |
 | Why | Owner asked for higher returns using leveraged funds (2026-10-13, account reset to £500). Backtest 2006–2026: 20.7%/yr vs 16.0% for the plain Nasdaq-100, max drawdown −59%. 1986–2005: −92% drawdown through the dot-com crash. See `research/experiments/E009.json`. |
 | Risk | **High.** A 3x daily fund can lose most of its value in a crash, and the trend filter reacts only after the fall has started. Expect years of −40% to −50%. |
-| Trading | Checked every weekday at 10:07 London. Switches in or out when the signal flips (about 10 times a year in the backtest) and tops up uninvested cash above 3% |
+| Trading | Checked every weekday at 08:20 London. Switches in or out when the signal flips (about 10 times a year in the backtest) and tops up uninvested cash above 3% |
 | Benchmarks (shadow) | A = 100% VWRP; D = previous 50/50 VWRP/IWMO strategy; E = LQQ3 held through everything; C = GEM-12; B-at-close = same trend rules at daily closes |
 | Previous period | £100 `momentum_tilt_v1` (50/50 VWRP/IWMO), archived in `journal/archive/2026-10-13_pre_reset_100gbp/` |
 

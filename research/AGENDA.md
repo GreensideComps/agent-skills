@@ -6,7 +6,7 @@ ideas are appended with a priority and a pre-registration. Status values:
 `OPEN`, `IN PROGRESS`, `DONE: rejected`, `DONE: promising → shadow`, `DONE: promoted`, `BLOCKED (reason)`.
 
 **Champion:** `nasdaq3x_trend_sma100_v1` (100% `LQQ3l_EQ` 3x Nasdaq-100 while QQQ > its 100-day SMA, else cash), from the 2026-10-13 reset to £500. Owner-directed override of the promotion gate (E009). Previous champion `momentum_tilt_v1` (50/50 VWRP/IWMO) is now shadow D.
-**Trial counter (all hypotheses, all configs, for deflated Sharpe):** 92 (53 round 1 + 18 in E006/E007 + 4 in E008 + 3 in E009 + 2 in E010 + 12 in E011, 2026-10-13).
+**Trial counter (all hypotheses, all configs, for deflated Sharpe):** 106 (53 round 1 + 18 in E006/E007 + 4 in E008 + 3 in E009 + 2 in E010 + 12 in E011 + 14 in E012, 2026-10-13).
 
 ---
 
