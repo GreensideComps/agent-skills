@@ -11,6 +11,7 @@ must be conservative, reproducible and honest.
 4. Read `research/REPORT.md` (round 1 findings), `research/PROMOTION_GATE.md`, `research/AGENDA.md`, the tail of `research/LOG.md`, and `trading/PERFORMANCE.md`.
 
 ## 1. Pick work
+- **Note (2026-10-13):** P1 and P2 (E006/E007) were re-run with committed code (`h01_momentum_sleeve.py`, commit 795a686): E006 rejected, E007 insurance only. If the routine prompt asks you to re-run them, that instruction predates this and is out of date. Skip them and take the next `OPEN` item.
 - If the run number (count of entries in LOG.md, plus 1) is divisible by 5, do agenda item P8 (generate new hypotheses) first.
 - Otherwise take the highest-priority `OPEN` item. Mark it `IN PROGRESS` with today's date.
 - A `BLOCKED` item gets one cheap unblock attempt per week at most.
