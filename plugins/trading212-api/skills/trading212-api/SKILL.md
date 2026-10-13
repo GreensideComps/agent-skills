@@ -473,9 +473,15 @@ Returns 200 OK if cancellation request accepted. Order may already be filled.
 
 | Error                          | Cause                   | Solution                            |
 | ------------------------------ | ----------------------- | ----------------------------------- |
-| `InsufficientFreeForStocksBuy` | Not enough cash         | Check `cash.availableToTrade`       |
+| `InsufficientFreeForStocksBuy` | Not enough cash         | Check `cash.availableToTrade`; leave headroom (see below) |
 | `SellingEquityNotOwned`        | Selling more than owned | Check `quantityAvailableForTrading` |
 | `MarketClosed`                 | Outside trading hours   | Check exchange schedule             |
+
+**Market buys need cash headroom.** Trading 212 holds extra cash on market BUY orders beyond `quantity × price`. On the demo account (Oct 2026), with £50.70 available, buys worth £49.17 and £48.67 were rejected with `insufficient-free-for-stocks-buy`, and a £46.71 buy was accepted. So size the last buy of a batch to roughly 92–95% of `cash.availableToTrade`. A rejected order is not created, so it's safe to retry with a smaller quantity.
+
+**Instruments in another currency.** A GBP account can buy USD-priced instruments (e.g. `IWMOl_EQ`) with a market order. The conversion is automatic and shows up as a `CURRENCY_CONVERSION_FEE` entry in `fill.walletImpact.taxes` (0.15%).
+
+**Market orders are not idempotent.** Never resend a market order after a timeout or 5xx. Check `GET /api/v0/equity/orders` and `/history/orders` first. A 429 response means the request was rejected before processing, so it's safe to retry after `x-ratelimit-reset`.
 
 ---
 
@@ -727,9 +733,9 @@ while [ -n "$NEXT_PATH" ]; do
   # Get next page path (null if no more pages)
   NEXT_PATH=$(echo "$RESPONSE" | jq -r '.nextPagePath // empty')
 
-  # Wait 1 second between requests (50 req/min limit)
+  # Wait 3 seconds between requests (20 req/min limit)
   if [ -n "$NEXT_PATH" ]; then
-    sleep 1
+    sleep 3
   fi
 done
 
@@ -738,7 +744,7 @@ echo "Done fetching all orders"
 
 ### Historical Orders
 
-`GET /api/v0/equity/history/orders` (50 req/min)
+`GET /api/v0/equity/history/orders` (20 req/min)
 
 ```bash
 curl -H "Authorization: $T212_AUTH_HEADER" \
@@ -828,7 +834,7 @@ curl -H "Authorization: $T212_AUTH_HEADER" \
 
 ### Historical Dividends
 
-`GET /api/v0/equity/history/dividends` (50 req/min)
+`GET /api/v0/equity/history/dividends` (20 req/min)
 
 ```bash
 curl -H "Authorization: $T212_AUTH_HEADER" \
@@ -886,7 +892,7 @@ _Note: Many additional US tax-specific types exist for 1042-S reporting._
 
 ### Account Transactions
 
-`GET /api/v0/equity/history/transactions` (50 req/min)
+`GET /api/v0/equity/history/transactions` (20 req/min)
 
 **Pagination:**
 
