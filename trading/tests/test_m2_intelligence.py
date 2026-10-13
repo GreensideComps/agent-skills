@@ -261,10 +261,15 @@ def test_registry_records_are_valid_and_validator_catches_problems():
 # ================================================================ email
 
 class FakeHTTP:
-    def __init__(self, statuses):
-        self.statuses, self.calls = list(statuses), []
+    """Fake Resend: POST /emails returns `statuses` in turn; GET /emails/{id} returns `events` in turn (default 'delivered')."""
+    def __init__(self, statuses, events=None):
+        self.statuses, self.events, self.calls, self.gets = list(statuses), list(events or []), [], []
 
     def __call__(self, url, headers, body):
+        if body is None:
+            self.gets.append(url)
+            ev = self.events.pop(0) if self.events else "delivered"
+            return (200, json.dumps({"id": url.rsplit("/", 1)[-1], "last_event": ev})) if ev != 404 else (404, '{"message":"nf"}')
         self.calls.append((url, headers, json.loads(body)))
         st = self.statuses.pop(0)
         return st, json.dumps({"id": f"msg-{len(self.calls)}"}) if st < 300 else '{"message":"err"}'
@@ -292,6 +297,45 @@ def test_send_success_records_ledger_and_idempotency(tmp_path):
     assert r.status == "sent" and r.provider_id == "msg-1"
     assert http.calls[0][1]["Idempotency-Key"] == emailer.idempotency_key("2026-10-13", "daily", "owner@example.com")
     assert emailer.last_delivery(tmp_path)["status"] == "sent"
+
+
+def test_sent_is_only_accepted_until_provider_confirms(tmp_path):
+    http = FakeHTTP([200], events=["queued", "sent", "delivered"])
+    cfg = _cfg()
+    r = emailer.deliver(_msg(), cfg, "2026-10-13", root=tmp_path, http=http, sleep=lambda s: None)
+    assert r.status == "sent"                                                  # accepted, not yet proven delivered
+    c = emailer.confirm_delivery(r, cfg, "2026-10-13", root=tmp_path, http=http, sleep=lambda s: None)
+    assert c["status"] == "confirmed_delivered" and c["provider_event"] == "delivered"
+    assert len(http.gets) == 3 and http.gets[0].endswith("/emails/msg-1")
+    assert emailer.last_delivery(tmp_path)["status"] == "confirmed_delivered"
+
+
+@pytest.mark.parametrize("event", ["bounced", "failed", "suppressed", "complained"])
+def test_provider_failure_is_never_recorded_as_delivered(tmp_path, event):
+    http = FakeHTTP([200], events=[event])
+    cfg = _cfg()
+    r = emailer.deliver(_msg(), cfg, "2026-10-13", root=tmp_path, http=http, sleep=lambda s: None)
+    c = emailer.confirm_delivery(r, cfg, "2026-10-13", root=tmp_path, http=http, sleep=lambda s: None)
+    assert c["status"] == "confirmed_failed"
+    assert not any(x["status"] == "confirmed_delivered" for x in emailer.ledger_records(tmp_path))
+    assert emailer.last_delivery(tmp_path)["status"] == "confirmed_failed"
+
+
+def test_still_pending_after_polls_is_unconfirmed(tmp_path):
+    http = FakeHTTP([200], events=["delivery_delayed"] * 3)
+    cfg = _cfg()
+    r = emailer.deliver(_msg(), cfg, "2026-10-13", root=tmp_path, http=http, sleep=lambda s: None)
+    c = emailer.confirm_delivery(r, cfg, "2026-10-13", root=tmp_path, http=http, polls=3, sleep=lambda s: None)
+    assert c["status"] == "unconfirmed" and len(http.gets) == 3
+
+
+def test_confirmation_not_applicable_when_not_sent(tmp_path):
+    http = FakeHTTP([401])
+    cfg = _cfg()
+    r = emailer.deliver(_msg(), cfg, "2026-10-13", root=tmp_path, http=http, sleep=lambda s: None)
+    assert r.status == "failed"
+    assert emailer.confirm_delivery(r, cfg, "2026-10-13", root=tmp_path, http=http)["status"] == "not_applicable"
+    assert http.gets == []
 
 
 def test_transient_errors_retry_then_succeed(tmp_path):
@@ -397,7 +441,17 @@ def test_end_to_end_report_send_and_no_trading(deployed, journal, tmp_path):
     M = json.loads(Path(out["paths"]["json"]).read_text())
     assert M["reconciliation_ok"] is True, M["reconciliation"]
     assert M["delivery"]["status"] == "sent"
+    assert M["delivery_confirmation"]["status"] == "confirmed_delivered"
     assert "Daily report" in http.calls[0][2]["subject"]
+
+
+def test_end_to_end_bounce_exits_3_and_next_report_says_not_delivered(deployed, journal, tmp_path):
+    env = dict(REPORT_EMAIL_PROVIDER="resend", REPORT_EMAIL_TO="o@example.com", REPORT_EMAIL_FROM="b@example.com", RESEND_API_KEY="k")
+    out = _run(deployed, journal, tmp_path, send=True, env=env, http=FakeHTTP([200], events=["bounced"]), now=NOW + timedelta(hours=1))
+    assert out["delivery"]["status"] == "sent" and out["delivery_confirmation"]["status"] == "confirmed_failed"
+    assert out["exit"] == 3
+    out2 = _run(deployed, journal, tmp_path, send=False, now=NOW + timedelta(days=1))
+    assert any("NOT delivered" in a["msg"] for a in out2["alerts"])
 
 
 def test_end_to_end_email_failure_exit_code_and_next_report(deployed, journal, tmp_path):

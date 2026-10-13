@@ -51,6 +51,12 @@ LOCK_STALE_MIN = 30
 UK = ZoneInfo("Europe/London")
 
 
+# Resend last_event values (https://resend.com/docs/dashboard/emails/manage-emails)
+EVENTS_DELIVERED = {"delivered", "opened", "clicked"}
+EVENTS_FAILED = {"bounced", "failed", "complained", "suppressed", "canceled"}
+EVENTS_PENDING = {"sent", "queued", "scheduled", "delivery_delayed"}
+
+
 class PermanentEmailError(RuntimeError):
     pass
 
@@ -216,9 +222,59 @@ def already_sent(key: str, root: Path = REPORTS) -> dict | None:
     return None
 
 
+FINAL_STATUSES = ("sent", "failed", "outbox", "config_error", "confirmed_delivered", "confirmed_failed", "unconfirmed")
+
+
 def last_delivery(root: Path = REPORTS, kind: str = "daily") -> dict | None:
-    recs = [r for r in ledger_records(root) if r.get("kind") == kind and r.get("status") in ("sent", "failed", "outbox")]
+    """Latest delivery outcome for `kind`, with provider confirmation folded in when available."""
+    recs = [r for r in ledger_records(root) if r.get("kind") == kind and r.get("status") in FINAL_STATUSES]
     return recs[-1] if recs else None
+
+
+# ---------------------------------------------------------------- provider-side confirmation
+
+def resend_status(email_id: str, cfg: EmailConfig, http=None) -> tuple[int, str | None, str]:
+    """GET /emails/{id}. `http(url, headers, body)` is the same injectable transport as sending; body=None means GET."""
+    url = f"https://api.resend.com/emails/{email_id}"
+    headers = {"Authorization": f"Bearer {cfg.resend_key}", "User-Agent": "t212bot-report/1.0"}
+    if http is not None:
+        status, text = http(url, headers, None)
+    else:
+        req = urllib.request.Request(url, headers=headers, method="GET")
+        try:
+            with urllib.request.urlopen(req, timeout=30) as r:
+                status, text = r.status, r.read().decode()
+        except urllib.error.HTTPError as e:
+            status, text = e.code, (e.read() or b"").decode("utf-8", "replace")
+        except Exception as e:
+            return 0, None, f"network: {type(e).__name__}"
+    try:
+        return status, json.loads(text).get("last_event"), text[:300]
+    except Exception:
+        return status, None, text[:300]
+
+
+def confirm_delivery(result: "DeliveryResult", cfg: EmailConfig, report_date: str, kind: str = "daily",
+                     root: Path = REPORTS, polls: int = 6, interval: float = 10.0, sleep=time.sleep, http=None,
+                     now=lambda: datetime.now(timezone.utc)) -> dict:
+    """Poll the provider until the email is delivered or definitively failed. 'sent' only means accepted."""
+    rec = {"report_date": report_date, "kind": kind, "provider": cfg.provider, "key": result.key, "provider_id": result.provider_id}
+    if cfg.provider != "resend" or result.status != "sent" or not result.provider_id:
+        return {**rec, "status": "not_applicable"}
+    event, detail = None, ""
+    for i in range(polls):
+        code, event, detail = resend_status(result.provider_id, cfg, http)
+        if event in EVENTS_DELIVERED or event in EVENTS_FAILED:
+            break
+        if i < polls - 1:
+            sleep(interval)
+    status = ("confirmed_delivered" if event in EVENTS_DELIVERED else
+              "confirmed_failed" if event in EVENTS_FAILED else "unconfirmed")
+    out = {**rec, "ts_utc": now().isoformat(timespec="seconds"), "status": status, "provider_event": event,
+           "detail": f"provider last_event={event!r}" + ("" if status != "unconfirmed" else f" after {polls} checks; {detail[:120]}"),
+           "attempts": 0}
+    ledger_append(out, root)
+    return out
 
 
 class LockBusy(RuntimeError):
@@ -265,7 +321,7 @@ def due(now_utc: datetime, report_time: str, tz: str = "Europe/London") -> tuple
 
 @dataclass
 class DeliveryResult:
-    status: str          # sent | failed | skipped_duplicate | outbox | config_error
+    status: str          # sent (accepted only) | failed | skipped_duplicate | outbox | config_error
     provider: str
     detail: str
     attempts: int

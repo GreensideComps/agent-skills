@@ -336,11 +336,13 @@ def compute(acct: dict[str, Src], journal_snaps: list[dict], journal_events: lis
     else:
         health.append({"check": "Market data freshness", "status": "WARN", "detail": market.get("market_error", "no market data")})
     if delivery:
-        st = {"sent": "PASS", "failed": "FAIL"}.get(delivery.get("status"), "WARN")
+        st = {"confirmed_delivered": "PASS", "failed": "FAIL", "confirmed_failed": "FAIL"}.get(delivery.get("status"), "WARN")
         health.append({"check": "Previous email delivery", "status": st,
                        "detail": f"{delivery.get('report_date')}: {delivery.get('status')} via {delivery.get('provider')} {delivery.get('detail', '')}".strip()})
         if st == "FAIL":
             alerts.append({"level": "CRITICAL", "msg": f"The previous report email was NOT delivered ({delivery.get('detail', '')})."})
+        elif delivery.get("status") in ("sent", "unconfirmed"):
+            health[-1]["detail"] += " - accepted by the provider but delivery to the inbox is not confirmed"
     else:
         health.append({"check": "Previous email delivery", "status": "WARN", "detail": "no delivery recorded yet"})
     if kill:

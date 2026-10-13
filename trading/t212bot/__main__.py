@@ -49,6 +49,8 @@ def main(argv=None) -> int:
     d.add_argument("--sample", action="store_true", help="render the EXAMPLE-DATA sample report (no API calls)")
     sub.add_parser("advise", help="print today's withdrawal recommendation (read-only)")
     sub.add_parser("email-check", help="validate email configuration without sending")
+    es = sub.add_parser("email-status", help="show the latest delivery and re-check it with the provider")
+    es.add_argument("--kind", default="daily")
     a = ap.parse_args(argv)
 
     if a.cmd == "daily-report" and a.sample:
@@ -69,6 +71,18 @@ def main(argv=None) -> int:
         res = daily.run(send=False)
         print(res["adviser"])
         return 0
+    if a.cmd == "email-status":
+        from . import emailer
+        last = emailer.last_delivery(kind=a.kind)
+        if not last:
+            print("no delivery recorded")
+            return 3
+        cfg = emailer.load_config()
+        if last["status"] in ("sent", "unconfirmed") and last.get("provider_id") and cfg.provider == "resend" and not cfg.problems():
+            res = emailer.DeliveryResult("sent", "resend", "", 0, last["key"], last["provider_id"])
+            last = emailer.confirm_delivery(res, cfg, last["report_date"], a.kind, polls=1)
+        print(json.dumps({k: last.get(k) for k in ("report_date", "status", "provider", "provider_id", "provider_event", "ts_utc", "detail")}, indent=1))
+        return 0 if last["status"] == "confirmed_delivered" else 3
     if a.cmd == "email-check":
         from . import emailer
         cfg = emailer.load_config()

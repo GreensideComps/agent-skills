@@ -99,6 +99,14 @@ def run(send: bool = False, force: bool = False, respect_schedule: bool = False,
             kw["sleep"] = sleep
         res = emailer.deliver(build_email(M, md, html, ecfg, rcfg), ecfg, rdate, "daily", **kw)
         out["delivery"] = res.__dict__
+        if res.status == "sent":
+            ckw = {"root": reports_root, "http": http}
+            if sleep:
+                ckw["sleep"] = sleep
+            conf = emailer.confirm_delivery(res, ecfg, rdate, "daily", **ckw)
+            out["delivery_confirmation"] = conf
+            if conf["status"] == "confirmed_failed":
+                out["exit"] = 3
         if M["adviser"].get("notify"):
             r2 = emailer.deliver(build_email(M, md, html, ecfg, rcfg, kind="adviser"), ecfg,
                                  f"{rdate}:{M['adviser']['reason_code']}:{M['adviser']['amount_gbp']}", "adviser", **kw)
@@ -110,6 +118,7 @@ def run(send: bool = False, force: bool = False, respect_schedule: bool = False,
                 rec = SimpleNamespace(amount_gbp=M["adviser"]["amount_gbp"], reason_code=M["adviser"]["reason_code"])
                 intel.save_state(adv.update_state(new_state, rec, si["gain"], si["drawdown"], si["net"], True, local_date), reports_root)
         M["delivery"] = out["delivery"]
+        M["delivery_confirmation"] = out.get("delivery_confirmation")
         paths["json"].write_text(json.dumps(M, indent=1, default=str))   # record the outcome with the report
         if res.status not in ("sent", "skipped_duplicate"):
             out["exit"] = 3
