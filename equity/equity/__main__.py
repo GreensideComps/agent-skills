@@ -471,6 +471,37 @@ def cmd_backtest(store: Store, a) -> int:
     return 0
 
 
+def cmd_research_data(store: Store, a) -> int:
+    """Build the Stage 1 research dataset (STRATEGY_V2) from SEC bulk files: fact panel, company table,
+    monthly point-in-time metrics and monthly prices, into --out (default the shared project folder)."""
+    import os  # noqa: PLC0415
+    import subprocess  # noqa: PLC0415
+
+    from . import monthly, panel  # noqa: PLC0415
+    out = Path(a.out)
+    out.mkdir(parents=True, exist_ok=True)
+    work = Path(a.work)
+    work.mkdir(parents=True, exist_ok=True)
+    ua = os.environ.get("SEC_USER_AGENT")
+    if not ua:
+        print("SEC_USER_AGENT is not set (SEC requires a contact in the User-Agent)", file=sys.stderr)
+        return 2
+    for name, url in (("companyfacts.zip", "https://www.sec.gov/Archives/edgar/daily-index/xbrl/companyfacts.zip"),
+                      ("submissions.zip", "https://www.sec.gov/Archives/edgar/daily-index/bulkdata/submissions.zip")):
+        if not (work / name).exists() or a.refresh:
+            subprocess.run(["curl", "-sS", "--fail", "-A", ua, "-o", str(work / name), url], check=True)
+    steps = a.step or ["facts", "companies", "monthly", "prices"]
+    if "facts" in steps:
+        print(panel.build(work / "companyfacts.zip", out / "sec_facts_panel.csv.gz"))
+    if "companies" in steps:
+        print(panel.build_companies(work / "submissions.zip", out / "sec_companies.csv.gz"))
+    if "monthly" in steps:
+        print(monthly.build(out / "sec_facts_panel.csv.gz", out / "monthly_metrics.csv.gz"))
+    if "prices" in steps:
+        print(monthly.fetch_prices(out / "sec_companies.csv.gz", out / "prices_monthly.csv.gz"))
+    return 0
+
+
 def cmd_portfolio(store: Store, a) -> int:
     """Read-only portfolio monitor: snapshot, research join, exposure, concentration, co-movement."""
     from . import portfolio  # noqa: PLC0415
@@ -554,13 +585,19 @@ def main(argv=None) -> int:
     s.add_argument("--method", help="only snapshots of this method version, e.g. fund-2.0")
     s.add_argument("--json", help="also write the survey to this file")
     s = sub.add_parser("crosscheck"); s.add_argument("--symbol", action="append", required=True)  # noqa: E702
+    s = sub.add_parser("research-data", help="build the Stage 1 research dataset from SEC bulk files (large)")
+    s.add_argument("--out", default="/mnt/project-files/research-data")
+    s.add_argument("--work", default="/tmp/equity-bulk", help="where the SEC zip files are downloaded (~3 GB)")
+    s.add_argument("--step", action="append", choices=["facts", "companies", "monthly", "prices"])
+    s.add_argument("--refresh", action="store_true", help="download the SEC zip files again")
     a = p.parse_args(argv)
     store = Store(Path(a.data)) if a.data else Store()
     handler = {"sync-universe": cmd_sync_universe, "ingest": cmd_ingest, "show": cmd_show,
                "discover": cmd_discover, "status": cmd_status, "search": cmd_search, "health": cmd_health,
                "coverage": cmd_coverage, "prices": cmd_prices, "screen": cmd_screen, "explain": cmd_explain,
                "valuate": cmd_valuate, "paper": cmd_paper, "thesis": cmd_thesis, "bearcase": cmd_bearcase, "alerts": cmd_alerts,
-               "crosscheck": cmd_crosscheck, "reliability": cmd_reliability, "backtest": cmd_backtest, "portfolio": cmd_portfolio}
+               "crosscheck": cmd_crosscheck, "reliability": cmd_reliability, "backtest": cmd_backtest, "portfolio": cmd_portfolio,
+               "research-data": cmd_research_data}
     return handler[a.cmd](store, a)
 
 
