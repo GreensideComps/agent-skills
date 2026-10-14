@@ -10,7 +10,7 @@ import json
 import os
 import sqlite3
 import sys
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 
 from . import index, pipeline, research
@@ -53,6 +53,23 @@ def _targets(store: Store, a) -> list[dict]:
                 seen.add(s["company_id"])
                 out.append(s)
         out.sort(key=lambda s: s["symbol"])
+        if a.new_only:  # universe growth: companies with no snapshot yet, in a stable order
+            have = {f["company_id"] for f in store.fundamentals.read()}
+            out = [s for s in out if s["company_id"] not in have]
+        if a.refresh:  # rolling re-check: companies whose last ok ingest is oldest (and over 7 days)
+            last = {}
+            for e in store.jobs.read():
+                if e["event"] == "start" and e["job"] == "ingest_fundamentals":
+                    last.setdefault("_starts", {})[e["run_id"]] = e["inputs"]["company_id"]
+            starts = last.pop("_starts", {})
+            for e in store.jobs.read():
+                if e["event"] == "finish" and e["status"] == "ok" and e["run_id"] in starts:
+                    cid = starts[e["run_id"]]
+                    last[cid] = max(last.get(cid, ""), e["ts_utc"])
+            cutoff = (date.today() - timedelta(days=7)).isoformat()
+            have = {f["company_id"] for f in store.fundamentals.read()}
+            out = sorted((s for s in out if s["company_id"] in have and last.get(s["company_id"], "") < cutoff),
+                         key=lambda s: last.get(s["company_id"], ""))[: a.refresh]
         if a.random:
             import random  # noqa: PLC0415
             out = random.Random(a.seed).sample(out, min(a.random, len(out)))
@@ -413,6 +430,19 @@ def cmd_health(store: Store, a) -> int:
     return 2 if h["stuck"] or h["last_failed"] else 0
 
 
+def cmd_reliability(store: Store, a) -> int:
+    """Missed runs, stuck jobs, stale data. Writes reports/health/<date>.md; exit 0 ok / 1 warn / 2 critical."""
+    from . import reliability  # noqa: PLC0415
+    res = reliability.run(store)
+    md = reliability.report(res)
+    out = Path(__file__).resolve().parent.parent / "reports" / "health" / f"{res['as_of'][:10]}.md"
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(md)
+    print(md)
+    print("->", out)
+    return res["exit_code"]
+
+
 def main(argv=None) -> int:
     p = argparse.ArgumentParser(prog="equity")
     p.add_argument("--data", default=None, help="ledger directory (default equity/data)")
@@ -423,6 +453,9 @@ def main(argv=None) -> int:
     s.add_argument("--limit", type=int, default=0); s.add_argument("--force", action="store_true")  # noqa: E702
     s.add_argument("--random", type=int, default=0, help="with --all-sec: a random sample of N companies")
     s.add_argument("--seed", type=int, default=0)
+    s.add_argument("--new-only", action="store_true", help="with --all-sec: only companies with no snapshot yet")
+    s.add_argument("--refresh", type=int, default=0,
+                   help="with --all-sec: re-check the N companies whose last ingest is oldest (over 7 days)")
     s = sub.add_parser("show"); s.add_argument("symbol"); s.add_argument("--provenance", action="store_true")  # noqa: E702
     for name in ("discover", "status"):
         s = sub.add_parser(name)
@@ -440,6 +473,7 @@ def main(argv=None) -> int:
     s.add_argument("--supported-only", action="store_true", help="exclude industries the method does not support")
     s.add_argument("--limit", type=int, default=50)
     sub.add_parser("health")
+    sub.add_parser("reliability", help="missed scheduled runs, stuck jobs, stale data (exit 0/1/2)")
     s = sub.add_parser("prices"); s.add_argument("--symbol", action="append")  # noqa: E702
     s = sub.add_parser("screen"); s.add_argument("--top", type=int, default=25)  # noqa: E702
     s = sub.add_parser("explain"); s.add_argument("symbol")  # noqa: E702
@@ -464,7 +498,7 @@ def main(argv=None) -> int:
                "discover": cmd_discover, "status": cmd_status, "search": cmd_search, "health": cmd_health,
                "coverage": cmd_coverage, "prices": cmd_prices, "screen": cmd_screen, "explain": cmd_explain,
                "valuate": cmd_valuate, "paper": cmd_paper, "thesis": cmd_thesis, "bearcase": cmd_bearcase, "alerts": cmd_alerts,
-               "crosscheck": cmd_crosscheck}
+               "crosscheck": cmd_crosscheck, "reliability": cmd_reliability}
     return handler[a.cmd](store, a)
 
 

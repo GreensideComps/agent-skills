@@ -227,5 +227,17 @@ for predictive value. That test is M5 (paper portfolio, recommendations logged b
 | Mandate | `equity/config/paper_portfolio.json`: 10,000 USD notional; top 10 ranked companies with total >= 60; equal weight; monthly rebalance; 25 bps per trade; SPY benchmark, same cash, same costs |
 | First decision, 2026-10-14 | 9 holdings (only 9 ranked companies scored >= 60): Adobe, NVIDIA, Ralph Lauren, Alphabet, MSCI, Microsoft, Apple, Costco, Gates Industrial. Both books start at -0.25% (entry costs). Report: `equity/reports/paper/2026-10-14.md` |
 | Integrity | Recommendations logged before outcomes, append-only; fills at the logged price only; all prices validated before any write |
-| Not yet | Running it on a schedule (daily mark, monthly rebalance) is part of M7; dividends are excluded from both books; statistical power will be low for years |
+| Not yet | Scheduled daily from M7 (§14); dividends are excluded from both books; statistical power will be low for years |
 | Tests | `equity/tests`: 88 passed (5 new); `trading/tests`: 139 passed |
+
+## 14. Milestone 7: reliability and scheduling (2026-10-14)
+
+| Item | Result |
+|---|---|
+| Reliability check | `python3 -m equity reliability`: expected runs from each routine's cron, read in its own timezone (DST-safe), checked against evidence (commits on the bot branch, or ok jobs in `jobs.jsonl`); stuck and failed jobs; freshness of prices, screen, paper marks and fundamentals; ledger size against GitHub's 100 MB file limit. Exit 0/1/2; report in `equity/reports/health/` |
+| First real finding | The demo bot's hourly monitor left no commit for its 09:57, 10:57 and 11:57 UTC runs on 2026-10-14 (3 of 6 since it started). The three bot routines share one persistent session, so a run that fires while another is still working can be lost. Splitting them into one session each (planned in §7) is a change to the bot's routines, so it waits for the owner |
+| Daily pipeline | `equity/daily_run.sh`: tests, 200 new companies a day (the full 5,472 SEC-linked universe in about 27 weekdays), a rolling re-check of the 300 oldest snapshots, prices, screen with valuation and alerts, paper portfolio, reliability check, then commit and push to `master` |
+| Scheduler | A Claude routine ("Equity: daily research pipeline", weekdays 22:27 London), not GitHub Actions, so no repository secrets are needed. §8 decision 3 is therefore no longer blocking |
+| Known limit | `fundamentals.jsonl` will reach about 70 MB at full coverage (13 KB per snapshot). The size check warns at 60 MB; sharding the ledger is the follow-up |
+| Tests | `equity/tests`: 97 passed (9 new); `trading/tests`: 139 passed |
+
