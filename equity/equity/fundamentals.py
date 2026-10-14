@@ -22,7 +22,7 @@ from datetime import date
 
 from .industry import NOT_MEANINGFUL, NOT_REQUIRED
 
-METHOD_VERSION = "fund-2.1"
+METHOD_VERSION = "fund-2.2"
 ANNUAL_FORMS = {"10-K", "10-K/A", "10-KT", "10-KT/A", "20-F", "20-F/A", "40-F", "40-F/A"}
 HISTORY_YEARS = 10
 
@@ -140,6 +140,8 @@ METHODS = {
     "cagr": "(end / start) ** (1 / years) - 1, only when both ends are positive",
     "sbc_pct_revenue": "sbc / revenue",
     "share_change_cagr": "CAGR of diluted share count (negative = net buybacks)",
+    "shares_outstanding": "cover-page dei:EntityCommonStockSharesOutstanding from the latest filing (summed over "
+                          "classes), else the latest fiscal year's weighted diluted shares (proxy)",
     "taxonomy": "us-gaap or ifrs-full, whichever has the most recent annual revenue/OCF/net income; ties go "
                 "to us-gaap. IFRS: net income = profit attributable to owners of the parent; debt = borrowings.",
     "reporting_currency": "the currency of the latest annual revenue/OCF/net income (ties: the one most annual "
@@ -526,6 +528,30 @@ def confidence(flags: list[str]) -> str:
     return "medium" if soft else "high"
 
 
+def shares_outstanding(facts: dict, years: dict[str, dict]) -> dict | None:
+    """Latest shares outstanding, for market capitalisation.
+
+    Preferred: the cover-page count (dei:EntityCommonStockSharesOutstanding) from the most
+    recent filing of any form, summed over share classes reported in that filing. It is
+    dated weeks before the filing and is already on the current split basis. Fallback
+    (e.g. Alphabet, which does not tag it): the latest fiscal year's weighted diluted
+    shares, labelled as a proxy."""
+    entries = facts.get("facts", {}).get("dei", {}).get("EntityCommonStockSharesOutstanding", {}) \
+        .get("units", {}).get("shares", [])
+    if entries:
+        latest = max(entries, key=lambda e: (e["filed"], e["end"]))
+        same = [e for e in entries if e["accn"] == latest["accn"] and e["end"] == latest["end"]]
+        return {"v": float(sum(e["val"] for e in same)), "as_of": latest["end"], "a": latest["accn"],
+                "f": latest["filed"], "form": latest["form"], "classes": len(same),
+                "c": "dei:EntityCommonStockSharesOutstanding"}
+    if years:
+        last = years[max(years)].get("shares_diluted")
+        if last:
+            return {"v": last["v"], "as_of": max(years), "a": last["a"], "f": last["f"], "form": last["form"],
+                    "c": "proxy:weighted_diluted_shares_latest_fy", "calculated": True}
+    return None
+
+
 def analyse(facts: dict, today: date | None = None, template: str = "industrial") -> dict:
     """`template` comes from industry.classify(SIC). Metrics a template marks as not
     meaningful are removed from the summary (and flagged) so no screen can rank on them;
@@ -543,4 +569,5 @@ def analyse(facts: dict, today: date | None = None, template: str = "industrial"
     flags = sorted(set(flags + more))
     return {"entity_name": facts.get("entityName"), "years": years, "derived": derived,
             "summary": summary, "flags": flags, "confidence": confidence(flags),
+            "shares_outstanding": shares_outstanding(facts, years),
             "method_version": METHOD_VERSION, "industry_template": template, **meta}

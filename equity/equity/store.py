@@ -94,3 +94,5 @@ class Store:
         self.scans = Ledger(self.root / "scans.jsonl")                # universe coverage per scan
         self.jobs = Ledger(self.root / "jobs.jsonl")                  # job runs (start/finish events)
         self.methods = Ledger(self.root / "methods.jsonl")            # metric formulas per method version
+        self.prices = Ledger(self.root / "prices.jsonl")              # daily closes used for valuation
+        self.screens = Ledger(self.root / "screens.jsonl")            # screener runs (scores, gates, ranks)

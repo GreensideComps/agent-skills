@@ -136,7 +136,7 @@ confidence. Agents propose; only rule-checked code paths change statuses, and me
 |---|---|---|---|---|
 | **M1 (done here)** | Security master (ISIN-keyed, SEC-linked), evidence-backed annual fundamentals with split handling, pipeline state machine, job ledger, search index, cross-check | — | Tag coverage gaps (measured below) | Foundation for everything |
 | **M2 (built 2026-10-14, see below)** | Coverage and correctness: IFRS (`ifrs-full`) filers; a concept-coverage survey across all ~5,500 SEC companies; SIC-based industry classification with bank, insurer, REIT and SPAC templates (or exclusions); slimmer snapshots so a full-universe pass fits in git (~32 KB/company today) | M1 | XBRL inconsistency across filers | Usable data for most of the US universe |
-| **M3** | **Master Stock Screener v1**: separate quality, growth, valuation, risk and data-confidence scores; your 30/25/20/20/5 baseline weights; mandatory gates with explained pass/fail; needs prices for valuation | M2, price source | Encoding "business quality" quantitatively; overfitting the weights | The core of your process |
+| **M3 (built 2026-10-14, §11)** | **Master Stock Screener v1**: separate quality, growth, valuation, risk and data-confidence scores; your 30/25/20/20/5 baseline weights; mandatory gates with explained pass/fail; needs prices for valuation | M2, price source | Encoding "business quality" quantitatively; overfitting the weights | The core of your process |
 | **M4** | Valuation: multiples, FCF yield, reverse DCF and DCF scenarios with stored assumptions; bear-case and thesis records; alerts with de-duplication | M3 | False precision in DCFs | Explainable candidates |
 | **M5** | Internal paper portfolio for screener picks: mandate, sizing, costs, benchmark, recommendations logged before outcomes are known | M3, M4 | Too few decisions for statistics for a long time | The evidence test you asked for |
 | **M6** | Invest monitoring (read-only key), exposure, concentration and correlation risk engine, daily and weekly reports on GitHub Actions | Your Invest key; M1 | Credential handling | Real-portfolio oversight |
@@ -194,3 +194,18 @@ survey command. Code and tests are in `equity/`; usage in [`../equity/README.md`
 | Gaps that are SEC's, not ours | TSMC's FY2025 20-F and Diageo's FY2026 20-F are not in SEC's companyfacts yet, so both stay `stale_annual_data`. Recent capex for Diageo, Infosys, Shell and BP uses company-specific tags that companyfacts leaves out, so it shows `missing:capex`. Toyota tags its cash flow in us-gaap but the rest in IFRS. |
 
 The method version is now `fund-2.1`. Old snapshots stay in the ledger, linked by `previous_snapshot`.
+
+## 11. Milestone 3: Master Stock Screener v1 (2026-10-14)
+
+| Item | Result |
+|---|---|
+| Price source | Yahoo chart endpoint (free, unofficial, delayed; the bot already uses it). Stooq's free CSV returned nothing on 2026-10-14; SEC and T212 have no prices. Paid feeds were not considered (owner decision). |
+| Scores | FCF per share 30, quality 25, growth 20, valuation 20, risk fit 5 (owner baseline), absolute scales in `equity/config/screener.json`; data confidence reported separately |
+| Gates | 8 gates, each pass / fail / unknown with the figure used; only fully passing companies are ranked; near misses listed |
+| Auditability | Each run is one `screens.jsonl` record naming the snapshot and price ids it used; `explain` recomputes the full breakdown and warns if the config changed since |
+| Live run, 128 companies | 14 passed every gate. Top 5: Adobe 84, NVIDIA 81, Ralph Lauren 78, Alphabet 75, MSCI 75. Most common blocks: FCF not positive or not meaningful (81), valuation unavailable (66, mostly ADRs and financials), low data confidence (42). Report: `equity/reports/screens/2026-10-14.md` |
+| Tests | `equity/tests`: 73 passed (12 new); `trading/tests`: 139 passed |
+
+Known limits: the screen covers only companies already ingested (a full-universe ingest is a scheduling job for M7);
+ADR valuation needs ADR ratios (not available free from SEC); weights and scales are the owner baseline and untested
+for predictive value. That test is M5 (paper portfolio, recommendations logged before outcomes).
