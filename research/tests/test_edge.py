@@ -80,10 +80,72 @@ def test_assert_exploration_only_catches_leaks():
 def test_holdout_gate_refuses_by_default():
     assert edge_split.holdout_gate(None, set()) == ["no batch"]
     reasons = edge_split.holdout_gate({"id": "B1", "trials": ["X1"], "prereg_commit": "abc"}, set())
-    assert reasons == ["owner has not approved the data split"]
-    ok = {"id": "B1", "trials": ["X1"], "prereg_commit": "abc", "owner_split_approval": "msg id"}
+    assert reasons == ["owner has not approved the data split", "portfolio backtester not validated"]
+    loose = {"id": "B1", "trials": ["X1"], "prereg_commit": "abc", "owner_split_approval": "yes",
+             "backtester_validated": True}
+    assert edge_split.holdout_gate(loose, set()) == ["owner has not approved the data split"]
+    ok = {**loose, "owner_split_approval": edge_split.OWNER_SPLIT_APPROVAL}
     assert edge_split.holdout_gate(ok, set()) == []
     assert edge_split.holdout_gate(ok, {"B1"}) == ["batch B1 already used the holdout"]
+
+
+def test_holdout_gate_allows_one_batch_only():
+    ok = {"id": "B2", "trials": ["X1"], "prereg_commit": "abc", "owner_split_approval": edge_split.OWNER_SPLIT_APPROVAL,
+          "backtester_validated": True}
+    assert any("1 confirmation batch" in r for r in edge_split.holdout_gate(ok, {"B1"}))
+
+
+def test_assert_exploration_only_refuses_unlabelled_forward_columns():
+    df = panel("2021-01-31", 12)
+    for col in ("fwd_ret", "future_price", "ret_next_q", "outcome"):
+        with pytest.raises(edge_split.HoldoutViolation):
+            edge_split.assert_exploration_only(df.drop(columns=["ret_next"]).assign(**{col: 0.0}))
+
+
+def test_quality_flags_use_only_the_cut_period():
+    """A share count only seen in 2024 must not change which 2022 rows are flagged."""
+    months = list(pd.date_range("2021-01-31", periods=24, freq="ME")) + list(pd.date_range("2023-01-31", periods=30, freq="ME"))
+    sh = [100.0] * 24 + [5000.0] * 30  # 50x issuance after the cut
+    df = pd.DataFrame({"cik": 1, "month": months, "shares_out": sh, "shares_diluted": sh, "adjclose": 10.0,
+                       "close_raw": 10.0})
+    full = edge_split.quality_flags(df)
+    assert full["share_outlier"].iloc[:24].all()  # uncut: the 2023+ counts dominate the median
+    cut = edge_split.with_quality(edge_split.cut_exploration(df))
+    assert len(cut) == 24 and cut["quality_ok"].all()
+    with pytest.raises(edge_split.HoldoutViolation):
+        edge_split.with_quality(df)
+
+
+def test_cut_exploration_drops_later_rows_and_ret_next():
+    df = panel("2022-06-30", 12)
+    cut = edge_split.cut_exploration(df)
+    assert cut["month"].max() == pd.Timestamp("2022-12-31") and "ret_next" not in cut
+
+
+def test_cut_series_cuts_benchmarks_and_factors():
+    x = pd.Series(1.0, index=pd.date_range("2022-10-31", periods=5, freq="ME"))
+    assert edge_split.cut_series(x).index.max() == pd.Timestamp("2022-12-31")
+
+
+def test_complete_months_drops_the_unfinished_month():
+    p = pd.DataFrame({"cik": 1, "month": ["2026-09-30", "2026-10-31"], "adjclose": [1.0, 1.1]})
+    assert list(edge_split.complete_months(p, "2026-10-14")["month"]) == ["2026-09-30"]
+    late = edge_integrity.check_prices(p.assign(ticker="A", close_raw=1.0, currency="USD"), "2026-10-14")
+    flag = [c for c in late if c["check"].startswith("prices: no row labelled")][0]
+    assert flag["status"] == "WARN" and "2026-10-31" in flag["detail"]
+
+
+def test_new_research_code_reads_data_only_through_the_guard():
+    """Only these modules may read the research dataset directly. Anything new must go through edge_split
+    (cut_exploration / exploration_view), so a holdout outcome cannot be read by a path the guard does not see."""
+    allowed = {"xsection.py", "stage2.py", "stage1_coverage.py", "signal_log.py", "edge_integrity.py",
+               "stage2_diagnostics.py"}
+    root = Path(__file__).resolve().parent.parent
+    offenders = [f.name for f in root.glob("*.py") if f.name not in allowed
+                 and any(k in f.read_text() for k in ("xsection.load(", "prices_monthly", "monthly_metrics"))]
+    assert offenders == []
+    diag = (root / "stage2_diagnostics.py").read_text()
+    assert "edge_split.cut_exploration(xsection.load())" in diag
 
 
 # --- registry ------------------------------------------------------------------------------------------------
@@ -126,6 +188,28 @@ def test_registry_one_holdout_run_per_batch_and_one_batch_per_trial(tmp_path):
     with pytest.raises(ValueError):
         edge_registry.append({"event": "holdout_run", "batch": "B1", "evidence": "f"}, p)
     assert edge_registry.holdout_runs(edge_registry.load(p)) == {"B1"}
+
+
+def test_registry_allows_one_batch_ever(tmp_path):
+    p = tmp_path / "t.jsonl"
+    edge_registry.append(_reg("X1"), p)
+    edge_registry.append(_reg("X2"), p)
+    edge_registry.append({"event": "batch", "batch": "B1", "trials": ["X1"], "prereg_commit": "abc"}, p)
+    with pytest.raises(ValueError, match="exceeds"):
+        edge_registry.append({"event": "batch", "batch": "B2", "trials": ["X2"], "prereg_commit": "def"}, p)
+
+
+def test_registry_require_blocks_unregistered_and_repeated_looks(tmp_path):
+    p = tmp_path / "t.jsonl"
+    with pytest.raises(KeyError):
+        edge_registry.require("X1", p)
+    edge_registry.append(_reg("X1"), p)
+    assert edge_registry.require("X1", p)["id"] == "X1"
+    edge_registry.append({"event": "result", "id": "X1", "evidence": "e"}, p)
+    with pytest.raises(ValueError):
+        edge_registry.require("X1", p)
+    with pytest.raises(ValueError, match="second result"):
+        edge_registry.append({"event": "result", "id": "X1", "evidence": "e"}, p)
 
 
 def test_registry_detects_an_edited_line(tmp_path):

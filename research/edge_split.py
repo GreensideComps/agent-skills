@@ -24,6 +24,14 @@ HOLDOUT_LAST_OUTCOME = pd.Timestamp("2026-09-30")
 PROSPECTIVE_FIRST_DECISION = pd.Timestamp("2026-10-31")  # research/signal_log.py FIRST_MONTH
 HORIZONS = (1, 3, 6, 12)
 
+# Owner decisions of 2026-10-14 (docs/edge/DECISIONS.md). The gate below enforces 1 and 2.
+OWNER_SPLIT_APPROVAL = "owner 2026-10-14: split approved provisionally (docs/edge/DECISIONS.md D1)"
+MAX_CONFIRMATION_BATCHES = 1  # D2: the holdout serves one confirmation batch, ever
+
+# Column names that suggest a value from after the decision date. ret_next and ret_{h}m are checked by horizon;
+# anything else with one of these markers is refused outright, because its horizon is unknown.
+FORWARD_MARKERS = ("fwd", "forward", "future", "next", "lead", "outcome", "realised", "realized")
+
 
 class HoldoutViolation(RuntimeError):
     """Raised when exploration code could read an outcome realised in the holdout."""
@@ -65,6 +73,51 @@ def forward_return(df: pd.DataFrame, horizon: int, price: str = "adjclose") -> p
     return pd.Series(m[price].to_numpy() / d[price].to_numpy() - 1, index=df.index)
 
 
+def cut_exploration(df: pd.DataFrame) -> pd.DataFrame:
+    """Rows with month <= 2022-12 and no `ret_next` (the 2022-12 row's ret_next is a 2023 return). Every
+    exploration path starts here, before features, flags or returns are computed, so nothing computed later
+    can depend on a 2023 value."""
+    out = df[pd.to_datetime(df["month"]) <= EXPLORATION_LAST_OUTCOME]
+    return out.drop(columns=[c for c in ("ret_next",) if c in out]).reset_index(drop=True)
+
+
+def share_outliers(df: pd.DataFrame) -> pd.Series:
+    """Company-months whose share count is over 10x or under 1/10 of the company's median over the rows given:
+    mostly XBRL scaling errors on the cover page (e.g. 1.9e14 shares), which inflate market cap and move a small
+    company into the large band. Some are real (IPOs, large issuance), so this flags, it does not prove.
+
+    The median is taken over the frame passed in, so the frame must already be cut to the period being studied
+    (`cut_exploration`): on the full dataset the median would use 2023-26 share counts."""
+    sh = df["shares_out"].where(df["shares_out"] > 0, df["shares_diluted"])
+    med = sh.groupby(df["cik"]).transform("median")
+    return (sh > 10 * med) | (sh < med / 10)
+
+
+def quality_flags(df: pd.DataFrame) -> pd.DataFrame:
+    """Per company-month flags (EVALUATION_SPEC §1; owner decision D5). Compute on a period-cut frame."""
+    return pd.DataFrame({"bad_price": (df["adjclose"] <= 0) | (df["close_raw"] <= 0),
+                         "share_outlier": share_outliers(df)}, index=df.index)
+
+
+def with_quality(df: pd.DataFrame) -> pd.DataFrame:
+    """The frame with a `quality_ok` column: False where any quality flag is set. Refuses an uncut frame."""
+    assert_exploration_only(df)
+    f = quality_flags(df)
+    return df.assign(quality_ok=~f.any(axis=1))
+
+
+def cut_series(x: pd.Series | pd.DataFrame) -> pd.Series | pd.DataFrame:
+    """A date-indexed series or frame (factors, benchmark, FX) cut at 2022-12. Benchmarks and factors are outcomes
+    too: a strategy's excess return over VWRP in 2023 is a holdout number."""
+    return x[pd.to_datetime(x.index) <= EXPLORATION_LAST_OUTCOME]
+
+
+def complete_months(prices: pd.DataFrame, as_of) -> pd.DataFrame:
+    """Drop price rows labelled with a month-end after `as_of`. The price builder labels the current, unfinished
+    month with its month-end (a row dated 2026-10-31 fetched on 2026-10-14 holds the 14 October price)."""
+    return prices[pd.to_datetime(prices["month"]) <= pd.Timestamp(as_of)]
+
+
 def exploration_view(df: pd.DataFrame, horizons=HORIZONS, prices: pd.DataFrame | None = None) -> pd.DataFrame:
     """The frame exploration code may use: no rows after 2022-12, and `ret_{h}m` forward returns (plus
     `ret_next` when present) only where the outcome ends by 2022-12. Forward returns are computed after the cut,
@@ -93,6 +146,9 @@ def assert_exploration_only(df: pd.DataFrame) -> None:
     for col in df.columns:
         h = 1 if col == "ret_next" else _horizon_of(col)
         if h is None:
+            if any(k in str(col).lower() for k in FORWARD_MARKERS):
+                raise HoldoutViolation(f"column {col!r} looks forward-looking; name forward returns ret_{{h}}m "
+                                       "so their horizon can be checked")
             continue
         bad = df[col].notna() & (months > last_exploration_decision(h))
         if bad.any():
@@ -106,18 +162,23 @@ def _horizon_of(col: str) -> int | None:
 
 
 def holdout_gate(batch: dict | None, already_run: set[str]) -> list[str]:
-    """Reasons a confirmation batch may NOT open the holdout (empty list = allowed). Phase A never calls this
-    with intent to run; it exists so the rule is code, not memory. A batch needs: an id not run before, a
-    pre-registration commit, the trial ids it confirms, and a recorded owner approval of the split."""
+    """Reasons a confirmation batch may NOT open the holdout (empty list = allowed). Nothing calls this with
+    intent to run yet; it exists so the rules are code, not memory. A batch needs: no earlier holdout run at all
+    (one batch only, D2), a pre-registration commit, the trial ids it confirms, the owner's split approval as
+    recorded in OWNER_SPLIT_APPROVAL, and a validated portfolio backtester (owner, 2026-10-14)."""
     if not batch:
         return ["no batch"]
     reasons = []
     if batch.get("id") in already_run:
         reasons.append(f"batch {batch.get('id')} already used the holdout")
+    elif len(already_run) >= MAX_CONFIRMATION_BATCHES:
+        reasons.append(f"the holdout allows {MAX_CONFIRMATION_BATCHES} confirmation batch and it has been used")
+    if batch.get("owner_split_approval") != OWNER_SPLIT_APPROVAL:
+        reasons.append("owner has not approved the data split")
+    if not batch.get("backtester_validated"):
+        reasons.append("portfolio backtester not validated")
     if not batch.get("prereg_commit"):
         reasons.append("no pre-registration commit")
     if not batch.get("trials"):
         reasons.append("no trials listed")
-    if not batch.get("owner_split_approval"):
-        reasons.append("owner has not approved the data split")
     return reasons

@@ -79,9 +79,13 @@ def ic_stats(ic: pd.Series, horizon: int) -> dict:
     }
 
 
-def investable(df: pd.DataFrame) -> pd.DataFrame:
-    """Stage 2's universe filter without the outcome condition: from START, price >= $1, a size band."""
-    return df[(df["month"] >= START) & (df["close_raw"] >= xsection.MIN_PRICE) & df["band"].notna()]
+def investable(df: pd.DataFrame, quality: bool = False) -> pd.DataFrame:
+    """Stage 2's universe filter without the outcome condition: from START, price >= $1, a size band. With
+    `quality`, also the programme's data-quality exclusion (`quality_ok`, EVALUATION_SPEC §1). The published
+    diagnostics reproduce Stage 2, which had no exclusion, so they run without it; `quality_sensitivity` shows
+    what the exclusion changes."""
+    d = df[(df["month"] >= START) & (df["close_raw"] >= xsection.MIN_PRICE) & df["band"].notna()]
+    return d[d["quality_ok"]] if quality else d
 
 
 def scored(d: pd.DataFrame, horizon: int) -> pd.DataFrame:
@@ -241,9 +245,9 @@ def report(diag: dict, cmp: dict, n_trials: int) -> str:
 
 
 def load_exploration() -> pd.DataFrame:
-    df = xsection.load()
-    # cut before anything is built; ret_next of 2022-12 is a 2023 return, so it goes too (recomputed below)
-    df = df[df["month"] <= edge_split.EXPLORATION_LAST_OUTCOME].drop(columns=["ret_next"]).reset_index(drop=True)
+    # cut before anything is built; ret_next of 2022-12 is a 2023 return, so it goes too (recomputed below).
+    # Quality flags are computed on the cut frame, so their share-count medians use no 2023-26 data.
+    df = edge_split.with_quality(edge_split.cut_exploration(xsection.load()))
     months = sorted(df.loc[(df["month"] >= START) & (df["month"] <= edge_split.last_exploration_decision(1)), "month"].unique())
     df = stage2.build_features(df, months)
     p = pd.read_csv(xsection.DATA / "prices_monthly.csv.gz", dtype={"cik": int})
@@ -259,9 +263,95 @@ def factors_to_2022() -> pd.DataFrame:
     return f[f.index <= edge_split.EXPLORATION_LAST_OUTCOME]
 
 
+QX_PREFIX = "QX-"
+
+
+def register_quality_sensitivity(path: Path = edge_registry.PATH) -> list[str]:
+    """Register the data-quality sensitivity looks (large caps, 1 month, one per Stage 2 trial) before they run."""
+    have = edge_registry.registered(edge_registry.load(path))
+    new = []
+    for tid, (fam, desc, _) in stage2.TRIALS.items():
+        i = f"{QX_PREFIX}{tid}"
+        if i in have:
+            continue
+        edge_registry.append({
+            "event": "register", "id": i, "kind": "diagnostic", "phase": "exploration", "hypothesis": fam,
+            "definition": f"Stage 2 {tid} ({desc}), IC vs 1-month return, large caps, with the programme's "
+                          "data-quality exclusion (edge_split.quality_flags on data cut at 2022-12)",
+            "universe": "US large band, Stage 2 filters plus quality_ok", "horizon_months": 1,
+            "window": {"decisions": [START[:7], f"{edge_split.last_exploration_decision(1):%Y-%m}"],
+                       "outcomes": ["2015-02", "2022-12"]},
+            "counts_for_dsr": True, "touched_holdout": False, "source": "research/stage2_diagnostics.py --quality",
+            "note": "Phase A verification (owner decision D5): does the exclusion change any Stage 2 conclusion?"},
+            path)
+        new.append(i)
+    return new
+
+
+def quality_sensitivity(d: pd.DataFrame) -> dict:
+    """Large-cap 1-month IC per trial without and with the quality exclusion, on the same scoring as Stage 2.
+    Scores are computed on the full cross-section (as Stage 2 does) and the exclusion then removes company-months
+    from the evaluation, which is how a universe filter acts on a portfolio."""
+    s_h = scored(d, 1)
+    out = {}
+    for tid in stage2.TRIALS:
+        row = {}
+        for name, x in (("all", s_h), ("quality_ok", s_h[s_h["quality_ok"]])):
+            ics = []
+            for mo, g in x[x["band"] == "large"].groupby("month"):
+                g = g[[tid, "ret_1m"]].dropna()
+                if len(g) >= 30:
+                    ics.append((mo, g[tid].rank().corr(g["ret_1m"].rank())))
+            st = ic_stats(pd.Series(dict(ics)), 1)
+            row[name] = {k: st.get(k) for k in ("months", "mean_ic", "t_nw")}
+        row["excluded_rows"] = int((s_h["band"].eq("large") & ~s_h["quality_ok"] & s_h[tid].notna()).sum())
+        out[tid] = row
+    return out
+
+
+def quality_report(q: dict, n_trials: int) -> str:
+    L = ["# Stage 2 with and without the data-quality exclusion (edge-discovery Phase A verification)", "",
+         "Large caps, 1-month IC, decisions 2015-01 to 2022-11 (outcomes to 2022-12), Stage 2's scoring. The "
+         "exclusion drops company-months with an adjusted close <= 0 or a share count over 10x or under 1/10 of the "
+         "company's median, the median taken on data up to 2022-12 only. Registered before running as "
+         f"`{QX_PREFIX}<trial>` diagnostics; the programme's trial count is now {n_trials}.", "",
+         "| Trial | IC (all) | t (all) | IC (excl.) | t (excl.) | Months | Large rows excluded |",
+         "|---|---:|---:|---:|---:|---:|---:|"]
+    for tid, r in q.items():
+        a, b = r["all"], r["quality_ok"]
+        L.append(f"| {tid} | {_f(a['mean_ic'], '.4f')} | {_f(a['t_nw'], '.2f')} | {_f(b['mean_ic'], '.4f')} | "
+                 f"{_f(b['t_nw'], '.2f')} | {b['months']} | {r['excluded_rows']:,} |")
+    return "\n".join(L) + "\n"
+
+
+def main_quality(out: Path) -> None:
+    new = register_quality_sensitivity()
+    print(f"registered {len(new)} quality-sensitivity looks before running")
+    for tid in stage2.TRIALS:
+        edge_registry.require(f"{QX_PREFIX}{tid}")
+    d = investable(load_exploration())
+    edge_split.assert_exploration_only(d)
+    q = quality_sensitivity(d)
+    rel = out.resolve()
+    try:
+        rel = rel.relative_to(Path(__file__).resolve().parent.parent)
+    except ValueError:
+        pass
+    for tid, r in q.items():
+        edge_registry.append({"event": "result", "id": f"{QX_PREFIX}{tid}", "band": "large",
+                              "mean_ic": r["quality_ok"]["mean_ic"], "ic_t_nw": r["quality_ok"]["t_nw"],
+                              "evidence": f"{rel.with_suffix('.json')}"})
+    out.write_text(quality_report(q, edge_registry.n_trials(edge_registry.load())))
+    out.with_suffix(".json").write_text(json.dumps(q, indent=1, default=str))
+    print(out.read_text())
+
+
 def main(out: Path) -> None:
     new = register_diagnostics()
     print(f"registered {len(new)} diagnostic looks before running")
+    for tid in stage2.TRIALS:  # refuses once results exist: a rerun is a new look and needs new trial ids
+        for h in EXTRA_HORIZONS:
+            edge_registry.require(f"DIAG-{tid}-h{h}")
     d = investable(load_exploration())
     edge_split.assert_exploration_only(d)
     diag = run(d, factors_to_2022())
@@ -279,4 +369,8 @@ def main(out: Path) -> None:
 
 
 if __name__ == "__main__":
-    main(Path(sys.argv[1]) if len(sys.argv) > 1 else Path("stage2_diagnostics.md"))
+    args = sys.argv[1:]
+    if args[:1] == ["--quality"]:
+        main_quality(Path(args[1]) if len(args) > 1 else Path("stage2_quality_sensitivity.md"))
+    else:
+        main(Path(args[0]) if args else Path("stage2_diagnostics.md"))

@@ -25,6 +25,7 @@ from pathlib import Path
 
 PATH = Path(__file__).resolve().parent / "edge" / "trials.jsonl"
 GENESIS = "0" * 64
+MAX_BATCHES = 1  # owner decision D2 (docs/edge/DECISIONS.md): one confirmation batch, ever
 KINDS = {"trial", "diagnostic", "inherited"}
 PHASES = {"exploration", "confirmation", "prospective", "pre-programme"}
 REQUIRED = {
@@ -58,6 +59,7 @@ def validate(path: Path = PATH) -> list[str]:
     batches: dict[str, dict] = {}
     runs: set[str] = set()
     in_batch: dict[str, str] = {}
+    resulted: set[str] = set()
     for n, raw in enumerate(path.read_text().splitlines(), 1):
         if not raw.strip():
             continue
@@ -91,10 +93,15 @@ def validate(path: Path = PATH) -> list[str]:
         elif ev == "result":
             if e.get("id") not in trials:
                 problems.append(f"line {n}: result for unregistered trial {e.get('id')}")
+            elif e.get("id") in resulted:
+                problems.append(f"line {n}: second result for {e.get('id')} (a rerun is a new trial)")
+            resulted.add(e.get("id"))
         elif ev == "batch":
             b = e.get("batch")
             if b in batches:
                 problems.append(f"line {n}: duplicate batch {b}")
+            elif len(batches) >= MAX_BATCHES:
+                problems.append(f"line {n}: batch {b} exceeds the {MAX_BATCHES} confirmation batch allowed")
             for t in e.get("trials", []):
                 if t not in trials:
                     problems.append(f"line {n}: batch {b} names unregistered trial {t}")
@@ -133,6 +140,18 @@ def append(event: dict, path: Path = PATH) -> dict:
         raise ValueError(f"event rejected: {after}")
     tmp.replace(path)
     return e
+
+
+def require(trial_id: str, path: Path = PATH) -> dict:
+    """The registration of `trial_id`, or an error if it is not registered or already has a result. Research
+    code calls this before computing anything, so an unregistered or repeated look cannot run."""
+    events = load(path)
+    reg = registered(events).get(trial_id)
+    if reg is None:
+        raise KeyError(f"{trial_id} is not registered: append a register event before running it")
+    if any(e.get("event") == "result" and e.get("id") == trial_id for e in events):
+        raise ValueError(f"{trial_id} already has a result; register a new trial to look again")
+    return reg
 
 
 def registered(events: list[dict]) -> dict[str, dict]:

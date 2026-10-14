@@ -1,8 +1,8 @@
 # Edge-discovery programme: exploration, confirmation and prospective evidence
 
-Status: **proposed, awaiting the owner's approval** (written 2026-10-14, Phase A). The code guard
-(`research/edge_split.py`) enforces the exploration boundary now, because that only restricts what research can
-read. Nothing opens the holdout until the owner approves this policy and the open decisions in §6.
+Status: **approved provisionally by the owner on 2026-10-14** (decisions D1-D4 in `DECISIONS.md`; §6 below). The
+code guard (`research/edge_split.py`) enforces the exploration boundary. Nothing opens the holdout until the
+portfolio backtester is validated and the single pre-registered batch is ready.
 
 ## 1. The three kinds of evidence
 
@@ -87,10 +87,16 @@ holdout is therefore **conditional confirmation**, and is weakest for hypotheses
 | Holdout | That an idea fails out of sample; conditional support that it survives | Clean proof, for the reasons in §3 |
 | Prospective | Clean, unseen evidence | Anything quickly: a typical IC of 0.03 needs about 44 months to reach t = 2 |
 
-## 6. Decisions for the owner
+## 6. Owner decisions (made 2026-10-14)
 
-These change what counts as evidence, so they are the owner's. The guard refuses any holdout run until they are
-recorded.
+1. **Split:** approved provisionally (D1).
+2. **Batches:** one confirmation batch only (D2). Enforced by `edge_split.holdout_gate` and
+   `edge_registry.validate`.
+3. **What a holdout pass earns:** conditional E3. No demo allocation before 12 months of prospective evidence
+   (D3).
+4. **Trial count:** inherited trials and relevant prior looks count (D4).
+
+The options as they were put to the owner are kept below for the record.
 
 1. **Approve the split** (exploration 2012-2022, holdout 2023-01 to 2026-09, by outcome month).
 2. **How many confirmation batches the holdout may serve.** Each extra batch re-uses the same 45 months, and

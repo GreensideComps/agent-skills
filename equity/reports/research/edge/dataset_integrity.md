@@ -12,9 +12,11 @@ Read-only checks. FAIL = a defect to fix before trusting results; WARN = a known
 | prices: one USD row per company-month | **PASS** | 0 duplicates (xsection.load keeps the last) |
 | prices: one ticker per company | **WARN** | 5,360 companies priced, 0 with more than one ticker. Each company is priced from the first ticker in today's SEC list (equity/monthly.py), so other share classes are ignored and a ticker since reused by another company can be mis-linked. |
 | prices: non-USD rows excluded from tests | **WARN** | 0.0% of price rows are not USD |
+| prices: no row labelled after the fetch date | **WARN** | 5,334 rows labelled 2026-10-31 in a file fetched 2026-10-14. The builder labels the unfinished month with its month-end, so these rows hold the price on the fetch date, not a month-end close. Not future data, but not a monthly return either: `edge_split.complete_months` drops them. Exploration (to 2022-12) and the holdout (to 2026-09) never reach them; the signal log only scores a month once it has ended. |
 | prices: positive prices | **FAIL** | 344 rows with a price <= 0 |
 | prices: monthly moves over 100% (to 2022-12) | **WARN** | 3,864 of 453,156 monthly returns; largest +166666659944%, smallest -441%. Review before trusting small-cap results; large caps rarely move this much. |
-| universe: share-count outliers in the large band (2015-01..2022-11) | **WARN** | 283 of 43,220 large-cap company-months (53 companies) have a share count over 10x or under 1/10 of the company's median, e.g. 1.9e14 shares. Most are XBRL scaling errors that inflate market cap and put a small company in the large band. |
+| universe: quality flags computed without 2023-26 data | **PASS** | flags use the share-count median of 2022-12 and earlier only. Computed on the whole dataset, 626 banded company-months up to 2022-12 would have been flagged differently; the Phase A draft did that in its report, fixed on 2026-10-14 (exploration never used the exclusion before the fix). |
+| universe: share-count outliers in the large band (2015-01..2022-11) | **WARN** | 253 of 43,220 large-cap company-months (53 companies) have a share count over 10x or under 1/10 of the company's median, e.g. 1.9e14 shares. Most are XBRL scaling errors that inflate market cap and put a small company in the large band. |
 | universe: negative adjusted prices in the large band (2015-01..2022-11) | **FAIL** | 4 large-cap company-months have an adjusted close <= 0 (a Yahoo adjustment error), so their returns are wrong |
 | companies: SIC code is today's, not point in time | **WARN** | 17,489 companies have one SIC from today's SEC submissions. Sector-neutral signals and sector caps use today's industry, a mild look-ahead. |
 | insiders: Form 4 data covers the holdout | **WARN** | filings 2014-01-02 to 2022-12-30. A confirmation run of any insider signal needs 2023-2026 quarters built first (`python -m equity research-data --step insiders`). |
@@ -24,10 +26,10 @@ Read-only checks. FAIL = a defect to fix before trusting results; WARN = a known
 
 Results are reproducible only against these exact files; the monthly signal log rebuilds them.
 
-| File | Rows | Months | SHA-256 (first 16) |
-|---|---:|---|---|
-| sec_facts_panel.csv.gz | 12,768,511 |  to  | `2a56736fdea78254` |
-| sec_companies.csv.gz | 20,458 |  to  | `acf5e3f746c355aa` |
-| monthly_metrics.csv.gz | 1,440,013 | 2009-12-31 to 2026-09-30 | `ae5429b661bd060d` |
-| prices_monthly.csv.gz | 676,241 | 2011-01-31 to 2026-10-31 | `505115711f7ef59c` |
-| insider_trades.csv.gz | 920,082 | 2014-01-02 to 2022-12-30 | `82e99ff117d2ec0c` |
+| File | Rows | Months | Modified (UTC) | SHA-256 (first 16) |
+|---|---:|---|---|---|
+| sec_facts_panel.csv.gz | 12,768,511 |  to  | 2026-10-14T15:55:30+00:00 | `2a56736fdea78254` |
+| sec_companies.csv.gz | 20,458 |  to  | 2026-10-14T15:55:25+00:00 | `acf5e3f746c355aa` |
+| monthly_metrics.csv.gz | 1,440,013 | 2009-12-31 to 2026-09-30 | 2026-10-14T15:55:26+00:00 | `ae5429b661bd060d` |
+| prices_monthly.csv.gz | 676,241 | 2011-01-31 to 2026-10-31 | 2026-10-14T16:23:57+00:00 | `505115711f7ef59c` |
+| insider_trades.csv.gz | 920,082 | 2014-01-02 to 2022-12-30 | 2026-10-14T16:34:33+00:00 | `82e99ff117d2ec0c` |

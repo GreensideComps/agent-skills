@@ -18,6 +18,7 @@ import gzip
 import hashlib
 import json
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 
 import pandas as pd
@@ -47,7 +48,8 @@ def manifest(data: Path = xsection.DATA) -> dict:
             continue
         with gzip.open(p, "rt") as f:
             rows = sum(1 for _ in f) - 1
-        rec = {"sha256": sha256(p), "bytes": p.stat().st_size, "rows": rows}
+        rec = {"sha256": sha256(p), "bytes": p.stat().st_size, "rows": rows,
+               "modified_utc": datetime.fromtimestamp(p.stat().st_mtime, timezone.utc).isoformat(timespec="seconds")}
         if name in MONTH_COL:
             s = pd.read_csv(p, usecols=[MONTH_COL[name]])[MONTH_COL[name]]
             rec["first"], rec["last"] = str(s.min()), str(s.max())
@@ -81,30 +83,28 @@ def check_metrics(m: pd.DataFrame) -> list[dict]:
     return out
 
 
-def share_outliers(df: pd.DataFrame) -> pd.Series:
-    """Company-months whose share count is over 10x or under 1/10 of the company's median: mostly XBRL scaling
-    errors on the cover page (e.g. 1.9e14 shares), which inflate market cap and move a small company into the
-    large band. Some are real (IPOs, large issuance), so this flags, it does not prove."""
-    sh = df["shares_out"].where(df["shares_out"] > 0, df["shares_diluted"])
-    med = sh.groupby(df["cik"]).transform("median")
-    return (sh > 10 * med) | (sh < med / 10)
-
-
-def quality_flags(df: pd.DataFrame) -> pd.DataFrame:
-    """Per company-month flags for a frame from `xsection.load()`. The programme's universe excludes flagged rows
-    (docs/edge/EVALUATION_SPEC.md); Stage 2 and the signal log are unchanged and do not."""
-    return pd.DataFrame({"bad_price": (df["adjclose"] <= 0) | (df["close_raw"] <= 0),
-                         "share_outlier": share_outliers(df)}, index=df.index)
+# One definition of the programme's quality exclusions, in edge_split; re-exported for the checks below.
+share_outliers = edge_split.share_outliers
+quality_flags = edge_split.quality_flags
 
 
 def check_universe(df: pd.DataFrame) -> list[dict]:
-    """How much of the Stage 2 large-cap universe (2015-01..2022-11) the flags touch."""
-    f = quality_flags(df)
-    inv = xsection.investable(df[(df["month"] >= "2015-01-31") & (df["month"] <= "2022-11-30")])
+    """How much of the Stage 2 large-cap universe (2015-01..2022-11) the flags touch. Flags are computed on the
+    frame cut at 2022-12, as exploration computes them; the full-dataset median is shown only to measure how much
+    computing it on uncut data would have changed (that would use 2023-26 share counts)."""
+    cut = df[df["month"] <= edge_split.EXPLORATION_LAST_OUTCOME]
+    f = quality_flags(cut)
+    leak = share_outliers(df).loc[cut.index] != f["share_outlier"]
+    inv = xsection.investable(cut[(cut["month"] >= "2015-01-31") & (cut["month"] <= "2022-11-30")])
     big = inv[inv["band"] == "large"]
     fl = f.loc[big.index]
     so, bp = int(fl["share_outlier"].sum()), int(fl["bad_price"].sum())
+    nl = int(leak[cut["band"].notna()].sum())
     return [
+        _r("universe: quality flags computed without 2023-26 data", True,
+           f"flags use the share-count median of 2022-12 and earlier only. Computed on the whole dataset, {nl:,} "
+           "banded company-months up to 2022-12 would have been flagged differently; the Phase A draft did that "
+           "in its report, fixed on 2026-10-14 (exploration never used the exclusion before the fix)."),
         _r("universe: share-count outliers in the large band (2015-01..2022-11)", so == 0,
            f"{so:,} of {len(big):,} large-cap company-months ({big.loc[fl['share_outlier'], 'cik'].nunique()} companies) "
            "have a share count over 10x or under 1/10 of the company's median, e.g. 1.9e14 shares. Most are XBRL "
@@ -115,7 +115,7 @@ def check_universe(df: pd.DataFrame) -> list[dict]:
     ]
 
 
-def check_prices(p: pd.DataFrame) -> list[dict]:
+def check_prices(p: pd.DataFrame, as_of=None) -> list[dict]:
     out = []
     usd = p[p["currency"] == "USD"]
     dup = int(usd.duplicated(["cik", "month"]).sum())
@@ -128,6 +128,16 @@ def check_prices(p: pd.DataFrame) -> list[dict]:
                   "are ignored and a ticker since reused by another company can be mis-linked.", warn=True))
     nonusd = float((p["currency"] != "USD").mean())
     out.append(_r("prices: non-USD rows excluded from tests", None, f"{nonusd:.1%} of price rows are not USD", warn=True))
+    if as_of is not None:
+        late = p[pd.to_datetime(p["month"]) > pd.Timestamp(as_of)]
+        lab = ", ".join(sorted(late["month"].astype(str).unique()))
+        out.append(_r("prices: no row labelled after the fetch date", late.empty,
+                      f"{len(late):,} rows labelled {lab or '-'} in a file fetched {pd.Timestamp(as_of).date()}. The "
+                      "builder labels the unfinished month with its month-end, so these rows hold the price on the "
+                      "fetch date, not a month-end close. Not future data, but not a monthly return either: "
+                      "`edge_split.complete_months` drops them. Exploration (to 2022-12) and the holdout (to "
+                      "2026-09) never reach them; the signal log only scores a month once it has ended.",
+                      warn=True))
     bad = int(((p["adjclose"] <= 0) | (p["close_raw"] <= 0)).sum())
     out.append(_r("prices: positive prices", bad == 0, f"{bad:,} rows with a price <= 0"))
     e = usd[pd.to_datetime(usd["month"]) <= edge_split.EXPLORATION_LAST_OUTCOME].sort_values(["cik", "month"])
@@ -168,7 +178,8 @@ def run(data: Path = xsection.DATA) -> dict:
     p = pd.read_csv(data / "prices_monthly.csv.gz")
     c = pd.read_csv(data / "sec_companies.csv.gz", dtype={"sic": str})
     t = pd.read_csv(data / "insider_trades.csv.gz", usecols=["filed"])
-    checks = (check_metrics(m) + check_prices(p) + check_universe(xsection.load(data)) + check_companies(c)
+    fetched = datetime.fromtimestamp((data / "prices_monthly.csv.gz").stat().st_mtime, timezone.utc).date()
+    checks = (check_metrics(m) + check_prices(p, fetched) + check_universe(xsection.load(data)) + check_companies(c)
               + check_insiders(t) + check_holdout_rows(m, p))
     return {"manifest": manifest(data), "checks": checks}
 
@@ -179,12 +190,12 @@ def report(res: dict) -> str:
          "state. Returns are inspected only up to 2022-12.", "", "| Check | Status | Detail |", "|---|---|---|"]
     L += [f"| {c['check']} | **{c['status']}** | {c['detail']} |" for c in res["checks"]]
     L += ["", "## Manifest", "", "Results are reproducible only against these exact files; the monthly signal log "
-          "rebuilds them.", "", "| File | Rows | Months | SHA-256 (first 16) |", "|---|---:|---|---|"]
+          "rebuilds them.", "", "| File | Rows | Months | Modified (UTC) | SHA-256 (first 16) |", "|---|---:|---|---|---|"]
     for k, v in res["manifest"].items():
         if v.get("missing"):
-            L.append(f"| {k} | missing | | |")
+            L.append(f"| {k} | missing | | | |")
             continue
-        L.append(f"| {k} | {v['rows']:,} | {v.get('first', '')} to {v.get('last', '')} | `{v['sha256'][:16]}` |")
+        L.append(f"| {k} | {v['rows']:,} | {v.get('first', '')} to {v.get('last', '')} | {v.get('modified_utc', '')} | `{v['sha256'][:16]}` |")
     return "\n".join(L) + "\n"
 
 

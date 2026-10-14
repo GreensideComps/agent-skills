@@ -1,8 +1,8 @@
 # Edge-discovery programme: statistical and portfolio evaluation rules
 
-Status: written 2026-10-14 (Phase A). Applies to every new trial in the programme. Stage 2, its pass rules and the
-monthly signal log are unchanged. Items marked **(owner)** are choices that change what counts as evidence; they
-apply as written unless the owner changes them. Items marked **(to build)** do not exist in code yet.
+Status: written 2026-10-14 (Phase A). The owner decided the items marked **(owner)** on 2026-10-14 (`DECISIONS.md`).
+Applies to every new trial in the programme. Stage 2, its pass rules and the monthly signal log are unchanged.
+Items marked **(to build)** do not exist in code yet.
 
 Each section names the existing code it reuses, so a rule here and its implementation can be checked together.
 
@@ -12,11 +12,21 @@ Each section names the existing code it reuses, so a rule here and its implement
   (cover-page shares x unadjusted close). Bands: large ≥ $10bn, mid $2-10bn, small $0.3-2bn
   (`xsection.SIZE_BANDS`). **Large caps decide; mid and small are exploratory only** until survivorship-free prices
   exist.
-- **Data-quality exclusion (owner):** company-months flagged by `edge_integrity.quality_flags` are excluded:
-  an adjusted close ≤ 0, or a share count over 10x or under 1/10 of the company's median. The second flag catches
-  XBRL scaling errors (for example 1.9e14 shares) that put small companies in the large band; it also drops some
-  genuine IPO and issuance months. Stage 2 did not apply it; Phase A measured that it touches 283 of 43,220
-  large-cap company-months in 2015-2022.
+- **Data-quality exclusion (owner, D5: retained):** company-months flagged by `edge_split.quality_flags` are
+  excluded: an adjusted close ≤ 0, or a share count over 10x or under 1/10 of the company's median. The second flag
+  catches XBRL scaling errors (for example 1.9e14 shares) that put small companies in the large band; it also
+  drops some genuine IPO and issuance months.
+  - **Computed on period-cut data only** (`edge_split.with_quality(cut_exploration(...))`). The median is taken
+    over the rows given, so on the full dataset it would use 2023-26 share counts: 626 banded exploration rows
+    would flip.
+  - Within exploration the median still uses later 2015-22 rows. This is a mild look-ahead in which rows are
+    excluded, not in any return.
+  - **Scope:** features are computed on every row, and the flag then removes company-months from the eligible
+    universe, as a universe filter would.
+  - **Effect measured:** 253 of 43,220 large-cap company-months in 2015-22 are flagged. Applying the exclusion
+    moves no Stage 2 large-cap IC by more than 0.003, and no conclusion changes
+    (`equity/reports/research/edge/stage2_quality_sensitivity.md`).
+  - Stage 2 itself and the signal log do not apply it.
 - Every result states: survivor bias on prices (no delisted company is priced); one ticker per company (the first in
   today's SEC list); SIC is today's, not point in time.
 
@@ -26,7 +36,14 @@ Each section names the existing code it reuses, so a rule here and its implement
   (`equity/monthly.py`; checked by `edge_integrity`: 0 rows use a later filing).
 - Outcomes are total returns from the decision close (`adjclose`), over 1, 3, 6 and 12 months
   (`edge_split.forward_return`; all h months must exist).
-- Exploration code starts from `edge_split.exploration_view`; see `SPLIT_POLICY.md` for the boundaries.
+- Exploration code starts from `edge_split.cut_exploration` (rows and `ret_next` cut at 2022-12, before features
+  or flags) and `edge_split.exploration_view` (forward returns). Factor, FX and benchmark series go through
+  `edge_split.cut_series`. Boundaries: `SPLIT_POLICY.md`.
+- A test (`test_new_research_code_reads_data_only_through_the_guard`) fails if a new module in `research/` reads
+  the dataset directly instead of through these.
+- Price rows labelled after the data's fetch date are an unfinished month. The builder labels them with the
+  month-end, so a row dated 2026-10-31 that was fetched on 2026-10-14 holds the 14 October price.
+  `edge_split.complete_months` drops them before any return is computed.
 
 ## 3. Signal-level tests (does a score rank returns?)
 
@@ -53,7 +70,7 @@ is a weak model of the concentrated portfolio the owner would hold. Phase B buil
 - **Rules, each variant a registered trial:** 15 to 30 names; equal, score or inverse-volatility weights; quarterly
   rebalance; an entry buffer (enter in the top N) and an exit buffer (exit below the top 2N); a sector cap;
   long-only, no leverage (ISA).
-- **Costs (owner):** one way, per trade: 0.15% FX plus spread by band at decision time: large 0.15%, mid 0.30%,
+- **Costs (owner, D5: retained; validated by the backtester's tests):** one way, per trade: 0.15% FX plus spread by band at decision time: large 0.15%, mid 0.30%,
   small 0.60%. No stamp duty on US shares. Reported at 1x, 2x and 3x. The large-cap figure matches Stage 2's 0.30%
   all-in; the mid and small spreads are assumptions with no fill data behind them yet.
 - **Currency:** stock returns are converted to GBP monthly (`research/dataset.usd_to_gbp_monthly`), because the
@@ -70,9 +87,12 @@ is a weak model of the concentrated portfolio the owner would hold. Phase B buil
 
 ## 5. Multiple testing
 
-- **Trial count:** `edge_registry.n_trials()`: every registered trial with `counts_for_dsr`, reported or not
-  (66 after Phase A: Stage 2's 15, the 6 M8 looks, 45 diagnostic horizons). **(owner)**: whether inherited trials
-  count; counting them is the stricter default.
+- **Trial count:** `edge_registry.n_trials()`: every registered trial with `counts_for_dsr`, reported or not.
+  - 81 after the Phase A verification: Stage 2's 15 trials, the 6 M8 looks, 45 diagnostic horizons and 15
+    quality-sensitivity looks.
+  - **(owner, D4):** inherited trials and relevant prior looks count.
+- **Registration is enforced, not just expected:** research code calls `edge_registry.require(trial_id)` before
+  computing. It refuses an unregistered trial, and a trial that already has a result (a rerun is a new trial).
 - **Deflated Sharpe** (Bailey and López de Prado 2014), as `stage2.deflated_sharpe` (formula checked by hand in
   Phase A): N = the trial count above; the cross-trial variance of Sharpe ratios is the variance of
   `edge_registry.sharpe_list()` (monthly Sharpe ratios of the same statistic), floored at 1/T, the variance of a
@@ -89,7 +109,7 @@ is a weak model of the concentrated portfolio the owner would hold. Phase B buil
 |---|---|---|
 | E1 | A written mechanism and a registry entry | Research only |
 | E2 | Exploration t ≥ 3 (IC or strategy alpha), positive after costs, alpha beyond FF5 + momentum | Pre-registration for confirmation |
-| E3 | Passes its confirmation batch (§5). Because the holdout is partly seen (`SPLIT_POLICY.md` §3), the owner decides whether this alone allows demo capital | As the owner decides |
+| E3 (conditional) | Passes the single confirmation batch (§5). Because the holdout is partly seen (`SPLIT_POLICY.md` §3), a pass is conditional (D3) | Prospective logging only; demo allocation is considered only after 12 months of prospective evidence |
 | E4 | 12 to 24 months of prospective results inside the backtest's 90% band | Larger demo allocation; ISA readiness review (owner) |
 
 ## 7. Reporting

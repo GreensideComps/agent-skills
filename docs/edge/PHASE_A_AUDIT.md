@@ -4,6 +4,10 @@ Written 2026-10-14 on branch `claude/edge-discovery-phase-a-j78pyp`, from `maste
 Evidence is cited as files, commits or command output from this session. Where something is inferred rather than
 checked, it says so.
 
+**Update, same evening:** the owner's decisions and the verification review they asked for are in §10. That
+section supersedes §7-§9 and the counts it corrects: the trial count is now 81, and 253 large-cap months are
+flagged as share-count outliers.
+
 **Bottom line.** The repository has a sound core for honest testing: point-in-time SEC data, a cross-sectional
 harness, pre-registered Stage 2 tests that reproduce exactly, Newey-West statistics, factor alpha and a deflated
 Sharpe. Phase A added what the new programme was missing (a separate trial registry, a code-level holdout guard,
@@ -161,9 +165,9 @@ Phase A.
 | Stage 2 definitions and results | V | V | prereg + code + tests; reproduced byte-identical today | none | `stage2.py` reproduces `stage2_signals.json` |
 | Separate programme trial registry | M | V | none existed | `research/edge/trials.jsonl` + `edge_registry.py`: append-only, hash-chained, validated | `test_edge.py` registry tests; `python3 edge_registry.py` exits 0 |
 | Prior looks recorded with holdout exposure | M | V | M8 and audit looks were unrecorded | 10 inherited entries with `touched_holdout` | `test_committed_registry_is_valid` |
-| Exploration/confirmation/prospective policy | P | B | single-use rule in STRATEGY_V2 only | `docs/edge/SPLIT_POLICY.md` | owner approval recorded (§6 of the policy) |
+| Exploration/confirmation/prospective policy | P | V (provisional) | single-use rule in STRATEGY_V2 only | `docs/edge/SPLIT_POLICY.md`; owner approval D1-D4 (`DECISIONS.md`) | approval recorded; gate and registry enforce one batch |
 | Holdout guard in code | P (Stage 2 only) | V for exploration; confirmation locked | `stage2.run` cut only | `edge_split.exploration_view`, `assert_exploration_only`, `holdout_gate` | split tests: a 7x change to every 2023+ price changes nothing in the view |
-| Holdout cleanliness | — | **B** | §3 | owner decision on what a holdout pass earns; no technical fix exists | decision recorded |
+| Holdout cleanliness | — | B (permanent; handled) | §3 | owner decided a pass is conditional E3, with 12 months of prospective evidence before demo capital (D3) | decision recorded |
 
 ### 4.2 Statistics
 
@@ -174,16 +178,16 @@ Phase A.
 | Power / minimum detectable effect | M | V | not reported | MDE and power in `ic_stats` | `test_ic_stats_mde_and_power`; diagnostics report |
 | Factor-adjusted alpha | U | V | no test | planted-alpha test | `test_stage2_factor_alpha_recovers_planted_alpha_and_betas` |
 | Deflated Sharpe | U | V | monotonicity test only | hand-computed check | `test_stage2_deflated_sharpe_matches_a_hand_computation` |
-| Trial count spanning all looks | P | V | Stage 2 counted its own 15 only | `edge_registry.n_trials` (66) | registry tests |
-| Written statistical specification | P | V | scattered across prereg docs | `docs/edge/EVALUATION_SPEC.md` §3, §5 | reviewed by owner |
+| Trial count spanning all looks | P | V | Stage 2 counted its own 15 only | `edge_registry.n_trials` (81 after §10) | registry tests |
+| Written statistical specification | P | V | scattered across prereg docs | `docs/edge/EVALUATION_SPEC.md` §3, §5 | reviewed by the owner 2026-10-14 |
 
 ### 4.3 Data
 
 | Component | Before | After | Evidence | Minimum fix | Test of completion |
 |---|---|---|---|---|---|
 | Point-in-time filing dates | V | V | 0 rows with a later filing | none | `edge_integrity` check |
-| Quarterly fundamentals | U | U | built; no second-source check of quarterly TTM | cross-check TTM revenue, OCF and EPS for ~30 companies against a second source | agreement within 2% on ≥ 90% of values |
-| **Share-count scaling errors** | unknown | P (flagged, not fixed) | 283 of 43,220 large-cap company-months (53 companies) with shares > 10x or < 1/10 of the company's median, e.g. 1.9e14 shares; puts small companies in the large band | programme excludes flagged rows (`quality_flags`); a fix in `equity/monthly.py` would change the signal log's inputs, so it needs its owner thread | flag count 0 after a fix, or exclusion applied in every programme test |
+| Quarterly fundamentals | U | U | built; no second-source check of quarterly TTM; staleness measured (§10.4) | the four checks in §10.4 | as §10.4 |
+| **Share-count scaling errors** | unknown | P (flagged, not fixed) | 253 (283 in the draft, whose median used 2023-26 data; §10.2) of 43,220 large-cap company-months (53 companies) with shares > 10x or < 1/10 of the company's median, e.g. 1.9e14 shares; puts small companies in the large band | programme excludes flagged rows (`quality_flags`); a fix in `equity/monthly.py` would change the signal log's inputs, so it needs its owner thread | flag count 0 after a fix, or exclusion applied in every programme test |
 | **Negative adjusted prices** | unknown | P (flagged, not fixed) | 344 price rows ≤ 0 (6 companies), 4 of them large-cap Stage 2 months (NFE 2022) | exclude in the programme; fix at source later | `edge_integrity` FAIL clears |
 | Extreme returns | unknown | P | 3,864 monthly moves over 100% to 2022-12, largest +1.7e9% (small caps) | exclusion or winsorising rule registered per trial | stated in each trial |
 | Mis-dated XBRL periods; negative share counts | unknown | P (WARN) | 106 rows / 15 companies; 4 rows | none needed for rank tests; noted | — |
@@ -206,9 +210,9 @@ Phase A.
 
 | Component | Before | After | Evidence | Minimum fix | Test of completion |
 |---|---|---|---|---|---|
-| Tests | V locally | V (268 + 19 new) | no CI | optional CI workflow (owner: adds a GitHub Action) | — |
+| Tests | V locally | V (268 + 28 new = 296) | no CI | optional CI workflow (owner: adds a GitHub Action) | — |
 | Signal-log routine monitored for missed runs | M | M | absent from `schedule.json` | add an expectation (owner thread of the signal log) | `python -m equity reliability` flags a missed 3rd |
-| Stale ETF research loop | — | flagged | enabled on an old branch and brief | owner: keep, re-brief or pause | — |
+| Stale ETF research loop | — | paused | enabled on an old branch and brief | paused (D6) until reviewed and retargeted | scheduler shows it disabled |
 | `trading/STATUS.md` current | P | P | describes the disabled intraday strategy | refresh in the trading thread | — |
 
 ## 5. What Phase A changed
@@ -285,3 +289,155 @@ The owner answers the four split decisions in SPLIT_POLICY §6 (recommended: app
 holdout pass is conditional and needs prospective confirmation before demo capital, inherited trials count). Until
 then Phase B exploration can proceed safely, because the guard makes the holdout unreadable and every trial is
 registered; nothing can be confirmed.
+
+## 10. Verification review after the owner's decisions (2026-10-14, evening)
+
+The owner decided D1-D6 (`docs/edge/DECISIONS.md`) and asked for the checks below before PR #18 merges.
+**No holdout outcome was run or inspected.** The only new computation on returns is §10.3, on data cut at 2022-12,
+registered before it ran.
+
+### 10.1 Price rows dated 2026-10-31
+
+**This is a date-label issue: an unfinished month labelled as a month-end. It is not future-dated data, but it
+is a defect for anyone who reads the row as a month-end close.**
+
+- **Cause:**
+  - The price build (`equity/equity/__main__.py` line 502, `monthly.fetch_prices`) asks Yahoo for monthly bars
+    up to the moment it runs.
+  - It labels every bar with its calendar month-end (`month_ends(...)[0]`), including the month in progress.
+  - The file was written on 2026-10-14 at 16:23 UTC, so its 5,334 rows dated 2026-10-31 hold the price on
+    14 October.
+- **Who reads it:**
+  - **Not exploration:** the data is cut at 2022-12.
+  - **Not the holdout:** its last outcome month is 2026-09.
+  - **Not the monthly signal log:**
+    - it scores only months before today (`latest_complete_month`);
+    - it joins an outcome only after that month has ended (`evaluate`);
+    - it rebuilds the data before every run.
+  - **`xsection.load()` does:** it computes 2026-09's `ret_next` from the row, which is a half-month return. That
+    month is prospective, and nothing in the programme uses it.
+- **Fix in this PR:**
+  - `edge_split.complete_months` drops rows labelled after the fetch date.
+  - `edge_integrity` reports them as a WARN.
+  - The manifest now records each file's modified time.
+- **Not fixed at source,** because the builder feeds the signal log, which must not change. The source fix
+  (label only finished months) belongs to the signal log's owner.
+
+### 10.2 Routes by which exploration could read confirmation outcomes
+
+| # | Route | Status before | Now |
+|---|---|---|---|
+| 1 | **Quality flags on uncut data.** The share-count median used 2023-26 counts, which changes the flag on 626 banded exploration rows. | Present in the draft's integrity report. No exploration result used the exclusion. | **Closed.** `with_quality` computes flags on `cut_exploration` output and refuses an uncut frame. Test: a 2024 issuance cannot change a 2022 flag. |
+| 2 | **New code reading the dataset directly** (`xsection.load()`, the CSVs), skipping the guard | Convention only | **Closed for new modules.** A test fails if any module outside a fixed list reads the data files. |
+| 3 | **A forward column not named `ret_*`** (e.g. `fwd_ret`) | Not detected | **Closed.** `assert_exploration_only` refuses forward-looking names it cannot check. |
+| 4 | **Factor, FX and benchmark series to 2026.** Excess return over VWRP is a holdout number. | Diagnostics cut factors by hand | **Closed.** `edge_split.cut_series`; the Phase B backtester must use it (its test). |
+| 5 | **An unregistered look, or a rerun of a registered one** | Append-time checks only | **Closed.** `edge_registry.require` refuses both, and the registry rejects a second result. Diagnostics call it. |
+| 6 | **A second confirmation batch** | One run per batch | **Closed (D2).** The gate and the registry both allow one batch, ever. |
+| 7 | **Gate approval as free text** | Any non-empty value passed | **Closed.** It must equal the recorded approval, and the gate also needs `backtester_validated`. |
+| 8 | **Survivorship conditioned on 2023-26.** No delisted company has a free price, so a company that stopped filing in 2023-26 is absent from 2015-22 exploration too. Of companies with at least $1bn revenue in 2015-22, 318 of 323 that stopped filing between 2023-01 and 2026-03 have no prices. | Known as survivor bias | **Open. It cannot be closed on free data.** The exploration universe is tilted towards companies that survived to 2026 without being acquired or failing. Every result states this. Paid survivorship-free prices would fix it. |
+| 9 | **Today's SIC codes and tickers** | Known | **Open (mild).** Stated in results. |
+| 10 | **Adjusted prices** | — | **Not a route.** Later dividends rescale all earlier prices by a constant, so returns within exploration are unchanged. `raw_close` undoes later splits; a split on the 29th to 31st misstates that month's raw close (an error, not a leak). |
+| 11 | **Knowledge of 2023-26** (people and the model) | Known | **Open.** Handled by D3. |
+| 12 | **Rewriting the registry wholesale,** recomputing the hash chain | — | **Open in code.** Git history is the anchor; review registry diffs in each PR. |
+
+### 10.3 Are the quality exclusions applied consistently?
+
+| Research path | Exclusion | Why |
+|---|---|---|
+| `stage2_diagnostics.py` published tables | No (by design) | They reproduce Stage 2, which had none, and match it exactly |
+| `stage2_diagnostics.py --quality` | Yes | Measures the exclusion's effect |
+| `edge_integrity.py` | Counts only | Reporting |
+| Phase B backtester | Yes, required | Its tests check it |
+| Stage 2, signal log | No | Unchanged by decision |
+
+The sensitivity run (15 `QX-*` trials, registered first) is in
+`equity/reports/research/edge/stage2_quality_sensitivity.md`. Its results:
+
+- Applying the exclusion drops 55 to 257 large-cap rows per signal over 95 months.
+- It changes no large-cap mean IC by more than 0.003 and no t by more than 0.31.
+- No signal crosses a threshold.
+- Without the exclusion, the run reproduces the published Stage 2 ICs.
+
+The exclusion is implemented as specified and does not alter any Stage 2 conclusion.
+
+### 10.4 Quarterly TTM figures: limitation and validation still needed
+
+**How TTM is built** (`equity/panel.py` `ttm`):
+
+- TTM = latest fiscal year + current year-to-date − prior year's year-to-date of the same length (±10 days), using
+  facts public on the month-end.
+- If no matching prior year-to-date exists, it falls back to the fiscal-year figure.
+- `monthly.py` drops figures whose period ended more than 18 months earlier.
+
+**Measured, large caps 2015-2022:**
+
+- 41,045 of 43,788 company-months have a TTM figure.
+- The TTM period ended a median of 3 months before the month-end (mean 2.8).
+- 1.8% are more than 6 months old, and 0.5% are more than 12 months old.
+
+**Limitations:**
+
+- The basis (fiscal year only, or fiscal year plus year-to-date) is not stored, so the share of stale fiscal-year
+  fallbacks cannot be measured directly.
+- The ±10-day matching can fail across fiscal-year changes and some 52/53-week calendars.
+- A restated prior-year comparative replaces the original once filed. This is point-in-time correct, but it mixes
+  vintages within one TTM.
+- 106 rows have mis-dated XBRL periods.
+- Nothing has been checked against a second source.
+
+**Validation needed before a TTM-based trial (H1 and others) can reach E2.** All use 2015-2022 values only:
+
+1. **Store the basis.** Store `basis` per row, or compute it in research. Pass: the fiscal-year-only share is
+   reported per year, and is below 10% for large caps.
+2. **Fiscal-year identity check.** In the month after a 10-K is filed, TTM equals the 10-K's annual figure. Pass:
+   100%, apart from listed exceptions.
+3. **Jump review.** TTM revenue changes of more than 50% quarter on quarter are flagged, and a sample of 30 is
+   reviewed by hand. Pass: each one is classified as real (an acquisition) or an error.
+4. **Second-source cross-check.** About 30 large caps, revenue, operating cash flow and diluted EPS, at
+   2015-2022 quarter-ends, against an independent source. Pass: within 2% on at least 90% of values.
+
+Checks 1 to 3 need no new data. Check 4 needs a source. SEC's Financial Statement Data Sets are free but come from
+the same filings, so they test the arithmetic, not the filing. A truly independent source is probably paid. This
+remains open.
+
+### 10.5 Tests
+
+| Suite | Result |
+|---|---|
+| research | 40 passed (12 before Phase A; 31 in the draft) |
+| equity | 117 passed |
+| trading | 139 passed |
+| **Total** | **296 passed** |
+
+New in this review:
+
+- the gate's one-batch and recorded-approval rules;
+- the registry's one-batch, `require` and second-result rules;
+- the cut-period quality flags;
+- refusal of forward-looking column names;
+- `cut_series` and `complete_months`;
+- the data-access guard test.
+
+**Unchanged** (checked against `origin/master`):
+
+- `research/signal_log.py`, `research/monthly_signal_log.sh`, `research/stage2.py` and `research/xsection.py`;
+- `equity/equity/` and `trading/`.
+
+### 10.6 Is Phase A complete?
+
+**Yes, subject to the owner's review of PR #18.**
+
+- **Data-split integrity:** the split, batch rule, trial count and the value of a holdout pass are decided and
+  enforced in code. The holdout's partial exposure is permanent and handled by D3.
+- **Statistical specification:** reviewed and recorded.
+- **Required diagnostics:** complete.
+
+**Carried into Phase B as gates, not left open in Phase A:**
+
+- backtester validation, including band-specific costs (D5);
+- the TTM checks in §10.4, before any TTM-based trial reaches E2;
+- survivorship (§10.2 route 8), stated in every result.
+
+### 10.7 Next action
+
+The owner reviews and merges PR #18. Phase B then builds the backtester to `docs/edge/PHASE_B_PLAN.md`.
