@@ -122,7 +122,7 @@ combined model is frozen, and is used once." It was for one final test of a comb
 
 1. Stage 2's signal tests. `stage2.py` cuts decisions at 2022-11 before evaluating; all 15 JSON windows end
    2022-11-30; and Phase A's diagnostics, which **cut the data at 2022-12 before building any feature**, reproduce
-   Stage 2's large-cap ICs (§5). So Stage 2's scores did not depend on post-2022 data.
+   Stage 2's large-cap ICs (§6). So Stage 2's scores did not depend on post-2022 data.
 2. The monthly signal log: starts at 2026-10-31; no log file exists yet.
 3. Stage 1's coverage tables for 2023-2026: row counts, not outcomes.
 
