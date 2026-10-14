@@ -260,6 +260,64 @@ def cmd_coverage(store: Store, a) -> int:
     return 0
 
 
+def _primary_priced(store: Store, ids: set[str]) -> list[dict]:
+    """The SEC-verified US listing of each company (the only lines priced so far)."""
+    out = {}
+    for s in sorted(latest_securities(store).values(), key=lambda s: s["t212_ticker"]):
+        if s["company_id"] in ids and not s.get("absent") and s.get("sec_match") == "high" \
+                and s["company_id"] not in out:
+            out[s["company_id"]] = s
+    return list(out.values())
+
+
+def cmd_prices(store: Store, a) -> int:
+    from .prices import update_prices  # noqa: PLC0415
+    ids = {s["company_id"] for s in store.fundamentals.read()}
+    if a.symbol:
+        ids &= {resolve(store, symbol=x)["company_id"] for x in a.symbol if resolve(store, symbol=x)}
+    with job(store, "update_prices", {"companies": len(ids)}, redact=_secrets()) as j:
+        res = update_prices(store, _primary_priced(store, ids))
+        j["outputs"] = {k: (len(v) if isinstance(v, list) else v) for k, v in res.items()}
+    print(json.dumps(res, indent=1))
+    return 1 if res["failed"] and not res["written"] else 0
+
+
+def cmd_screen(store: Store, a) -> int:
+    from . import screener  # noqa: PLC0415
+    with job(store, "screen", {}, redact=_secrets()) as j:
+        rec = screener.run(store)
+        j["outputs"] = {"rid": rec["rid"], "companies": rec["companies"], "eligible": rec["eligible"]}
+    md = screener.report(rec, a.top)
+    out = Path(__file__).resolve().parent.parent / "reports" / "screens" / f"{rec['as_of']}.md"
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(md)
+    print(md)
+    print("->", out)
+    return 0
+
+
+def cmd_explain(store: Store, a) -> int:
+    """Every sub-score and gate of one company in the latest screen run."""
+    from . import screener  # noqa: PLC0415
+    s = resolve(store, symbol=a.symbol)
+    out = screener.explain(store, s["company_id"]) if s else None
+    if not out:
+        print("not found, or not in the latest screen run")
+        return 1
+    r, full = out
+    print(f"{r['entity_name']}  run {full['run_rid']}  total={r['total']}  rank={r.get('rank')}  eligible={r['eligible']}")
+    if not full["config_matches_run"]:
+        print("  WARNING: config/screener.json changed since this run; breakdown uses the current config")
+    for name, c in full["components"].items():
+        print(f"  {name:<14} score={c['score']} coverage={c['coverage']:.0%}")
+        for p in c["parts"]:
+            print(f"      {p['metric']:<28} value={p['value']} score={p['score']} scale={p['scale']} w={p['weight']}")
+    for g in r["gates"]:
+        print(f"  gate {g['gate']:<20} {g['result']:<7} {g['detail']}")
+    print("  valuation", json.dumps(r["valuation"]))
+    return 0
+
+
 def cmd_health(store: Store, a) -> int:
     h = job_health(store)
     scans = store.scans.read()
@@ -296,6 +354,9 @@ def main(argv=None) -> int:
     s.add_argument("--supported-only", action="store_true", help="exclude industries the method does not support")
     s.add_argument("--limit", type=int, default=50)
     sub.add_parser("health")
+    s = sub.add_parser("prices"); s.add_argument("--symbol", action="append")  # noqa: E702
+    s = sub.add_parser("screen"); s.add_argument("--top", type=int, default=25)  # noqa: E702
+    s = sub.add_parser("explain"); s.add_argument("symbol")  # noqa: E702
     s = sub.add_parser("coverage")
     s.add_argument("--method", help="only snapshots of this method version, e.g. fund-2.0")
     s.add_argument("--json", help="also write the survey to this file")
@@ -304,7 +365,7 @@ def main(argv=None) -> int:
     store = Store(Path(a.data)) if a.data else Store()
     handler = {"sync-universe": cmd_sync_universe, "ingest": cmd_ingest, "show": cmd_show,
                "discover": cmd_discover, "status": cmd_status, "search": cmd_search, "health": cmd_health,
-               "coverage": cmd_coverage,
+               "coverage": cmd_coverage, "prices": cmd_prices, "screen": cmd_screen, "explain": cmd_explain,
                "crosscheck": cmd_crosscheck}
     return handler[a.cmd](store, a)
 

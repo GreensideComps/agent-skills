@@ -151,7 +151,8 @@ def ingest_company(store: Store, sec: SecClient, security: dict, today: date | N
     a = analyse(facts, today, template)
     # The snapshot identity is the filed data, the industry and the method version, not the
     # fetch time, so re-fetching unchanged filings writes nothing.
-    input_hash = content_hash({"years": a["years"], "method": a["method_version"], "sic": sic})
+    input_hash = content_hash({"years": a["years"], "method": a["method_version"], "sic": sic,
+                               "shares_outstanding": a["shares_outstanding"]})
     prev = last_snapshot(store, security["company_id"])
     if prev and prev["input_hash"] == input_hash:
         return prev, False
@@ -170,6 +171,7 @@ def ingest_company(store: Store, sec: SecClient, security: dict, today: date | N
             "years": "reported (XBRL as filed; 'o' = first filed value when it differs from 'v', the latest)",
             "derived": "calculated (formulas: methods ledger, by method_version)", "summary": "calculated"},
         "summary": a["summary"], "flags": a["flags"], "confidence": a["confidence"],
+        "shares_outstanding": a["shares_outstanding"],
         "years_packed": pack_years(a["years"], a["reporting_currency"]),
         "derived": compact_derived(a["derived"]),
         "previous_snapshot": prev["rid"] if prev else None,

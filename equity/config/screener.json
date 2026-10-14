@@ -1,0 +1,38 @@
+{
+  "method_version": "screen-1.0",
+  "note": "Owner baseline weights 30/25/20/20/5. Scales are absolute (a company's score does not depend on which other companies are in the run). Changing weights, scales or gates is a methodology change: bump method_version and get the owner's approval.",
+  "weights": {"fcf_per_share": 30, "quality": 25, "growth": 20, "valuation": 20, "risk_fit": 5},
+  "components": {
+    "fcf_per_share": [
+      {"metric": "fcf_per_share_cagr_5y", "fallback": "fcf_per_share_cagr_3y", "weight": 0.6, "zero": -0.05, "full": 0.20},
+      {"metric": "fcf_consistency", "weight": 0.4, "zero": 0.4, "full": 1.0}
+    ],
+    "quality": [
+      {"metric": "roic_avg_5y", "fallback": "roic", "weight": 0.4, "zero": 0.05, "full": 0.30},
+      {"metric": "fcf_margin_avg_5y", "fallback": "fcf_margin", "weight": 0.2, "zero": 0.0, "full": 0.25},
+      {"metric": "gross_margin", "weight": 0.15, "zero": 0.20, "full": 0.70},
+      {"metric": "cash_conversion_5y", "weight": 0.15, "zero": 0.6, "full": 1.2},
+      {"metric": "sbc_pct_revenue", "weight": 0.1, "zero": 0.10, "full": 0.0}
+    ],
+    "growth": [
+      {"metric": "revenue_cagr_5y", "fallback": "revenue_cagr_3y", "weight": 0.6, "zero": 0.0, "full": 0.20},
+      {"metric": "eps_cagr_5y", "weight": 0.4, "zero": 0.0, "full": 0.20}
+    ],
+    "valuation": [
+      {"metric": "fcf_yield", "weight": 0.6, "zero": 0.0, "full": 0.08},
+      {"metric": "ebit_yield", "weight": 0.4, "zero": 0.0, "full": 0.10}
+    ],
+    "risk_fit": [
+      {"metric": "net_debt_to_ebitda_or_cash", "weight": 0.6, "zero": 3.0, "full": 0.0},
+      {"metric": "goodwill_pct_assets", "weight": 0.4, "zero": 0.5, "full": 0.0}
+    ]
+  },
+  "min_component_coverage": 0.5,
+  "gates": {
+    "max_net_debt_to_ebitda": 4.0,
+    "min_interest_coverage": 3.0,
+    "min_fcf_positive_share": 0.6,
+    "max_share_change_cagr_3y": 0.03,
+    "max_price_age_days": 7
+  }
+}
