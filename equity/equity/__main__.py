@@ -443,6 +443,26 @@ def cmd_reliability(store: Store, a) -> int:
     return res["exit_code"]
 
 
+def cmd_backtest(store: Store, a) -> int:
+    """Pre-registered point-in-time test of the screen score (research/screen_backtest_prereg.md)."""
+    import time  # noqa: PLC0415
+
+    from . import backtest  # noqa: PLC0415
+    from .prices import _get  # noqa: PLC0415
+    root = Path(__file__).resolve().parent.parent / "research"
+    out = root / "output" / "screen_backtest_rows.jsonl"
+    out.parent.mkdir(parents=True, exist_ok=True)
+    secs = backtest.sample(list(latest_securities(store).values()), a.n, a.seed)
+    recs = backtest.collect(secs, SecClient(), out)
+    spy = backtest.parse_monthly(_get(backtest.CHART.format(sym="SPY", end=int(time.time()))))
+    ev = backtest.evaluate(recs, spy)
+    (root / "output" / "screen_backtest_summary.json").write_text(json.dumps(ev, indent=1))
+    md = backtest.report(ev)
+    (root / "screen_backtest_results.md").write_text(md)
+    print(md)
+    return 0
+
+
 def main(argv=None) -> int:
     p = argparse.ArgumentParser(prog="equity")
     p.add_argument("--data", default=None, help="ledger directory (default equity/data)")
@@ -473,6 +493,8 @@ def main(argv=None) -> int:
     s.add_argument("--supported-only", action="store_true", help="exclude industries the method does not support")
     s.add_argument("--limit", type=int, default=50)
     sub.add_parser("health")
+    s = sub.add_parser("backtest", help="pre-registered point-in-time test of the screen score")
+    s.add_argument("--n", type=int, default=600); s.add_argument("--seed", type=int, default=7)  # noqa: E702
     sub.add_parser("reliability", help="missed scheduled runs, stuck jobs, stale data (exit 0/1/2)")
     s = sub.add_parser("prices"); s.add_argument("--symbol", action="append")  # noqa: E702
     s = sub.add_parser("screen"); s.add_argument("--top", type=int, default=25)  # noqa: E702
@@ -498,7 +520,7 @@ def main(argv=None) -> int:
                "discover": cmd_discover, "status": cmd_status, "search": cmd_search, "health": cmd_health,
                "coverage": cmd_coverage, "prices": cmd_prices, "screen": cmd_screen, "explain": cmd_explain,
                "valuate": cmd_valuate, "paper": cmd_paper, "thesis": cmd_thesis, "bearcase": cmd_bearcase, "alerts": cmd_alerts,
-               "crosscheck": cmd_crosscheck, "reliability": cmd_reliability}
+               "crosscheck": cmd_crosscheck, "reliability": cmd_reliability, "backtest": cmd_backtest}
     return handler[a.cmd](store, a)
 
 

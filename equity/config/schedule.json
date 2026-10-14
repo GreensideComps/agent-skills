@@ -3,7 +3,7 @@
  "expectations": [
   {
    "name": "T212 demo: hourly trader + monitor",
-   "trigger_id": "trig_01HwinHAEB3cteN7zavwCGzQ",
+   "trigger_id": "trig_01Qh8CiQcWpUK4Jop7EvdEH4",
    "cron": "57 7-20 * * 1-5",
    "tz": "Europe/London",
    "active_from": "2026-10-14T07:46:35Z",
