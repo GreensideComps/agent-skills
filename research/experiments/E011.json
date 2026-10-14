@@ -1,0 +1,168 @@
+{
+ "id": "E011",
+ "title": "Day-trading gold on the LSE (SGLN / 3x gold ETPs), flat every night",
+ "date": "2026-10-13",
+ "agenda_item": "Owner request: day trade like gold day traders",
+ "hypothesis": "Simple intraday gold rules traded in London hours, flat at every close, make money after spread.",
+ "rationale": "Mechanical stand-ins for common retail gold day-trading styles: always long, opening-range breakout, follow yesterday, fade the first hour.",
+ "data": [
+  "Yahoo hourly bars SGLN.L 2023-11-23..2026-10-13"
+ ],
+ "methodology": "Hourly bars 08:00-16:00 London; entries at bar closes; exit by the 15:00 bar close; 3x modelled as 3x the SGLN intraday move.",
+ "benchmark": "holding gold (SGLN) over the same period",
+ "costs": "1x: 0.03% and 0.10% per side; 3x: 0.20% per side",
+ "in_sample": "none (no fitting)",
+ "out_of_sample": "2023-11-23..2026-10-13",
+ "results": [
+  {
+   "rule": "long_every_day",
+   "leverage": 1,
+   "cost_per_side": 0.0003,
+   "trades": 721,
+   "win_rate": 0.4563,
+   "total_return": -0.4681,
+   "CAGR": -0.1963,
+   "maxDD": -0.4728,
+   "gross_total_no_costs": -0.1802
+  },
+  {
+   "rule": "london_breakout",
+   "leverage": 1,
+   "cost_per_side": 0.0003,
+   "trades": 693,
+   "win_rate": 0.3838,
+   "total_return": -0.4559,
+   "CAGR": -0.19,
+   "maxDD": -0.4759,
+   "gross_total_no_costs": -0.1754
+  },
+  {
+   "rule": "follow_yesterday",
+   "leverage": 1,
+   "cost_per_side": 0.0003,
+   "trades": 720,
+   "win_rate": 0.4764,
+   "total_return": -0.2936,
+   "CAGR": -0.1135,
+   "maxDD": -0.3494,
+   "gross_total_no_costs": 0.0881
+  },
+  {
+   "rule": "fade_first_hour",
+   "leverage": 1,
+   "cost_per_side": 0.0003,
+   "trades": 721,
+   "win_rate": 0.4743,
+   "total_return": -0.4647,
+   "CAGR": -0.1945,
+   "maxDD": -0.5182,
+   "gross_total_no_costs": -0.1749
+  },
+  {
+   "rule": "long_every_day",
+   "leverage": 1,
+   "cost_per_side": 0.001,
+   "trades": 721,
+   "win_rate": 0.3703,
+   "total_return": -0.8062,
+   "CAGR": -0.4334,
+   "maxDD": -0.8052,
+   "gross_total_no_costs": -0.1802
+  },
+  {
+   "rule": "london_breakout",
+   "leverage": 1,
+   "cost_per_side": 0.001,
+   "trades": 693,
+   "win_rate": 0.3074,
+   "total_return": -0.7938,
+   "CAGR": -0.4211,
+   "maxDD": -0.794,
+   "gross_total_no_costs": -0.1754
+  },
+  {
+   "rule": "follow_yesterday",
+   "leverage": 1,
+   "cost_per_side": 0.001,
+   "trades": 720,
+   "win_rate": 0.3944,
+   "total_return": -0.7422,
+   "CAGR": -0.3748,
+   "maxDD": -0.7411,
+   "gross_total_no_costs": 0.0881
+  },
+  {
+   "rule": "fade_first_hour",
+   "leverage": 1,
+   "cost_per_side": 0.001,
+   "trades": 721,
+   "win_rate": 0.3814,
+   "total_return": -0.8049,
+   "CAGR": -0.4321,
+   "maxDD": -0.8058,
+   "gross_total_no_costs": -0.1749
+  },
+  {
+   "rule": "long_every_day",
+   "leverage": 3,
+   "cost_per_side": 0.002,
+   "trades": 721,
+   "win_rate": 0.4147,
+   "total_return": -0.973,
+   "CAGR": -0.7136,
+   "maxDD": -0.9726,
+   "gross_total_no_costs": -0.5169
+  },
+  {
+   "rule": "london_breakout",
+   "leverage": 3,
+   "cost_per_side": 0.002,
+   "trades": 693,
+   "win_rate": 0.3434,
+   "total_return": -0.9679,
+   "CAGR": -0.696,
+   "maxDD": -0.9681,
+   "gross_total_no_costs": -0.487
+  },
+  {
+   "rule": "follow_yesterday",
+   "leverage": 3,
+   "cost_per_side": 0.002,
+   "trades": 720,
+   "win_rate": 0.4389,
+   "total_return": -0.9365,
+   "CAGR": -0.6154,
+   "maxDD": -0.9371,
+   "gross_total_no_costs": 0.1305
+  },
+  {
+   "rule": "fade_first_hour",
+   "leverage": 3,
+   "cost_per_side": 0.002,
+   "trades": 721,
+   "win_rate": 0.4313,
+   "total_return": -0.9725,
+   "CAGR": -0.7118,
+   "maxDD": -0.9737,
+   "gross_total_no_costs": -0.5079
+  }
+ ],
+ "robustness": [
+  "three cost levels",
+  "1x and 3x"
+ ],
+ "limitations": [
+  "hourly bars only (no tick fills)",
+  "about 3 years",
+  "3x modelled, not observed (3x ETPs have ~3 months of hourly data)"
+ ],
+ "trials": 12,
+ "decision": "REJECTED",
+ "decision_detail": "Every rule lost money after costs at every cost level (best: follow_yesterday 1x at 0.03%/side, -29% total), while holding gold returned +97%. Before costs, gold's London-hours move was itself negative (-18% for always-long), so gold's gains came outside London hours.",
+ "promoted": false,
+ "evidence": [
+  "research/h05_gold_daytrade.py",
+  "research/output/h05_gold_daytrade.csv",
+  "research/output/h05_gold_daytrade_trades.csv"
+ ]
+}

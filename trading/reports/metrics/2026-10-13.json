@@ -1,0 +1,1322 @@
+{
+ "meta": {
+  "report_date": "2026-10-13",
+  "generated_utc": "2026-10-13T13:47:22+00:00",
+  "generated_uk": "2026-10-13 14:47 BST",
+  "environment": "PRACTICE (demo) account - demo.trading212.com; live trading is disabled in code",
+  "strategy": "momentum_tilt_v1",
+  "example": false
+ },
+ "data_status": {
+  "summary": {
+   "ok": true,
+   "error": null,
+   "at": "2026-10-13T13:47:22+00:00"
+  },
+  "positions": {
+   "ok": true,
+   "error": null,
+   "at": "2026-10-13T13:47:22+00:00"
+  },
+  "pending": {
+   "ok": true,
+   "error": null,
+   "at": "2026-10-13T13:47:23+00:00"
+  },
+  "orders": {
+   "ok": true,
+   "error": null,
+   "at": "2026-10-13T13:47:23+00:00"
+  },
+  "transactions": {
+   "ok": true,
+   "error": null,
+   "at": "2026-10-13T13:47:24+00:00"
+  },
+  "dividends": {
+   "ok": true,
+   "error": null,
+   "at": "2026-10-13T13:47:25+00:00"
+  }
+ },
+ "alerts": [],
+ "account": {
+  "currency": "GBP",
+  "total_value": 99.55,
+  "cash_available": 1.52,
+  "cash_reserved": 0.0,
+  "cash_in_pies": 0.0,
+  "invested_value": 98.03,
+  "holdings": [
+   {
+    "ticker": "VWRPl_EQ",
+    "name": "Vanguard FTSE All-World (Acc)",
+    "quantity": 0.3359,
+    "price": 146.202,
+    "currency": "GBP",
+    "value_gbp": 49.11,
+    "weight": 0.4933,
+    "unrealized_pl_gbp": -0.07,
+    "cost_gbp": 49.18
+   },
+   {
+    "ticker": "IWMOl_EQ",
+    "name": "iShares Edge MSCI World Momentum Factor (Acc)",
+    "quantity": 0.5568,
+    "price": 116.4,
+    "currency": "USD",
+    "value_gbp": 48.92,
+    "weight": 0.4914,
+    "unrealized_pl_gbp": -0.31,
+    "cost_gbp": 49.23
+   }
+  ]
+ },
+ "reconciliation": [
+  {
+   "name": "R1 total = cash + investments",
+   "status": "PASS",
+   "detail": "total value: expected \u00a399.55, actual \u00a399.55, diff \u00a3+0.00 (tol \u00a30.05)",
+   "expected": 99.55,
+   "actual": 99.55
+  },
+  {
+   "name": "R2 investments = \u03a3 positions",
+   "status": "PASS",
+   "detail": "investments value: expected \u00a398.03, actual \u00a398.03, diff \u00a3+0.00 (tol \u00a30.05)",
+   "expected": 98.03,
+   "actual": 98.03
+  },
+  {
+   "name": "R3 cash ledger",
+   "status": "PASS",
+   "detail": "cash from transaction history: expected \u00a31.52, actual \u00a31.52, diff \u00a3-0.00 (tol \u00a30.05)",
+   "expected": 1.52,
+   "actual": 1.52
+  },
+  {
+   "name": "R4 gain = P&L components",
+   "status": "PASS",
+   "detail": "investment gain: expected \u00a3-0.45, actual \u00a3-0.45, diff \u00a3-0.00 (tol \u00a30.05)",
+   "expected": -0.45,
+   "actual": -0.45
+  },
+  {
+   "name": "R5 holdings = \u03a3 fills",
+   "status": "PASS",
+   "detail": "all position quantities match filled orders",
+   "expected": null,
+   "actual": null
+  }
+ ],
+ "performance": {
+  "deposits": 100.0,
+  "withdrawals": 0.0,
+  "net_contributions": 100.0,
+  "realized_pl": 0.0,
+  "unrealized_pl": -0.38,
+  "trading_fees": 0.07,
+  "fees_by_type": {
+   "CURRENCY_CONVERSION_FEE": 0.07
+  },
+  "account_fees": 0.0,
+  "dividends": 0.0,
+  "interest": 0.0,
+  "investment_gain": -0.45,
+  "twr_since_inception": -0.0045,
+  "hwm_index": 1.0,
+  "drawdown_from_hwm": -0.0045,
+  "max_drawdown": -0.0072,
+  "twr_periods": 12,
+  "first_snapshot": "2026-10-13T09:18:07+00:00",
+  "unclassified_transactions": 0
+ },
+ "orders": {
+  "verified_all": [
+   {
+    "id": 56400858343,
+    "ticker": "VWRPl_EQ",
+    "side": "BUY",
+    "type": "MARKET",
+    "status": "FILLED",
+    "quantity": 0.0169,
+    "filled": 0.0169,
+    "created": "2026-10-13T09:24:50.000Z",
+    "initiated": "API",
+    "fill_price": 146.42,
+    "filled_at": "2026-10-13T09:25:01.000Z",
+    "fees": 0.0,
+    "net_value": 2.47
+   },
+   {
+    "id": 56400858303,
+    "ticker": "VWRPl_EQ",
+    "side": "BUY",
+    "type": "MARKET",
+    "status": "FILLED",
+    "quantity": 0.319,
+    "filled": 0.319,
+    "created": "2026-10-13T09:20:38.000Z",
+    "initiated": "API",
+    "fill_price": 146.42,
+    "filled_at": "2026-10-13T09:20:49.000Z",
+    "fees": 0.0,
+    "net_value": 46.71
+   },
+   {
+    "id": 56400858289,
+    "ticker": "IWMOl_EQ",
+    "side": "BUY",
+    "type": "MARKET",
+    "status": "FILLED",
+    "quantity": 0.5568,
+    "filled": 0.5568,
+    "created": "2026-10-13T09:18:37.000Z",
+    "initiated": "API",
+    "fill_price": 117.02,
+    "filled_at": "2026-10-13T09:18:42.000Z",
+    "fees": 0.07,
+    "net_value": 49.3
+   }
+  ],
+  "verified_24h": [
+   {
+    "id": 56400858343,
+    "ticker": "VWRPl_EQ",
+    "side": "BUY",
+    "type": "MARKET",
+    "status": "FILLED",
+    "quantity": 0.0169,
+    "filled": 0.0169,
+    "created": "2026-10-13T09:24:50.000Z",
+    "initiated": "API",
+    "fill_price": 146.42,
+    "filled_at": "2026-10-13T09:25:01.000Z",
+    "fees": 0.0,
+    "net_value": 2.47
+   },
+   {
+    "id": 56400858303,
+    "ticker": "VWRPl_EQ",
+    "side": "BUY",
+    "type": "MARKET",
+    "status": "FILLED",
+    "quantity": 0.319,
+    "filled": 0.319,
+    "created": "2026-10-13T09:20:38.000Z",
+    "initiated": "API",
+    "fill_price": 146.42,
+    "filled_at": "2026-10-13T09:20:49.000Z",
+    "fees": 0.0,
+    "net_value": 46.71
+   },
+   {
+    "id": 56400858289,
+    "ticker": "IWMOl_EQ",
+    "side": "BUY",
+    "type": "MARKET",
+    "status": "FILLED",
+    "quantity": 0.5568,
+    "filled": 0.5568,
+    "created": "2026-10-13T09:18:37.000Z",
+    "initiated": "API",
+    "fill_price": 117.02,
+    "filled_at": "2026-10-13T09:18:42.000Z",
+    "fees": 0.07,
+    "net_value": 49.3
+   }
+  ],
+  "verified_7d_count": 3,
+  "pending_now": [],
+  "journal_24h": [
+   {
+    "ts": "2026-10-13T09:18:09+00:00",
+    "kind": "plan",
+    "ticker": null,
+    "quantity": null,
+    "reason": "uninvested cash 100.0% > 4.5%, IWMOl_EQ drift -49.2% beyond \u00b15% band"
+   },
+   {
+    "ts": "2026-10-13T09:18:36+00:00",
+    "kind": "plan",
+    "ticker": null,
+    "quantity": null,
+    "reason": "uninvested cash 100.0% > 4.5%, IWMOl_EQ drift -49.2% beyond \u00b15% band"
+   },
+   {
+    "ts": "2026-10-13T09:18:37+00:00",
+    "kind": "order_placed",
+    "ticker": "IWMOl_EQ",
+    "quantity": 0.5568,
+    "reason": "increase to target"
+   },
+   {
+    "ts": "2026-10-13T09:18:44+00:00",
+    "kind": "order_rejected",
+    "ticker": "VWRPl_EQ",
+    "quantity": 0.3367,
+    "reason": "Insufficient funds (insufficient-free-for-stocks-buy)"
+   },
+   {
+    "ts": "2026-10-13T09:20:17+00:00",
+    "kind": "plan",
+    "ticker": null,
+    "quantity": null,
+    "reason": "uninvested cash 50.8% > 4.5%, VWRPl_EQ drift -49.2% beyond \u00b15% band"
+   },
+   {
+    "ts": "2026-10-13T09:20:17+00:00",
+    "kind": "order_rejected",
+    "ticker": "VWRPl_EQ",
+    "quantity": 0.3361,
+    "reason": "Insufficient funds (insufficient-free-for-stocks-buy)"
+   },
+   {
+    "ts": "2026-10-13T09:20:24+00:00",
+    "kind": "order_rejected",
+    "ticker": "VWRPl_EQ",
+    "quantity": 0.3361,
+    "reason": "Insufficient funds (insufficient-free-for-stocks-buy)"
+   },
+   {
+    "ts": "2026-10-13T09:20:31+00:00",
+    "kind": "order_rejected",
+    "ticker": "VWRPl_EQ",
+    "quantity": 0.3327,
+    "reason": "Insufficient funds (insufficient-free-for-stocks-buy)"
+   },
+   {
+    "ts": "2026-10-13T09:20:38+00:00",
+    "kind": "order_placed",
+    "ticker": "VWRPl_EQ",
+    "quantity": 0.319,
+    "reason": "increase to target (resized to fresh cash \u00a350.70)"
+   },
+   {
+    "ts": "2026-10-13T09:24:46+00:00",
+    "kind": "plan",
+    "ticker": null,
+    "quantity": null,
+    "reason": "uninvested cash 4.0% > 3.0%"
+   },
+   {
+    "ts": "2026-10-13T09:24:50+00:00",
+    "kind": "order_placed",
+    "ticker": "VWRPl_EQ",
+    "quantity": 0.0169,
+    "reason": "increase to target"
+   },
+   {
+    "ts": "2026-10-13T12:13:54+00:00",
+    "kind": "plan",
+    "ticker": null,
+    "quantity": null,
+    "reason": "checked - no rebalance needed"
+   }
+  ]
+ },
+ "benchmarks": {
+  "inception": "2026-10-13",
+  "capital": 100.0,
+  "portfolios": {
+   "A_benchmark_vwrp": {
+    "value": 99.9,
+    "return": -0.001,
+    "as_of": "2026-10-13"
+   },
+   "C_gem12": {
+    "value": 99.9,
+    "return": -0.001,
+    "as_of": "2026-10-13"
+   },
+   "B_live_rules_at_close": {
+    "value": 99.82,
+    "return": -0.00175,
+    "as_of": "2026-10-13"
+   }
+  }
+ },
+ "risk": {
+  "weights": {
+   "VWRPl_EQ": 0.4933,
+   "IWMOl_EQ": 0.4914
+  },
+  "cash_weight": 0.0153,
+  "largest_position": [
+   "VWRPl_EQ",
+   0.4933
+  ],
+  "hhi": 0.4848,
+  "effective_positions": 2.06,
+  "listing_currency_weights": {
+   "GBP": 0.4933,
+   "USD": 0.4914
+  },
+  "est_annual_vol": 0.1625,
+  "est_daily_vol": 0.01024,
+  "est_var95_1d_pct": 0.01684,
+  "vol_window_days": 250,
+  "estimate_basis": "target weights x last 252 daily GBP total returns (public prices); not a forecast",
+  "drawdown_from_hwm": -0.0045,
+  "material_changes": [
+   "No previous report to compare against (first report)."
+  ]
+ },
+ "reconciliation_ok": true,
+ "research": {
+  "experiments": [
+   {
+    "id": "E001",
+    "title": "Asset-allocation timing: trend, dual momentum, rotation, risk parity, vol targeting",
+    "date": "2026-10-13",
+    "agenda_item": "Round 1",
+    "hypothesis": "Rules that time or rotate between equities, bonds, gold and cash beat buy-and-hold world equity after costs.",
+    "rationale": "Time-series momentum (under-reaction/herding), cross-asset momentum, volatility clustering.",
+    "data": [
+     "Yahoo Finance adjusted closes (UCITS ETFs + US mutual-fund proxies), cleaned for unit flips",
+     "Ken French Data Library (CRSP, survivorship-free)",
+     "FRED: GBP/USD, UK 3m interbank",
+     "Monthly GBP total returns 1992-2026"
+    ],
+    "methodology": "36 pre-declared configs in 6 families; per-family winner chosen on in-sample Sharpe only; signals use data to month-end t, trade t+1.",
+    "benchmark": "World equity buy-and-hold (OOS CAGR 0.1111, Sharpe 0.857, maxDD -0.1548)",
+    "costs": "0.05-0.25% one-way spread by asset; 0.15% FX fee on non-GBP lines; stressed x3/x5",
+    "in_sample": "1992-01..2010-12",
+    "out_of_sample": "2011-01..2026-09",
+    "results": [
+     {
+      "family": "benchmark",
+      "selected_on_IS_sharpe": "60/40 WORLD/BOND",
+      "IS": {
+       "CAGR": 0.0866,
+       "Sharpe": 0.372,
+       "maxDD": -0.2229,
+       "DSR": 0.594
+      },
+      "OOS": {
+       "CAGR": 0.074,
+       "Sharpe": 0.808,
+       "maxDD": -0.1091,
+       "dCAGR_vs_world": -0.0371,
+       "p_CAGR": 1.0,
+       "dSharpe_vs_world": -0.049,
+       "p_Sharpe": 0.697
+      }
+     },
+     {
+      "family": "trend_abs",
+      "selected_on_IS_sharpe": "TSMOM L=8 safe=BOND",
+      "IS": {
+       "CAGR": 0.1218,
+       "Sharpe": 0.62,
+       "maxDD": -0.1577,
+       "DSR": 0.886
+      },
+      "OOS": {
+       "CAGR": 0.0756,
+       "Sharpe": 0.623,
+       "maxDD": -0.1679,
+       "dCAGR_vs_world": -0.0356,
+       "p_CAGR": 0.997,
+       "dSharpe_vs_world": -0.235,
+       "p_Sharpe": 0.981
+      }
+     },
+     {
+      "family": "trend_sma",
+      "selected_on_IS_sharpe": "SMA L=10 safe=BOND",
+      "IS": {
+       "CAGR": 0.1252,
+       "Sharpe": 0.616,
+       "maxDD": -0.1686,
+       "DSR": 0.887
+      },
+      "OOS": {
+       "CAGR": 0.0809,
+       "Sharpe": 0.671,
+       "maxDD": -0.1931,
+       "dCAGR_vs_world": -0.0302,
+       "p_CAGR": 0.995,
+       "dSharpe_vs_world": -0.187,
+       "p_Sharpe": 0.942
+      }
+     },
+     {
+      "family": "gem",
+      "selected_on_IS_sharpe": "GEM L=12 safe=BOND",
+      "IS": {
+       "CAGR": 0.1326,
+       "Sharpe": 0.621,
+       "maxDD": -0.2214,
+       "DSR": 0.892
+      },
+      "OOS": {
+       "CAGR": 0.1231,
+       "Sharpe": 0.918,
+       "maxDD": -0.1319,
+       "dCAGR_vs_world": 0.012,
+       "p_CAGR": 0.147,
+       "dSharpe_vs_world": 0.061,
+       "p_Sharpe": 0.251
+      }
+     },
+     {
+      "family": "rotation",
+      "selected_on_IS_sharpe": "ROT K=1 L=12",
+      "IS": {
+       "CAGR": 0.1706,
+       "Sharpe": 0.718,
+       "maxDD": -0.2168,
+       "DSR": 0.955
+      },
+      "OOS": {
+       "CAGR": 0.0807,
+       "Sharpe": 0.479,
+       "maxDD": -0.2766,
+       "dCAGR_vs_world": -0.0305,
+       "p_CAGR": 0.801,
+       "dSharpe_vs_world": -0.38,
+       "p_Sharpe": 0.94
+      }
+     },
+     {
+      "family": "inverse_vol",
+      "selected_on_IS_sharpe": "InvVol WORLD/BOND/GOLD L=12",
+      "IS": {
+       "CAGR": 0.097,
+       "Sharpe": 0.732,
+       "maxDD": -0.0603,
+       "DSR": 0.966
+      },
+      "OOS": {
+       "CAGR": 0.0487,
+       "Sharpe": 0.649,
+       "maxDD": -0.0983,
+       "dCAGR_vs_world": -0.0624,
+       "p_CAGR": 0.998,
+       "dSharpe_vs_world": -0.209,
+       "p_Sharpe": 0.778
+      }
+     },
+     {
+      "family": "vol_target",
+      "selected_on_IS_sharpe": "VolTarget 15% L=6",
+      "IS": {
+       "CAGR": 0.0754,
+       "Sharpe": 0.213,
+       "maxDD": -0.4261,
+       "DSR": 0.33
+      },
+      "OOS": {
+       "CAGR": 0.1064,
+       "Sharpe": 0.828,
+       "maxDD": -0.1548,
+       "dCAGR_vs_world": -0.0047,
+       "p_CAGR": 0.949,
+       "dSharpe_vs_world": -0.029,
+       "p_Sharpe": 0.955
+      }
+     }
+    ],
+    "robustness": [
+     "costs x3/x5 (GEM)",
+     "one-day execution lag (GEM)",
+     "8-regime breakdown",
+     "1927-2026 US trend check (E002)"
+    ],
+    "limitations": [
+     "OOS period mostly a bull market",
+     "pre-2012 data uses proxies; bond proxy weakest (corr 0.78)",
+     "monthly sampling understates intra-month drawdowns"
+    ],
+    "trials": 36,
+    "decision": "REJECTED",
+    "decision_detail": "No family beat world equity significantly OOS; GEM-12 +1.2%/yr p=0.15 kept as shadow portfolio C only.",
+    "promoted": false,
+    "evidence": [
+     "research/output/allocation_selected.csv",
+     "research/output/allocation_all_configs.csv",
+     "research/run_allocation.py"
+    ]
+   },
+   {
+    "id": "E002",
+    "title": "Trend following on the US market, 1928-2026",
+    "date": "2026-10-13",
+    "agenda_item": "Round 1",
+    "hypothesis": "A 10-month SMA or 12-month absolute-momentum filter improves risk-adjusted returns over a century.",
+    "rationale": "Trend persistence; crash avoidance.",
+    "data": [
+     "Ken French US market and T-bill returns (CRSP)"
+    ],
+    "methodology": "Monthly signal, 0.1% cost per switch; sub-period breakdown; bootstrap vs buy-and-hold (p-values in REPORT.md 4a).",
+    "benchmark": "US market buy-and-hold",
+    "costs": "0.1% per switch",
+    "in_sample": "n/a (long-run check)",
+    "out_of_sample": "1928-2026 sub-periods",
+    "results": {
+     "US b&h 1928-1949": {
+      "CAGR": 0.0488,
+      "Sharpe": 0.28,
+      "maxDD": -0.8365
+     },
+     "US b&h 1950-1989": {
+      "CAGR": 0.1226,
+      "Sharpe": 0.517,
+      "maxDD": -0.4651
+     },
+     "US b&h 1990-2010": {
+      "CAGR": 0.0883,
+      "Sharpe": 0.393,
+      "maxDD": -0.5031
+     },
+     "US b&h 2011-2026": {
+      "CAGR": 0.1408,
+      "Sharpe": 0.877,
+      "maxDD": -0.2484
+     },
+     "US b&h ALL": {
+      "CAGR": 0.1012,
+      "Sharpe": 0.441,
+      "maxDD": -0.8365
+     },
+     "SMA L=10 1928-1949": {
+      "CAGR": 0.0553,
+      "Sharpe": 0.368,
+      "maxDD": -0.4309
+     },
+     "SMA L=10 1950-1989": {
+      "CAGR": 0.1137,
+      "Sharpe": 0.551,
+      "maxDD": -0.2448
+     },
+     "SMA L=10 1990-2010": {
+      "CAGR": 0.0975,
+      "Sharpe": 0.571,
+      "maxDD": -0.1738
+     },
+     "SMA L=10 2011-2026": {
+      "CAGR": 0.0993,
+      "Sharpe": 0.791,
+      "maxDD": -0.1813
+     },
+     "SMA L=10 ALL": {
+      "CAGR": 0.0947,
+      "Sharpe": 0.529,
+      "maxDD": -0.4309
+     },
+     "TSMOM L=12 1928-1949": {
+      "CAGR": 0.0725,
+      "Sharpe": 0.467,
+      "maxDD": -0.445
+     },
+     "TSMOM L=12 1950-1989": {
+      "CAGR": 0.1091,
+      "Sharpe": 0.538,
+      "maxDD": -0.2424
+     },
+     "TSMOM L=12 1990-2010": {
+      "CAGR": 0.0995,
+      "Sharpe": 0.585,
+      "maxDD": -0.1732
+     },
+     "TSMOM L=12 2011-2026": {
+      "CAGR": 0.0977,
+      "Sharpe": 0.682,
+      "maxDD": -0.2361
+     },
+     "TSMOM L=12 ALL": {
+      "CAGR": 0.097,
+      "Sharpe": 0.543,
+      "maxDD": -0.445
+     }
+    },
+    "robustness": [
+     "four sub-periods"
+    ],
+    "limitations": [
+     "USD, gross index, US only"
+    ],
+    "trials": 2,
+    "decision": "INSURANCE_ONLY",
+    "decision_detail": "Roughly halves max drawdown; does not raise long-run CAGR.",
+    "promoted": false,
+    "evidence": [
+     "research/output/us_century_trend.csv",
+     "research/run_regimes.py"
+    ]
+   },
+   {
+    "id": "E003",
+    "title": "Persistence of factor premia (momentum, value, profitability)",
+    "date": "2026-10-13",
+    "agenda_item": "Round 1",
+    "hypothesis": "Published long-short factor premia persist after publication and in developed markets.",
+    "rationale": "Behavioural under-reaction (momentum); risk/mispricing (value, profitability).",
+    "data": [
+     "Ken French US and Developed factor files"
+    ],
+    "methodology": "Annualised mean and t-stat by sub-period, gross of costs.",
+    "benchmark": "zero premium",
+    "costs": "none (gross long-short; not directly investable)",
+    "in_sample": "1927-1989 / 1990-2010",
+    "out_of_sample": "2011-2026",
+    "results": [
+     {
+      "factor": "US momentum (UMD)",
+      "1927-1989": "+8.5% (t=4.1)",
+      "1990-2010": "+7.2% (t=1.8)",
+      "2011-2026": "+2.8% (t=0.8)"
+     },
+     {
+      "factor": "US value (HML)",
+      "1927-1989": "+5.6% (t=3.4)",
+      "1990-2010": "+3.6% (t=1.5)",
+      "2011-2026": "-0.4% (t=-0.1)"
+     },
+     {
+      "factor": "US profitability (RMW)",
+      "1927-1989": "+2.0% (t=1.9)",
+      "1990-2010": "+5.0% (t=2.2)",
+      "2011-2026": "+2.1% (t=1.1)"
+     },
+     {
+      "factor": "Dev momentum (WML)",
+      "1927-1989": "",
+      "1990-2010": "+7.5% (t=2.3)",
+      "2011-2026": "+5.3% (t=2.1)"
+     },
+     {
+      "factor": "Dev value (HML)",
+      "1927-1989": "",
+      "1990-2010": "+5.3% (t=2.8)",
+      "2011-2026": "+0.4% (t=0.2)"
+     },
+     {
+      "factor": "Dev profitability (RMW)",
+      "1927-1989": "",
+      "1990-2010": "+4.4% (t=3.7)",
+      "2011-2026": "+2.6% (t=2.0)"
+     }
+    ],
+    "robustness": [
+     "US and Developed samples"
+    ],
+    "limitations": [
+     "long-short and gross: not what a \u00a3100 long-only account can hold"
+    ],
+    "trials": 6,
+    "decision": "MOMENTUM_SUPPORTED",
+    "decision_detail": "Developed momentum still t\u22482.1 after 2010; value premium \u22480.",
+    "promoted": false,
+    "evidence": [
+     "research/output/factor_premia_by_period.csv",
+     "research/run_factors.py"
+    ]
+   },
+   {
+    "id": "E004",
+    "title": "Tradeable MSCI World factor UCITS ETFs vs MSCI World",
+    "date": "2026-10-13",
+    "agenda_item": "Round 1",
+    "hypothesis": "Factor ETFs (momentum, quality, value, min-vol) beat MSCI World net of fees.",
+    "rationale": "As E003.",
+    "data": [
+     "Yahoo: IWFM/IWFQ/IWFV/MINV/SWDA GBP lines 2014-11..2026-09"
+    ],
+    "methodology": "Monthly GBP returns, paired block bootstrap vs SWDA.",
+    "benchmark": "SWDA (MSCI World)",
+    "costs": "fund OCF included in prices; spreads ignored (buy-and-hold)",
+    "in_sample": "academic evidence pre-2014 (E003)",
+    "out_of_sample": "2014-11..2026-09",
+    "results": [
+     {
+      "etf": "WORLD_ETF",
+      "CAGR": 0.1299,
+      "vol": 0.1166,
+      "Sharpe": 0.9542,
+      "maxDD": -0.1495,
+      "dCAGR": null,
+      "p_CAGR": null,
+      "dSharpe": null,
+      "p_Sharpe": null
+     },
+     {
+      "etf": "MOM",
+      "CAGR": 0.1559,
+      "vol": 0.1411,
+      "Sharpe": 0.97,
+      "maxDD": -0.1515,
+      "dCAGR": 0.026,
+      "p_CAGR": 0.0887,
+      "dSharpe": 0.0159,
+      "p_Sharpe": 0.4543
+     },
+     {
+      "etf": "QUALITY",
+      "CAGR": 0.128,
+      "vol": 0.1151,
+      "Sharpe": 0.947,
+      "maxDD": -0.1366,
+      "dCAGR": -0.0019,
+      "p_CAGR": 0.605,
+      "dSharpe": -0.0072,
+      "p_Sharpe": 0.548
+     },
+     {
+      "etf": "VALUE",
+      "CAGR": 0.1211,
+      "vol": 0.1319,
+      "Sharpe": 0.7979,
+      "maxDD": -0.2132,
+      "dCAGR": -0.0087,
+      "p_CAGR": 0.5977,
+      "dSharpe": -0.1568,
+      "p_Sharpe": 0.7593
+     },
+     {
+      "etf": "MINVOL",
+      "CAGR": 0.0907,
+      "vol": 0.099,
+      "Sharpe": 0.731,
+      "maxDD": -0.1321,
+      "dCAGR": -0.0391,
+      "p_CAGR": 0.94,
+      "dSharpe": -0.2239,
+      "p_Sharpe": 0.8547
+     }
+    ],
+    "robustness": [
+     "CAPM alpha t=1.21; excess falls to \u22480 without the 6 best months (REPORT.md 4b)"
+    ],
+    "limitations": [
+     "12 years only",
+     "concentrated in a few months",
+     "momentum crash risk not observed in sample"
+    ],
+    "trials": 5,
+    "decision": "PROMOTED",
+    "decision_detail": "Momentum chosen as the 50% tilt in champion momentum_tilt_v1 (not statistically proven; p=0.09).",
+    "promoted": true,
+    "evidence": [
+     "research/output/factor_etfs_vs_world.csv",
+     "research/run_factors.py"
+    ]
+   },
+   {
+    "id": "E005",
+    "title": "Short-term mean reversion (RSI-2, down-day streaks)",
+    "date": "2026-10-13",
+    "agenda_item": "Round 1",
+    "hypothesis": "Buying short-term dips in an index ETF beats buy-and-hold.",
+    "rationale": "Liquidity provision / overreaction.",
+    "data": [
+     "^SP500TR daily 1990-2010 (train)",
+     "VUSA.L daily 2013-2026 (test)"
+    ],
+    "methodology": "5 rules x 2 execution assumptions; 0.1% per trade.",
+    "benchmark": "buy-and-hold",
+    "costs": "0.10% one-way",
+    "in_sample": "1990-2010",
+    "out_of_sample": "2013-2026",
+    "results": [
+     {
+      "strategy": "RSI2<5",
+      "period": "TRAIN 1990-2010",
+      "exec": "same-close",
+      "CAGR": 0.064,
+      "Sharpe": 0.6446,
+      "maxDD": -0.0599,
+      "time_in_mkt": 0.058,
+      "trades_pa": 8.4714
+     },
+     {
+      "strategy": "RSI2<5",
+      "period": "TRAIN 1990-2010",
+      "exec": "next-close",
+      "CAGR": 0.0557,
+      "Sharpe": 0.4836,
+      "maxDD": -0.0538,
+      "time_in_mkt": 0.058,
+      "trades_pa": 8.4714
+     },
+     {
+      "strategy": "RSI2<5",
+      "period": "TEST 2012-2026",
+      "exec": "same-close",
+      "CAGR": 0.0451,
+      "Sharpe": 0.5677,
+      "maxDD": -0.101,
+      "time_in_mkt": 0.0619,
+      "trades_pa": 10.1613
+     },
+     {
+      "strategy": "RSI2<5",
+      "period": "TEST 2012-2026",
+      "exec": "next-close",
+      "CAGR": 0.0514,
+      "Sharpe": 0.7221,
+      "maxDD": -0.0941,
+      "time_in_mkt": 0.0619,
+      "trades_pa": 10.1613
+     },
+     {
+      "strategy": "RSI2<10",
+      "period": "TRAIN 1990-2010",
+      "exec": "same-close",
+      "CAGR": 0.0751,
+      "Sharpe": 0.6563,
+      "maxDD": -0.0763,
+      "time_in_mkt": 0.1169,
+      "trades_pa": 17.2283
+     },
+     {
+      "strategy": "RSI2<10",
+      "period": "TRAIN 1990-2010",
+      "exec": "next-close",
+      "CAGR": 0.0779,
+      "Sharpe": 0.7174,
+      "maxDD": -0.0658,
+      "time_in_mkt": 0.1169,
+      "trades_pa": 17.2283
+     },
+     {
+      "strategy": "RSI2<10",
+      "period": "TEST 2012-2026",
+      "exec": "same-close",
+      "CAGR": 0.0481,
+      "Sharpe": 0.4876,
+      "maxDD": -0.101,
+      "time_in_mkt": 0.1267,
+      "trades_pa": 18.4355
+     },
+     {
+      "strategy": "RSI2<10",
+      "period": "TEST 2012-2026",
+      "exec": "next-close",
+      "CAGR": 0.0538,
+      "Sharpe": 0.5894,
+      "maxDD": -0.1105,
+      "time_in_mkt": 0.1267,
+      "trades_pa": 18.4355
+     },
+     {
+      "strategy": "RSI2<20",
+      "period": "TRAIN 1990-2010",
+      "exec": "same-close",
+      "CAGR": 0.0633,
+      "Sharpe": 0.3831,
+      "maxDD": -0.0764,
+      "time_in_mkt": 0.197,
+      "trades_pa": 28.4601
+     },
+     {
+      "strategy": "RSI2<20",
+      "period": "TRAIN 1990-2010",
+      "exec": "next-close",
+      "CAGR": 0.0741,
+      "Sharpe": 0.5327,
+      "maxDD": -0.1089,
+      "time_in_mkt": 0.197,
+      "trades_pa": 28.4601
+     },
+     {
+      "strategy": "RSI2<20",
+      "period": "TEST 2012-2026",
+      "exec": "same-close",
+      "CAGR": 0.0464,
+      "Sharpe": 0.3884,
+      "maxDD": -0.1111,
+      "time_in_mkt": 0.2229,
+      "trades_pa": 31.7903
+     },
+     {
+      "strategy": "RSI2<20",
+      "period": "TEST 2012-2026",
+      "exec": "next-close",
+      "CAGR": 0.045,
+      "Sharpe": 0.3761,
+      "maxDD": -0.1337,
+      "time_in_mkt": 0.2229,
+      "trades_pa": 31.7903
+     },
+     {
+      "strategy": "3 down days, hold 5",
+      "period": "TRAIN 1990-2010",
+      "exec": "same-close",
+      "CAGR": 0.0764,
+      "Sharpe": 0.3941,
+      "maxDD": -0.2783,
+      "time_in_mkt": 0.271,
+      "trades_pa": 24.3671
+     },
+     {
+      "strategy": "3 down days, hold 5",
+      "period": "TRAIN 1990-2010",
+      "exec": "next-close",
+      "CAGR": 0.0622,
+      "Sharpe": 0.2731,
+      "maxDD": -0.3683,
+      "time_in_mkt": 0.271,
+      "trades_pa": 24.3671
+     },
+     {
+      "strategy": "3 down days, hold 5",
+      "period": "TEST 2012-2026",
+      "exec": "same-close",
+      "CAGR": 0.0517,
+      "Sharpe": 0.4107,
+      "maxDD": -0.1494,
+      "time_in_mkt": 0.2454,
+      "trades_pa": 22.1371
+     },
+     {
+      "strategy": "3 down days, hold 5",
+      "period": "TEST 2012-2026",
+      "exec": "next-close",
+      "CAGR": 0.0502,
+      "Sharpe": 0.3914,
+      "maxDD": -0.1876,
+      "time_in_mkt": 0.2457,
+      "trades_pa": 22.1371
+     },
+     {
+      "strategy": "4 down days, hold 5",
+      "period": "TRAIN 1990-2010",
+      "exec": "same-close",
+      "CAGR": 0.0798,
+      "Sharpe": 0.5627,
+      "maxDD": -0.1617,
+      "time_in_mkt": 0.1086,
+      "trades_pa": 10.5654
+     },
+     {
+      "strategy": "4 down days, hold 5",
+      "period": "TRAIN 1990-2010",
+      "exec": "next-close",
+      "CAGR": 0.0795,
+      "Sharpe": 0.585,
+      "maxDD": -0.197,
+      "time_in_mkt": 0.1086,
+      "trades_pa": 10.5654
+     },
+     {
+      "strategy": "4 down days, hold 5",
+      "period": "TEST 2012-2026",
+      "exec": "same-close",
+      "CAGR": 0.054,
+      "Sharpe": 0.5344,
+      "maxDD": -0.1623,
+      "time_in_mkt": 0.1161,
+      "trades_pa": 11.3952
+     },
+     {
+      "strategy": "4 down days, hold 5",
+      "period": "TEST 2012-2026",
+      "exec": "next-close",
+      "CAGR": 0.0393,
+      "Sharpe": 0.3371,
+      "maxDD": -0.1642,
+      "time_in_mkt": 0.1164,
+      "trades_pa": 11.3952
+     },
+     {
+      "strategy": "BUY & HOLD",
+      "period": "TRAIN 1990-2010",
+      "exec": "-",
+      "CAGR": 0.0852,
+      "Sharpe": 0.3391,
+      "maxDD": -0.5525,
+      "time_in_mkt": 1.0,
+      "trades_pa": 0.0
+     },
+     {
+      "strategy": "BUY & HOLD",
+      "period": "TEST 2012-2026",
+      "exec": "-",
+      "CAGR": 0.164,
+      "Sharpe": 0.9518,
+      "maxDD": -0.2547,
+      "time_in_mkt": 1.0,
+      "trades_pa": 0.0
+     }
+    ],
+    "robustness": [
+     "same-close vs next-close execution"
+    ],
+    "limitations": [
+     "Yahoo daily data; no intraday spreads"
+    ],
+    "trials": 10,
+    "decision": "REJECTED",
+    "decision_detail": "Test CAGR 4-5%/yr vs 16.4% buy-and-hold; in cash 85-95% of the time.",
+    "promoted": false,
+    "evidence": [
+     "research/output/mean_reversion.csv",
+     "research/run_meanrev.py"
+    ]
+   },
+   {
+    "id": "E006",
+    "title": "Volatility-managed momentum sleeve",
+    "date": "2026-10-13",
+    "agenda_item": "P1",
+    "hypothesis": "see research/AGENDA.md",
+    "rationale": "see research/AGENDA.md",
+    "data": [],
+    "methodology": "",
+    "benchmark": "champion momentum_tilt_v1",
+    "costs": "",
+    "in_sample": "",
+    "out_of_sample": "",
+    "results": null,
+    "robustness": [],
+    "limitations": [
+     "A test run on 2026-10-13 reported rejection (DSR 0.86-0.90) but its code and outputs were never pushed (git 403), so they are unverified; to be re-run by the research loop."
+    ],
+    "trials": 0,
+    "decision": "PENDING_RERUN",
+    "decision_detail": "A test run on 2026-10-13 reported rejection (DSR 0.86-0.90) but its code and outputs were never pushed (git 403), so they are unverified; to be re-run by the research loop.",
+    "promoted": false,
+    "evidence": []
+   },
+   {
+    "id": "E007",
+    "title": "Momentum sleeve with trend filter",
+    "date": "2026-10-13",
+    "agenda_item": "P2",
+    "hypothesis": "see research/AGENDA.md",
+    "rationale": "see research/AGENDA.md",
+    "data": [],
+    "methodology": "",
+    "benchmark": "champion momentum_tilt_v1",
+    "costs": "",
+    "in_sample": "",
+    "out_of_sample": "",
+    "results": null,
+    "robustness": [],
+    "limitations": [
+     "A test run on 2026-10-13 reported rejection (lower OOS CAGR) but its code and outputs were never pushed (git 403), so they are unverified; to be re-run."
+    ],
+    "trials": 0,
+    "decision": "PENDING_RERUN",
+    "decision_detail": "A test run on 2026-10-13 reported rejection (lower OOS CAGR) but its code and outputs were never pushed (git 403), so they are unverified; to be re-run.",
+    "promoted": false,
+    "evidence": []
+   }
+  ],
+  "registry_problems": [],
+  "agenda": [
+   {
+    "id": "P1",
+    "title": "Volatility-managed momentum sleeve",
+    "status": "OPEN"
+   },
+   {
+    "id": "P2",
+    "title": "Momentum sleeve with an absolute trend filter (crash insurance)",
+    "status": "OPEN"
+   },
+   {
+    "id": "P3",
+    "title": "Cheaper or better momentum vehicle",
+    "status": "DONE: no change now (2026-10-13). Revisit on the next full rebalance, or if capital > \u00a31,000."
+   },
+   {
+    "id": "P4",
+    "title": "Quality + momentum combination",
+    "status": "OPEN"
+   },
+   {
+    "id": "P5",
+    "title": "Fill-quality and timing study (operations)",
+    "status": "OPEN (needs \u2265 20 fills)"
+   },
+   {
+    "id": "P6",
+    "title": "Post-earnings-announcement drift",
+    "status": "BLOCKED (needs point-in-time earnings surprises: LSEG/Daloopa connectors unauthorised, SEC EDGAR returned 403 to plain requests). Retry EDGAR with a compliant `User-Agent` including contact details. Use XBRL `frames` to build a seasonal-random-walk SUE."
+   },
+   {
+    "id": "P7",
+    "title": "Longer MSCI factor-index history",
+    "status": "OPEN"
+   },
+   {
+    "id": "P8",
+    "title": "Generate new hypotheses (recurring)",
+    "status": "RECURRING (every 5th research run)"
+   }
+  ],
+  "trials_total": 53,
+  "log": [
+   {
+    "date": "2026-10-13",
+    "item": "Round 1",
+    "what": "36 allocation configs, factor premia, factor ETFs, mean reversion, risk, power analysis",
+    "result": "No strategy beats world equity significantly OOS. Momentum ETF +2.6%/yr (p=0.09).",
+    "decision": "Champion = momentum_tilt_v1 (50/50 VWRP/IWMO). GEM-12 \u2192 shadow.",
+    "trials": "53"
+   }
+  ]
+ },
+ "adviser": {
+  "as_of": "2026-10-13",
+  "amount_gbp": 0.0,
+  "reason_code": "NO_DEFENSIBLE_REASON",
+  "headline": "Your portfolio has decreased by \u00a30.45 after adjusting for deposits and withdrawals. I recommend withdrawing \u00a30 because there is no investment gain to take.",
+  "gain_gbp": -0.45,
+  "explanation": [
+   "There is no investment gain to take: the account is at or below the money you put in."
+  ],
+  "calculation": [
+   "Total value \u00a399.55 \u2212 net contributions \u00a3100.00 = investment gain \u00a3-0.45.",
+   "Time-weighted return since inception -0.45% (deposits/withdrawals excluded)."
+  ],
+  "assumptions": [
+   "Scenario annual returns are assumptions, not forecasts: conservative 3%, base 6%, adverse -1% for 10 years; shock = immediate -40% fall. Assumptions, not forecasts. Base sits below the research's measured long-run nominal equity CAGRs (world equity in GBP: 8.1%/yr 1992-2010, 11.1%/yr 2011-2026; US market 1927-2026 about 10%/yr in USD). Adverse is a lost decade (US 2000-2009 was about -1%/yr). The shock row is a 40% fall, comparable to 2008-09 in GBP terms.",
+   "Withdrawn money is assumed to be spent or held outside the portfolio, so it earns nothing further in these figures.",
+   "Selling costs assumed 0.10% (GBP lines) / 0.25% (non-GBP, incl. FX fee)."
+  ],
+  "uncertainty": "The scenario figures show sensitivity to assumed returns, not predictions. Future returns may be far outside this range in either direction, and past returns do not guarantee future results.",
+  "scenarios": [
+   {
+    "withdraw_gbp": 0.0,
+    "remaining_now_gbp": 99.55,
+    "conservative_portfolio_in_10y": 133.79,
+    "conservative_compounding_cost": 0.0,
+    "base_portfolio_in_10y": 178.28,
+    "base_compounding_cost": 0.0,
+    "adverse_portfolio_in_10y": 90.03,
+    "adverse_compounding_cost": 0.0,
+    "shock_loss_avoided_on_withdrawn": 0.0
+   }
+  ],
+  "effect": {
+   "remaining_value_gbp": 99.55,
+   "remaining_gain_gbp": -0.45,
+   "base_case_value_in_10y_if_retained": 178.28,
+   "base_case_value_in_10y_after_withdrawal": 178.28
+  },
+  "selling_required_gbp": 0.0,
+  "sell_plan": [],
+  "est_selling_cost_gbp": 0.0,
+  "wrapper_notes": [],
+  "candidates": [],
+  "safety": "Recommendation only. Nothing is sold, transferred or withdrawn without your explicit action.",
+  "events": [
+   "new investment-gain high (\u00a3-0.45)"
+  ],
+  "notify": false,
+  "notify_reason": "\u00a30 recommendation - reported in the daily report only",
+  "_state_inputs": {
+   "gain": -0.45000000000000284,
+   "drawdown": -0.0045000000000000595,
+   "net": 100.0
+  }
+ },
+ "health": [
+  {
+   "check": "API summary",
+   "status": "PASS",
+   "detail": "read at 2026-10-13T13:47:22+00:00"
+  },
+  {
+   "check": "API positions",
+   "status": "PASS",
+   "detail": "read at 2026-10-13T13:47:22+00:00"
+  },
+  {
+   "check": "API pending",
+   "status": "PASS",
+   "detail": "read at 2026-10-13T13:47:23+00:00"
+  },
+  {
+   "check": "API orders",
+   "status": "PASS",
+   "detail": "read at 2026-10-13T13:47:23+00:00"
+  },
+  {
+   "check": "API transactions",
+   "status": "PASS",
+   "detail": "read at 2026-10-13T13:47:24+00:00"
+  },
+  {
+   "check": "API dividends",
+   "status": "PASS",
+   "detail": "read at 2026-10-13T13:47:25+00:00"
+  },
+  {
+   "check": "Reconciliation",
+   "status": "PASS",
+   "detail": "5 passed, 0 failed, 0 skipped"
+  },
+  {
+   "check": "Trading bot last run",
+   "status": "PASS",
+   "detail": "2026-10-13T12:13:51+00:00 (0d 1h ago); events: plan"
+  },
+  {
+   "check": "Bot failures (7 days)",
+   "status": "PASS",
+   "detail": "0 failure event(s)"
+  },
+  {
+   "check": "Research loop activity",
+   "status": "PASS",
+   "detail": "last LOG.md entry 2026-10-13 (0 day(s) ago)"
+  },
+  {
+   "check": "Experiment registry",
+   "status": "PASS",
+   "detail": "7 records valid"
+  },
+  {
+   "check": "Market data freshness",
+   "status": "PASS",
+   "detail": "latest close 2026-10-13 (0d old)"
+  },
+  {
+   "check": "Previous email delivery",
+   "status": "WARN",
+   "detail": "2026-10-13: outbox via outbox written to /home/user/agent-skills/trading/reports/outbox/d43a1d8ea8b997b0.eml - NOT emailed (no provider configured)"
+  }
+ ],
+ "priorities": [
+  "[HEALTH] Previous email delivery: 2026-10-13: outbox via outbox written to /home/user/agent-skills/trading/reports/outbox/d43a1d8ea8b997b0.eml - NOT emailed (no provider configured)",
+  "[RESEARCH] Next agenda item: P1 Volatility-managed momentum sleeve",
+  "[RESEARCH] 2 experiment(s) awaiting a verifiable re-run: E006 Volatility-managed momentum sleeve, E007 Momentum sleeve with trend filter"
+ ],
+ "email_last_delivery": {
+  "attempts": 1,
+  "detail": "written to /home/user/agent-skills/trading/reports/outbox/d43a1d8ea8b997b0.eml - NOT emailed (no provider configured)",
+  "key": "d43a1d8ea8b997b0a6909ca9f6f559f01f473bc31060b7ba8c9cd640b7757475",
+  "kind": "daily",
+  "provider": "outbox",
+  "provider_id": "/home/user/agent-skills/trading/reports/outbox/d43a1d8ea8b997b0.eml",
+  "report_date": "2026-10-13",
+  "status": "outbox",
+  "to_hash": "e3b0c44298fc",
+  "ts_utc": "2026-10-13T13:20:45+00:00"
+ },
+ "delivery": {
+  "status": "sent",
+  "provider": "resend",
+  "detail": "accepted by provider",
+  "attempts": 1,
+  "key": "c1e7a98f9d1d8f33d088a57f4cc98e6651224047eb1d518a1e6551226c8a23f1",
+  "provider_id": "01a13584-a89b-7ad2-82e8-27b2a8100ee5"
+ },
+ "delivery_confirmation": {
+  "report_date": "2026-10-13",
+  "kind": "daily",
+  "provider": "resend",
+  "key": "c1e7a98f9d1d8f33d088a57f4cc98e6651224047eb1d518a1e6551226c8a23f1",
+  "provider_id": "01a13584-a89b-7ad2-82e8-27b2a8100ee5",
+  "ts_utc": "2026-10-13T13:47:40+00:00",
+  "status": "confirmed_delivered",
+  "provider_event": "delivered",
+  "detail": "provider last_event='delivered'",
+  "attempts": 0
+ }
+}

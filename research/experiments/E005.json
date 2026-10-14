@@ -1,0 +1,253 @@
+{
+ "id": "E005",
+ "title": "Short-term mean reversion (RSI-2, down-day streaks)",
+ "date": "2026-10-13",
+ "agenda_item": "Round 1",
+ "hypothesis": "Buying short-term dips in an index ETF beats buy-and-hold.",
+ "rationale": "Liquidity provision / overreaction.",
+ "data": [
+  "^SP500TR daily 1990-2010 (train)",
+  "VUSA.L daily 2013-2026 (test)"
+ ],
+ "methodology": "5 rules x 2 execution assumptions; 0.1% per trade.",
+ "benchmark": "buy-and-hold",
+ "costs": "0.10% one-way",
+ "in_sample": "1990-2010",
+ "out_of_sample": "2013-2026",
+ "results": [
+  {
+   "strategy": "RSI2<5",
+   "period": "TRAIN 1990-2010",
+   "exec": "same-close",
+   "CAGR": 0.064,
+   "Sharpe": 0.6446,
+   "maxDD": -0.0599,
+   "time_in_mkt": 0.058,
+   "trades_pa": 8.4714
+  },
+  {
+   "strategy": "RSI2<5",
+   "period": "TRAIN 1990-2010",
+   "exec": "next-close",
+   "CAGR": 0.0557,
+   "Sharpe": 0.4836,
+   "maxDD": -0.0538,
+   "time_in_mkt": 0.058,
+   "trades_pa": 8.4714
+  },
+  {
+   "strategy": "RSI2<5",
+   "period": "TEST 2012-2026",
+   "exec": "same-close",
+   "CAGR": 0.0451,
+   "Sharpe": 0.5677,
+   "maxDD": -0.101,
+   "time_in_mkt": 0.0619,
+   "trades_pa": 10.1613
+  },
+  {
+   "strategy": "RSI2<5",
+   "period": "TEST 2012-2026",
+   "exec": "next-close",
+   "CAGR": 0.0514,
+   "Sharpe": 0.7221,
+   "maxDD": -0.0941,
+   "time_in_mkt": 0.0619,
+   "trades_pa": 10.1613
+  },
+  {
+   "strategy": "RSI2<10",
+   "period": "TRAIN 1990-2010",
+   "exec": "same-close",
+   "CAGR": 0.0751,
+   "Sharpe": 0.6563,
+   "maxDD": -0.0763,
+   "time_in_mkt": 0.1169,
+   "trades_pa": 17.2283
+  },
+  {
+   "strategy": "RSI2<10",
+   "period": "TRAIN 1990-2010",
+   "exec": "next-close",
+   "CAGR": 0.0779,
+   "Sharpe": 0.7174,
+   "maxDD": -0.0658,
+   "time_in_mkt": 0.1169,
+   "trades_pa": 17.2283
+  },
+  {
+   "strategy": "RSI2<10",
+   "period": "TEST 2012-2026",
+   "exec": "same-close",
+   "CAGR": 0.0481,
+   "Sharpe": 0.4876,
+   "maxDD": -0.101,
+   "time_in_mkt": 0.1267,
+   "trades_pa": 18.4355
+  },
+  {
+   "strategy": "RSI2<10",
+   "period": "TEST 2012-2026",
+   "exec": "next-close",
+   "CAGR": 0.0538,
+   "Sharpe": 0.5894,
+   "maxDD": -0.1105,
+   "time_in_mkt": 0.1267,
+   "trades_pa": 18.4355
+  },
+  {
+   "strategy": "RSI2<20",
+   "period": "TRAIN 1990-2010",
+   "exec": "same-close",
+   "CAGR": 0.0633,
+   "Sharpe": 0.3831,
+   "maxDD": -0.0764,
+   "time_in_mkt": 0.197,
+   "trades_pa": 28.4601
+  },
+  {
+   "strategy": "RSI2<20",
+   "period": "TRAIN 1990-2010",
+   "exec": "next-close",
+   "CAGR": 0.0741,
+   "Sharpe": 0.5327,
+   "maxDD": -0.1089,
+   "time_in_mkt": 0.197,
+   "trades_pa": 28.4601
+  },
+  {
+   "strategy": "RSI2<20",
+   "period": "TEST 2012-2026",
+   "exec": "same-close",
+   "CAGR": 0.0464,
+   "Sharpe": 0.3884,
+   "maxDD": -0.1111,
+   "time_in_mkt": 0.2229,
+   "trades_pa": 31.7903
+  },
+  {
+   "strategy": "RSI2<20",
+   "period": "TEST 2012-2026",
+   "exec": "next-close",
+   "CAGR": 0.045,
+   "Sharpe": 0.3761,
+   "maxDD": -0.1337,
+   "time_in_mkt": 0.2229,
+   "trades_pa": 31.7903
+  },
+  {
+   "strategy": "3 down days, hold 5",
+   "period": "TRAIN 1990-2010",
+   "exec": "same-close",
+   "CAGR": 0.0764,
+   "Sharpe": 0.3941,
+   "maxDD": -0.2783,
+   "time_in_mkt": 0.271,
+   "trades_pa": 24.3671
+  },
+  {
+   "strategy": "3 down days, hold 5",
+   "period": "TRAIN 1990-2010",
+   "exec": "next-close",
+   "CAGR": 0.0622,
+   "Sharpe": 0.2731,
+   "maxDD": -0.3683,
+   "time_in_mkt": 0.271,
+   "trades_pa": 24.3671
+  },
+  {
+   "strategy": "3 down days, hold 5",
+   "period": "TEST 2012-2026",
+   "exec": "same-close",
+   "CAGR": 0.0517,
+   "Sharpe": 0.4107,
+   "maxDD": -0.1494,
+   "time_in_mkt": 0.2454,
+   "trades_pa": 22.1371
+  },
+  {
+   "strategy": "3 down days, hold 5",
+   "period": "TEST 2012-2026",
+   "exec": "next-close",
+   "CAGR": 0.0502,
+   "Sharpe": 0.3914,
+   "maxDD": -0.1876,
+   "time_in_mkt": 0.2457,
+   "trades_pa": 22.1371
+  },
+  {
+   "strategy": "4 down days, hold 5",
+   "period": "TRAIN 1990-2010",
+   "exec": "same-close",
+   "CAGR": 0.0798,
+   "Sharpe": 0.5627,
+   "maxDD": -0.1617,
+   "time_in_mkt": 0.1086,
+   "trades_pa": 10.5654
+  },
+  {
+   "strategy": "4 down days, hold 5",
+   "period": "TRAIN 1990-2010",
+   "exec": "next-close",
+   "CAGR": 0.0795,
+   "Sharpe": 0.585,
+   "maxDD": -0.197,
+   "time_in_mkt": 0.1086,
+   "trades_pa": 10.5654
+  },
+  {
+   "strategy": "4 down days, hold 5",
+   "period": "TEST 2012-2026",
+   "exec": "same-close",
+   "CAGR": 0.054,
+   "Sharpe": 0.5344,
+   "maxDD": -0.1623,
+   "time_in_mkt": 0.1161,
+   "trades_pa": 11.3952
+  },
+  {
+   "strategy": "4 down days, hold 5",
+   "period": "TEST 2012-2026",
+   "exec": "next-close",
+   "CAGR": 0.0393,
+   "Sharpe": 0.3371,
+   "maxDD": -0.1642,
+   "time_in_mkt": 0.1164,
+   "trades_pa": 11.3952
+  },
+  {
+   "strategy": "BUY & HOLD",
+   "period": "TRAIN 1990-2010",
+   "exec": "-",
+   "CAGR": 0.0852,
+   "Sharpe": 0.3391,
+   "maxDD": -0.5525,
+   "time_in_mkt": 1.0,
+   "trades_pa": 0.0
+  },
+  {
+   "strategy": "BUY & HOLD",
+   "period": "TEST 2012-2026",
+   "exec": "-",
+   "CAGR": 0.164,
+   "Sharpe": 0.9518,
+   "maxDD": -0.2547,
+   "time_in_mkt": 1.0,
+   "trades_pa": 0.0
+  }
+ ],
+ "robustness": [
+  "same-close vs next-close execution"
+ ],
+ "limitations": [
+  "Yahoo daily data; no intraday spreads"
+ ],
+ "trials": 10,
+ "decision": "REJECTED",
+ "decision_detail": "Test CAGR 4-5%/yr vs 16.4% buy-and-hold; in cash 85-95% of the time.",
+ "promoted": false,
+ "evidence": [
+  "research/output/mean_reversion.csv",
+  "research/run_meanrev.py"
+ ]
+}

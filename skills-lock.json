@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "skills": {
+    "trading212-api": {
+      "source": "trading212-labs/agent-skills",
+      "sourceType": "github",
+      "skillPath": "plugins/trading212-api/skills/trading212-api/SKILL.md",
+      "computedHash": "7350cc7d9cf960d7f90ed531ac0e2522de6011130a41c7fb38ed6387d2b1bd75"
+    }
+  }
+}

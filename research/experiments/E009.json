@@ -1,0 +1,406 @@
+{
+ "id": "E009",
+ "title": "3x Nasdaq-100 with a trend filter (LQQ3, SMA on QQQ)",
+ "date": "2026-10-13",
+ "agenda_item": "Owner request: higher returns with leveraged funds",
+ "hypothesis": "Holding a 3x Nasdaq-100 ETP only while the index is above its moving average gives higher returns than holding the index, while avoiding the near-total losses of holding 3x through crashes.",
+ "rationale": "Leveraged ETPs compound badly in volatile falls (volatility drag); trend filters tend to step aside in prolonged bear markets, which is when that drag is worst.",
+ "data": [
+  "Yahoo ^NDX price 1985-1999, QQQ adjusted close 1999-2026 (daily)",
+  "Ken French monthly T-bill rate",
+  "QQQ3.L real ETP 2013-2026 for validation"
+ ],
+ "methodology": "Synthetic 3x = 3*r - 2*(rf+0.5%) - 0.75% OCF; signal at close t, traded at close t+1; 0.15% per switch. Grid SMA {100,150,200}; pick = best in-sample Sharpe.",
+ "benchmark": "Nasdaq-100 1x buy-and-hold; 3x buy-and-hold; 1x with SMA200 filter",
+ "costs": "0.75% OCF, 0.5%/yr financing spread over T-bills on the borrowed 2x, 0.15% per switch",
+ "in_sample": "1986-2005",
+ "out_of_sample": "2006-2026",
+ "results": [
+  {
+   "config": "Nasdaq-100 1x hold",
+   "period": "IS",
+   "start": "1986-01-02",
+   "end": "2005-12-30",
+   "CAGR": 0.1338,
+   "Sharpe": 0.424,
+   "maxDD": -0.8296,
+   "worst_year": -0.3737,
+   "best_year": 0.9868,
+   "time_in_market": null,
+   "switches_per_year": null
+  },
+  {
+   "config": "3x hold",
+   "period": "IS",
+   "start": "1986-01-02",
+   "end": "2005-12-30",
+   "CAGR": 0.0162,
+   "Sharpe": 0.403,
+   "maxDD": -0.9995,
+   "worst_year": -0.9164,
+   "best_year": 4.1011,
+   "time_in_market": null,
+   "switches_per_year": null
+  },
+  {
+   "config": "1x + SMA200 filter",
+   "period": "IS",
+   "start": "1986-01-02",
+   "end": "2005-12-30",
+   "CAGR": 0.1094,
+   "Sharpe": 0.391,
+   "maxDD": -0.4335,
+   "worst_year": -0.1421,
+   "best_year": 0.9868,
+   "time_in_market": 0.689,
+   "switches_per_year": 7.44
+  },
+  {
+   "config": "3x + SMA100 filter",
+   "period": "IS",
+   "start": "1986-01-02",
+   "end": "2005-12-30",
+   "CAGR": 0.183,
+   "Sharpe": 0.503,
+   "maxDD": -0.9207,
+   "worst_year": -0.6711,
+   "best_year": 2.8534,
+   "time_in_market": 0.658,
+   "switches_per_year": 9.64
+  },
+  {
+   "config": "3x + SMA150 filter",
+   "period": "IS",
+   "start": "1986-01-02",
+   "end": "2005-12-30",
+   "CAGR": 0.1034,
+   "Sharpe": 0.388,
+   "maxDD": -0.9571,
+   "worst_year": -0.6359,
+   "best_year": 4.1011,
+   "time_in_market": 0.674,
+   "switches_per_year": 9.74
+  },
+  {
+   "config": "3x + SMA200 filter",
+   "period": "IS",
+   "start": "1986-01-02",
+   "end": "2005-12-30",
+   "CAGR": 0.1095,
+   "Sharpe": 0.408,
+   "maxDD": -0.8913,
+   "worst_year": -0.6686,
+   "best_year": 4.1011,
+   "time_in_market": 0.689,
+   "switches_per_year": 7.44
+  },
+  {
+   "config": "Nasdaq-100 1x hold",
+   "period": "OOS",
+   "start": "2006-01-03",
+   "end": "2026-10-12",
+   "CAGR": 0.1598,
+   "Sharpe": 0.709,
+   "maxDD": -0.534,
+   "worst_year": -0.4173,
+   "best_year": 0.5486,
+   "time_in_market": null,
+   "switches_per_year": null
+  },
+  {
+   "config": "3x hold",
+   "period": "OOS",
+   "start": "2006-01-03",
+   "end": "2026-10-12",
+   "CAGR": 0.2811,
+   "Sharpe": 0.683,
+   "maxDD": -0.9463,
+   "worst_year": -0.8841,
+   "best_year": 2.0125,
+   "time_in_market": null,
+   "switches_per_year": null
+  },
+  {
+   "config": "1x + SMA200 filter",
+   "period": "OOS",
+   "start": "2006-01-03",
+   "end": "2026-10-12",
+   "CAGR": 0.1191,
+   "Sharpe": 0.686,
+   "maxDD": -0.2709,
+   "worst_year": -0.1963,
+   "best_year": 0.3596,
+   "time_in_market": 0.806,
+   "switches_per_year": 5.98
+  },
+  {
+   "config": "3x + SMA100 filter",
+   "period": "OOS",
+   "start": "2006-01-03",
+   "end": "2026-10-12",
+   "CAGR": 0.2066,
+   "Sharpe": 0.611,
+   "maxDD": -0.5941,
+   "worst_year": -0.517,
+   "best_year": 2.4214,
+   "time_in_market": 0.752,
+   "switches_per_year": 11.77
+  },
+  {
+   "config": "3x + SMA150 filter",
+   "period": "OOS",
+   "start": "2006-01-03",
+   "end": "2026-10-12",
+   "CAGR": 0.2543,
+   "Sharpe": 0.687,
+   "maxDD": -0.6124,
+   "worst_year": -0.4208,
+   "best_year": 1.3811,
+   "time_in_market": 0.798,
+   "switches_per_year": 6.17
+  },
+  {
+   "config": "3x + SMA200 filter",
+   "period": "OOS",
+   "start": "2006-01-03",
+   "end": "2026-10-12",
+   "CAGR": 0.2609,
+   "Sharpe": 0.695,
+   "maxDD": -0.6178,
+   "worst_year": -0.4942,
+   "best_year": 1.1859,
+   "time_in_market": 0.806,
+   "switches_per_year": 5.98
+  },
+  {
+   "config": "Nasdaq-100 1x hold",
+   "period": "FULL",
+   "start": "1986-01-02",
+   "end": "2026-10-12",
+   "CAGR": 0.1469,
+   "Sharpe": 0.544,
+   "maxDD": -0.8296,
+   "worst_year": -0.4173,
+   "best_year": 0.9868,
+   "time_in_market": null,
+   "switches_per_year": null
+  },
+  {
+   "config": "3x hold",
+   "period": "FULL",
+   "start": "1986-01-02",
+   "end": "2026-10-12",
+   "CAGR": 0.1433,
+   "Sharpe": 0.522,
+   "maxDD": -0.9998,
+   "worst_year": -0.9164,
+   "best_year": 4.1011,
+   "time_in_market": null,
+   "switches_per_year": null
+  },
+  {
+   "config": "1x + SMA200 filter",
+   "period": "FULL",
+   "start": "1986-01-02",
+   "end": "2026-10-12",
+   "CAGR": 0.1143,
+   "Sharpe": 0.518,
+   "maxDD": -0.4335,
+   "worst_year": -0.1963,
+   "best_year": 0.9868,
+   "time_in_market": 0.748,
+   "switches_per_year": 6.7
+  },
+  {
+   "config": "3x + SMA100 filter",
+   "period": "FULL",
+   "start": "1986-01-02",
+   "end": "2026-10-12",
+   "CAGR": 0.1949,
+   "Sharpe": 0.547,
+   "maxDD": -0.9207,
+   "worst_year": -0.6711,
+   "best_year": 2.8534,
+   "time_in_market": 0.706,
+   "switches_per_year": 10.72
+  },
+  {
+   "config": "3x + SMA150 filter",
+   "period": "FULL",
+   "start": "1986-01-02",
+   "end": "2026-10-12",
+   "CAGR": 0.1777,
+   "Sharpe": 0.518,
+   "maxDD": -0.9571,
+   "worst_year": -0.6359,
+   "best_year": 4.1011,
+   "time_in_market": 0.737,
+   "switches_per_year": 7.92
+  },
+  {
+   "config": "3x + SMA200 filter",
+   "period": "FULL",
+   "start": "1986-01-02",
+   "end": "2026-10-12",
+   "CAGR": 0.1841,
+   "Sharpe": 0.531,
+   "maxDD": -0.8913,
+   "worst_year": -0.6686,
+   "best_year": 4.1011,
+   "time_in_market": 0.748,
+   "switches_per_year": 6.7
+  }
+ ],
+ "robustness": [
+  "three neighbouring windows",
+  "real-ETP validation: synthetic CAGR 40.3% vs real 43.1% over 3404 days"
+ ],
+ "limitations": [
+  "USD returns; the GBX line adds GBP/USD moves",
+  "Daily correlation with the real ETP is only 0.59 because the ETP trades on London hours",
+  "In-sample (1986-2005) the filter did not prevent a -92% drawdown in the dot-com crash",
+  "Out-of-sample period was an unusually strong one for the Nasdaq",
+  "Fails the promotion gate's Sharpe and drawdown tests against 1x Nasdaq",
+  "Real-fund check (actual LQQ3.L prices in GBP, live rule, 2013-2026): 17.8%/yr vs 20.4%/yr for 1x Nasdaq in GBP and 37.1%/yr for LQQ3 held; it trailed 1x Nasdaq over the last 10, 5, 3 and 1 years. The simulated out-of-sample edge does not show up on the real fund's recent history."
+ ],
+ "trials": 3,
+ "decision": "PROMOTED",
+ "decision_detail": "Owner-directed override of the promotion gate (owner asked for higher returns with leveraged funds and reset the account to \u00a3500 for it). Pick SMA100 (best in-sample Sharpe). Out-of-sample CAGR 20.7% vs 16.0% for 1x Nasdaq, but max drawdown -59% vs -53%; worst calendar year -52%.",
+ "promoted": true,
+ "evidence": [
+  "research/h03_leveraged_trend.py",
+  "research/output/h03_leveraged_trend.csv",
+  "research/output/h03_validation.csv",
+  "research/output/h03_yearly.csv",
+  "research/output/h03_real_fund_windows.csv",
+  "research/output/h03_real_fund_yearly.csv"
+ ],
+ "real_fund_check": [
+  {
+   "window": "since 2013",
+   "series": "3x + SMA100 (live rule, real LQQ3, GBP)",
+   "total_return": 8.4425,
+   "CAGR": 0.1778,
+   "maxDD": -0.6312
+  },
+  {
+   "window": "since 2013",
+   "series": "LQQ3 held (GBP)",
+   "total_return": 74.7413,
+   "CAGR": 0.3707,
+   "maxDD": -0.7916
+  },
+  {
+   "window": "since 2013",
+   "series": "Nasdaq-100 1x (QQQ, GBP)",
+   "total_return": 11.785,
+   "CAGR": 0.2041,
+   "maxDD": -0.2982
+  },
+  {
+   "window": "last 10y",
+   "series": "3x + SMA100 (live rule, real LQQ3, GBP)",
+   "total_return": 4.0815,
+   "CAGR": 0.1767,
+   "maxDD": -0.6312
+  },
+  {
+   "window": "last 10y",
+   "series": "LQQ3 held (GBP)",
+   "total_return": 16.8856,
+   "CAGR": 0.3347,
+   "maxDD": -0.7916
+  },
+  {
+   "window": "last 10y",
+   "series": "Nasdaq-100 1x (QQQ, GBP)",
+   "total_return": 4.318,
+   "CAGR": 0.1821,
+   "maxDD": -0.2982
+  },
+  {
+   "window": "last 5y",
+   "series": "3x + SMA100 (live rule, real LQQ3, GBP)",
+   "total_return": 0.545,
+   "CAGR": 0.0911,
+   "maxDD": -0.6312
+  },
+  {
+   "window": "last 5y",
+   "series": "LQQ3 held (GBP)",
+   "total_return": 0.8471,
+   "CAGR": 0.1308,
+   "maxDD": -0.7916
+  },
+  {
+   "window": "last 5y",
+   "series": "Nasdaq-100 1x (QQQ, GBP)",
+   "total_return": 1.1919,
+   "CAGR": 0.1702,
+   "maxDD": -0.2982
+  },
+  {
+   "window": "last 3y",
+   "series": "3x + SMA100 (live rule, real LQQ3, GBP)",
+   "total_return": 0.6256,
+   "CAGR": 0.1761,
+   "maxDD": -0.436
+  },
+  {
+   "window": "last 3y",
+   "series": "LQQ3 held (GBP)",
+   "total_return": 1.6273,
+   "CAGR": 0.3805,
+   "maxDD": -0.5839
+  },
+  {
+   "window": "last 3y",
+   "series": "Nasdaq-100 1x (QQQ, GBP)",
+   "total_return": 0.9608,
+   "CAGR": 0.252,
+   "maxDD": -0.2523
+  },
+  {
+   "window": "last 1y",
+   "series": "3x + SMA100 (live rule, real LQQ3, GBP)",
+   "total_return": -0.1233,
+   "CAGR": null,
+   "maxDD": -0.4329
+  },
+  {
+   "window": "last 1y",
+   "series": "LQQ3 held (GBP)",
+   "total_return": 0.0768,
+   "CAGR": null,
+   "maxDD": -0.4777
+  },
+  {
+   "window": "last 1y",
+   "series": "Nasdaq-100 1x (QQQ, GBP)",
+   "total_return": 0.2541,
+   "CAGR": null,
+   "maxDD": -0.1166
+  },
+  {
+   "window": "2026 YTD",
+   "series": "3x + SMA100 (live rule, real LQQ3, GBP)",
+   "total_return": 0.2828,
+   "CAGR": null,
+   "maxDD": -0.309
+  },
+  {
+   "window": "2026 YTD",
+   "series": "LQQ3 held (GBP)",
+   "total_return": 0.4481,
+   "CAGR": null,
+   "maxDD": -0.309
+  },
+  {
+   "window": "2026 YTD",
+   "series": "Nasdaq-100 1x (QQQ, GBP)",
+   "total_return": 0.253,
+   "CAGR": null,
+   "maxDD": -0.1166
+  }
+ ]
+}

@@ -1,0 +1,7 @@
+{
+  "_comment": "Daily intelligence report settings. Secrets (API keys, addresses) come from environment variables - see trading/REPORTING.md.",
+  "report_time_local": "07:30",
+  "timezone": "Europe/London",
+  "subject_prefix": "[T212 demo]",
+  "attach_markdown": true
+}

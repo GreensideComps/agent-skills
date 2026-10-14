@@ -1,0 +1,107 @@
+{
+ "id": "E002",
+ "title": "Trend following on the US market, 1928-2026",
+ "date": "2026-10-13",
+ "agenda_item": "Round 1",
+ "hypothesis": "A 10-month SMA or 12-month absolute-momentum filter improves risk-adjusted returns over a century.",
+ "rationale": "Trend persistence; crash avoidance.",
+ "data": [
+  "Ken French US market and T-bill returns (CRSP)"
+ ],
+ "methodology": "Monthly signal, 0.1% cost per switch; sub-period breakdown; bootstrap vs buy-and-hold (p-values in REPORT.md 4a).",
+ "benchmark": "US market buy-and-hold",
+ "costs": "0.1% per switch",
+ "in_sample": "n/a (long-run check)",
+ "out_of_sample": "1928-2026 sub-periods",
+ "results": {
+  "US b&h 1928-1949": {
+   "CAGR": 0.0488,
+   "Sharpe": 0.28,
+   "maxDD": -0.8365
+  },
+  "US b&h 1950-1989": {
+   "CAGR": 0.1226,
+   "Sharpe": 0.517,
+   "maxDD": -0.4651
+  },
+  "US b&h 1990-2010": {
+   "CAGR": 0.0883,
+   "Sharpe": 0.393,
+   "maxDD": -0.5031
+  },
+  "US b&h 2011-2026": {
+   "CAGR": 0.1408,
+   "Sharpe": 0.877,
+   "maxDD": -0.2484
+  },
+  "US b&h ALL": {
+   "CAGR": 0.1012,
+   "Sharpe": 0.441,
+   "maxDD": -0.8365
+  },
+  "SMA L=10 1928-1949": {
+   "CAGR": 0.0553,
+   "Sharpe": 0.368,
+   "maxDD": -0.4309
+  },
+  "SMA L=10 1950-1989": {
+   "CAGR": 0.1137,
+   "Sharpe": 0.551,
+   "maxDD": -0.2448
+  },
+  "SMA L=10 1990-2010": {
+   "CAGR": 0.0975,
+   "Sharpe": 0.571,
+   "maxDD": -0.1738
+  },
+  "SMA L=10 2011-2026": {
+   "CAGR": 0.0993,
+   "Sharpe": 0.791,
+   "maxDD": -0.1813
+  },
+  "SMA L=10 ALL": {
+   "CAGR": 0.0947,
+   "Sharpe": 0.529,
+   "maxDD": -0.4309
+  },
+  "TSMOM L=12 1928-1949": {
+   "CAGR": 0.0725,
+   "Sharpe": 0.467,
+   "maxDD": -0.445
+  },
+  "TSMOM L=12 1950-1989": {
+   "CAGR": 0.1091,
+   "Sharpe": 0.538,
+   "maxDD": -0.2424
+  },
+  "TSMOM L=12 1990-2010": {
+   "CAGR": 0.0995,
+   "Sharpe": 0.585,
+   "maxDD": -0.1732
+  },
+  "TSMOM L=12 2011-2026": {
+   "CAGR": 0.0977,
+   "Sharpe": 0.682,
+   "maxDD": -0.2361
+  },
+  "TSMOM L=12 ALL": {
+   "CAGR": 0.097,
+   "Sharpe": 0.543,
+   "maxDD": -0.445
+  }
+ },
+ "robustness": [
+  "four sub-periods"
+ ],
+ "limitations": [
+  "USD, gross index, US only"
+ ],
+ "trials": 2,
+ "decision": "INSURANCE_ONLY",
+ "decision_detail": "Roughly halves max drawdown; does not raise long-run CAGR.",
+ "promoted": false,
+ "evidence": [
+  "research/output/us_century_trend.csv",
+  "research/run_regimes.py"
+ ]
+}

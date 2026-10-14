@@ -1,0 +1,483 @@
+{
+ "id": "E015",
+ "title": "Volatility-managed leverage on the Nasdaq trend rule",
+ "date": "2026-10-14",
+ "agenda_item": "P10",
+ "hypothesis": "Scaling 3x exposure by 20-day realised volatility while the trend is on beats constant 3x.",
+ "rationale": "Moreira & Muir (2017): volatility-managed portfolios raise Sharpe; leveraged daily-reset drag grows with variance.",
+ "data": [
+  "Yahoo ^NDX 1985-1999, QQQ adjusted 1999-2026 (daily)",
+  "Ken French daily-spread T-bill rate (via h03)"
+ ],
+ "methodology": "Grid tv {30,45,60}% x remainder {1x, cash}, frozen in AGENDA P10 (commit d85f0d1); pick by IS Sharpe; full Stage 2.",
+ "benchmark": "champion: 3x + SMA100, else cash (live rule before the discretionary override)",
+ "costs": "0.15% per unit of weight traded, daily rebalancing; x3 stress; OCF and financing inside the synthetic 3x",
+ "in_sample": "1986-2005",
+ "out_of_sample": "2006-2026",
+ "results": [
+  {
+   "config": "champion 3x SMA100",
+   "period": "IS",
+   "cost_mult": 1.0,
+   "lag_days": 1,
+   "CAGR": 0.1833,
+   "Sharpe": 0.488,
+   "maxDD": -0.8895,
+   "turnover_pa": 10.4
+  },
+  {
+   "config": "champion 3x SMA100",
+   "period": "OOS",
+   "cost_mult": 1.0,
+   "lag_days": 1,
+   "CAGR": 0.2054,
+   "Sharpe": 0.611,
+   "maxDD": -0.552,
+   "turnover_pa": 10.4
+  },
+  {
+   "config": "tv30 rem=1x",
+   "period": "IS",
+   "cost_mult": 1.0,
+   "lag_days": 1,
+   "CAGR": 0.1597,
+   "Sharpe": 0.456,
+   "maxDD": -0.62,
+   "turnover_pa": 17.32
+  },
+  {
+   "config": "tv30 rem=1x",
+   "period": "OOS",
+   "cost_mult": 1.0,
+   "lag_days": 1,
+   "CAGR": 0.1672,
+   "Sharpe": 0.593,
+   "maxDD": -0.4794,
+   "turnover_pa": 17.32
+  },
+  {
+   "config": "tv30 rem=cash",
+   "period": "IS",
+   "cost_mult": 1.0,
+   "lag_days": 1,
+   "CAGR": 0.1412,
+   "Sharpe": 0.447,
+   "maxDD": -0.3675,
+   "turnover_pa": 8.81
+  },
+  {
+   "config": "tv30 rem=cash",
+   "period": "OOS",
+   "cost_mult": 1.0,
+   "lag_days": 1,
+   "CAGR": 0.1617,
+   "Sharpe": 0.626,
+   "maxDD": -0.4645,
+   "turnover_pa": 8.81
+  },
+  {
+   "config": "tv45 rem=1x",
+   "period": "IS",
+   "cost_mult": 1.0,
+   "lag_days": 1,
+   "CAGR": 0.176,
+   "Sharpe": 0.475,
+   "maxDD": -0.6913,
+   "turnover_pa": 15.33
+  },
+  {
+   "config": "tv45 rem=1x",
+   "period": "OOS",
+   "cost_mult": 1.0,
+   "lag_days": 1,
+   "CAGR": 0.1915,
+   "Sharpe": 0.61,
+   "maxDD": -0.4878,
+   "turnover_pa": 15.33
+  },
+  {
+   "config": "tv45 rem=cash",
+   "period": "IS",
+   "cost_mult": 1.0,
+   "lag_days": 1,
+   "CAGR": 0.1721,
+   "Sharpe": 0.478,
+   "maxDD": -0.512,
+   "turnover_pa": 10.12
+  },
+  {
+   "config": "tv45 rem=cash",
+   "period": "OOS",
+   "cost_mult": 1.0,
+   "lag_days": 1,
+   "CAGR": 0.1941,
+   "Sharpe": 0.631,
+   "maxDD": -0.481,
+   "turnover_pa": 10.12
+  },
+  {
+   "config": "tv60 rem=1x",
+   "period": "IS",
+   "cost_mult": 1.0,
+   "lag_days": 1,
+   "CAGR": 0.1912,
+   "Sharpe": 0.496,
+   "maxDD": -0.7514,
+   "turnover_pa": 13.05
+  },
+  {
+   "config": "tv60 rem=1x",
+   "period": "OOS",
+   "cost_mult": 1.0,
+   "lag_days": 1,
+   "CAGR": 0.2006,
+   "Sharpe": 0.612,
+   "maxDD": -0.4943,
+   "turnover_pa": 13.05
+  },
+  {
+   "config": "tv60 rem=cash",
+   "period": "IS",
+   "cost_mult": 1.0,
+   "lag_days": 1,
+   "CAGR": 0.1958,
+   "Sharpe": 0.506,
+   "maxDD": -0.6315,
+   "turnover_pa": 10.33
+  },
+  {
+   "config": "tv60 rem=cash",
+   "period": "OOS",
+   "cost_mult": 1.0,
+   "lag_days": 1,
+   "CAGR": 0.2026,
+   "Sharpe": 0.62,
+   "maxDD": -0.4935,
+   "turnover_pa": 10.33
+  },
+  {
+   "config": "champion 3x SMA100",
+   "period": "IS",
+   "cost_mult": 3.0,
+   "lag_days": 1,
+   "CAGR": 0.1492,
+   "Sharpe": 0.441,
+   "maxDD": -0.9005,
+   "turnover_pa": 10.4
+  },
+  {
+   "config": "champion 3x SMA100",
+   "period": "OOS",
+   "cost_mult": 3.0,
+   "lag_days": 1,
+   "CAGR": 0.1635,
+   "Sharpe": 0.526,
+   "maxDD": -0.5787,
+   "turnover_pa": 10.4
+  },
+  {
+   "config": "tv30 rem=1x",
+   "period": "IS",
+   "cost_mult": 3.0,
+   "lag_days": 1,
+   "CAGR": 0.1057,
+   "Sharpe": 0.331,
+   "maxDD": -0.6981,
+   "turnover_pa": 17.32
+  },
+  {
+   "config": "tv30 rem=1x",
+   "period": "OOS",
+   "cost_mult": 3.0,
+   "lag_days": 1,
+   "CAGR": 0.0999,
+   "Sharpe": 0.404,
+   "maxDD": -0.5472,
+   "turnover_pa": 17.32
+  },
+  {
+   "config": "tv30 rem=cash",
+   "period": "IS",
+   "cost_mult": 3.0,
+   "lag_days": 1,
+   "CAGR": 0.1143,
+   "Sharpe": 0.362,
+   "maxDD": -0.432,
+   "turnover_pa": 8.81
+  },
+  {
+   "config": "tv30 rem=cash",
+   "period": "OOS",
+   "cost_mult": 3.0,
+   "lag_days": 1,
+   "CAGR": 0.1268,
+   "Sharpe": 0.512,
+   "maxDD": -0.5161,
+   "turnover_pa": 8.81
+  },
+  {
+   "config": "tv45 rem=1x",
+   "period": "IS",
+   "cost_mult": 3.0,
+   "lag_days": 1,
+   "CAGR": 0.1236,
+   "Sharpe": 0.377,
+   "maxDD": -0.7509,
+   "turnover_pa": 15.33
+  },
+  {
+   "config": "tv45 rem=1x",
+   "period": "OOS",
+   "cost_mult": 3.0,
+   "lag_days": 1,
+   "CAGR": 0.1341,
+   "Sharpe": 0.477,
+   "maxDD": -0.5342,
+   "turnover_pa": 15.33
+  },
+  {
+   "config": "tv45 rem=cash",
+   "period": "IS",
+   "cost_mult": 3.0,
+   "lag_days": 1,
+   "CAGR": 0.1385,
+   "Sharpe": 0.405,
+   "maxDD": -0.5799,
+   "turnover_pa": 10.12
+  },
+  {
+   "config": "tv45 rem=cash",
+   "period": "OOS",
+   "cost_mult": 3.0,
+   "lag_days": 1,
+   "CAGR": 0.1547,
+   "Sharpe": 0.534,
+   "maxDD": -0.5209,
+   "turnover_pa": 10.12
+  },
+  {
+   "config": "tv60 rem=1x",
+   "period": "IS",
+   "cost_mult": 3.0,
+   "lag_days": 1,
+   "CAGR": 0.1451,
+   "Sharpe": 0.42,
+   "maxDD": -0.7805,
+   "turnover_pa": 13.05
+  },
+  {
+   "config": "tv60 rem=1x",
+   "period": "OOS",
+   "cost_mult": 3.0,
+   "lag_days": 1,
+   "CAGR": 0.1518,
+   "Sharpe": 0.508,
+   "maxDD": -0.5315,
+   "turnover_pa": 13.05
+  },
+  {
+   "config": "tv60 rem=cash",
+   "period": "IS",
+   "cost_mult": 3.0,
+   "lag_days": 1,
+   "CAGR": 0.1611,
+   "Sharpe": 0.446,
+   "maxDD": -0.6554,
+   "turnover_pa": 10.33
+  },
+  {
+   "config": "tv60 rem=cash",
+   "period": "OOS",
+   "cost_mult": 3.0,
+   "lag_days": 1,
+   "CAGR": 0.1618,
+   "Sharpe": 0.532,
+   "maxDD": -0.5306,
+   "turnover_pa": 10.33
+  },
+  {
+   "config": "tv30 rem=1x",
+   "period": "IS",
+   "cost_mult": 1.0,
+   "lag_days": 2,
+   "CAGR": 0.19,
+   "Sharpe": 0.527,
+   "maxDD": -0.5604,
+   "turnover_pa": 17.32
+  },
+  {
+   "config": "tv30 rem=1x",
+   "period": "OOS",
+   "cost_mult": 1.0,
+   "lag_days": 2,
+   "CAGR": 0.1543,
+   "Sharpe": 0.557,
+   "maxDD": -0.5136,
+   "turnover_pa": 17.32
+  },
+  {
+   "config": "tv30 rem=cash",
+   "period": "IS",
+   "cost_mult": 1.0,
+   "lag_days": 2,
+   "CAGR": 0.1681,
+   "Sharpe": 0.533,
+   "maxDD": -0.3242,
+   "turnover_pa": 8.81
+  },
+  {
+   "config": "tv30 rem=cash",
+   "period": "OOS",
+   "cost_mult": 1.0,
+   "lag_days": 2,
+   "CAGR": 0.154,
+   "Sharpe": 0.603,
+   "maxDD": -0.479,
+   "turnover_pa": 8.81
+  },
+  {
+   "config": "tv45 rem=1x",
+   "period": "IS",
+   "cost_mult": 1.0,
+   "lag_days": 2,
+   "CAGR": 0.2111,
+   "Sharpe": 0.542,
+   "maxDD": -0.632,
+   "turnover_pa": 15.33
+  },
+  {
+   "config": "tv45 rem=1x",
+   "period": "OOS",
+   "cost_mult": 1.0,
+   "lag_days": 2,
+   "CAGR": 0.17,
+   "Sharpe": 0.561,
+   "maxDD": -0.5596,
+   "turnover_pa": 15.33
+  },
+  {
+   "config": "tv45 rem=cash",
+   "period": "IS",
+   "cost_mult": 1.0,
+   "lag_days": 2,
+   "CAGR": 0.2064,
+   "Sharpe": 0.552,
+   "maxDD": -0.432,
+   "turnover_pa": 10.12
+  },
+  {
+   "config": "tv45 rem=cash",
+   "period": "OOS",
+   "cost_mult": 1.0,
+   "lag_days": 2,
+   "CAGR": 0.1737,
+   "Sharpe": 0.581,
+   "maxDD": -0.5528,
+   "turnover_pa": 10.12
+  },
+  {
+   "config": "tv60 rem=1x",
+   "period": "IS",
+   "cost_mult": 1.0,
+   "lag_days": 2,
+   "CAGR": 0.2245,
+   "Sharpe": 0.552,
+   "maxDD": -0.6944,
+   "turnover_pa": 13.05
+  },
+  {
+   "config": "tv60 rem=1x",
+   "period": "OOS",
+   "cost_mult": 1.0,
+   "lag_days": 2,
+   "CAGR": 0.1777,
+   "Sharpe": 0.565,
+   "maxDD": -0.5787,
+   "turnover_pa": 13.05
+  },
+  {
+   "config": "tv60 rem=cash",
+   "period": "IS",
+   "cost_mult": 1.0,
+   "lag_days": 2,
+   "CAGR": 0.2276,
+   "Sharpe": 0.563,
+   "maxDD": -0.5613,
+   "turnover_pa": 10.33
+  },
+  {
+   "config": "tv60 rem=cash",
+   "period": "OOS",
+   "cost_mult": 1.0,
+   "lag_days": 2,
+   "CAGR": 0.1804,
+   "Sharpe": 0.573,
+   "maxDD": -0.5692,
+   "turnover_pa": 10.33
+  },
+  {
+   "config": "champion 3x SMA100",
+   "period": "IS",
+   "cost_mult": 1.0,
+   "lag_days": 2,
+   "CAGR": 0.2194,
+   "Sharpe": 0.547,
+   "maxDD": -0.8563,
+   "turnover_pa": 10.4
+  },
+  {
+   "config": "champion 3x SMA100",
+   "period": "OOS",
+   "cost_mult": 1.0,
+   "lag_days": 2,
+   "CAGR": 0.1811,
+   "Sharpe": 0.564,
+   "maxDD": -0.5883,
+   "turnover_pa": 10.4
+  }
+ ],
+ "gate": {
+  "pick": "tv60 rem=cash",
+  "dCAGR": -0.0028,
+  "p_CAGR": 0.588,
+  "dSharpe": 0.009,
+  "p_Sharpe": 0.382,
+  "DSR": 0.003,
+  "DSR_N": 132,
+  "regime_wins_of_3": 3,
+  "P_dd50_10y": 0.629,
+  "champion_P_dd50_10y": 0.801,
+  "tests": {
+   "oos_beats": false,
+   "dsr_ge_0_90": false,
+   "costs_x3": false,
+   "neighbours": false,
+   "maxdd_within_5pp": true,
+   "p_dd50_not_higher": true,
+   "regimes_2_of_3": true,
+   "extra_lag_still_beats": false
+  }
+ },
+ "robustness": [
+  "costs x3",
+  "neighbouring tv",
+  "extra one-day lag",
+  "3 regimes",
+  "bootstrap drawdown risk",
+  "DSR at cumulative N"
+ ],
+ "limitations": [
+  "Synthetic 3x before 2012; USD, not the GBX line",
+  "Daily rebalancing with no band overstates turnover",
+  "1x leg modelled as the index (QQQ/NDX), EQQQ tracking not modelled"
+ ],
+ "trials": 6,
+ "decision": "REJECTED",
+ "decision_detail": "Pick tv60 rem=cash. OOS 2006-2026: CAGR 20.3% vs champion 20.5% (p=0.59), Sharpe 0.62 vs 0.61 (p=0.38), maxDD -49.4% vs -55.2%, DSR 0.00 (N=132). Failed Stage 2: oos_beats, dsr_ge_0_90, costs_x3, neighbours, extra_lag_still_beats.",
+ "promoted": false,
+ "evidence": [
+  "research/h09_vol_managed_leverage.py",
+  "research/output/h09_gate.csv",
+  "research/output/h09_all_configs.csv"
+ ]
+}

@@ -1,0 +1,74 @@
+# Daily intelligence report via GitHub Actions (the recommended scheduler; see trading/REPORTING.md).
+# NOT ACTIVE until this file is committed to the repository's DEFAULT branch (master) as
+# .github/workflows/daily-report.yml and the repository secrets below exist. GitHub only runs `schedule:`
+# workflows from the default branch; the job then checks out the bot's branch.
+# Read-only towards Trading 212: the report and the verifier never place orders.
+name: t212-daily-report
+on:
+  schedule:
+    # 06:35, 07:35, 08:35 and 09:35 UTC. --respect-schedule lets the first run after 07:30 UK time send:
+    # 07:35 UK in both seasons (06:35 UTC in BST, 07:35 UTC in GMT). Earlier runs exit 4 (not due); later runs are
+    # retries for GitHub's delayed or dropped schedules and exit 4 once the ledger shows delivery.
+    - cron: "35 6-9 * * *"
+  workflow_dispatch: {}          # "Run workflow" button for manual tests
+permissions:
+  contents: write                # commit reports/ and journal/ back to the bot branch
+concurrency:
+  group: t212-daily-report       # never two report jobs at once
+  cancel-in-progress: false
+env:
+  BOT_BRANCH: claude/trading212-agent-skills-r71zy3
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.BOT_BRANCH }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install pandas numpy
+      - name: Generate, send and confirm report
+        id: report
+        working-directory: trading
+        env:
+          T212_ENV: demo
+          T212_API_KEY: ${{ secrets.T212_API_KEY }}
+          T212_API_SECRET: ${{ secrets.T212_API_SECRET }}
+          REPORT_EMAIL_PROVIDER: resend
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          REPORT_EMAIL_TO: ${{ secrets.REPORT_EMAIL_TO }}
+          REPORT_EMAIL_FROM: ${{ secrets.REPORT_EMAIL_FROM }}
+        run: |
+          set +e
+          python -m t212bot daily-report --send --respect-schedule
+          rc=$?
+          echo "daily-report exit code $rc"
+          echo "rc=$rc" >> "$GITHUB_OUTPUT"
+          # 0 sent and provider-confirmed | 4 not due / already delivered  -> success
+          # 2 critical data problems | 3 email not delivered | 1 crash     -> job fails, GitHub emails you
+          if [ $rc -eq 4 ]; then exit 0; fi
+          exit $rc
+      - name: Independent verification of today's report
+        if: steps.report.outputs.rc == '0'
+        working-directory: trading
+        env:
+          T212_ENV: demo
+          T212_API_KEY: ${{ secrets.T212_API_KEY }}
+          T212_API_SECRET: ${{ secrets.T212_API_SECRET }}
+        run: python -m t212bot verify-report      # exit 2 on any discrepancy
+      - name: Commit report history
+        if: always()
+        run: |
+          git config user.name "t212-report-bot"
+          git config user.email "t212-report-bot@users.noreply.github.com"
+          git add trading/reports trading/journal || true
+          git diff --cached --quiet && exit 0
+          git commit -m "report: daily intelligence $(date -u +%F) (GitHub Actions run ${{ github.run_id }})"
+          for i in 1 2 3 4; do          # the ops and research routines push to the same branch
+            git pull --rebase origin "$BOT_BRANCH" && git push origin "HEAD:$BOT_BRANCH" && exit 0
+            sleep $((2 ** i))
+          done
+          exit 1

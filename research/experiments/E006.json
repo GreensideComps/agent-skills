@@ -1,0 +1,159 @@
+{
+ "id": "E006",
+ "title": "Volatility-managed momentum sleeve",
+ "agenda_item": "P1",
+ "hypothesis": "Scaling the momentum sleeve by the inverse of its 6-month relative volatility (clip 25-75%) beats a static 50/50.",
+ "rationale": "Momentum crashes follow high momentum volatility (Barroso & Santa-Clara 2015; Daniel & Moskowitz 2016).",
+ "methodology": "Pre-registered grid tv in {6,8,10}%, lookback 6m; pick by in-sample Sharpe; Stage 2 gate in both markets.",
+ "results": [
+  {
+   "market": "US",
+   "pick_on_IS_sharpe": "P1 volmgd tv=10%",
+   "oos": "2001-01..2026-08",
+   "CAGR": 0.0951,
+   "Sharpe": 0.556,
+   "maxDD": -0.4877,
+   "champion_CAGR": 0.0947,
+   "champion_Sharpe": 0.559,
+   "champion_maxDD": -0.4933,
+   "dCAGR": 0.0004,
+   "p_CAGR": 0.448,
+   "dSharpe": -0.003,
+   "p_Sharpe": 0.573,
+   "DSR_active": 0.211,
+   "regime_wins_of_3": 2,
+   "P_dd50_10y": 0.18,
+   "champion_P_dd50_10y": 0.183,
+   "tests": {
+    "oos_beats": false,
+    "dsr_ge_0_90": false,
+    "costs_x3": false,
+    "neighbours": false,
+    "maxdd_within_5pp": true,
+    "p_dd50_not_higher": true,
+    "regimes_2_of_3": true
+   },
+   "PASS": false
+  },
+  {
+   "market": "DEV",
+   "pick_on_IS_sharpe": "P1 volmgd tv=6%",
+   "oos": "2006-01..2026-08",
+   "CAGR": 0.094,
+   "Sharpe": 0.544,
+   "maxDD": -0.5288,
+   "champion_CAGR": 0.0916,
+   "champion_Sharpe": 0.536,
+   "champion_maxDD": -0.5316,
+   "dCAGR": 0.0024,
+   "p_CAGR": 0.194,
+   "dSharpe": 0.009,
+   "p_Sharpe": 0.291,
+   "DSR_active": 0.46,
+   "regime_wins_of_3": 3,
+   "P_dd50_10y": 0.163,
+   "champion_P_dd50_10y": 0.167,
+   "tests": {
+    "oos_beats": false,
+    "dsr_ge_0_90": false,
+    "costs_x3": true,
+    "neighbours": true,
+    "maxdd_within_5pp": true,
+    "p_dd50_not_higher": true,
+    "regimes_2_of_3": true
+   },
+   "PASS": false
+  }
+ ],
+ "tradeable_check": [
+  {
+   "config": "CHAMPION 50/50",
+   "exec_lag_days": 0,
+   "CAGR": 0.1406,
+   "maxDD": -0.2377,
+   "avg_mom_weight": 0.5
+  },
+  {
+   "config": "CHAMPION 50/50",
+   "exec_lag_days": 1,
+   "CAGR": 0.1393,
+   "maxDD": -0.2377,
+   "avg_mom_weight": 0.5
+  },
+  {
+   "config": "P1 volmgd tv=6%",
+   "exec_lag_days": 0,
+   "CAGR": 0.1485,
+   "maxDD": -0.2328,
+   "avg_mom_weight": 0.726
+  },
+  {
+   "config": "P1 volmgd tv=6%",
+   "exec_lag_days": 1,
+   "CAGR": 0.1464,
+   "maxDD": -0.233,
+   "avg_mom_weight": 0.726
+  },
+  {
+   "config": "P1 volmgd tv=8%",
+   "exec_lag_days": 0,
+   "CAGR": 0.1486,
+   "maxDD": -0.2317,
+   "avg_mom_weight": 0.744
+  },
+  {
+   "config": "P1 volmgd tv=8%",
+   "exec_lag_days": 1,
+   "CAGR": 0.1466,
+   "maxDD": -0.2317,
+   "avg_mom_weight": 0.744
+  },
+  {
+   "config": "P1 volmgd tv=10%",
+   "exec_lag_days": 0,
+   "CAGR": 0.1473,
+   "maxDD": -0.2317,
+   "avg_mom_weight": 0.748
+  },
+  {
+   "config": "P1 volmgd tv=10%",
+   "exec_lag_days": 1,
+   "CAGR": 0.1456,
+   "maxDD": -0.2317,
+   "avg_mom_weight": 0.748
+  }
+ ],
+ "trials": 6,
+ "decision": "REJECTED",
+ "decision_detail": "Failed Stage 2: costs_x3, dsr_ge_0_90, neighbours, oos_beats.",
+ "date": "2026-10-13",
+ "data": [
+  "Ken French Data Library (CRSP / Bloomberg, survivorship-free): F-F_Research_Data_Factors, 6_Portfolios_ME_Prior_12_2, Developed_3_Factors, Developed_6_Portfolios_ME_Prior_12_2 (value-weighted, USD, to 2026-08)",
+  "Yahoo adjusted closes VWRL.L and IWFM.L (GBP/GBX) 2014-11..2026-08 for the tradeable check"
+ ],
+ "benchmark": "champion momentum_tilt_v1 proxy: 50% market + 50% large-cap top-30% momentum (BIG HiPRIOR), monthly rebalance",
+ "costs": "OCF MKT 0.22%, MOM 0.30% p.a.; one-way trading MKT 0.10%, MOM 0.35% (incl. 0.15% FX), cash 0.05%; stress x3",
+ "in_sample": "US 1927-07..2000-12; Developed 1991-06..2005-12",
+ "out_of_sample": "US 2001-01..2026-08; Developed 2006-01..2026-08",
+ "robustness": [
+  "costs x3",
+  "neighbouring parameters",
+  "3 sub-period regimes",
+  "bootstrap P(>=50% drawdown in 10y)",
+  "deflated Sharpe of active return vs champion, across all configs of this run",
+  "tradeable ETF check with next-day execution (h01_tradeable.csv)"
+ ],
+ "limitations": [
+  "USD academic portfolios, not GBP; both arms share the currency so the comparison is fair, levels are not",
+  "BIG HiPRIOR is a proxy for MSCI World Momentum (different weighting and rebalance rules)",
+  "Monthly sampling; the one-day lag is tested only on the 2014-2026 ETF sample",
+  "An unpushed run on 2026-10-13 tried an unknown number of configs; they are not in the trial count"
+ ],
+ "promoted": false,
+ "evidence": [
+  "research/h01_momentum_sleeve.py",
+  "research/output/h01_gate.csv",
+  "research/output/h01_all_configs.csv",
+  "research/output/h01_tradeable.csv"
+ ]
+}

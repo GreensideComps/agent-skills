@@ -1,0 +1,187 @@
+{
+ "id": "E012",
+ "title": "CFD-style round-the-clock day trading: gold and Nasdaq-100 futures",
+ "date": "2026-10-13",
+ "agenda_item": "Owner plans a CFD account; test 24-hour day trading before it is set up",
+ "hypothesis": "With 24-hour access and tight CFD spreads, simple intraday rules on gold or the Nasdaq make money.",
+ "rationale": "Removes the two obstacles of E011 (London-only hours, wider ETP spreads).",
+ "data": [
+  "Yahoo hourly GC=F and NQ=F, 2024-05-21..2026-10-13"
+ ],
+ "methodology": "7 pre-set rules per market (session windows, breakouts, follow-yesterday); unleveraged; never open at 22:00 London.",
+ "benchmark": "holding the future over the same period",
+ "costs": "0.02% spread per side; no overnight financing (never open at 22:00)",
+ "in_sample": "none (no fitting)",
+ "out_of_sample": "2024-05-21..2026-10-13",
+ "results": [
+  {
+   "market": "gold",
+   "rule": "always_long_session",
+   "trades": 534,
+   "win_rate": 0.5356,
+   "total_return": 0.401,
+   "CAGR": 0.1515,
+   "maxDD": -0.1845,
+   "gross_total": 0.7347,
+   "buy_and_hold": 0.7329
+  },
+  {
+   "market": "gold",
+   "rule": "asia_long",
+   "trades": 576,
+   "win_rate": 0.4826,
+   "total_return": -0.037,
+   "CAGR": -0.0156,
+   "maxDD": -0.1615,
+   "gross_total": 0.2125,
+   "buy_and_hold": 0.7329
+  },
+  {
+   "market": "gold",
+   "rule": "london_long",
+   "trades": 595,
+   "win_rate": 0.5059,
+   "total_return": -0.1481,
+   "CAGR": -0.0647,
+   "maxDD": -0.2078,
+   "gross_total": 0.0808,
+   "buy_and_hold": 0.7329
+  },
+  {
+   "market": "gold",
+   "rule": "us_long",
+   "trades": 553,
+   "win_rate": 0.5226,
+   "total_return": -0.1354,
+   "CAGR": -0.059,
+   "maxDD": -0.1952,
+   "gross_total": 0.0786,
+   "buy_and_hold": 0.7329
+  },
+  {
+   "market": "gold",
+   "rule": "london_breakout",
+   "trades": 592,
+   "win_rate": 0.4544,
+   "total_return": 0.0514,
+   "CAGR": 0.0212,
+   "maxDD": -0.1541,
+   "gross_total": 0.3323,
+   "buy_and_hold": 0.7329
+  },
+  {
+   "market": "gold",
+   "rule": "us_breakout",
+   "trades": 488,
+   "win_rate": 0.4078,
+   "total_return": -0.2134,
+   "CAGR": -0.0954,
+   "maxDD": -0.2315,
+   "gross_total": -0.0439,
+   "buy_and_hold": 0.7329
+  },
+  {
+   "market": "gold",
+   "rule": "follow_yesterday",
+   "trades": 549,
+   "win_rate": 0.4699,
+   "total_return": -0.404,
+   "CAGR": -0.1949,
+   "maxDD": -0.4155,
+   "gross_total": -0.2577,
+   "buy_and_hold": 0.7329
+  },
+  {
+   "market": "nasdaq",
+   "rule": "always_long_session",
+   "trades": 529,
+   "win_rate": 0.535,
+   "total_return": 0.3399,
+   "CAGR": 0.1302,
+   "maxDD": -0.203,
+   "gross_total": 0.6557,
+   "buy_and_hold": 0.6402
+  },
+  {
+   "market": "nasdaq",
+   "rule": "asia_long",
+   "trades": 576,
+   "win_rate": 0.5122,
+   "total_return": -0.0695,
+   "CAGR": -0.0296,
+   "maxDD": -0.0958,
+   "gross_total": 0.1716,
+   "buy_and_hold": 0.6402
+  },
+  {
+   "market": "nasdaq",
+   "rule": "london_long",
+   "trades": 588,
+   "win_rate": 0.4864,
+   "total_return": -0.2601,
+   "CAGR": -0.1181,
+   "maxDD": -0.3022,
+   "gross_total": -0.0639,
+   "buy_and_hold": 0.6402
+  },
+  {
+   "market": "nasdaq",
+   "rule": "us_long",
+   "trades": 549,
+   "win_rate": 0.5446,
+   "total_return": -0.0517,
+   "CAGR": -0.022,
+   "maxDD": -0.2383,
+   "gross_total": 0.1811,
+   "buy_and_hold": 0.6402
+  },
+  {
+   "market": "nasdaq",
+   "rule": "london_breakout",
+   "trades": 595,
+   "win_rate": 0.3916,
+   "total_return": -0.2261,
+   "CAGR": -0.1014,
+   "maxDD": -0.2419,
+   "gross_total": -0.0181,
+   "buy_and_hold": 0.6402
+  },
+  {
+   "market": "nasdaq",
+   "rule": "us_breakout",
+   "trades": 531,
+   "win_rate": 0.4765,
+   "total_return": -0.1771,
+   "CAGR": -0.0782,
+   "maxDD": -0.2655,
+   "gross_total": 0.0176,
+   "buy_and_hold": 0.6402
+  },
+  {
+   "market": "nasdaq",
+   "rule": "follow_yesterday",
+   "trades": 544,
+   "win_rate": 0.4651,
+   "total_return": -0.2477,
+   "CAGR": -0.1124,
+   "maxDD": -0.3659,
+   "gross_total": -0.0648,
+   "buy_and_hold": 0.6402
+  }
+ ],
+ "robustness": [
+  "two markets",
+  "seven rules"
+ ],
+ "limitations": [
+  "hourly bars; ~2.4 years; futures prices, not a specific CFD provider's quotes"
+ ],
+ "trials": 14,
+ "decision": "REJECTED",
+ "decision_detail": "Only 'be long all session' made clear money (gold +40%, Nasdaq +34% vs holding +73% / +64%); every active rule lost except gold london_breakout (+5% over the period), one positive out of 12, consistent with luck.",
+ "promoted": false,
+ "evidence": [
+  "research/h06_cfd_intraday.py",
+  "research/output/h06_cfd_intraday.csv"
+ ]
+}
