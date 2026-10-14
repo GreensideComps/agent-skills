@@ -238,6 +238,6 @@ for predictive value. That test is M5 (paper portfolio, recommendations logged b
 | First real finding | The demo bot's hourly monitor left no commit for its 09:57, 10:57 and 11:57 UTC runs on 2026-10-14 (3 of 6 since it started). The three bot routines share one persistent session, so a run that fires while another is still working can be lost. Splitting them into one session each (planned in §7) is a change to the bot's routines, so it waits for the owner |
 | Daily pipeline | `equity/daily_run.sh`: tests, 200 new companies a day (the full 5,472 SEC-linked universe in about 27 weekdays), a rolling re-check of the 300 oldest snapshots, prices, screen with valuation and alerts, paper portfolio, reliability check, then commit and push to `master` |
 | Scheduler | A Claude routine ("Equity: daily research pipeline", weekdays 22:27 London), not GitHub Actions, so no repository secrets are needed. §8 decision 3 is therefore no longer blocking |
-| Known limit | `fundamentals.jsonl` will reach about 70 MB at full coverage (13 KB per snapshot). The size check warns at 60 MB; sharding the ledger is the follow-up |
-| Tests | `equity/tests`: 97 passed (9 new); `trading/tests`: 139 passed |
+| Ledger size | `fundamentals.jsonl` would have reached about 70 MB at full coverage. It is now sharded into 16 files by company (`data/fundamentals/0-f.jsonl`), and the job log by month (`data/jobs/YYYY-MM.jsonl`). The existing records were moved unchanged (444 snapshots and 1,088 job events, same rids). The size check warns at 60 MB per file |
+| Tests | `equity/tests`: 98 passed (10 new); `trading/tests`: 139 passed |
 

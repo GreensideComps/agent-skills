@@ -25,7 +25,7 @@ python3 -m equity prices >/dev/null || FAILED="$FAILED prices"
 python3 -m equity screen --top 25 >/dev/null || FAILED="$FAILED screen"
 python3 -m equity paper >/dev/null || FAILED="$FAILED paper"
 python3 -m equity reliability; RC=$?
-[ -n "$FAILED" ] && echo "EQUITY: steps with failures:$FAILED (see equity/data/jobs.jsonl)"
+[ -n "$FAILED" ] && echo "EQUITY: steps with failures:$FAILED (see equity/data/jobs/)"
 
 cd "$ROOT"
 git add equity/data equity/reports
