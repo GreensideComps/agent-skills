@@ -254,3 +254,18 @@ Pre-registered in [`../equity/research/screen_backtest_prereg.md`](../equity/res
 | Reading | Weak positive evidence that the score ranks companies the right way. It is not strong enough to call it predictive. Weights stay as they are; changing them is the owner's decision, and every further variant tried must be counted as a new trial |
 | Biases | Survivorship (only companies listed today), 32-96 scored companies a year (many lack a total score early on), no costs, unofficial prices |
 | Tests | `equity/tests`: 102 passed (4 new); `trading/tests`: 139 passed |
+
+## 16. Milestone 6 (demo stand-in): portfolio monitoring (2026-10-14)
+
+On 2026-10-14 the owner copied their ISA pies into the demo account: real weights and capital, but not real average
+prices or profits. That made a demo version of M6 possible before an Invest/ISA key exists.
+
+| Item | Result |
+|---|---|
+| Monitor | `python3 -m equity portfolio`: reads the account through the bot's `ReadOnlyClient` (GET account summary and positions only), stores a snapshot in `portfolio.jsonl`, and joins each holding to the research database (screen score, rank, failed gates, the growth the price implies, bear case). It also researches any SEC-linked holding not yet in the database. Runs in the daily pipeline |
+| Risk engine | Exposure by broad sector (approximate, from SIC), SIC industry and currency. Concentration (largest, top 5, effective number of holdings). One year of daily returns per holding: annualised volatility, average pairwise correlation, beta to QQQ, 5-day moves. Flags use fixed thresholds in `config/portfolio.json`, set before looking at the holdings |
+| First run | 22 holdings, £1,298, 100% USD. Technology is about 74% (flag at 40%), and the top 5 are 54%. Volatility 27%, beta to QQQ 1.16. 10 holdings fail at least one screen gate, mostly dilution; Intel and Bloom Energy fell over 10% in 5 days. Report: `equity/reports/portfolio/2026-10-14.md` |
+| Demo-bot check | All pie shares show 0 available to trade and free cash is £0, so the demo trader cannot sell them. Its LQQ3 position is gone, so it is idle until the owner decides its future |
+| Moving to the ISA | Needs a read-only Invest/ISA key **and** a reviewed change: `T212Client` refuses any host but demo by design. Both are the owner's decisions |
+| Tests | `equity/tests`: 106 passed (4 new); `trading/tests`: 139 passed |
+

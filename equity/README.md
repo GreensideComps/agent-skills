@@ -33,6 +33,8 @@ python3 -m equity health                                 # last ok/failed run pe
 python3 -m equity ingest --all-sec --new-only --limit 200  # grow the universe: companies with no snapshot yet
 python3 -m equity ingest --all-sec --refresh 300         # re-check the 300 oldest snapshots (over 7 days old)
 python3 -m equity reliability                            # missed runs, stuck jobs, stale data -> reports/health/
+python3 -m equity portfolio --ingest-missing             # read-only holdings monitor -> reports/portfolio/<date>.md
+python3 -m equity backtest                               # pre-registered point-in-time test of the screen score
 bash daily_run.sh                                        # the whole daily pipeline, then commit + push (needs SEC_USER_AGENT)
 ```
 

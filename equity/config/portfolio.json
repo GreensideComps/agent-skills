@@ -1,0 +1,11 @@
+{
+  "note": "Fixed flag thresholds for the portfolio monitor, set before looking at the current holdings. Changing them is the owner's call.",
+  "method_version": "portfolio-1.0",
+  "thresholds": {
+    "max_position_weight": 0.15,
+    "max_sector_weight": 0.40,
+    "max_avg_correlation": 0.50,
+    "max_vol_annual": 0.30,
+    "move_5d": 0.10
+  }
+}
