@@ -1,5 +1,7 @@
 # Investment research system: audit, target architecture and plan
 
+> **Superseded roadmap (2026-10-14):** the plan in §7 is replaced by [`STRATEGY_V2.md`](STRATEGY_V2.md) after the owner's strategic reset. The audit and milestone records below remain accurate history.
+
 Audit date **2026-10-14** (branch `claude/trading212-agent-skills-r71zy3` at `2a4305e`, plus the Milestone 1 work
 in this commit). "Verified" means observed directly in this session: an API response, a test run, a git commit
 or a routine record. A config file or schedule existing is not treated as proof that anything works.
