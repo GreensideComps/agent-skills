@@ -2,8 +2,18 @@
  "buy_reserve": {
   "lower": 0.0416,
   "source": "demo 2026-10-13: \u00a350.70 free; VWRPl_EQ buys of 0.3361 and 0.3327 sh rejected, 0.319 sh (\u00a346.71) accepted",
-  "upper": 0.0854
+  "upper": 0.0635
  },
+ "inception": {
+  "total_value_gbp": 500.0,
+  "ts_utc": "2026-10-14T07:21:37+00:00"
+ },
+ "last_rebalance_month": "2026-10",
+ "last_rebalance_utc": "2026-10-14T07:21:50+00:00",
  "note": "Account reset by owner 2026-10-13 ~17:43 UTC to \u00a3500 cash. Pre-reset journal archived in journal/archive/2026-10-13_pre_reset_100gbp/. buy_reserve carried over (account-level behaviour).",
- "qty_decimals": {}
+ "qty_decimals": {
+  "LQQ3l_EQ": 4
+ },
+ "signal_on": true,
+ "strategy": "nasdaq3x_trend_sma100_v1"
 }
