@@ -258,12 +258,22 @@ class Bot:
                        "filled_quantity": o.get("filledQuantity"), "fill_price": f.get("price"),
                        "filled_at": f.get("filledAt"), "wallet_impact": f.get("walletImpact")}
                 ref = e.get("reference") or {}
-                if f.get("price") and ref.get("price"):
-                    side = 1 if e["quantity"] > 0 else -1
+                wi = f.get("walletImpact") or {}
+                side = 1 if e["quantity"] > 0 else -1
+                qty = abs(o.get("filledQuantity") or 0)
+                # Compare in GBP: the fill price is quoted in the instrument's unit (GBX for most LSE lines, USD...),
+                # the reference is not, so price/price can be off by 100x. netValue is GBP; listed taxes/fees (FX fee) are
+                # removed so this measures price only (fees stay in cost_vs_reference_gbp).
+                if wi.get("currency") == "GBP" and wi.get("netValue") and qty and ref.get("price_gbp"):
+                    fees = sum(abs(float(x.get("quantity") or 0)) for x in wi.get("taxes") or [])
+                    rec["fill_price_gbp"] = round((abs(wi["netValue"]) - side * fees) / qty, 6)
+                    rec["slippage_bps_vs_reference"] = round(side * (rec["fill_price_gbp"] / ref["price_gbp"] - 1) * 1e4, 2)
+                    rec["reference_price"] = ref["price_gbp"]
+                    rec["reference_as_of"] = ref.get("as_of")
+                elif f.get("price") and ref.get("price") and ref.get("currency") == o.get("currency"):
                     rec["slippage_bps_vs_reference"] = round(side * (f["price"] / ref["price"] - 1) * 1e4, 2)
                     rec["reference_price"] = ref["price"]
                     rec["reference_as_of"] = ref.get("as_of")
-                wi = f.get("walletImpact") or {}
                 if wi.get("netValue") is not None and ref.get("price_gbp") and o.get("filledQuantity"):
                     ideal = abs(o["filledQuantity"]) * ref["price_gbp"]
                     rec["cost_vs_reference_gbp"] = round((abs(wi["netValue"]) - ideal) * (1 if e["quantity"] > 0 else -1), 4)

@@ -76,3 +76,18 @@ def test_signal_nav_switches_to_cash_and_back():
     # then the shadow sits in cash and rebuys at 10; three trades pay COST each
     assert log[1]["date"] == idx[151].date().isoformat() and log[2]["date"] == idx[171].date().isoformat()
     assert nav.iloc[-1] == pytest.approx(80 * (1 - COST) ** 3, rel=1e-9)
+
+
+def test_report_uses_latest_reconcile_record_per_order(tmp_path, cfg):
+    from t212bot import report
+    from t212bot.journal import Journal
+    j = Journal(root=tmp_path)
+    j.save_state({"inception": {"total_value_gbp": 100.0}})
+    j.event("order_placed", ticker="VWRPl_EQ", quantity=0.3, order_id=1, reference={"price": 146.4})
+    j.event("order_reconciled", order_id=1, ticker="VWRPl_EQ", status="FILLED", slippage_bps_vs_reference=986397.28)
+    j.event("order_reconciled", order_id=1, ticker="VWRPl_EQ", status="FILLED", slippage_bps_vs_reference=-36.03)
+    j.snapshot({"totalValue": 100.0, "cash": {"availableToTrade": 1.5}, "investments": {}}, [])
+    cfg.shadow_portfolios = {}
+    cfg.yahoo_symbols = {"VWRPl_EQ": "VWRP.L", "IWMOl_EQ": "VWRP.L"}
+    md = report.render(report.build(j, cfg, book=book()))
+    assert "-36.03" in md and "986397" not in md

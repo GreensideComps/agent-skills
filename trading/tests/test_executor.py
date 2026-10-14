@@ -168,3 +168,19 @@ def test_loose_upper_bound_does_not_starve_later_buys(make_bot):
     st = {}
     bot._learn_reserve(st, cash=100.0, value=49.0, accepted=True)     # 104% headroom: uninformative
     assert bot._reserve(st) == bot.DEFAULT_RESERVE
+
+
+def test_reconcile_slippage_handles_gbx_fill_prices(make_bot, journal):
+    """2026-10-14: T212 reported an LQQ3 fill at 34571 (GBX) against a £346.96 reference and the journal showed
+    +986,397 bps. Slippage must be computed in GBP from the wallet impact: 468.44 / 1.355 = £345.71 -> about -36 bps."""
+    fake = FakeT212()
+    journal.event("order_placed", order_id=777, ticker="LQQ3l_EQ", quantity=1.355,
+                  reference={"price": 346.96, "price_gbp": 346.96, "currency": "GBP", "as_of": "2026-10-14T07:05:46+00:00"})
+    fake.history.append({"order": {"id": 777, "ticker": "LQQ3l_EQ", "quantity": 1.355, "filledQuantity": 1.355,
+                                   "status": "FILLED", "currency": "GBX"},
+                         "fill": {"price": 34571.0, "filledAt": "2026-10-14T07:21:49.000Z",
+                                  "walletImpact": {"currency": "GBP", "netValue": 468.44, "fxRate": 100, "taxes": []}}})
+    rec = make_bot(fake).reconcile()[0]
+    assert rec["fill_price_gbp"] == pytest.approx(345.712, abs=1e-3)
+    assert rec["slippage_bps_vs_reference"] == pytest.approx(-36.0, abs=0.5)
+    assert rec["cost_vs_reference_gbp"] == pytest.approx(-1.6908, abs=1e-4)

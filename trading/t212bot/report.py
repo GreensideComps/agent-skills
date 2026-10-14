@@ -60,7 +60,7 @@ def build(j: Journal, cfg: StrategyConfig, book: PriceBook | None = None) -> dic
     out["shadows"] = shadows
     out["start"] = start
     out["capital"] = capital
-    fills = j.events("order_reconciled")
+    fills = list({f["order_id"]: f for f in j.events("order_reconciled")}.values())  # a later correction replaces the original
     out["fills"] = fills
     return out
 
@@ -90,10 +90,10 @@ def render(data: dict) -> str:
     fills = data.get("fills", [])
     if fills:
         L += ["## Execution quality (real fills vs reference quote at order time)", "",
-              "| Order | Ticker | Status | Fill price | Reference | Slippage (bps, + = worse) | Cost vs reference (£) |",
+              "| Order | Ticker | Status | Fill price (£, ex fees) | Reference (£) | Slippage (bps, + = worse) | Cost vs reference (£) |",
               "|---|---|---|---|---|---|---|"]
         for f in fills:
-            L.append(f"| {f['order_id']} | {f['ticker']} | {f['status']} | {f.get('fill_price')} | {f.get('reference_price')} | "
+            L.append(f"| {f['order_id']} | {f['ticker']} | {f['status']} | {f.get('fill_price_gbp', f.get('fill_price'))} | {f.get('reference_price')} | "
                      f"{f.get('slippage_bps_vs_reference', '')} | {f.get('cost_vs_reference_gbp', '')} |")
         L.append("")
     # statistical honesty

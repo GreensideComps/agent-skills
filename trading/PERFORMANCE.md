@@ -1,6 +1,6 @@
 # Live demo performance: `nasdaq3x_trend_sma100_v1`
 
-_Generated 2026-10-14T07:21:57+00:00 UTC by `python -m t212bot report`. Demo (paper) account only._
+_Generated 2026-10-14T07:23:45+00:00 UTC by `python -m t212bot report`. Demo (paper) account only._
 
 Inception: **2026-10-14**, starting capital **£500.00**.
 
@@ -17,9 +17,9 @@ Inception: **2026-10-14**, starting capital **£500.00**.
 
 ## Execution quality (real fills vs reference quote at order time)
 
-| Order | Ticker | Status | Fill price | Reference | Slippage (bps, + = worse) | Cost vs reference (£) |
+| Order | Ticker | Status | Fill price (£, ex fees) | Reference (£) | Slippage (bps, + = worse) | Cost vs reference (£) |
 |---|---|---|---|---|---|---|
-| 56450558072 | LQQ3l_EQ | FILLED | 34571.0 | 346.96 | 986397.28 | -1.6908 |
+| 56450558072 | LQQ3l_EQ | FILLED | 345.712177 | 346.96 | -35.96 | -1.6908 |
 
 ## Is any of this meaningful yet?
 
