@@ -1,0 +1,2 @@
+# Append-only research ledgers: concurrent appends from scheduled sessions merge by union.
+equity/data/*.jsonl merge=union
