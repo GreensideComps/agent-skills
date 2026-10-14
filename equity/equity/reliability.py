@@ -3,7 +3,7 @@
 Nothing here trusts a schedule. A run counts only when its evidence exists:
 * a Claude routine counts when a commit with the expected subject prefix landed on its
   branch within `grace_minutes` of the scheduled time;
-* an equity job counts when equity/data/jobs.jsonl has an ok finish for it in that window.
+* an equity job counts when the job ledger (equity/data/jobs/) has an ok finish for it in that window.
 Expected times come from the cron expressions in config/schedule.json, read in their own
 timezone (so a Europe/London 08:20 run is expected at 07:20 UTC in summer).
 
@@ -170,10 +170,10 @@ def run(store: Store, now: datetime | None = None, cfg: dict | None = None, comm
         findings.append({"check": f"stuck:{s['job']}", "severity": "critical",
                          "detail": f"started {s['started']}, never finished", "run_id": s["run_id"]})
     findings += freshness(store, now.date(), cfg["freshness_days"])
-    for p in sorted(store.root.glob("*.jsonl")):
+    for p in sorted(store.root.rglob("*.jsonl")):
         mb = p.stat().st_size / 1e6
         if mb > cfg["ledger_size_warn_mb"]:
-            findings.append({"check": f"size:{p.name}", "severity": "warn",
+            findings.append({"check": f"size:{p.relative_to(store.root)}", "severity": "warn",
                              "detail": f"{mb:.0f} MB (GitHub refuses files over 100 MB)"})
     worst = max((SEVERITY[f["severity"]] for f in findings), default=0)
     return {"as_of": now.replace(microsecond=0).isoformat(), "status": ["ok", "warn", "critical"][worst],

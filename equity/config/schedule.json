@@ -1,5 +1,5 @@
 {
- "note": "What is expected to run, and what counts as evidence that it ran. Evidence is a commit on a branch (Claude routines) or an ok finish in equity/data/jobs.jsonl (equity jobs); a schedule existing proves nothing. Cron fields: minute hour day-of-month month day-of-week (0=Sunday), read in `tz`. Copied from the routines' triggers on 2026-10-14; update this file when a routine's schedule changes.",
+ "note": "What is expected to run, and what counts as evidence that it ran. Evidence is a commit on a branch (Claude routines) or an ok finish in equity/data/jobs/ (equity jobs); a schedule existing proves nothing. Cron fields: minute hour day-of-month month day-of-week (0=Sunday), read in `tz`. Copied from the routines' triggers on 2026-10-14; update this file when a routine's schedule changes.",
  "expectations": [
   {
    "name": "T212 demo: hourly trader + monitor",

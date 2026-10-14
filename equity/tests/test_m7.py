@@ -111,3 +111,20 @@ def test_shipped_schedule_config_parses():
     for exp in cfg["expectations"]:
         reliability.cron_times(exp["cron"], exp["tz"], now - timedelta(days=1), now)
         assert exp["evidence"]["type"] in ("commit", "job")
+
+
+def test_sharded_ledger_routes_dedupes_and_migrates_legacy(tmp_path):
+    from equity.store import Ledger, Store
+    legacy = tmp_path / "fundamentals.jsonl"
+    Ledger(legacy).append([{"rid": "old1", "company_id": "SEC:1"}, {"rid": "old2", "company_id": "SEC:2"}])
+    st = Store(tmp_path)
+    assert {r["rid"] for r in st.fundamentals.read()} == {"old1", "old2"}   # legacy file still read
+    assert st.fundamentals.append([{"rid": "old1", "company_id": "SEC:1"}, {"rid": "new", "company_id": "SEC:3"}]) == 1
+    assert st.fundamentals.migrate_legacy() == 2 and not legacy.exists()
+    assert st.fundamentals.migrate_legacy() == 0
+    assert sorted(r["rid"] for r in Store(tmp_path).fundamentals.read()) == ["new", "old1", "old2"]
+    # Same company always lands in the same shard; jobs shard by month.
+    shards = {p.name for p in (tmp_path / "fundamentals").glob("*.jsonl")}
+    assert 1 <= len(shards) <= 3
+    st.jobs.append({"rid": "j", "event": "start", "run_id": "j", "job": "x", "ts_utc": "2026-10-14T00:00:00+00:00"})
+    assert (tmp_path / "jobs" / "2026-10.jsonl").exists()
