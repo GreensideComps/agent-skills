@@ -1,0 +1,614 @@
+{
+ "id": "E014",
+ "title": "TJR / ICT smart-money intraday model (sweep, break of structure, FVG)",
+ "date": "2026-10-14",
+ "agenda_item": "P9 (owner request)",
+ "hypothesis": "Buying 3x Nasdaq after a New York-morning sweep of Asia/London/previous-day lows and a break of structure, with the stop under the sweep and a fixed R target, makes money after costs.",
+ "rationale": "Proponents: stop liquidity is swept before reversals. No audited or peer-reviewed evidence known.",
+ "data": [
+  "Yahoo NQ=F 5-minute bars (~60 days)",
+  "Yahoo LQQ3.L 5-minute bars (~60 days)"
+ ],
+ "methodology": "Rules frozen in AGENDA P9 before running (third-party TradingView definitions). Grid entry {next, fvg50} x target {1.5R, 2R, 3R}; pick on first-half Sharpe, test on second half.",
+ "benchmark": "Holding LQQ3 over the same days; cash",
+ "costs": "0.15% per side on LQQ3 (stress 0.30%)",
+ "in_sample": "2026-08-05..2026-09-09",
+ "out_of_sample": "2026-09-10..2026-10-14",
+ "results": [
+  {
+   "config": "next 1.5R",
+   "venue": "LQQ3 long-only",
+   "cost": "base",
+   "period": "IS",
+   "trades": 20,
+   "total_return": -0.0445,
+   "win_rate": 0.35,
+   "sharpe_daily": -3.19
+  },
+  {
+   "config": "next 1.5R",
+   "venue": "LQQ3 long-only",
+   "cost": "base",
+   "period": "OOS",
+   "trades": 15,
+   "total_return": -0.0502,
+   "win_rate": 0.333,
+   "sharpe_daily": -6.88
+  },
+  {
+   "config": "next 1.5R",
+   "venue": "LQQ3 long-only",
+   "cost": "base",
+   "period": "ALL",
+   "trades": 35,
+   "total_return": -0.0924,
+   "win_rate": 0.343,
+   "sharpe_daily": -4.3
+  },
+  {
+   "config": "next 1.5R",
+   "venue": "LQQ3 long-only",
+   "cost": "x2",
+   "period": "IS",
+   "trades": 20,
+   "total_return": -0.1002,
+   "win_rate": 0.3,
+   "sharpe_daily": -7.38
+  },
+  {
+   "config": "next 1.5R",
+   "venue": "LQQ3 long-only",
+   "cost": "x2",
+   "period": "OOS",
+   "trades": 15,
+   "total_return": -0.0921,
+   "win_rate": 0.133,
+   "sharpe_daily": -11.23
+  },
+  {
+   "config": "next 1.5R",
+   "venue": "LQQ3 long-only",
+   "cost": "x2",
+   "period": "ALL",
+   "trades": 35,
+   "total_return": -0.1831,
+   "win_rate": 0.229,
+   "sharpe_daily": -8.62
+  },
+  {
+   "config": "next 1.5R",
+   "venue": "NQ 3x both directions (not tradable)",
+   "cost": "base",
+   "period": "IS",
+   "trades": 23,
+   "total_return": -0.1288,
+   "win_rate": 0.174,
+   "sharpe_daily": -8.9
+  },
+  {
+   "config": "next 1.5R",
+   "venue": "NQ 3x both directions (not tradable)",
+   "cost": "base",
+   "period": "OOS",
+   "trades": 17,
+   "total_return": -0.0079,
+   "win_rate": 0.471,
+   "sharpe_daily": -0.71
+  },
+  {
+   "config": "next 1.5R",
+   "venue": "NQ 3x both directions (not tradable)",
+   "cost": "base",
+   "period": "ALL",
+   "trades": 40,
+   "total_return": -0.1356,
+   "win_rate": 0.3,
+   "sharpe_daily": -5.26
+  },
+  {
+   "config": "next 2.0R",
+   "venue": "LQQ3 long-only",
+   "cost": "base",
+   "period": "IS",
+   "trades": 20,
+   "total_return": -0.0472,
+   "win_rate": 0.35,
+   "sharpe_daily": -3.5
+  },
+  {
+   "config": "next 2.0R",
+   "venue": "LQQ3 long-only",
+   "cost": "base",
+   "period": "OOS",
+   "trades": 15,
+   "total_return": -0.0439,
+   "win_rate": 0.333,
+   "sharpe_daily": -5.23
+  },
+  {
+   "config": "next 2.0R",
+   "venue": "LQQ3 long-only",
+   "cost": "base",
+   "period": "ALL",
+   "trades": 35,
+   "total_return": -0.089,
+   "win_rate": 0.343,
+   "sharpe_daily": -4.09
+  },
+  {
+   "config": "next 2.0R",
+   "venue": "LQQ3 long-only",
+   "cost": "x2",
+   "period": "IS",
+   "trades": 20,
+   "total_return": -0.1028,
+   "win_rate": 0.3,
+   "sharpe_daily": -7.79
+  },
+  {
+   "config": "next 2.0R",
+   "venue": "LQQ3 long-only",
+   "cost": "x2",
+   "period": "OOS",
+   "trades": 15,
+   "total_return": -0.086,
+   "win_rate": 0.133,
+   "sharpe_daily": -9.51
+  },
+  {
+   "config": "next 2.0R",
+   "venue": "LQQ3 long-only",
+   "cost": "x2",
+   "period": "ALL",
+   "trades": 35,
+   "total_return": -0.18,
+   "win_rate": 0.229,
+   "sharpe_daily": -8.38
+  },
+  {
+   "config": "next 2.0R",
+   "venue": "NQ 3x both directions (not tradable)",
+   "cost": "base",
+   "period": "IS",
+   "trades": 23,
+   "total_return": -0.1322,
+   "win_rate": 0.174,
+   "sharpe_daily": -9.49
+  },
+  {
+   "config": "next 2.0R",
+   "venue": "NQ 3x both directions (not tradable)",
+   "cost": "base",
+   "period": "OOS",
+   "trades": 17,
+   "total_return": 0.0015,
+   "win_rate": 0.471,
+   "sharpe_daily": 0.18
+  },
+  {
+   "config": "next 2.0R",
+   "venue": "NQ 3x both directions (not tradable)",
+   "cost": "base",
+   "period": "ALL",
+   "trades": 40,
+   "total_return": -0.1309,
+   "win_rate": 0.3,
+   "sharpe_daily": -4.86
+  },
+  {
+   "config": "next 3.0R",
+   "venue": "LQQ3 long-only",
+   "cost": "base",
+   "period": "IS",
+   "trades": 20,
+   "total_return": -0.0472,
+   "win_rate": 0.35,
+   "sharpe_daily": -3.5
+  },
+  {
+   "config": "next 3.0R",
+   "venue": "LQQ3 long-only",
+   "cost": "base",
+   "period": "OOS",
+   "trades": 15,
+   "total_return": -0.0371,
+   "win_rate": 0.333,
+   "sharpe_daily": -3.72
+  },
+  {
+   "config": "next 3.0R",
+   "venue": "LQQ3 long-only",
+   "cost": "base",
+   "period": "ALL",
+   "trades": 35,
+   "total_return": -0.0826,
+   "win_rate": 0.343,
+   "sharpe_daily": -3.58
+  },
+  {
+   "config": "next 3.0R",
+   "venue": "LQQ3 long-only",
+   "cost": "x2",
+   "period": "IS",
+   "trades": 20,
+   "total_return": -0.1028,
+   "win_rate": 0.3,
+   "sharpe_daily": -7.79
+  },
+  {
+   "config": "next 3.0R",
+   "venue": "LQQ3 long-only",
+   "cost": "x2",
+   "period": "OOS",
+   "trades": 15,
+   "total_return": -0.0795,
+   "win_rate": 0.133,
+   "sharpe_daily": -7.68
+  },
+  {
+   "config": "next 3.0R",
+   "venue": "LQQ3 long-only",
+   "cost": "x2",
+   "period": "ALL",
+   "trades": 35,
+   "total_return": -0.1742,
+   "win_rate": 0.229,
+   "sharpe_daily": -7.72
+  },
+  {
+   "config": "next 3.0R",
+   "venue": "NQ 3x both directions (not tradable)",
+   "cost": "base",
+   "period": "IS",
+   "trades": 23,
+   "total_return": -0.1322,
+   "win_rate": 0.174,
+   "sharpe_daily": -9.49
+  },
+  {
+   "config": "next 3.0R",
+   "venue": "NQ 3x both directions (not tradable)",
+   "cost": "base",
+   "period": "OOS",
+   "trades": 17,
+   "total_return": -0.0042,
+   "win_rate": 0.471,
+   "sharpe_daily": -0.3
+  },
+  {
+   "config": "next 3.0R",
+   "venue": "NQ 3x both directions (not tradable)",
+   "cost": "base",
+   "period": "ALL",
+   "trades": 40,
+   "total_return": -0.1358,
+   "win_rate": 0.3,
+   "sharpe_daily": -5.18
+  },
+  {
+   "config": "fvg50 1.5R",
+   "venue": "LQQ3 long-only",
+   "cost": "base",
+   "period": "IS",
+   "trades": 2,
+   "total_return": -0.0016,
+   "win_rate": 0.5,
+   "sharpe_daily": -1.53
+  },
+  {
+   "config": "fvg50 1.5R",
+   "venue": "LQQ3 long-only",
+   "cost": "base",
+   "period": "OOS",
+   "trades": 4,
+   "total_return": -0.0121,
+   "win_rate": 0.25,
+   "sharpe_daily": -4.04
+  },
+  {
+   "config": "fvg50 1.5R",
+   "venue": "LQQ3 long-only",
+   "cost": "base",
+   "period": "ALL",
+   "trades": 6,
+   "total_return": -0.0137,
+   "win_rate": 0.333,
+   "sharpe_daily": -3.08
+  },
+  {
+   "config": "fvg50 1.5R",
+   "venue": "LQQ3 long-only",
+   "cost": "x2",
+   "period": "IS",
+   "trades": 2,
+   "total_return": -0.0076,
+   "win_rate": 0.0,
+   "sharpe_daily": -3.99
+  },
+  {
+   "config": "fvg50 1.5R",
+   "venue": "LQQ3 long-only",
+   "cost": "x2",
+   "period": "OOS",
+   "trades": 4,
+   "total_return": -0.0239,
+   "win_rate": 0.25,
+   "sharpe_daily": -5.62
+  },
+  {
+   "config": "fvg50 1.5R",
+   "venue": "LQQ3 long-only",
+   "cost": "x2",
+   "period": "ALL",
+   "trades": 6,
+   "total_return": -0.0314,
+   "win_rate": 0.167,
+   "sharpe_daily": -4.8
+  },
+  {
+   "config": "fvg50 1.5R",
+   "venue": "NQ 3x both directions (not tradable)",
+   "cost": "base",
+   "period": "IS",
+   "trades": 5,
+   "total_return": 0.0047,
+   "win_rate": 0.4,
+   "sharpe_daily": 1.1
+  },
+  {
+   "config": "fvg50 1.5R",
+   "venue": "NQ 3x both directions (not tradable)",
+   "cost": "base",
+   "period": "OOS",
+   "trades": 6,
+   "total_return": -0.0106,
+   "win_rate": 0.5,
+   "sharpe_daily": -3.04
+  },
+  {
+   "config": "fvg50 1.5R",
+   "venue": "NQ 3x both directions (not tradable)",
+   "cost": "base",
+   "period": "ALL",
+   "trades": 11,
+   "total_return": -0.006,
+   "win_rate": 0.455,
+   "sharpe_daily": -0.75
+  },
+  {
+   "config": "fvg50 2.0R",
+   "venue": "LQQ3 long-only",
+   "cost": "base",
+   "period": "IS",
+   "trades": 2,
+   "total_return": -0.0016,
+   "win_rate": 0.5,
+   "sharpe_daily": -1.53
+  },
+  {
+   "config": "fvg50 2.0R",
+   "venue": "LQQ3 long-only",
+   "cost": "base",
+   "period": "OOS",
+   "trades": 4,
+   "total_return": -0.0121,
+   "win_rate": 0.25,
+   "sharpe_daily": -4.04
+  },
+  {
+   "config": "fvg50 2.0R",
+   "venue": "LQQ3 long-only",
+   "cost": "base",
+   "period": "ALL",
+   "trades": 6,
+   "total_return": -0.0137,
+   "win_rate": 0.333,
+   "sharpe_daily": -3.08
+  },
+  {
+   "config": "fvg50 2.0R",
+   "venue": "LQQ3 long-only",
+   "cost": "x2",
+   "period": "IS",
+   "trades": 2,
+   "total_return": -0.0076,
+   "win_rate": 0.0,
+   "sharpe_daily": -3.99
+  },
+  {
+   "config": "fvg50 2.0R",
+   "venue": "LQQ3 long-only",
+   "cost": "x2",
+   "period": "OOS",
+   "trades": 4,
+   "total_return": -0.0239,
+   "win_rate": 0.25,
+   "sharpe_daily": -5.62
+  },
+  {
+   "config": "fvg50 2.0R",
+   "venue": "LQQ3 long-only",
+   "cost": "x2",
+   "period": "ALL",
+   "trades": 6,
+   "total_return": -0.0314,
+   "win_rate": 0.167,
+   "sharpe_daily": -4.8
+  },
+  {
+   "config": "fvg50 2.0R",
+   "venue": "NQ 3x both directions (not tradable)",
+   "cost": "base",
+   "period": "IS",
+   "trades": 5,
+   "total_return": 0.0089,
+   "win_rate": 0.4,
+   "sharpe_daily": 1.69
+  },
+  {
+   "config": "fvg50 2.0R",
+   "venue": "NQ 3x both directions (not tradable)",
+   "cost": "base",
+   "period": "OOS",
+   "trades": 6,
+   "total_return": -0.0106,
+   "win_rate": 0.5,
+   "sharpe_daily": -3.04
+  },
+  {
+   "config": "fvg50 2.0R",
+   "venue": "NQ 3x both directions (not tradable)",
+   "cost": "base",
+   "period": "ALL",
+   "trades": 11,
+   "total_return": -0.0018,
+   "win_rate": 0.455,
+   "sharpe_daily": -0.17
+  },
+  {
+   "config": "fvg50 3.0R",
+   "venue": "LQQ3 long-only",
+   "cost": "base",
+   "period": "IS",
+   "trades": 2,
+   "total_return": -0.0016,
+   "win_rate": 0.5,
+   "sharpe_daily": -1.53
+  },
+  {
+   "config": "fvg50 3.0R",
+   "venue": "LQQ3 long-only",
+   "cost": "base",
+   "period": "OOS",
+   "trades": 4,
+   "total_return": -0.0121,
+   "win_rate": 0.25,
+   "sharpe_daily": -4.04
+  },
+  {
+   "config": "fvg50 3.0R",
+   "venue": "LQQ3 long-only",
+   "cost": "base",
+   "period": "ALL",
+   "trades": 6,
+   "total_return": -0.0137,
+   "win_rate": 0.333,
+   "sharpe_daily": -3.08
+  },
+  {
+   "config": "fvg50 3.0R",
+   "venue": "LQQ3 long-only",
+   "cost": "x2",
+   "period": "IS",
+   "trades": 2,
+   "total_return": -0.0076,
+   "win_rate": 0.0,
+   "sharpe_daily": -3.99
+  },
+  {
+   "config": "fvg50 3.0R",
+   "venue": "LQQ3 long-only",
+   "cost": "x2",
+   "period": "OOS",
+   "trades": 4,
+   "total_return": -0.0239,
+   "win_rate": 0.25,
+   "sharpe_daily": -5.62
+  },
+  {
+   "config": "fvg50 3.0R",
+   "venue": "LQQ3 long-only",
+   "cost": "x2",
+   "period": "ALL",
+   "trades": 6,
+   "total_return": -0.0314,
+   "win_rate": 0.167,
+   "sharpe_daily": -4.8
+  },
+  {
+   "config": "fvg50 3.0R",
+   "venue": "NQ 3x both directions (not tradable)",
+   "cost": "base",
+   "period": "IS",
+   "trades": 5,
+   "total_return": 0.0012,
+   "win_rate": 0.4,
+   "sharpe_daily": 0.36
+  },
+  {
+   "config": "fvg50 3.0R",
+   "venue": "NQ 3x both directions (not tradable)",
+   "cost": "base",
+   "period": "OOS",
+   "trades": 6,
+   "total_return": -0.0106,
+   "win_rate": 0.5,
+   "sharpe_daily": -3.04
+  },
+  {
+   "config": "fvg50 3.0R",
+   "venue": "NQ 3x both directions (not tradable)",
+   "cost": "base",
+   "period": "ALL",
+   "trades": 11,
+   "total_return": -0.0094,
+   "win_rate": 0.455,
+   "sharpe_daily": -1.32
+  },
+  {
+   "config": "hold LQQ3",
+   "venue": "LQQ3",
+   "cost": "none",
+   "period": "IS",
+   "trades": 1,
+   "total_return": -0.0507,
+   "win_rate": null,
+   "sharpe_daily": null
+  },
+  {
+   "config": "hold LQQ3",
+   "venue": "LQQ3",
+   "cost": "none",
+   "period": "OOS",
+   "trades": 1,
+   "total_return": 0.1486,
+   "win_rate": null,
+   "sharpe_daily": null
+  },
+  {
+   "config": "hold LQQ3",
+   "venue": "LQQ3",
+   "cost": "none",
+   "period": "ALL",
+   "trades": 1,
+   "total_return": 0.0751,
+   "win_rate": null,
+   "sharpe_daily": null
+  }
+ ],
+ "robustness": [
+  "cost x2",
+  "all 6 grid configs reported",
+  "both-direction NQ variant as an upper bound"
+ ],
+ "limitations": [
+  "Only ~60 days of 5-minute data: a few dozen trades at most, no statistical power",
+  "TJR's exact rules are not public; this is one mechanical reading of the published model",
+  "Fills at 5-minute closes of LQQ3; real stop fills can be worse",
+  "Long-only: half the model's trades (shorts) are not allowed on this account"
+ ],
+ "trials": 6,
+ "decision": "REJECTED",
+ "decision_detail": "In-sample pick fvg50 1.5R. Out-of-sample (2026-09-10..2026-10-14, 25 days): 4 trades, total -1.2% after 0.15%/side (-2.4% at 0.30%/side), win rate 25%; holding LQQ3 +14.9%. Loses money out-of-sample after costs: rejected.",
+ "promoted": false,
+ "evidence": [
+  "research/h08_tjr_smc.py",
+  "research/output/h08_tjr_summary.csv",
+  "research/output/h08_tjr_trades.csv"
+ ],
+ "informational_both_directions_oos": {
+  "config": "fvg50 1.5R",
+  "trades": 6,
+  "total_return": -0.0106
+ }
+}

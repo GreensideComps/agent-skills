@@ -6,7 +6,7 @@ ideas are appended with a priority and a pre-registration. Status values:
 `OPEN`, `IN PROGRESS`, `DONE: rejected`, `DONE: promising → shadow`, `DONE: promoted`, `BLOCKED (reason)`.
 
 **Champion:** `nasdaq3x_trend_sma100_v1` (100% `LQQ3l_EQ` 3x Nasdaq-100 while QQQ > its 100-day SMA, else cash), from the 2026-10-13 reset to £500. Owner-directed override of the promotion gate (E009). Previous champion `momentum_tilt_v1` (50/50 VWRP/IWMO) is now shadow D.
-**Trial counter (all hypotheses, all configs, for deflated Sharpe):** 120 (53 round 1 + 18 in E006/E007 + 4 in E008 + 3 in E009 + 2 in E010 + 12 in E011 + 14 in E012, 2026-10-13; + 14 in E013, 2026-10-14).
+**Trial counter (all hypotheses, all configs, for deflated Sharpe):** 126 (53 round 1 + 18 in E006/E007 + 4 in E008 + 3 in E009 + 2 in E010 + 12 in E011 + 14 in E012, 2026-10-13; + 14 in E013, + 6 in E014, 2026-10-14).
 
 ---
 
@@ -65,7 +65,7 @@ ideas are appended with a priority and a pre-registration. Status values:
 
 
 ## P9: TJR / ICT "smart money" intraday model (owner request 2026-10-14)
-- **Status:** IN PROGRESS (2026-10-14, E014)
+- **Status:** DONE: rejected (2026-10-14, E014)
 - **Rationale claimed by its proponents:** stop-loss liquidity above/below obvious levels gets swept by larger players, then price reverses; entering after the reversal is confirmed (break of structure) on a retrace into the imbalance (fair-value gap) gives a small stop and a large target. No audited track record or peer-reviewed test is known; rules below follow third-party TradingView implementations (TJR's own rulebook not public).
 - **Pre-registration (frozen 2026-10-14 before running; script `research/h08_tjr_smc.py`):**
   - Signal data: NQ=F 5-minute bars (Yahoo, ~60 days, 24h). Execution: LQQ3.L 5-minute closes (the real 3x Nasdaq fund, GBP), cost 0.15% per side (stress 0.30%).
@@ -74,6 +74,7 @@ ideas are appended with a priority and a pre-registration. Status values:
   - Grid: entry {next = LQQ3 close of the BOS bar, fvg50 = limit at the midpoint of the last bullish 3-bar fair-value gap of the BOS leg, valid to 11:30 ET} x target {1.5R, 2R, 3R} = 6 configs. Informational only (not tradable, needs shorting): the same rules both directions on NQ at 3x.
   - Split: first half of the trading days in-sample (pick = best Sharpe), second half out-of-sample. Benchmarks: holding LQQ3 over the same days; cash.
   - Decision rule: cannot pass the gate's 20-year history test, so the best outcome is AWAITING_EVIDENCE (paper-track live); REJECTED if the out-of-sample pick loses money after base costs.
+- **Log:** 2026-10-14 (E014, `h08_tjr_smc.py`, `output/h08_tjr_summary.csv`): 49 trading days 2026-08-05..2026-10-14. All 6 long-only configs lost over the whole sample after 0.15%/side: 'next' entries -8.3% to -9.2% on 35 trades (win rate 34%), FVG entries -1.4% on 6 trades. In-sample pick fvg50 1.5R: OOS 4 trades, -1.2% (-2.4% at 0.30%/side) while holding LQQ3 made +14.9%. Even the untradable both-directions version lost (-0.2% to -13.6%). **Rejected.**
 
 ---
 
