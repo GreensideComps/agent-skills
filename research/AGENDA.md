@@ -6,7 +6,7 @@ ideas are appended with a priority and a pre-registration. Status values:
 `OPEN`, `IN PROGRESS`, `DONE: rejected`, `DONE: promising → shadow`, `DONE: promoted`, `BLOCKED (reason)`.
 
 **Champion:** `nasdaq3x_trend_sma100_v1` (100% `LQQ3l_EQ` 3x Nasdaq-100 while QQQ > its 100-day SMA, else cash), from the 2026-10-13 reset to £500. Owner-directed override of the promotion gate (E009). Previous champion `momentum_tilt_v1` (50/50 VWRP/IWMO) is now shadow D.
-**Trial counter (all hypotheses, all configs, for deflated Sharpe):** 106 (53 round 1 + 18 in E006/E007 + 4 in E008 + 3 in E009 + 2 in E010 + 12 in E011 + 14 in E012, 2026-10-13).
+**Trial counter (all hypotheses, all configs, for deflated Sharpe):** 120 (53 round 1 + 18 in E006/E007 + 4 in E008 + 3 in E009 + 2 in E010 + 12 in E011 + 14 in E012, 2026-10-13; + 14 in E013, 2026-10-14).
 
 ---
 
@@ -32,7 +32,7 @@ ideas are appended with a priority and a pre-registration. Status values:
 - **Log:** 2026-10-13: Trading 212 lists the same iShares fund (IE00BP3QZ825) as `IWFM_EQ` (GBX, no FX fee), alongside `IWMOl_EQ` (USD) and `IS3Rd_EQ` (EUR). Xtrackers MSCI World Momentum is listed as `XDEMl_EQ` (GBX). Note: GBX/GBP tickers are not always `…l_EQ`, so search by name and currency, not suffix. A switch from IWMO to IWFM costs about £0.10–0.15 in spread (the exit FX fee is paid either way) and saves the 0.15% fee only on future rebalance trades (≈£0.01/yr at £100), so it breaks even only after more than 10 years. **Decision:** keep IWMO and use `IWFM_EQ` (Yahoo `IWFM.L`) at the next full rebalance. Open follow-up: compare XDEM vs IWFM (different index methodology? OCF and tracking).
 
 ## P4: Quality + momentum combination
-- **Status:** IN PROGRESS (2026-10-14, E013)
+- **Status:** DONE: rejected (2026-10-14, E013)
 - **Rationale:** Quality is a crash hedge for momentum (negative correlation in drawdowns). Profitability (RMW) is still significant in developed markets after 2010 (t=2.0, round 1).
 - **Rule:** sleeve = 50% IWMO + 50% IWQU (or the GBP line), vs the champion.
 - **Pre-registration (frozen 2026-10-14, before any out-of-sample result; script `research/h07_quality_momentum.py`):**
@@ -43,7 +43,7 @@ ideas are appended with a priority and a pre-registration. Status values:
   - Costs: OCF MKT 0.22%, MOM 0.30%, QUAL 0.25% p.a.; one-way trading MKT 0.10%, MOM 0.35% (incl. 0.15% FX, USD line), QUAL 0.20% (GBX line IWFQ); stress x3.
   - Deflated Sharpe uses the cumulative trial count (106 + 14 = 120) with the variance of this run's active Sharpe ratios.
   - Decision rule: promotable/shadow only if every Stage 2 test passes vs the live champion; otherwise REJECTED (or INSURANCE_ONLY if it cuts max drawdown by 10pp+ while losing on return).
-- **Log:** (none yet)
+- **Log:** 2026-10-14 (E013, `h07_quality_momentum.py`, `output/h07_gate.csv`): in-sample pick = Q2 0/50/50 in both markets. Vs live champion (US OOS 2001-01..2026-08): CAGR 10.2% vs 14.2% (p=0.73), Sharpe 0.62 vs 0.48 (p=0.24), maxDD -44% vs -56%, DSR 0.04 → fails oos_beats, DSR, costs x3, neighbours. Vs previous champion 50/50: US +0.74%/yr (p=0.04), Sharpe +0.06 (p<0.01); Developed +0.82%/yr (p=0.02), Sharpe +0.06 (p<0.01); but DSR 0.62 / 0.61 at N=120 trials → fails multiple testing. Tradeable GBP ETFs 2014-11..2026-08: Q2 14.0%/yr vs 50/50 13.8% vs live rule on real LQQ3 12.0% (maxDD -63%). One-day lag changes nothing. **Rejected.** Note: quality+momentum is the most consistent improvement of the old 50/50 seen so far; if a future hypothesis reuses the previous-champion benchmark, Q2 is the stronger baseline.
 
 ## P5: Fill-quality and timing study (operations)
 - **Status:** OPEN (needs ≥ 20 fills)

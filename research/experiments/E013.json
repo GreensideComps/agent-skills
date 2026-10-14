@@ -1,0 +1,210 @@
+{
+ "id": "E013",
+ "title": "Quality + momentum sleeve",
+ "date": "2026-10-14",
+ "agenda_item": "P4",
+ "hypothesis": "Splitting the momentum sleeve between momentum and quality (profitability) raises risk-adjusted returns because quality hedges momentum crashes.",
+ "rationale": "Quality/profitability tends to hold up in momentum crashes and junk rallies; RMW still significant post-2010.",
+ "data": [
+  "Ken French Data Library: F-F_Research_Data_Factors, 6_Portfolios_ME_Prior_12_2, 6_Portfolios_ME_OP_2x3, Developed_3_Factors, Developed_6_Portfolios_ME_Prior_12_2, Developed_6_Portfolios_ME_OP (USD, to 2026-08)",
+  "Yahoo ^NDX / QQQ daily (live champion, via h03_leveraged_trend.py)",
+  "Yahoo adjusted closes VWRL.L, IWFM.L, IWFQ.L, LQQ3.L 2014-11..2026-08 for the tradeable check"
+ ],
+ "methodology": "Pre-registered grid Q1 50/25/25, Q2 0/50/50, Q3 34/33/33 (MKT/MOM/QUAL) + 4 neighbours; pick by in-sample Sharpe; Stage 2 vs the live champion (US) and vs the previous champion (US, Developed).",
+ "benchmark": "Gate: live champion nasdaq3x_trend_sma100_v1 (synthetic 3x Nasdaq-100 + SMA100, monthly). Information: previous champion 50% MKT + 50% MOM.",
+ "costs": "OCF MKT 0.22%, MOM 0.30%, QUAL 0.25% p.a.; one-way MKT 0.10%, MOM 0.35%, QUAL 0.20%; stress x3",
+ "in_sample": "US 1963-07..2000-12 (live champion from 1986); Developed 1991-07..2005-12",
+ "out_of_sample": "US 2001-01..2026-08; Developed 2006-01..2026-08",
+ "results": [
+  {
+   "benchmark": "live_champion_3x_ndx_sma100",
+   "market": "US",
+   "pick_on_IS_sharpe": "Q2 0/50/50",
+   "oos": "2001-01..2026-08",
+   "CAGR": 0.1021,
+   "Sharpe": 0.622,
+   "maxDD": -0.4447,
+   "benchmark_CAGR": 0.142,
+   "benchmark_Sharpe": 0.481,
+   "benchmark_maxDD": -0.5597,
+   "dCAGR": -0.0399,
+   "p_CAGR": 0.727,
+   "dSharpe": 0.141,
+   "p_Sharpe": 0.235,
+   "DSR_active": 0.04,
+   "DSR_trials_N": 120,
+   "regime_wins_of_3": 3,
+   "P_dd50_10y": 0.027,
+   "benchmark_P_dd50_10y": 0.797,
+   "tests": {
+    "oos_beats": false,
+    "dsr_ge_0_90": false,
+    "costs_x3": false,
+    "neighbours": false,
+    "maxdd_within_5pp": true,
+    "p_dd50_not_higher": true,
+    "regimes_2_of_3": true
+   },
+   "PASS": false
+  },
+  {
+   "benchmark": "prev_champion_50_50",
+   "market": "US",
+   "pick_on_IS_sharpe": "Q2 0/50/50",
+   "oos": "2001-01..2026-08",
+   "CAGR": 0.1021,
+   "Sharpe": 0.622,
+   "maxDD": -0.4447,
+   "benchmark_CAGR": 0.0947,
+   "benchmark_Sharpe": 0.559,
+   "benchmark_maxDD": -0.4933,
+   "dCAGR": 0.0074,
+   "p_CAGR": 0.037,
+   "dSharpe": 0.063,
+   "p_Sharpe": 0.001,
+   "DSR_active": 0.615,
+   "DSR_trials_N": 120,
+   "regime_wins_of_3": 3,
+   "P_dd50_10y": 0.035,
+   "benchmark_P_dd50_10y": 0.06,
+   "tests": {
+    "oos_beats": true,
+    "dsr_ge_0_90": false,
+    "costs_x3": true,
+    "neighbours": true,
+    "maxdd_within_5pp": true,
+    "p_dd50_not_higher": true,
+    "regimes_2_of_3": true
+   },
+   "PASS": false
+  },
+  {
+   "benchmark": "prev_champion_50_50",
+   "market": "DEV",
+   "pick_on_IS_sharpe": "Q2 0/50/50",
+   "oos": "2006-01..2026-08",
+   "CAGR": 0.0998,
+   "Sharpe": 0.593,
+   "maxDD": -0.5015,
+   "benchmark_CAGR": 0.0916,
+   "benchmark_Sharpe": 0.536,
+   "benchmark_maxDD": -0.5316,
+   "dCAGR": 0.0082,
+   "p_CAGR": 0.022,
+   "dSharpe": 0.057,
+   "p_Sharpe": 0.008,
+   "DSR_active": 0.612,
+   "DSR_trials_N": 120,
+   "regime_wins_of_3": 3,
+   "P_dd50_10y": 0.117,
+   "benchmark_P_dd50_10y": 0.167,
+   "tests": {
+    "oos_beats": true,
+    "dsr_ge_0_90": false,
+    "costs_x3": true,
+    "neighbours": true,
+    "maxdd_within_5pp": true,
+    "p_dd50_not_higher": true,
+    "regimes_2_of_3": true
+   },
+   "PASS": false
+  }
+ ],
+ "tradeable_check": [
+  {
+   "config": "PREV 50/50",
+   "exec_lag_days": 0,
+   "start": "2014-11-04",
+   "end": "2026-08-28",
+   "CAGR": 0.138,
+   "maxDD": -0.2378
+  },
+  {
+   "config": "PREV 50/50",
+   "exec_lag_days": 1,
+   "start": "2014-11-04",
+   "end": "2026-08-28",
+   "CAGR": 0.1379,
+   "maxDD": -0.2379
+  },
+  {
+   "config": "Q1 50/25/25",
+   "exec_lag_days": 0,
+   "start": "2014-11-04",
+   "end": "2026-08-28",
+   "CAGR": 0.1321,
+   "maxDD": -0.2411
+  },
+  {
+   "config": "Q1 50/25/25",
+   "exec_lag_days": 1,
+   "start": "2014-11-04",
+   "end": "2026-08-28",
+   "CAGR": 0.1321,
+   "maxDD": -0.2412
+  },
+  {
+   "config": "Q2 0/50/50",
+   "exec_lag_days": 0,
+   "start": "2014-11-04",
+   "end": "2026-08-28",
+   "CAGR": 0.14,
+   "maxDD": -0.2324
+  },
+  {
+   "config": "Q2 0/50/50",
+   "exec_lag_days": 1,
+   "start": "2014-11-04",
+   "end": "2026-08-28",
+   "CAGR": 0.1399,
+   "maxDD": -0.2324
+  },
+  {
+   "config": "Q3 34/33/33",
+   "exec_lag_days": 0,
+   "start": "2014-11-04",
+   "end": "2026-08-28",
+   "CAGR": 0.1347,
+   "maxDD": -0.2384
+  },
+  {
+   "config": "Q3 34/33/33",
+   "exec_lag_days": 1,
+   "start": "2014-11-04",
+   "end": "2026-08-28",
+   "CAGR": 0.1346,
+   "maxDD": -0.2384
+  },
+  {
+   "config": "LIVE CHAMPION real LQQ3 + SMA100 (GBP)",
+   "exec_lag_days": 1,
+   "start": "2014-11-04",
+   "end": "2026-08-28",
+   "CAGR": 0.1199,
+   "maxDD": -0.6312
+  }
+ ],
+ "robustness": [
+  "costs x3",
+  "neighbouring weights",
+  "3 sub-period regimes",
+  "bootstrap P(>=50% drawdown in 10y)",
+  "deflated Sharpe with cumulative trial count",
+  "tradeable GBP ETF check with same-day and next-day execution"
+ ],
+ "limitations": [
+  "USD academic portfolios; the live champion is also in USD here, the real fund is GBX",
+  "BIG HiOP (operating profitability) is a proxy for MSCI World Quality (ROE, leverage, earnings variability)",
+  "The live champion was installed by owner override (E009), not via the gate; comparing an unlevered portfolio against a 3x strategy mostly measures leverage, not the quality effect"
+ ],
+ "trials": 14,
+ "decision": "REJECTED",
+ "decision_detail": "Failed Stage 2 vs the live champion (US OOS): costs_x3, dsr_ge_0_90, neighbours, oos_beats. Vs the previous champion 50/50 (both markets): fails dsr_ge_0_90.",
+ "promoted": false,
+ "evidence": [
+  "research/h07_quality_momentum.py",
+  "research/output/h07_gate.csv",
+  "research/output/h07_all_configs.csv",
+  "research/output/h07_tradeable.csv"
+ ]
+}
