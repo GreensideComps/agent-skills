@@ -64,3 +64,26 @@ def test_residual_momentum_recovers_a_planted_drift():
     s = stage2.residual_momentum(df, ff)
     last = df["month"] == months[-1]
     assert s[last & (df["cik"] == 2)].iloc[0] > s[last & (df["cik"] == 1)].iloc[0]
+
+
+def test_dcf_multiple_matches_gordon_at_terminal_growth_and_rises_with_growth():
+    m = stage2.dcf_multiple(np.array([stage2.G_TERMINAL, 0.10]))
+    assert abs(m[0] - 1.025 / (0.09 - 0.025)) < 1e-9
+    assert m[1] > m[0]
+
+
+def test_base_rate_uses_nothing_after_the_decision_month():
+    rng = np.random.default_rng(5)
+    months = pd.date_range("2010-01-31", periods=60, freq="ME")
+    rows = [{"cik": c, "month": m, "ttm_revenue": 100 * (1 + c % 7) * (1.01 + 0.002 * (c % 5)) ** i}
+            for c in range(600) for i, m in enumerate(months)]
+    df = pd.DataFrame(rows)
+    df["p"] = df["month"].dt.to_period("M")
+    df["rev_g"] = df["ttm_revenue"] / stage2.lag(df, "ttm_revenue", 12) - 1
+    t = months[50]
+    a = stage2.base_rate_growth(df, [t])
+    df2 = df.copy()
+    df2.loc[df2["month"] > t, "ttm_revenue"] *= rng.uniform(0.1, 10, (df2["month"] > t).sum())
+    b = stage2.base_rate_growth(df2, [t])
+    sel = df["month"] == t
+    assert a[sel].notna().all() and np.allclose(a[sel], b[sel])

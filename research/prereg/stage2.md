@@ -114,3 +114,25 @@ recomputed with 14. The window, universe, costs and pass rules are unchanged.
 
 **Data:** SEC Form 3/4/5 quarterly data sets for 2014q1 to 2022q4, from
 `python -m equity`'s `insiders.build`. Dated by filing date. Amendments (4/A) count as filings.
+
+## Addendum 2: S9 expectations gap (written 2026-10-14, after 14 had run, before S9 ran)
+
+This is one new trial, which brings the trial count to 15. Nothing else changes. It is the core thesis of
+STRATEGY_V2: the market's price implies a growth path, and a base rate for similar companies may disagree.
+
+- **Base rate.** For a decision month t:
+  - The cohort is every company observed at months t−47 to t−36, with revenue > 0, whose revenue is known
+    36 months later, so by t.
+  - Its realised 3-year revenue CAGR is clipped to [−50%, +100%].
+  - The median is taken within 5 × 5 buckets of log TTM revenue and 1-year revenue growth, using quintile
+    breakpoints from the cohort.
+  - A company at t gets its bucket's median. If it has no growth figure, it gets its size quintile's median.
+- **Value.** TTM free cash flow (operating cash flow − capex, which must be > 0) grows at the base rate for
+  3 years. The rate then fades linearly to 2.5% by year 10, followed by a perpetuity growing at 2.5%. The
+  discount rate is 9%.
+- **Score.** log(value / market cap). Higher means the market expects less than the base rate. Financials
+  are excluded.
+- **Known biases:**
+  - The cohort only includes companies that survived 3 years, so base rates lean high. This shifts levels
+    more than ranks.
+  - Revenue growth stands in for FCF growth, so margins are assumed to stay where they are.
