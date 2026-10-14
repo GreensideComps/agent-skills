@@ -63,6 +63,18 @@ ideas are appended with a priority and a pre-registration. Status values:
 - **Status:** RECURRING (every 5th research run)
 - **Task:** scan recent factor/asset-allocation literature (SSRN, NBER, Alpha Architect, Research Affiliates, AQR) for ideas that are implementable with Trading 212 UCITS ETFs at £100. Add each with a pre-registration. Prefer ideas with an economic rationale and out-of-sample evidence after publication.
 
+
+## P9: TJR / ICT "smart money" intraday model (owner request 2026-10-14)
+- **Status:** IN PROGRESS (2026-10-14, E014)
+- **Rationale claimed by its proponents:** stop-loss liquidity above/below obvious levels gets swept by larger players, then price reverses; entering after the reversal is confirmed (break of structure) on a retrace into the imbalance (fair-value gap) gives a small stop and a large target. No audited track record or peer-reviewed test is known; rules below follow third-party TradingView implementations (TJR's own rulebook not public).
+- **Pre-registration (frozen 2026-10-14 before running; script `research/h08_tjr_smc.py`):**
+  - Signal data: NQ=F 5-minute bars (Yahoo, ~60 days, 24h). Execution: LQQ3.L 5-minute closes (the real 3x Nasdaq fund, GBP), cost 0.15% per side (stress 0.30%).
+  - Levels (New York time): Asia range 20:00-00:00, London range 02:00-05:00, previous regular-session high/low.
+  - Long setup: in 09:30-11:00 ET a bar's low trades below any level (sweep); within the next 12 bars a bar closes above the highest high of the 5 bars up to the sweep (break of structure). Stop = lowest low since the sweep. One trade per day. Exit at stop (checked first), target, or the last LQQ3 bar before 16:25 London.
+  - Grid: entry {next = LQQ3 close of the BOS bar, fvg50 = limit at the midpoint of the last bullish 3-bar fair-value gap of the BOS leg, valid to 11:30 ET} x target {1.5R, 2R, 3R} = 6 configs. Informational only (not tradable, needs shorting): the same rules both directions on NQ at 3x.
+  - Split: first half of the trading days in-sample (pick = best Sharpe), second half out-of-sample. Benchmarks: holding LQQ3 over the same days; cash.
+  - Decision rule: cannot pass the gate's 20-year history test, so the best outcome is AWAITING_EVIDENCE (paper-track live); REJECTED if the out-of-sample pick loses money after base costs.
+
 ---
 
 ## Closed (round 1, see REPORT.md)
