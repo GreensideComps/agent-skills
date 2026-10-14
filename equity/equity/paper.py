@@ -25,6 +25,7 @@ import json
 from datetime import date
 from pathlib import Path
 
+from .evidence import tier
 from .store import Store, content_hash, utc_now
 
 CONFIG_PATH = Path(__file__).resolve().parent.parent / "config" / "paper_portfolio.json"
@@ -137,6 +138,7 @@ def rebalance(store: Store, screen_rec: dict, prices: dict[str, dict], cfg: dict
                      "implied_growth_5y": v.get("implied_growth_5y"),
                      "base_case_upside": ((v.get("scenarios") or {}).get("base") or {}).get("upside"),
                      "screen_rid": screen_rec["rid"], "as_of": as_of, "ts_utc": now,
+                     "evidence_tier": tier(screen_rec.get("method_version", "")),
                      "method_version": cfg["method_version"],
                      "basis": "screen rank within mandate (top N, total >= min); logged before outcome"})
         diff = target_qty - held
@@ -148,6 +150,7 @@ def rebalance(store: Store, screen_rec: dict, prices: dict[str, dict], cfg: dict
         if cid not in tgt_ids:
             recs.append({"rid": f"rec:{as_of}:{cid}", "company_id": cid, "action": "sell",
                          "decision_price": px(cid)["close"], "screen_rid": screen_rec["rid"], "as_of": as_of,
+                         "evidence_tier": tier(screen_rec.get("method_version", "")),
                          "ts_utc": now, "method_version": cfg["method_version"],
                          "basis": "no longer in the target set"})
     # Benchmark: buy once with all its cash, then hold.
@@ -191,11 +194,13 @@ def report(store: Store, cfg: dict | None = None) -> str:
     st = state(store, "portfolio")
     recs = [r for r in store.recommendations.read() if r["as_of"] == st["last_rebalance"]]
     start = cfg["starting_cash"]
-    lines = [f"# Paper portfolio ({cfg['method_version']}), {last['as_of']}", "",
+    from .evidence import banner  # noqa: PLC0415
+    lines = [f"# Screen-1.0 forward test: paper portfolio ({cfg['method_version']}), {last['as_of']}", "",
+             banner(cfg["method_version"], "screen-1.0"), "",
              f"Simulated, no broker. Started {first['as_of']} with {start:,.0f} {cfg['base_currency']} in each book. "
              f"Costs {_cost(cfg) * 1e4:.0f} bps per trade. Dividends excluded from both books.", "",
              "| Book | NAV | Return since start |", "|---|---|---|",
-             f"| Screener portfolio | {last['portfolio']['nav']:,.2f} | {last['portfolio']['nav'] / start - 1:+.2%} |",
+             f"| Screen-1.0 forward test | {last['portfolio']['nav']:,.2f} | {last['portfolio']['nav'] / start - 1:+.2%} |",
              f"| Benchmark ({cfg['benchmark']['symbol']}) | {last['benchmark']['nav']:,.2f} | "
              f"{last['benchmark']['nav'] / start - 1:+.2%} |",
              f"| **Excess** | | **{last['excess_return']:+.2%}** |", "",
