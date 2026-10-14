@@ -135,7 +135,7 @@ confidence. Agents propose; only rule-checked code paths change statuses, and me
 | Phase | Deliverable | Depends on | Main risks | Value |
 |---|---|---|---|---|
 | **M1 (done here)** | Security master (ISIN-keyed, SEC-linked), evidence-backed annual fundamentals with split handling, pipeline state machine, job ledger, search index, cross-check | — | Tag coverage gaps (measured below) | Foundation for everything |
-| **M2** | Coverage and correctness: IFRS (`ifrs-full`) filers; a concept-coverage survey across all ~5,500 SEC companies; SIC-based industry classification with bank, insurer, REIT and SPAC templates (or exclusions); slimmer snapshots so a full-universe pass fits in git (~32 KB/company today) | M1 | XBRL inconsistency across filers | Usable data for most of the US universe |
+| **M2 (built 2026-10-14, see below)** | Coverage and correctness: IFRS (`ifrs-full`) filers; a concept-coverage survey across all ~5,500 SEC companies; SIC-based industry classification with bank, insurer, REIT and SPAC templates (or exclusions); slimmer snapshots so a full-universe pass fits in git (~32 KB/company today) | M1 | XBRL inconsistency across filers | Usable data for most of the US universe |
 | **M3** | **Master Stock Screener v1**: separate quality, growth, valuation, risk and data-confidence scores; your 30/25/20/20/5 baseline weights; mandatory gates with explained pass/fail; needs prices for valuation | M2, price source | Encoding "business quality" quantitatively; overfitting the weights | The core of your process |
 | **M4** | Valuation: multiples, FCF yield, reverse DCF and DCF scenarios with stored assumptions; bear-case and thesis records; alerts with de-duplication | M3 | False precision in DCFs | Explainable candidates |
 | **M5** | Internal paper portfolio for screener picks: mandate, sizing, costs, benchmark, recommendations logged before outcomes are known | M3, M4 | Too few decisions for statistics for a long time | The evidence test you asked for |
@@ -174,3 +174,23 @@ See [`../equity/README.md`](../equity/README.md) for usage and design. The accep
 | Real fundamentals | 54 companies ingested (14 chosen to stress the method, plus 40 at random). Re-runs wrote 0 duplicate snapshots. |
 | Independent cross-check vs Yahoo (13 companies, 4 metrics) | **44 agree within 2%**; 1 conflict (Berkshire revenue −9.5%, a definitional difference at an insurer/conglomerate); 7 missing in one source. Record: `equity/reports/verification/2026-10-14-sec-vs-yahoo.md` |
 | Data confidence across the **random** sample of 40 | high 10, medium 10, **low 20**. Causes: IFRS/20-F filers with no US-GAAP data (7), banks/REITs/SPACs without capex or revenue lines, company-specific tags. This is the M2 work list. |
+
+## 10. Milestone 2: what was built (2026-10-14)
+
+Scope taken from the M2 row of §7: IFRS filers, industry templates or exclusions, slimmer snapshots, and a coverage
+survey command. Code and tests are in `equity/`; usage in [`../equity/README.md`](../equity/README.md).
+
+| Item | Result |
+|---|---|
+| IFRS (`ifrs-full`) filers | Parallel concept map; per-company taxonomy choice (most recent annual data wins); one reporting currency per company, other currencies ignored and flagged rather than mixed |
+| Industry classification | SIC from SEC submissions → `industrial` / `bank` / `insurer` / `financial_other` / `reit` / `spac`; non-industrial metrics that don't apply are blanked and flagged; such companies are excluded from screening and blocked at the `candidate` gate |
+| Snapshot size | Lossless packing, methods stored once per version: 36 KB → 13 KB per snapshot (12.9 KB average over the 128 live `fund-2.1` snapshots); round trip exact on all 54 M1 snapshots |
+| Coverage survey | `python3 -m equity coverage`: confidence by taxonomy and template, most common gaps, concepts in use |
+| Tests | `equity/tests`: 61 passed (31 M1 + 30 M2); `trading/tests`: 139 passed, unchanged |
+| Live run against SEC (2026-10-14, owner's account email as the SEC contact, owner's choice) | 128 companies re-ingested at `fund-2.1`, 0 failures: the 54 M1 companies, 18 chosen IFRS filers, banks, REITs and insurers, and a random 60 (seed 7; 2 had no XBRL at SEC, HTTP 404). Record: `equity/reports/verification/2026-10-14-coverage-fund-2.1.json` |
+| Result on the 54 M1 companies | low 24 → 19, medium 12 → 17, high 18 → 18. 44 of 54 are supported for screening; 10 are banks, insurers, REITs, other financials or a SPAC |
+| Result on the random 60 | high 12, medium 28, low 18 (no data 2); 47 supported for screening; 7 read from IFRS |
+| Bug found on live data and fixed | Diageo changed its presentation currency from GBP to USD in FY2024. Choosing the currency used by the most facts picked GBP and left the data stale at FY2023. The currency now follows the latest annual statements (regression test added), and the method version went to `fund-2.1` so the earlier `fund-2.0` snapshots are superseded. |
+| Gaps that are SEC's, not ours | TSMC's FY2025 20-F and Diageo's FY2026 20-F are not in SEC's companyfacts yet, so both stay `stale_annual_data`. Recent capex for Diageo, Infosys, Shell and BP uses company-specific tags that companyfacts leaves out, so it shows `missing:capex`. Toyota tags its cash flow in us-gaap but the rest in IFRS. |
+
+The method version is now `fund-2.1`. Old snapshots stay in the ledger, linked by `previous_snapshot`.

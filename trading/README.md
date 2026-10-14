@@ -12,10 +12,11 @@ scheduled cloud routines (see [`RUNBOOK.md`](RUNBOOK.md)).
 
 | | |
 |---|---|
-| Strategy | `nasdaq3x_trend_sma100_v1`: 100% `LQQ3l_EQ` (WisdomTree Nasdaq-100 3x Daily Leveraged, GBX) while QQQ's last close is above its 100-day average; otherwise 100% cash |
-| Why | Owner asked for higher returns using leveraged funds (2026-10-13, account reset to £500). Backtest 2006–2026: 20.7%/yr vs 16.0% for the plain Nasdaq-100, max drawdown −59%. 1986–2005: −92% drawdown through the dot-com crash. See `research/experiments/E009.json`. |
-| Risk | **High.** A 3x daily fund can lose most of its value in a crash, and the trend filter reacts only after the fall has started. Expect years of −40% to −50%. |
-| Trading | Checked every weekday at 08:20 London. Switches in or out when the signal flips (about 10 times a year in the backtest) and tops up uninvested cash above 3% |
+| Strategy | `discretionary_intraday_v1` (owner override, 2026-10-14): Claude trades the whole Practice account intraday within `decision_limits` in `config/strategy.json` (universe LQQ3, EQQQ, VUAG, SGLN, 3LGO; at most 8 decisions a day; 10% daily loss stop; long-only, no borrowing, no inverse products) |
+| Why | Owner instruction. The repository's research rejected every intraday approach it tested (E008, E010, E011, E012, E014), so this mode is not backed by the backtests. |
+| Risk | **High.** 3x daily leveraged ETPs can lose most of their value quickly, and intraday decisions add trading costs. |
+| Trading | Hourly decisions at :57 past the hour, 07–20 London, weekdays, plus the weekday ops run |
+| Previous rule | `nasdaq3x_trend_sma100_v1` (2026-10-13 to 2026-10-14): 100% `LQQ3l_EQ` while QQQ is above its 100-day average, else cash (E009). It now runs only as the shadow `B_live_rules_at_close`. |
 | Benchmarks (shadow) | A = 100% VWRP; D = previous 50/50 VWRP/IWMO strategy; E = LQQ3 held through everything; C = GEM-12; B-at-close = same trend rules at daily closes |
 | Previous period | £100 `momentum_tilt_v1` (50/50 VWRP/IWMO), archived in `journal/archive/2026-10-13_pre_reset_100gbp/` |
 

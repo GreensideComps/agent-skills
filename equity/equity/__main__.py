@@ -118,6 +118,10 @@ def cmd_show(store: Store, a) -> int:
         print("no fundamentals snapshot")
         return 0
     print(f"snapshot {snap['rid']} retrieved {snap['retrieved_utc']} source {snap['source_url']}")
+    print(f"taxonomy {snap.get('taxonomy', 'us-gaap')}, currency {snap.get('reporting_currency')}, "
+          f"SIC {snap.get('sic')} {snap.get('sic_description') or ''} -> template "
+          f"{snap.get('industry_template', 'unclassified (pre-M2 snapshot)')} "
+          f"(screening supported: {snap.get('screen_supported')})")
     print(f"confidence {snap['confidence']}; flags: {', '.join(snap['flags']) or 'none'}")
     for k, v in snap["summary"].items():
         print(f"  {k:<24} {v}")
@@ -146,6 +150,7 @@ def cmd_status(store: Store, a) -> int:
         return 1
     snap = last_snapshot(store, s["company_id"])
     gates = {"data_confidence": snap["confidence"] if snap else None,
+             "industry_supported": snap.get("screen_supported") if snap else None,
              "bear_case_recorded": False}  # bear-case records arrive with the bear-case agent (milestone 3)
     try:
         t = pipeline.transition(store, s["company_id"], a.to, a.reason, a.evidence, a.actor, gates)
@@ -166,6 +171,8 @@ def cmd_search(store: Store, a) -> int:
         where.append("(c.name LIKE ? OR s.symbol = ?)"); args += [f"%{a.name}%", a.name.upper()]  # noqa: E702
     if a.min_roic is not None:
         where.append("c.roic >= ?"); args.append(a.min_roic)  # noqa: E702
+    if a.supported_only:
+        where.append("c.screen_supported = 1")
     if a.min_fcf_margin is not None:
         where.append("c.fcf_margin >= ?"); args.append(a.min_fcf_margin)  # noqa: E702
     rows = db.execute(f"""SELECT c.* FROM companies c
@@ -222,6 +229,37 @@ def _n(x):
     return "" if x is None else f"{x:,.0f}"
 
 
+def cmd_coverage(store: Store, a) -> int:
+    """Data-coverage survey over the latest snapshot of every ingested company: confidence by
+    taxonomy and industry template, and the most common causes of missing data."""
+    from collections import Counter  # noqa: PLC0415
+
+    from .ingest import unpacked  # noqa: PLC0415
+    latest: dict[str, dict] = {}
+    for s in store.fundamentals.read():
+        if s["company_id"] not in latest or s["retrieved_utc"] > latest[s["company_id"]]["retrieved_utc"]:
+            latest[s["company_id"]] = s
+    snaps = [unpacked(s) for s in latest.values()
+             if not a.method or s.get("method_version") == a.method]
+    by = Counter((s.get("taxonomy", "us-gaap"), s.get("industry_template", "unclassified"), s["confidence"])
+                 for s in snaps)
+    flags = Counter(f.split(":")[0] + ":" + f.split(":")[1] if f.startswith(("missing", "not_meaningful"))
+                    else f.split(":")[0] for s in snaps for f in s["flags"])
+    concepts = Counter((m, v["c"]) for s in snaps for m, v in
+                       s["years"].get(s["summary"].get("latest_fy_end"), {}).items())
+    out = {"companies": len(snaps), "method_filter": a.method,
+           "confidence": dict(Counter(s["confidence"] for s in snaps)),
+           "screen_supported": sum(1 for s in snaps if s.get("screen_supported") is True),
+           "unclassified_pre_m2": sum(1 for s in snaps if "screen_supported" not in s),
+           "by_taxonomy_template_confidence": {" / ".join(k): n for k, n in sorted(by.items())},
+           "flags": dict(flags.most_common(25)),
+           "concepts_used_latest_year": {f"{m} <- {c}": n for (m, c), n in sorted(concepts.items())}}
+    if a.json:
+        Path(a.json).write_text(json.dumps(out, indent=1) + "\n")
+    print(json.dumps(out, indent=1))
+    return 0
+
+
 def cmd_health(store: Store, a) -> int:
     h = job_health(store)
     scans = store.scans.read()
@@ -255,13 +293,18 @@ def main(argv=None) -> int:
     s = sub.add_parser("search")
     s.add_argument("--status"); s.add_argument("--name")  # noqa: E702
     s.add_argument("--min-roic", type=float); s.add_argument("--min-fcf-margin", type=float)  # noqa: E702
+    s.add_argument("--supported-only", action="store_true", help="exclude industries the method does not support")
     s.add_argument("--limit", type=int, default=50)
     sub.add_parser("health")
+    s = sub.add_parser("coverage")
+    s.add_argument("--method", help="only snapshots of this method version, e.g. fund-2.0")
+    s.add_argument("--json", help="also write the survey to this file")
     s = sub.add_parser("crosscheck"); s.add_argument("--symbol", action="append", required=True)  # noqa: E702
     a = p.parse_args(argv)
     store = Store(Path(a.data)) if a.data else Store()
     handler = {"sync-universe": cmd_sync_universe, "ingest": cmd_ingest, "show": cmd_show,
                "discover": cmd_discover, "status": cmd_status, "search": cmd_search, "health": cmd_health,
+               "coverage": cmd_coverage,
                "crosscheck": cmd_crosscheck}
     return handler[a.cmd](store, a)
 

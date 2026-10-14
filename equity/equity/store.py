@@ -93,3 +93,4 @@ class Store:
         self.fundamentals = Ledger(self.root / "fundamentals.jsonl")  # metric snapshots (only on change)
         self.scans = Ledger(self.root / "scans.jsonl")                # universe coverage per scan
         self.jobs = Ledger(self.root / "jobs.jsonl")                  # job runs (start/finish events)
+        self.methods = Ledger(self.root / "methods.jsonl")            # metric formulas per method version

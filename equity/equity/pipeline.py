@@ -7,7 +7,8 @@ stays in transitions.jsonl.
 
 Gate hooks: moving a company to `candidate` requires a recorded bear case
 (objections from the independent bear-case analyst) and a fundamentals snapshot
-whose data confidence is not `low`. The hooks are passed in, so the rule cannot be
+whose data confidence is not `low`, and an industry the screening method supports
+(industry.py: banks, insurers, REITs and SPACs are not yet supported). The hooks are passed in, so the rule cannot be
 bypassed by a caller that forgets to check.
 """
 from __future__ import annotations
@@ -54,7 +55,7 @@ def all_statuses(store: Store) -> dict[str, str]:
 def transition(store: Store, company_id: str, to: str, reason: str, evidence: list[str], actor: str,
                gate_checks: dict | None = None) -> dict:
     """Record a status change. `gate_checks` carries facts the gates need, e.g.
-    {"bear_case_recorded": bool, "data_confidence": "high"|"medium"|"low"}."""
+    {"bear_case_recorded": bool, "data_confidence": "high"|"medium"|"low", "industry_supported": bool}."""
     if to not in STATUSES:
         raise TransitionError(f"unknown status {to!r}")
     if not reason or not reason.strip():
@@ -72,6 +73,9 @@ def transition(store: Store, company_id: str, to: str, reason: str, evidence: li
             raise TransitionError("candidate gate: an independent bear case must be recorded first")
         if g.get("data_confidence") not in ("high", "medium"):
             raise TransitionError("candidate gate: data confidence must be high or medium")
+        if g.get("industry_supported") is not True:
+            raise TransitionError("candidate gate: the industry must be classified and supported by the "
+                                  "screening method (re-ingest snapshots older than fund-2.0)")
     seq = len(hist)
     rec = {"company_id": company_id, "from": frm, "to": to, "reason": reason.strip(), "evidence": evidence,
            "actor": actor, "seq": seq, "ts_utc": utc_now(), "gate_checks": gate_checks or {}}

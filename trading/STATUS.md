@@ -1,17 +1,23 @@
-# System status: factual audit (updated 2026-10-13 ~18:30 UTC)
+# System status: factual audit (updated 2026-10-14)
 
-> **2026-10-13 ~17:43 UTC: account reset by the owner to £500 cash.** Strategy switched to `nasdaq3x_trend_sma100_v1`
-> (3x Nasdaq-100 with a 100-day trend filter, E009) at the owner's request. Old journal archived. Signal on 2026-10-13:
-> QQQ 3.1% above its 100-day average, so the next London-session run would buy LQQ3 with the cash.
-> Not yet verified: a dry run of the new strategy against the live account (blocked by the session's permission check).
-> Check-in routines deleted at the owner's request (2026-10-13); the trading-ops and research routines continue.
-> Owner rule considered and rejected on evidence (E010): flat at every close. The strategy holds overnight.
-> Sections below describe the pre-reset £100 period.
+> **Current strategy (2026-10-14): `discretionary_intraday_v1`** (`config/strategy.json`, mode `discretionary`).
+> Owner override: Claude trades the whole Practice account intraday within the limits in `decision_limits`
+> (universe LQQ3, EQQQ, VUAG, SGLN, 3LGO; at most 8 decisions a day; 10% daily loss stop; long-only, no borrowing,
+> no inverse products). The previous rule, `nasdaq3x_trend_sma100_v1` (E009), now runs only as the paper shadow
+> `B_live_rules_at_close`. The repository's research rejected every intraday approach it tested (E008, E010, E011,
+> E012, E014); the owner chose this mode knowing that.
+>
+> **Scheduling as of 2026-10-14** is audited in [`../docs/AUDIT_AND_PLAN.md`](../docs/AUDIT_AND_PLAN.md) §4: trading
+> ops and the research loop run; the hourly trader + monitor missed 3 of 6 expected runs on 2026-10-14; the daily
+> report is still unscheduled. Section 1 below is the 2026-10-13 snapshot and is kept for history.
+>
+> 2026-10-13 ~17:43 UTC: account reset by the owner to £500 cash, strategy switched to `nasdaq3x_trend_sma100_v1`,
+> old journal archived. Sections 2 onwards describe the pre-reset £100 period.
 
 "Verified" means observed directly (API responses, git commits, run output). A schedule or config file existing is not
 proof that anything runs. Assumptions and unknowns are labelled.
 
-## 1. Scheduled automation
+## 1. Scheduled automation (snapshot 2026-10-13; superseded by AUDIT_AND_PLAN.md §4)
 
 | Component | Schedule | Verified state | Evidence of a successful run |
 |---|---|---|---|

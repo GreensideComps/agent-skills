@@ -21,6 +21,7 @@ from pathlib import Path
 CACHE_DIR = Path(__file__).resolve().parent.parent / "cache" / "sec"
 TICKERS_URL = "https://www.sec.gov/files/company_tickers_exchange.json"
 FACTS_URL = "https://data.sec.gov/api/xbrl/companyfacts/CIK{cik:010d}.json"
+SUBMISSIONS_URL = "https://data.sec.gov/submissions/CIK{cik:010d}.json"
 
 
 class SecError(RuntimeError):
@@ -90,3 +91,8 @@ class SecClient:
 
     def company_facts(self, cik: int, max_age_s: float = 86400) -> dict:
         return self._get_json(FACTS_URL.format(cik=int(cik)), f"facts/CIK{int(cik):010d}.json", max_age_s)
+
+    def submissions(self, cik: int, max_age_s: float = 7 * 86400) -> dict:
+        """Registrant profile: SIC code and description, fiscal year end, former names, filings."""
+        return self._get_json(SUBMISSIONS_URL.format(cik=int(cik)), f"submissions/CIK{int(cik):010d}.json",
+                              max_age_s)

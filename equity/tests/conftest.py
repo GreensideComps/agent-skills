@@ -86,6 +86,8 @@ class FakeTransport:
 
     def __call__(self, url, headers, timeout):
         self.calls.append((url, headers))
+        if url not in self.routes and "/submissions/" in url:  # default registrant profile: an industrial
+            return 200, json.dumps({"sic": "3571", "sicDescription": "Electronic Computers"}).encode()
         seq = self.routes[url]
         status, obj = seq.pop(0) if len(seq) > 1 else seq[0]
         return status, json.dumps(obj).encode() if not isinstance(obj, bytes) else obj

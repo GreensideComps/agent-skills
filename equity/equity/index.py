@@ -33,7 +33,8 @@ def build(store: Store, path: Path = INDEX_PATH) -> Path:
     db.execute("""CREATE TABLE securities (t212_ticker TEXT PRIMARY KEY, symbol TEXT, isin TEXT, name TEXT,
                   currency TEXT, isin_country TEXT, company_id TEXT, cik INTEGER, sec_match TEXT, absent INTEGER)""")
     db.execute(f"""CREATE TABLE companies (company_id TEXT PRIMARY KEY, symbol TEXT, primary_listing TEXT,
-                  name TEXT, status TEXT, confidence TEXT,
+                  name TEXT, status TEXT, confidence TEXT, taxonomy TEXT, reporting_currency TEXT, sic TEXT,
+                  industry_template TEXT, screen_supported INTEGER,
                   flags TEXT, snapshot_rid TEXT, {', '.join(c + ' ' + ('TEXT' if c.startswith('latest') else 'REAL')
                                                             for c in SUMMARY_COLS)})""")
     db.execute("""CREATE TABLE transitions (company_id TEXT, seq INTEGER, ts_utc TEXT, from_status TEXT,
@@ -59,8 +60,11 @@ def build(store: Store, path: Path = INDEX_PATH) -> Path:
         sn = snaps.get(cid, {})
         summ = sn.get("summary", {})
         pl = primary.get(cid, {})
-        db.execute(f"INSERT INTO companies VALUES ({','.join('?' * (8 + len(SUMMARY_COLS)))})",
-                   [cid, pl.get("symbol"), pl.get("t212_ticker"), sn.get("entity_name") or names.get(cid), statuses.get(cid), sn.get("confidence"),
+        db.execute(f"INSERT INTO companies VALUES ({','.join('?' * (13 + len(SUMMARY_COLS)))})",
+                   [cid, pl.get("symbol"), pl.get("t212_ticker"), sn.get("entity_name") or names.get(cid),
+                    statuses.get(cid), sn.get("confidence"),
+                    sn.get("taxonomy", "us-gaap") if sn else None, sn.get("reporting_currency"), sn.get("sic"),
+                    sn.get("industry_template"), None if sn.get("screen_supported") is None else int(sn["screen_supported"]),
                     json.dumps(sn.get("flags", [])), sn.get("rid")] + [summ.get(c) for c in SUMMARY_COLS])
     db.executemany("INSERT INTO transitions VALUES (?,?,?,?,?,?,?,?)", [
         (t["company_id"], t["seq"], t["ts_utc"], t["from"], t["to"], t["reason"], json.dumps(t["evidence"]),
