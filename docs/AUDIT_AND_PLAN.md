@@ -199,7 +199,7 @@ The method version is now `fund-2.1`. Old snapshots stay in the ledger, linked b
 
 | Item | Result |
 |---|---|
-| Price source | Yahoo chart endpoint (free, unofficial, delayed; the bot already uses it). Stooq's free CSV returned nothing on 2026-10-14; SEC and T212 have no prices. Paid feeds were not considered (owner decision). |
+| Price source | Yahoo chart endpoint (free, unofficial, delayed; the bot already uses it). Stooq's free CSV returned nothing on 2026-10-14; SEC and T212 have no prices. Paid feeds would need the owner's approval. |
 | Scores | FCF per share 30, quality 25, growth 20, valuation 20, risk fit 5 (owner baseline), absolute scales in `equity/config/screener.json`; data confidence reported separately |
 | Gates | 8 gates, each pass / fail / unknown with the figure used; only fully passing companies are ranked; near misses listed |
 | Auditability | Each run is one `screens.jsonl` record naming the snapshot and price ids it used; `explain` recomputes the full breakdown and warns if the config changed since |
