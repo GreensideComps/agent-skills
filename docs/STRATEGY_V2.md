@@ -311,8 +311,10 @@ profitability (S2a) and revenue acceleration (S3b) are inconclusive (IC t 1.18 a
 large-cap IC is 0.013, and no top quintile beats the universe after costs except low net issuance (+0.7% a year,
 DSR 0.12 after 14 trials). Some small caps have IC t > 2 (FCF yield, gross profitability, low issuance), but
 that band is not the deciding one and is the most exposed to survivor bias. Addendum 1 (residual momentum S6c,
-insider net buyers S7a, insider purchase value S7b) also fails: **0 of 14**. Still to run before the §2.5 kill
-rule is applied: S9 expectations gap.
+insider net buyers S7a, insider purchase value S7b) also fails: 0 of 14. Addendum 2 (S9 expectations gap, the
+core thesis) fails too (IC −0.002, t −0.12): **0 of 15 pass in large caps.** The §2.5 project kill rule is
+therefore met on free data. Every Stage 2 signal stays at E0/E1: none may drive rankings or sizing. Next steps
+are the owner's decision (paid data, universe, or the satellite-and-VWRP default).
 
 ### Stage 3: expectations engine (replaces val-1.0)
 
