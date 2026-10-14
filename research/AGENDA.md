@@ -6,7 +6,7 @@ ideas are appended with a priority and a pre-registration. Status values:
 `OPEN`, `IN PROGRESS`, `DONE: rejected`, `DONE: promising → shadow`, `DONE: promoted`, `BLOCKED (reason)`.
 
 **Champion:** `nasdaq3x_trend_sma100_v1` (100% `LQQ3l_EQ` 3x Nasdaq-100 while QQQ > its 100-day SMA, else cash), from the 2026-10-13 reset to £500. Owner-directed override of the promotion gate (E009). Previous champion `momentum_tilt_v1` (50/50 VWRP/IWMO) is now shadow D.
-**Trial counter (all hypotheses, all configs, for deflated Sharpe):** 126 (53 round 1 + 18 in E006/E007 + 4 in E008 + 3 in E009 + 2 in E010 + 12 in E011 + 14 in E012, 2026-10-13; + 14 in E013, + 6 in E014, 2026-10-14).
+**Trial counter (all hypotheses, all configs, for deflated Sharpe):** 132 (53 round 1 + 18 in E006/E007 + 4 in E008 + 3 in E009 + 2 in E010 + 12 in E011 + 14 in E012, 2026-10-13; + 14 in E013, + 6 in E014, + 6 in E015, 2026-10-14).
 
 ---
 
@@ -78,9 +78,10 @@ ideas are appended with a priority and a pre-registration. Status values:
 
 
 ## P10: Volatility-managed leverage on the Nasdaq trend rule (priority 1)
-- **Status:** IN PROGRESS (2026-10-14, E015; grid frozen as below before running `research/h09_vol_managed_leverage.py`)
+- **Status:** DONE: rejected (2026-10-14, E015, `research/h09_vol_managed_leverage.py`)
 - **Rationale:** Volatility clusters while expected returns barely rise with it, so scaling exposure down when recent volatility is high raises Sharpe (Moreira & Muir 2017, "Volatility-Managed Portfolios", JF). For a daily-reset 3x product the volatility drag is about 3x(3-1)/2 = 3 times the index variance, so cutting leverage in high-vol spells should help most where the drag is worst. Who is on the other side: investors who hold constant leverage through turbulence.
 - **Rule to pre-register before running:** while QQQ > SMA100 (as now), weight in LQQ3 = clip(target_vol / realised_vol_20d(3x), 0, 1), remainder in EQQQ (1x) or cash; off-signal = cash. Grid: target_vol in {30%, 45%, 60%} x remainder {EQQQ, cash} = 6 configs. Data: `h03_leveraged_trend.py` synthetic 3x on ^NDX/QQQ 1986-2026, IS 1986-2005 / OOS 2006-2026, champion = current rule.
+- **Log:** 2026-10-14 (E015, `output/h09_gate.csv`): IS pick tv60%/cash. OOS 2006-2026: CAGR 20.3% vs champion 20.5% (p=0.59), Sharpe 0.62 vs 0.61 (p=0.38), maxDD -49.4% vs -55.2%, DSR 0.00 at N=132. Fails oos_beats, DSR, costs x3, neighbours, extra lag. Cuts drawdown ~6pp but gives up the same in return and raises turnover (tv30/1x: 17 vs 10 one-way turns/yr). **Rejected.**
 
 ## P11: Trend sleeve rotates to gold instead of cash (priority 2)
 - **Status:** OPEN (added 2026-10-14 by P8)
