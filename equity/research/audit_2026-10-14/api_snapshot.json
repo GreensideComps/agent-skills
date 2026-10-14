@@ -1,0 +1,489 @@
+{
+ "retrieved_utc": "2026-10-14T15:05:38+00:00",
+ "host": "demo (T212Client refuses other hosts)",
+ "endpoints": [
+  "GET /api/v0/equity/account/summary",
+  "GET /api/v0/equity/positions",
+  "GET /api/v0/equity/orders"
+ ],
+ "account_summary": {
+  "currency": "GBP",
+  "totalValue": 1294.95,
+  "cash": {
+   "availableToTrade": 0,
+   "reservedForOrders": 0,
+   "inPies": 0
+  },
+  "investments": {
+   "currentValue": 1294.95,
+   "totalCost": 1298.05,
+   "realizedProfitLoss": 0,
+   "unrealizedProfitLoss": -3.1
+  }
+ },
+ "positions": [
+  {
+   "instrument": {
+    "ticker": "SPCX_US_EQ",
+    "name": "SpaceX",
+    "isin": "US84615Q1031",
+    "currency": "USD"
+   },
+   "createdAt": "2026-10-14T17:46:17.472+03:00",
+   "quantity": 0.59790994,
+   "quantityAvailableForTrading": 0,
+   "quantityInPies": 0.59790994,
+   "currentPrice": 153.66,
+   "averagePricePaid": 153.95295151,
+   "walletImpact": {
+    "currency": "GBP",
+    "totalCost": 69.89,
+    "currentValue": 69.87,
+    "unrealizedProfitLoss": -0.02,
+    "fxImpact": 0.11
+   }
+  },
+  {
+   "instrument": {
+    "ticker": "MSFT_US_EQ",
+    "name": "Microsoft",
+    "isin": "US5949181045",
+    "currency": "USD"
+   },
+   "createdAt": "2026-10-14T17:46:17.117+03:00",
+   "quantity": 0.31512867,
+   "quantityAvailableForTrading": 0,
+   "quantityInPies": 0.31512867,
+   "currentPrice": 538.77,
+   "averagePricePaid": 538.38325786,
+   "walletImpact": {
+    "currency": "GBP",
+    "totalCost": 128.81,
+    "currentValue": 129.11,
+    "unrealizedProfitLoss": 0.3,
+    "fxImpact": 0.21
+   }
+  },
+  {
+   "instrument": {
+    "ticker": "ASML_US_EQ",
+    "name": "ASML",
+    "isin": "USN070592100",
+    "currency": "USD"
+   },
+   "createdAt": "2026-10-14T17:46:17.091+03:00",
+   "quantity": 0.06086964,
+   "quantityAvailableForTrading": 0,
+   "quantityInPies": 0.06086964,
+   "currentPrice": 1714.53,
+   "averagePricePaid": 1728.44787648,
+   "walletImpact": {
+    "currency": "GBP",
+    "totalCost": 79.88,
+    "currentValue": 79.36,
+    "unrealizedProfitLoss": -0.52,
+    "fxImpact": 0.12
+   }
+  },
+  {
+   "instrument": {
+    "ticker": "PLTR_US_EQ",
+    "name": "Palantir",
+    "isin": "US69608A1088",
+    "currency": "USD"
+   },
+   "createdAt": "2026-10-14T17:46:26.055+03:00",
+   "quantity": 0.4444545,
+   "quantityAvailableForTrading": 0,
+   "quantityInPies": 0.4444545,
+   "currentPrice": 206.47,
+   "averagePricePaid": 207.10781419,
+   "walletImpact": {
+    "currency": "GBP",
+    "totalCost": 69.89,
+    "currentValue": 69.78,
+    "unrealizedProfitLoss": -0.11,
+    "fxImpact": 0.11
+   }
+  },
+  {
+   "instrument": {
+    "ticker": "NVDA_US_EQ",
+    "name": "Nvidia",
+    "isin": "US67066G1040",
+    "currency": "USD"
+   },
+   "createdAt": "2026-10-14T17:46:16.996+03:00",
+   "quantity": 0.98506019,
+   "quantityAvailableForTrading": 0,
+   "quantityInPies": 0.98506019,
+   "currentPrice": 223.74,
+   "averagePricePaid": 224.28071121,
+   "walletImpact": {
+    "currency": "GBP",
+    "totalCost": 167.75,
+    "currentValue": 167.6,
+    "unrealizedProfitLoss": -0.15,
+    "fxImpact": 0.26
+   }
+  },
+  {
+   "instrument": {
+    "ticker": "CRWD_US_EQ",
+    "name": "Crowdstrike",
+    "isin": "US22788C1053",
+    "currency": "USD"
+   },
+   "createdAt": "2026-10-14T17:49:31.558+03:00",
+   "quantity": 0.07771173,
+   "quantityAvailableForTrading": 0,
+   "quantityInPies": 0.07771173,
+   "currentPrice": 253.77,
+   "averagePricePaid": 253.7583451,
+   "walletImpact": {
+    "currency": "GBP",
+    "totalCost": 14.98,
+    "currentValue": 15.0,
+    "unrealizedProfitLoss": 0.02,
+    "fxImpact": 0.02
+   }
+  },
+  {
+   "instrument": {
+    "ticker": "TSM_US_EQ",
+    "name": "Taiwan Semiconductor Manufacturing",
+    "isin": "US8740391003",
+    "currency": "USD"
+   },
+   "createdAt": "2026-10-14T17:46:18.898+03:00",
+   "quantity": 0.24017614,
+   "quantityAvailableForTrading": 0,
+   "quantityInPies": 0.24017614,
+   "currentPrice": 435.8,
+   "averagePricePaid": 438.01186912,
+   "walletImpact": {
+    "currency": "GBP",
+    "totalCost": 79.88,
+    "currentValue": 79.59,
+    "unrealizedProfitLoss": -0.29,
+    "fxImpact": 0.11
+   }
+  },
+  {
+   "instrument": {
+    "ticker": "AMD_US_EQ",
+    "name": "Advanced Micro Devices",
+    "isin": "US0079031078",
+    "currency": "USD"
+   },
+   "createdAt": "2026-10-14T17:46:17.076+03:00",
+   "quantity": 0.08969373,
+   "quantityAvailableForTrading": 0,
+   "quantityInPies": 0.08969373,
+   "currentPrice": 582.36,
+   "averagePricePaid": 586.55159062,
+   "walletImpact": {
+    "currency": "GBP",
+    "totalCost": 39.94,
+    "currentValue": 39.72,
+    "unrealizedProfitLoss": -0.22,
+    "fxImpact": 0.07
+   }
+  },
+  {
+   "instrument": {
+    "ticker": "BE_US_EQ",
+    "name": "Bloom Energy",
+    "isin": "US0937121079",
+    "currency": "USD"
+   },
+   "createdAt": "2026-10-14T17:49:28.781+03:00",
+   "quantity": 0.15652482,
+   "quantityAvailableForTrading": 0,
+   "quantityInPies": 0.15652482,
+   "currentPrice": 247.53,
+   "averagePricePaid": 251.90893048,
+   "walletImpact": {
+    "currency": "GBP",
+    "totalCost": 29.95,
+    "currentValue": 29.46,
+    "unrealizedProfitLoss": -0.49,
+    "fxImpact": 0.03
+   }
+  },
+  {
+   "instrument": {
+    "ticker": "IBTAl_EQ",
+    "name": "iShares USD Treasury Bond 1-3yr (Acc)",
+    "isin": "IE00BYXPSP02",
+    "currency": "USD"
+   },
+   "createdAt": "2026-10-14T17:49:43.503+03:00",
+   "quantity": 1.32577458,
+   "quantityAvailableForTrading": 0,
+   "quantityInPies": 1.32577458,
+   "currentPrice": 5.9491,
+   "averagePricePaid": 5.95123795,
+   "walletImpact": {
+    "currency": "GBP",
+    "totalCost": 5.99,
+    "currentValue": 6.0,
+    "unrealizedProfitLoss": 0.01,
+    "fxImpact": 0.01
+   }
+  },
+  {
+   "instrument": {
+    "ticker": "AMZN_US_EQ",
+    "name": "Amazon",
+    "isin": "US0231351067",
+    "currency": "USD"
+   },
+   "createdAt": "2026-10-14T17:46:16.993+03:00",
+   "quantity": 0.58913439,
+   "quantityAvailableForTrading": 0,
+   "quantityInPies": 0.58913439,
+   "currentPrice": 255.52,
+   "averagePricePaid": 256.69864562,
+   "walletImpact": {
+    "currency": "GBP",
+    "totalCost": 114.83,
+    "currentValue": 114.47,
+    "unrealizedProfitLoss": -0.36,
+    "fxImpact": 0.17
+   }
+  },
+  {
+   "instrument": {
+    "ticker": "UBER_US_EQ",
+    "name": "Uber Technologies",
+    "isin": "US90353T1007",
+    "currency": "USD"
+   },
+   "createdAt": "2026-10-14T17:49:29.198+03:00",
+   "quantity": 0.11366152,
+   "quantityAvailableForTrading": 0,
+   "quantityInPies": 0.11366152,
+   "currentPrice": 69.08,
+   "averagePricePaid": 69.41663282,
+   "walletImpact": {
+    "currency": "GBP",
+    "totalCost": 5.99,
+    "currentValue": 5.97,
+    "unrealizedProfitLoss": -0.02,
+    "fxImpact": 0.01
+   }
+  },
+  {
+   "instrument": {
+    "ticker": "VRT_US_EQ",
+    "name": "Vertiv",
+    "isin": "US92537N1081",
+    "currency": "USD"
+   },
+   "createdAt": "2026-10-14T17:46:19.152+03:00",
+   "quantity": 0.23088345,
+   "quantityAvailableForTrading": 0,
+   "quantityInPies": 0.23088345,
+   "currentPrice": 227.08,
+   "averagePricePaid": 227.82057354,
+   "walletImpact": {
+    "currency": "GBP",
+    "totalCost": 39.94,
+    "currentValue": 39.87,
+    "unrealizedProfitLoss": -0.07,
+    "fxImpact": 0.06
+   }
+  },
+  {
+   "instrument": {
+    "ticker": "VST_US_EQ",
+    "name": "Vistra",
+    "isin": "US92840M1027",
+    "currency": "USD"
+   },
+   "createdAt": "2026-10-14T17:49:29.190+03:00",
+   "quantity": 0.15443456,
+   "quantityAvailableForTrading": 0,
+   "quantityInPies": 0.15443456,
+   "currentPrice": 153.01,
+   "averagePricePaid": 153.20404966,
+   "walletImpact": {
+    "currency": "GBP",
+    "totalCost": 17.97,
+    "currentValue": 17.97,
+    "unrealizedProfitLoss": 0,
+    "fxImpact": 0.02
+   }
+  },
+  {
+   "instrument": {
+    "ticker": "FB_US_EQ",
+    "name": "Meta Platforms",
+    "isin": "US30303M1027",
+    "currency": "USD"
+   },
+   "createdAt": "2026-10-14T17:46:17.595+03:00",
+   "quantity": 0.14090095,
+   "quantityAvailableForTrading": 0,
+   "quantityInPies": 0.14090095,
+   "currentPrice": 743.81,
+   "averagePricePaid": 746.69475259,
+   "walletImpact": {
+    "currency": "GBP",
+    "totalCost": 79.88,
+    "currentValue": 79.7,
+    "unrealizedProfitLoss": -0.18,
+    "fxImpact": 0.13
+   }
+  },
+  {
+   "instrument": {
+    "ticker": "GOOGL_US_EQ",
+    "name": "Alphabet (Class A)",
+    "isin": "US02079K3059",
+    "currency": "USD"
+   },
+   "createdAt": "2026-10-14T17:46:17.469+03:00",
+   "quantity": 0.52578695,
+   "quantityAvailableForTrading": 0,
+   "quantityInPies": 0.52578695,
+   "currentPrice": 353.72,
+   "averagePricePaid": 355.14384676,
+   "walletImpact": {
+    "currency": "GBP",
+    "totalCost": 141.79,
+    "currentValue": 141.43,
+    "unrealizedProfitLoss": -0.36,
+    "fxImpact": 0.21
+   }
+  },
+  {
+   "instrument": {
+    "ticker": "TSLA_US_EQ",
+    "name": "Tesla",
+    "isin": "US88160R1014",
+    "currency": "USD"
+   },
+   "createdAt": "2026-10-14T17:49:28.872+03:00",
+   "quantity": 0.03205004,
+   "quantityAvailableForTrading": 0,
+   "quantityInPies": 0.03205004,
+   "currentPrice": 367.4,
+   "averagePricePaid": 369.42231585,
+   "walletImpact": {
+    "currency": "GBP",
+    "totalCost": 8.99,
+    "currentValue": 8.95,
+    "unrealizedProfitLoss": -0.04,
+    "fxImpact": 0.01
+   }
+  },
+  {
+   "instrument": {
+    "ticker": "AVGO_US_EQ",
+    "name": "Broadcom",
+    "isin": "US11135F1012",
+    "currency": "USD"
+   },
+   "createdAt": "2026-10-14T17:46:17.094+03:00",
+   "quantity": 0.53068349,
+   "quantityAvailableForTrading": 0,
+   "quantityInPies": 0.53068349,
+   "currentPrice": 350.33,
+   "averagePricePaid": 351.86698572,
+   "walletImpact": {
+    "currency": "GBP",
+    "totalCost": 141.79,
+    "currentValue": 141.38,
+    "unrealizedProfitLoss": -0.41,
+    "fxImpact": 0.21
+   }
+  },
+  {
+   "instrument": {
+    "ticker": "AAPL_US_EQ",
+    "name": "Apple",
+    "isin": "US0378331005",
+    "currency": "USD"
+   },
+   "createdAt": "2026-10-14T17:49:28.929+03:00",
+   "quantity": 0.03427649,
+   "quantityAvailableForTrading": 0,
+   "quantityInPies": 0.03427649,
+   "currentPrice": 345.25,
+   "averagePricePaid": 345.42626739,
+   "walletImpact": {
+    "currency": "GBP",
+    "totalCost": 8.99,
+    "currentValue": 9.0,
+    "unrealizedProfitLoss": 0.01,
+    "fxImpact": 0.01
+   }
+  },
+  {
+   "instrument": {
+    "ticker": "TEM_US_EQ",
+    "name": "Tempus AI",
+    "isin": "US88023B1035",
+    "currency": "USD"
+   },
+   "createdAt": "2026-10-14T17:49:28.947+03:00",
+   "quantity": 0.22232482,
+   "quantityAvailableForTrading": 0,
+   "quantityInPies": 0.22232482,
+   "currentPrice": 69.55,
+   "averagePricePaid": 70.93225129,
+   "walletImpact": {
+    "currency": "GBP",
+    "totalCost": 11.98,
+    "currentValue": 11.76,
+    "unrealizedProfitLoss": -0.22,
+    "fxImpact": 0.01
+   }
+  },
+  {
+   "instrument": {
+    "ticker": "INTC_US_EQ",
+    "name": "Intel",
+    "isin": "US4581401001",
+    "currency": "USD"
+   },
+   "createdAt": "2026-10-14T17:49:28.862+03:00",
+   "quantity": 0.23529156,
+   "quantityAvailableForTrading": 0,
+   "quantityInPies": 0.23529156,
+   "currentPrice": 100.16,
+   "averagePricePaid": 100.55609304,
+   "walletImpact": {
+    "currency": "GBP",
+    "totalCost": 17.97,
+    "currentValue": 17.92,
+    "unrealizedProfitLoss": -0.05,
+    "fxImpact": 0.02
+   }
+  },
+  {
+   "instrument": {
+    "ticker": "PANW_US_EQ",
+    "name": "Palo Alto Networks",
+    "isin": "US6974351057",
+    "currency": "USD"
+   },
+   "createdAt": "2026-10-14T17:49:28.768+03:00",
+   "quantity": 0.07265667,
+   "quantityAvailableForTrading": 0,
+   "quantityInPies": 0.07265667,
+   "currentPrice": 380.54,
+   "averagePricePaid": 380.00640547,
+   "walletImpact": {
+    "currency": "GBP",
+    "totalCost": 20.97,
+    "currentValue": 21.03,
+    "unrealizedProfitLoss": 0.06,
+    "fxImpact": 0.03
+   }
+  }
+ ],
+ "pending_orders": []
+}

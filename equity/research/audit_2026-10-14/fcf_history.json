@@ -1,0 +1,1389 @@
+{
+ "INTC_US_EQ": {
+  "currency": "USD",
+  "years": [
+   {
+    "fy_end": "2021-12-25",
+    "revenue": 79024000000,
+    "ocf": 29456000000,
+    "capex": 18733000000,
+    "fcf": 10723000000,
+    "sbc": 2036000000,
+    "shares_diluted": 4090000000,
+    "debt_total": 38101000000,
+    "cash": 4827000000,
+    "net_income": 19868000000,
+    "buybacks": 2415000000
+   },
+   {
+    "fy_end": "2022-12-31",
+    "revenue": 63054000000,
+    "ocf": 15433000000,
+    "capex": 24844000000,
+    "fcf": -9411000000,
+    "sbc": 3128000000,
+    "shares_diluted": 4123000000,
+    "debt_total": 38107000000,
+    "cash": 11144000000,
+    "net_income": 8014000000,
+    "buybacks": 0
+   },
+   {
+    "fy_end": "2023-12-30",
+    "revenue": 54228000000,
+    "ocf": 11471000000,
+    "capex": 25750000000,
+    "fcf": -14279000000,
+    "sbc": 3229000000,
+    "shares_diluted": 4212000000,
+    "debt_total": 49266000000,
+    "cash": 7079000000,
+    "net_income": 1689000000,
+    "buybacks": 0
+   },
+   {
+    "fy_end": "2024-12-28",
+    "revenue": 53101000000,
+    "ocf": 8288000000,
+    "capex": 23944000000,
+    "fcf": -15656000000,
+    "sbc": 3410000000,
+    "shares_diluted": 4280000000,
+    "debt_total": 50011000000,
+    "cash": 8249000000,
+    "net_income": -18756000000,
+    "buybacks": null
+   },
+   {
+    "fy_end": "2025-12-27",
+    "revenue": 52853000000,
+    "ocf": 9697000000,
+    "capex": 14646000000,
+    "fcf": -4949000000,
+    "sbc": 2434000000,
+    "shares_diluted": 4530000000,
+    "debt_total": 46585000000,
+    "cash": 14265000000,
+    "net_income": -267000000,
+    "buybacks": null
+   }
+  ]
+ },
+ "BE_US_EQ": {
+  "currency": "USD",
+  "years": [
+   {
+    "fy_end": "2021-12-31",
+    "revenue": 972176000,
+    "ocf": -60681000,
+    "capex": 49810000,
+    "fcf": -110491000,
+    "sbc": null,
+    "shares_diluted": 173438000,
+    "debt_total": 526730000,
+    "cash": 396035000,
+    "net_income": -164445000,
+    "buybacks": null
+   },
+   {
+    "fy_end": "2022-12-31",
+    "revenue": 1199125000,
+    "ocf": -191723000,
+    "capex": 116823000,
+    "fcf": -308546000,
+    "sbc": null,
+    "shares_diluted": 185907000,
+    "debt_total": 411579000,
+    "cash": 348498000,
+    "net_income": -301708000,
+    "buybacks": null
+   },
+   {
+    "fy_end": "2023-12-31",
+    "revenue": 1333470000,
+    "ocf": -372531000,
+    "capex": 83739000,
+    "fcf": -456270000,
+    "sbc": null,
+    "shares_diluted": 212681000,
+    "debt_total": 846633000,
+    "cash": 664593000,
+    "net_income": -302116000,
+    "buybacks": null
+   },
+   {
+    "fy_end": "2024-12-31",
+    "revenue": 1473856000,
+    "ocf": 91998000,
+    "capex": 58852000,
+    "fcf": 33146000,
+    "sbc": null,
+    "shares_diluted": 227365000,
+    "debt_total": 1128792000,
+    "cash": 802851000,
+    "net_income": -27203000,
+    "buybacks": null
+   },
+   {
+    "fy_end": "2025-12-31",
+    "revenue": 2023994000,
+    "ocf": 113949000,
+    "capex": 56759000,
+    "fcf": 57190000,
+    "sbc": null,
+    "shares_diluted": 240402000,
+    "debt_total": 2617879000,
+    "cash": 2454108000,
+    "net_income": -87140000,
+    "buybacks": null
+   }
+  ]
+ },
+ "TEM_US_EQ": {
+  "currency": "USD",
+  "years": [
+   {
+    "fy_end": "2022-12-31",
+    "revenue": 320668000,
+    "ocf": -168204000,
+    "capex": 18377000,
+    "fcf": -186581000,
+    "sbc": 0,
+    "shares_diluted": 63032,
+    "debt_total": null,
+    "cash": 302938000,
+    "net_income": -289811000,
+    "buybacks": null
+   },
+   {
+    "fy_end": "2023-12-31",
+    "revenue": 531822000,
+    "ocf": -214339000,
+    "capex": 34608000,
+    "fcf": -248947000,
+    "sbc": 0,
+    "shares_diluted": 63306,
+    "debt_total": null,
+    "cash": 165767000,
+    "net_income": -214118000,
+    "buybacks": null
+   },
+   {
+    "fy_end": "2024-12-31",
+    "revenue": 693398000,
+    "ocf": -189045000,
+    "capex": 22121000,
+    "fcf": -211166000,
+    "sbc": 534138000,
+    "shares_diluted": 119849,
+    "debt_total": null,
+    "cash": 340954000,
+    "net_income": -705809000,
+    "buybacks": null
+   },
+   {
+    "fy_end": "2025-12-31",
+    "revenue": 1271789000,
+    "ocf": -218090000,
+    "capex": 21049000,
+    "fcf": -239139000,
+    "sbc": 124747000,
+    "shares_diluted": 174264,
+    "debt_total": null,
+    "cash": 604787000,
+    "net_income": -245028000,
+    "buybacks": null
+   }
+  ]
+ },
+ "TSLA_US_EQ": {
+  "currency": "USD",
+  "years": [
+   {
+    "fy_end": "2021-12-31",
+    "revenue": 53823000000,
+    "ocf": 11497000000,
+    "capex": 6482000000,
+    "fcf": 5015000000,
+    "sbc": 2121000000,
+    "shares_diluted": 3386000000,
+    "debt_total": 4254000000,
+    "cash": 17576000000,
+    "net_income": 5519000000,
+    "buybacks": null
+   },
+   {
+    "fy_end": "2022-12-31",
+    "revenue": 81462000000,
+    "ocf": 14724000000,
+    "capex": 7158000000,
+    "fcf": 7566000000,
+    "sbc": 1560000000,
+    "shares_diluted": 3475000000,
+    "debt_total": 1029000000,
+    "cash": 16253000000,
+    "net_income": 12556000000,
+    "buybacks": null
+   },
+   {
+    "fy_end": "2023-12-31",
+    "revenue": 96773000000,
+    "ocf": 13256000000,
+    "capex": 8899000000,
+    "fcf": 4357000000,
+    "sbc": 1812000000,
+    "shares_diluted": 3485000000,
+    "debt_total": 2682000000,
+    "cash": 16398000000,
+    "net_income": 14997000000,
+    "buybacks": null
+   },
+   {
+    "fy_end": "2024-12-31",
+    "revenue": 97690000000,
+    "ocf": 14923000000,
+    "capex": 11342000000,
+    "fcf": 3581000000,
+    "sbc": 1999000000,
+    "shares_diluted": 3498000000,
+    "debt_total": 5535000000,
+    "cash": 16139000000,
+    "net_income": 7091000000,
+    "buybacks": null
+   },
+   {
+    "fy_end": "2025-12-31",
+    "revenue": 94827000000,
+    "ocf": 14747000000,
+    "capex": 8527000000,
+    "fcf": 6220000000,
+    "sbc": 2825000000,
+    "shares_diluted": 3528000000,
+    "debt_total": 6584000000,
+    "cash": 16513000000,
+    "net_income": 3794000000,
+    "buybacks": null
+   }
+  ]
+ },
+ "UBER_US_EQ": {
+  "currency": "USD",
+  "years": [
+   {
+    "fy_end": "2021-12-31",
+    "revenue": 17455000000,
+    "ocf": -445000000,
+    "capex": 298000000,
+    "fcf": -743000000,
+    "sbc": 1168000000,
+    "shares_diluted": 1895519000,
+    "debt_total": 9388000000,
+    "cash": 4295000000,
+    "net_income": -496000000,
+    "buybacks": null
+   },
+   {
+    "fy_end": "2022-12-31",
+    "revenue": 31877000000,
+    "ocf": 642000000,
+    "capex": 252000000,
+    "fcf": 390000000,
+    "sbc": 1793000000,
+    "shares_diluted": 1974928000,
+    "debt_total": 9361000000,
+    "cash": 4208000000,
+    "net_income": -9141000000,
+    "buybacks": 0
+   },
+   {
+    "fy_end": "2023-12-31",
+    "revenue": 37281000000,
+    "ocf": 3585000000,
+    "capex": 223000000,
+    "fcf": 3362000000,
+    "sbc": 1935000000,
+    "shares_diluted": 2091782000,
+    "debt_total": 9560000000,
+    "cash": 4680000000,
+    "net_income": 1887000000,
+    "buybacks": 0
+   },
+   {
+    "fy_end": "2024-12-31",
+    "revenue": 43978000000,
+    "ocf": 7137000000,
+    "capex": 242000000,
+    "fcf": 6895000000,
+    "sbc": 1796000000,
+    "shares_diluted": 2150508000,
+    "debt_total": 9575000000,
+    "cash": 5893000000,
+    "net_income": 9856000000,
+    "buybacks": 1252000000
+   },
+   {
+    "fy_end": "2025-12-31",
+    "revenue": 52017000000,
+    "ocf": 10099000000,
+    "capex": 336000000,
+    "fcf": 9763000000,
+    "sbc": 1826000000,
+    "shares_diluted": 2119689000,
+    "debt_total": 10600000000,
+    "cash": 7105000000,
+    "net_income": 10053000000,
+    "buybacks": 6523000000
+   }
+  ]
+ },
+ "AMD_US_EQ": {
+  "currency": "USD",
+  "years": [
+   {
+    "fy_end": "2021-12-25",
+    "revenue": 16434000000,
+    "ocf": 3521000000,
+    "capex": 301000000,
+    "fcf": 3220000000,
+    "sbc": 379000000,
+    "shares_diluted": 1229000000,
+    "debt_total": 1000000,
+    "cash": 2535000000,
+    "net_income": 3162000000,
+    "buybacks": 1762000000
+   },
+   {
+    "fy_end": "2022-12-31",
+    "revenue": 23601000000,
+    "ocf": 3565000000,
+    "capex": 450000000,
+    "fcf": 3115000000,
+    "sbc": 1081000000,
+    "shares_diluted": 1571000000,
+    "debt_total": 2467000000,
+    "cash": 4835000000,
+    "net_income": 1320000000,
+    "buybacks": 3702000000
+   },
+   {
+    "fy_end": "2023-12-30",
+    "revenue": 22680000000,
+    "ocf": 1667000000,
+    "capex": 546000000,
+    "fcf": 1121000000,
+    "sbc": 1384000000,
+    "shares_diluted": 1625000000,
+    "debt_total": 2468000000,
+    "cash": 3933000000,
+    "net_income": 854000000,
+    "buybacks": 985000000
+   },
+   {
+    "fy_end": "2024-12-28",
+    "revenue": 25785000000,
+    "ocf": 3041000000,
+    "capex": 636000000,
+    "fcf": 2405000000,
+    "sbc": 1407000000,
+    "shares_diluted": 1637000000,
+    "debt_total": 1721000000,
+    "cash": 3787000000,
+    "net_income": 1641000000,
+    "buybacks": 862000000
+   },
+   {
+    "fy_end": "2025-12-27",
+    "revenue": 34639000000,
+    "ocf": 7709000000,
+    "capex": 974000000,
+    "fcf": 6735000000,
+    "sbc": 1638000000,
+    "shares_diluted": 1636000000,
+    "debt_total": 3222000000,
+    "cash": 5539000000,
+    "net_income": 4335000000,
+    "buybacks": 1316000000
+   }
+  ]
+ },
+ "NVDA_US_EQ": {
+  "currency": "USD",
+  "years": [
+   {
+    "fy_end": "2022-01-30",
+    "revenue": 26914000000,
+    "ocf": 9108000000,
+    "capex": 976000000,
+    "fcf": 8132000000,
+    "sbc": 2004000000,
+    "shares_diluted": 25350000000.0,
+    "debt_total": 10946000000,
+    "cash": 1990000000,
+    "net_income": 9752000000,
+    "buybacks": 0
+   },
+   {
+    "fy_end": "2023-01-29",
+    "revenue": 26974000000,
+    "ocf": 5641000000,
+    "capex": 1833000000,
+    "fcf": 3808000000,
+    "sbc": 2709000000,
+    "shares_diluted": 25070000000,
+    "debt_total": 10953000000,
+    "cash": 3389000000,
+    "net_income": 4368000000,
+    "buybacks": 10039000000
+   },
+   {
+    "fy_end": "2024-01-28",
+    "revenue": 60922000000,
+    "ocf": 28090000000,
+    "capex": 1069000000,
+    "fcf": 27021000000,
+    "sbc": 3549000000,
+    "shares_diluted": 24940000000,
+    "debt_total": 9709000000,
+    "cash": 7280000000,
+    "net_income": 29760000000,
+    "buybacks": 9533000000
+   },
+   {
+    "fy_end": "2025-01-26",
+    "revenue": 130497000000,
+    "ocf": 64089000000,
+    "capex": 3236000000,
+    "fcf": 60853000000,
+    "sbc": 4737000000,
+    "shares_diluted": 24804000000,
+    "debt_total": 8463000000,
+    "cash": 8589000000,
+    "net_income": 72880000000,
+    "buybacks": 33706000000
+   },
+   {
+    "fy_end": "2026-01-25",
+    "revenue": 215938000000,
+    "ocf": 102718000000,
+    "capex": 6042000000,
+    "fcf": 96676000000,
+    "sbc": 6386000000,
+    "shares_diluted": 24514000000,
+    "debt_total": 8468000000,
+    "cash": 10605000000,
+    "net_income": 120067000000,
+    "buybacks": 40086000000
+   }
+  ]
+ },
+ "AVGO_US_EQ": {
+  "currency": "USD",
+  "years": [
+   {
+    "fy_end": "2021-10-31",
+    "revenue": 27450000000,
+    "ocf": 13764000000,
+    "capex": 443000000,
+    "fcf": 13321000000,
+    "sbc": 1704000000,
+    "shares_diluted": 4290000000.0,
+    "debt_total": 39665000000,
+    "cash": 12163000000,
+    "net_income": 6736000000,
+    "buybacks": 0
+   },
+   {
+    "fy_end": "2022-10-30",
+    "revenue": 33203000000,
+    "ocf": 16736000000,
+    "capex": 424000000,
+    "fcf": 16312000000,
+    "sbc": 1533000000,
+    "shares_diluted": 4232000000,
+    "debt_total": null,
+    "cash": 12416000000,
+    "net_income": 11495000000,
+    "buybacks": 7000000000
+   },
+   {
+    "fy_end": "2023-10-29",
+    "revenue": 35819000000,
+    "ocf": 18085000000,
+    "capex": 452000000,
+    "fcf": 17633000000,
+    "sbc": 2171000000,
+    "shares_diluted": 4272000000,
+    "debt_total": null,
+    "cash": 14189000000,
+    "net_income": 14082000000,
+    "buybacks": 5824000000
+   },
+   {
+    "fy_end": "2024-11-03",
+    "revenue": 51574000000,
+    "ocf": 19962000000,
+    "capex": 548000000,
+    "fcf": 19414000000,
+    "sbc": 5741000000,
+    "shares_diluted": 4778000000,
+    "debt_total": 69847000000,
+    "cash": 9348000000,
+    "net_income": 5895000000,
+    "buybacks": 7176000000
+   },
+   {
+    "fy_end": "2025-11-02",
+    "revenue": 63887000000,
+    "ocf": 27537000000,
+    "capex": 623000000,
+    "fcf": 26914000000,
+    "sbc": 7568000000,
+    "shares_diluted": 4853000000,
+    "debt_total": 67120000000,
+    "cash": 16178000000,
+    "net_income": 23126000000,
+    "buybacks": 2450000000
+   }
+  ]
+ },
+ "AMZN_US_EQ": {
+  "currency": "USD",
+  "years": [
+   {
+    "fy_end": "2021-12-31",
+    "revenue": 469822000000,
+    "ocf": 46327000000,
+    "capex": 61053000000,
+    "fcf": -14726000000,
+    "sbc": 12757000000,
+    "shares_diluted": 10296000000,
+    "debt_total": 50553000000,
+    "cash": 36220000000,
+    "net_income": 33364000000,
+    "buybacks": 0
+   },
+   {
+    "fy_end": "2022-12-31",
+    "revenue": 513983000000,
+    "ocf": 46752000000,
+    "capex": 63645000000,
+    "fcf": -16893000000,
+    "sbc": 19621000000,
+    "shares_diluted": 10189000000,
+    "debt_total": 70542000000,
+    "cash": 53888000000,
+    "net_income": -2722000000,
+    "buybacks": 6000000000
+   },
+   {
+    "fy_end": "2023-12-31",
+    "revenue": 574785000000,
+    "ocf": 84946000000,
+    "capex": 52729000000,
+    "fcf": 32217000000,
+    "sbc": 24023000000,
+    "shares_diluted": 10492000000,
+    "debt_total": 67182000000,
+    "cash": 73387000000,
+    "net_income": 30425000000,
+    "buybacks": 0
+   },
+   {
+    "fy_end": "2024-12-31",
+    "revenue": 637959000000,
+    "ocf": 115877000000,
+    "capex": 82999000000,
+    "fcf": 32878000000,
+    "sbc": 22011000000,
+    "shares_diluted": 10721000000,
+    "debt_total": 58000000000,
+    "cash": 78779000000,
+    "net_income": 59248000000,
+    "buybacks": 0
+   },
+   {
+    "fy_end": "2025-12-31",
+    "revenue": 716924000000,
+    "ocf": 139514000000,
+    "capex": 131819000000,
+    "fcf": 7695000000,
+    "sbc": 19467000000,
+    "shares_diluted": 10827000000,
+    "debt_total": 68836000000,
+    "cash": 86810000000,
+    "net_income": 77670000000,
+    "buybacks": null
+   }
+  ]
+ },
+ "TSM_US_EQ": {
+  "currency": "TWD",
+  "years": [
+   {
+    "fy_end": "2020-12-31",
+    "revenue": 1339254800000,
+    "ocf": 822666200000,
+    "capex": 507238700000,
+    "fcf": 315427500000,
+    "sbc": 6600000,
+    "shares_diluted": 25930300000,
+    "debt_total": null,
+    "cash": 660170600000,
+    "net_income": 510744000000,
+    "buybacks": null
+   },
+   {
+    "fy_end": "2021-12-31",
+    "revenue": 1587415000000,
+    "ocf": 1112160700000,
+    "capex": 839195700000,
+    "fcf": 272965000000,
+    "sbc": 7800000,
+    "shares_diluted": 25930300000,
+    "debt_total": null,
+    "cash": 1064990200000,
+    "net_income": 592359200000,
+    "buybacks": null
+   },
+   {
+    "fy_end": "2022-12-31",
+    "revenue": 2263891300000,
+    "ocf": 1610599200000,
+    "capex": 1082672100000,
+    "fcf": 527927100000,
+    "sbc": 302400000,
+    "shares_diluted": 25929400000,
+    "debt_total": null,
+    "cash": 1342814100000,
+    "net_income": 992923400000,
+    "buybacks": null
+   },
+   {
+    "fy_end": "2023-12-31",
+    "revenue": 2161735800000,
+    "ocf": 1241967300000,
+    "capex": 949816800000,
+    "fcf": 292150500000,
+    "sbc": 483000000,
+    "shares_diluted": 25929300000,
+    "debt_total": null,
+    "cash": 1465427800000,
+    "net_income": 851740000000,
+    "buybacks": null
+   },
+   {
+    "fy_end": "2024-12-31",
+    "revenue": 2894307700000,
+    "ocf": 1826177100000,
+    "capex": 956006500000,
+    "fcf": 870170600000,
+    "sbc": 1242700000,
+    "shares_diluted": 25929700000,
+    "debt_total": null,
+    "cash": 2127627000000,
+    "net_income": 1158380200000,
+    "buybacks": null
+   }
+  ]
+ },
+ "ASML_US_EQ": {
+  "currency": "EUR",
+  "years": [
+   {
+    "fy_end": "2021-12-31",
+    "revenue": 18611000000,
+    "ocf": 10845800000,
+    "capex": 900700000,
+    "fcf": 9945100000,
+    "sbc": 117500000,
+    "shares_diluted": 410400000,
+    "debt_total": null,
+    "cash": 6951800000,
+    "net_income": 5883200000,
+    "buybacks": 8560300000
+   },
+   {
+    "fy_end": "2022-12-31",
+    "revenue": 21173400000,
+    "ocf": 8486800000,
+    "capex": 1281800000,
+    "fcf": 7205000000,
+    "sbc": 68900000,
+    "shares_diluted": 398000000,
+    "debt_total": null,
+    "cash": 7268300000,
+    "net_income": 5624200000,
+    "buybacks": 4639700000
+   },
+   {
+    "fy_end": "2023-12-31",
+    "revenue": 27558500000,
+    "ocf": 5443400000,
+    "capex": 2155600000,
+    "fcf": 3287800000,
+    "sbc": 134800000,
+    "shares_diluted": 394100000,
+    "debt_total": null,
+    "cash": 7004700000,
+    "net_income": 7839000000,
+    "buybacks": 1000000000
+   },
+   {
+    "fy_end": "2024-12-31",
+    "revenue": 28262900000,
+    "ocf": 11166200000,
+    "capex": 2067200000,
+    "fcf": 9099000000,
+    "sbc": 172600000,
+    "shares_diluted": 393600000,
+    "debt_total": null,
+    "cash": 12735900000,
+    "net_income": 7571600000,
+    "buybacks": 500000000
+   },
+   {
+    "fy_end": "2025-12-31",
+    "revenue": 32667300000,
+    "ocf": 12658500000,
+    "capex": 1573600000,
+    "fcf": 11084900000,
+    "sbc": 202300000,
+    "shares_diluted": 388900000,
+    "debt_total": null,
+    "cash": 12916000000,
+    "net_income": 9609400000,
+    "buybacks": 5950000000
+   }
+  ]
+ },
+ "PLTR_US_EQ": {
+  "currency": "USD",
+  "years": [
+   {
+    "fy_end": "2021-12-31",
+    "revenue": 1541889000,
+    "ocf": 333851000,
+    "capex": 12627000,
+    "fcf": 321224000,
+    "sbc": 778215000,
+    "shares_diluted": 1923617000,
+    "debt_total": null,
+    "cash": 2290674000,
+    "net_income": -520379000,
+    "buybacks": 0
+   },
+   {
+    "fy_end": "2022-12-31",
+    "revenue": 1905871000,
+    "ocf": 223737000,
+    "capex": 40027000,
+    "fcf": 183710000,
+    "sbc": 564798000,
+    "shares_diluted": 2063793000,
+    "debt_total": null,
+    "cash": 2598540000,
+    "net_income": -373705000,
+    "buybacks": 0
+   },
+   {
+    "fy_end": "2023-12-31",
+    "revenue": 2225012000,
+    "ocf": 712183000,
+    "capex": 15114000,
+    "fcf": 697069000,
+    "sbc": 475903000,
+    "shares_diluted": 2297927000,
+    "debt_total": null,
+    "cash": 831047000,
+    "net_income": 209825000,
+    "buybacks": 0
+   },
+   {
+    "fy_end": "2024-12-31",
+    "revenue": 2865507000,
+    "ocf": 1153865000,
+    "capex": 12634000,
+    "fcf": 1141231000,
+    "sbc": 691638000,
+    "shares_diluted": 2450818000,
+    "debt_total": null,
+    "cash": 2098524000,
+    "net_income": 462190000,
+    "buybacks": 64196000
+   },
+   {
+    "fy_end": "2025-12-31",
+    "revenue": 4475446000,
+    "ocf": 2134473000,
+    "capex": 33882000,
+    "fcf": 2100591000,
+    "sbc": 684033000,
+    "shares_diluted": 2565197000,
+    "debt_total": null,
+    "cash": 1423796000,
+    "net_income": 1625033000,
+    "buybacks": 74985000
+   }
+  ]
+ },
+ "ADBE_US_EQ": {
+  "currency": "USD",
+  "years": [
+   {
+    "fy_end": "2021-12-03",
+    "revenue": 15785000000,
+    "ocf": 7230000000,
+    "capex": 348000000,
+    "fcf": 6882000000,
+    "sbc": 1069000000,
+    "shares_diluted": 481000000,
+    "debt_total": 4123000000,
+    "cash": 3844000000,
+    "net_income": 4822000000,
+    "buybacks": 3950000000
+   },
+   {
+    "fy_end": "2022-12-02",
+    "revenue": 17606000000,
+    "ocf": 7838000000,
+    "capex": 442000000,
+    "fcf": 7396000000,
+    "sbc": 1440000000,
+    "shares_diluted": 470900000,
+    "debt_total": 3629000000,
+    "cash": 4236000000,
+    "net_income": 4756000000,
+    "buybacks": 6550000000
+   },
+   {
+    "fy_end": "2023-12-01",
+    "revenue": 19409000000,
+    "ocf": 7302000000,
+    "capex": 360000000,
+    "fcf": 6942000000,
+    "sbc": 1718000000,
+    "shares_diluted": 459100000,
+    "debt_total": 3634000000,
+    "cash": 7141000000,
+    "net_income": 5428000000,
+    "buybacks": 4400000000
+   },
+   {
+    "fy_end": "2024-11-29",
+    "revenue": 21505000000,
+    "ocf": 8056000000,
+    "capex": 183000000,
+    "fcf": 7873000000,
+    "sbc": 1833000000,
+    "shares_diluted": 449700000,
+    "debt_total": 4129000000,
+    "cash": 7613000000,
+    "net_income": 5560000000,
+    "buybacks": 9500000000
+   },
+   {
+    "fy_end": "2025-11-28",
+    "revenue": 23769000000,
+    "ocf": 10031000000,
+    "capex": 179000000,
+    "fcf": 9852000000,
+    "sbc": 1942000000,
+    "shares_diluted": 427000000,
+    "debt_total": 6210000000,
+    "cash": 5431000000,
+    "net_income": 7130000000,
+    "buybacks": 11281000000
+   }
+  ]
+ },
+ "COST_US_EQ": {
+  "currency": "USD",
+  "years": [
+   {
+    "fy_end": "2022-08-28",
+    "revenue": 226954000000,
+    "ocf": 7392000000,
+    "capex": 3891000000,
+    "fcf": 3501000000,
+    "sbc": 724000000,
+    "shares_diluted": 444757000,
+    "debt_total": null,
+    "cash": 10203000000,
+    "net_income": 5844000000,
+    "buybacks": 439000000
+   },
+   {
+    "fy_end": "2023-09-03",
+    "revenue": 242290000000,
+    "ocf": 11068000000,
+    "capex": 4323000000,
+    "fcf": 6745000000,
+    "sbc": 774000000,
+    "shares_diluted": 444452000,
+    "debt_total": null,
+    "cash": 13700000000,
+    "net_income": 6292000000,
+    "buybacks": 676000000
+   },
+   {
+    "fy_end": "2024-09-01",
+    "revenue": 254453000000,
+    "ocf": 11339000000,
+    "capex": 4710000000,
+    "fcf": 6629000000,
+    "sbc": 818000000,
+    "shares_diluted": 444759000,
+    "debt_total": null,
+    "cash": 9906000000,
+    "net_income": 7367000000,
+    "buybacks": 700000000
+   },
+   {
+    "fy_end": "2025-08-31",
+    "revenue": 275235000000,
+    "ocf": 13335000000,
+    "capex": 5498000000,
+    "fcf": 7837000000,
+    "sbc": 860000000,
+    "shares_diluted": 444803000,
+    "debt_total": null,
+    "cash": 14161000000,
+    "net_income": 8099000000,
+    "buybacks": 903000000
+   },
+   {
+    "fy_end": "2026-08-30",
+    "revenue": 303154000000,
+    "ocf": 15817000000,
+    "capex": 6435000000,
+    "fcf": 9382000000,
+    "sbc": 924000000,
+    "shares_diluted": 444427000,
+    "debt_total": null,
+    "cash": 20207000000,
+    "net_income": 9226000000,
+    "buybacks": 848000000
+   }
+  ]
+ },
+ "MSCI_US_EQ": {
+  "currency": "USD",
+  "years": [
+   {
+    "fy_end": "2021-12-31",
+    "revenue": 2043544000,
+    "ocf": 936069000,
+    "capex": 13509000,
+    "fcf": 922560000,
+    "sbc": 54917000,
+    "shares_diluted": 83479000,
+    "debt_total": 4161422000,
+    "cash": 1421449000,
+    "net_income": 725983000,
+    "buybacks": 198374000
+   },
+   {
+    "fy_end": "2022-12-31",
+    "revenue": 2248598000,
+    "ocf": 1095369000,
+    "capex": 13617000,
+    "fcf": 1081752000,
+    "sbc": 58094000,
+    "shares_diluted": 81215000,
+    "debt_total": 4511947000,
+    "cash": 993564000,
+    "net_income": 870573000,
+    "buybacks": 1397506000
+   },
+   {
+    "fy_end": "2023-12-31",
+    "revenue": 2528920000,
+    "ocf": 1236029000,
+    "capex": 22757000,
+    "fcf": 1213272000,
+    "sbc": 71653000,
+    "shares_diluted": 79843000,
+    "debt_total": 4507728000,
+    "cash": 461693000,
+    "net_income": 1148592000,
+    "buybacks": 504188000
+   },
+   {
+    "fy_end": "2024-12-31",
+    "revenue": 2856128000,
+    "ocf": 1501627000,
+    "capex": 33762000,
+    "fcf": 1467865000,
+    "sbc": 95204000,
+    "shares_diluted": 78960000,
+    "debt_total": 4510816000,
+    "cash": 409351000,
+    "net_income": 1109128000,
+    "buybacks": 885266000
+   },
+   {
+    "fy_end": "2025-12-31",
+    "revenue": 3134459000,
+    "ocf": 1588446000,
+    "capex": 39319000,
+    "fcf": 1549127000,
+    "sbc": 111343000,
+    "shares_diluted": 76636000,
+    "debt_total": 6202119000,
+    "cash": 515332000,
+    "net_income": 1202305000,
+    "buybacks": 2484305000
+   }
+  ]
+ },
+ "RL_US_EQ": {
+  "currency": "USD",
+  "years": [
+   {
+    "fy_end": "2022-04-02",
+    "revenue": 6218500000,
+    "ocf": 715900000,
+    "capex": 166900000,
+    "fcf": 549000000,
+    "sbc": 81700000,
+    "shares_diluted": 74300000,
+    "debt_total": 1636300000,
+    "cash": 1863800000,
+    "net_income": 600100000,
+    "buybacks": 492600000
+   },
+   {
+    "fy_end": "2023-04-01",
+    "revenue": 6443600000,
+    "ocf": 411000000,
+    "capex": 217500000,
+    "fcf": 193500000,
+    "sbc": 75500000,
+    "shares_diluted": 69000000,
+    "debt_total": 1138500000,
+    "cash": 1529300000,
+    "net_income": 522700000,
+    "buybacks": 488600000
+   },
+   {
+    "fy_end": "2024-03-30",
+    "revenue": 6631400000,
+    "ocf": 1069700000,
+    "capex": 164800000,
+    "fcf": 904900000,
+    "sbc": 99500000,
+    "shares_diluted": 66500000,
+    "debt_total": 1140500000,
+    "cash": 1662200000,
+    "net_income": 646300000,
+    "buybacks": 449700000
+   },
+   {
+    "fy_end": "2025-03-29",
+    "revenue": 7079000000,
+    "ocf": 1235100000,
+    "capex": 216200000,
+    "fcf": 1018900000,
+    "sbc": 107900000,
+    "shares_diluted": 64000000,
+    "debt_total": 1142600000,
+    "cash": 1922500000,
+    "net_income": 742900000,
+    "buybacks": 480900000
+   },
+   {
+    "fy_end": "2026-03-28",
+    "revenue": 8114500000,
+    "ocf": 1154200000,
+    "capex": 408100000,
+    "fcf": 746100000,
+    "sbc": 111000000,
+    "shares_diluted": 62300000,
+    "debt_total": 1238900000,
+    "cash": 1988000000,
+    "net_income": 941100000,
+    "buybacks": 623800000
+   }
+  ]
+ },
+ "A_US_EQ": {
+  "currency": "USD",
+  "years": [
+   {
+    "fy_end": "2021-10-31",
+    "revenue": 6319000000,
+    "ocf": 1485000000,
+    "capex": 188000000,
+    "fcf": 1297000000,
+    "sbc": 110000000,
+    "shares_diluted": 307000000,
+    "debt_total": 2729000000,
+    "cash": 1484000000,
+    "net_income": 1210000000,
+    "buybacks": 788000000
+   },
+   {
+    "fy_end": "2022-10-31",
+    "revenue": 6848000000,
+    "ocf": 1312000000,
+    "capex": 291000000,
+    "fcf": 1021000000,
+    "sbc": 125000000,
+    "shares_diluted": 300000000,
+    "debt_total": 2733000000,
+    "cash": 1053000000,
+    "net_income": 1254000000,
+    "buybacks": 1139000000
+   },
+   {
+    "fy_end": "2023-10-31",
+    "revenue": 6833000000,
+    "ocf": 1772000000,
+    "capex": 298000000,
+    "fcf": 1474000000,
+    "sbc": 111000000,
+    "shares_diluted": 296000000,
+    "debt_total": 2735000000,
+    "cash": 1590000000,
+    "net_income": 1240000000,
+    "buybacks": 575000000
+   },
+   {
+    "fy_end": "2024-10-31",
+    "revenue": 6510000000,
+    "ocf": 1751000000,
+    "capex": 378000000,
+    "fcf": 1373000000,
+    "sbc": 129000000,
+    "shares_diluted": 291000000,
+    "debt_total": 3345000000,
+    "cash": 1329000000,
+    "net_income": 1289000000,
+    "buybacks": 1150000000
+   },
+   {
+    "fy_end": "2025-10-31",
+    "revenue": 6948000000,
+    "ocf": 1559000000,
+    "capex": 407000000,
+    "fcf": 1152000000,
+    "sbc": 128000000,
+    "shares_diluted": 285000000,
+    "debt_total": 3050000000,
+    "cash": 1789000000,
+    "net_income": 1303000000,
+    "buybacks": 425000000
+   }
+  ]
+ },
+ "PANW_US_EQ": {
+  "currency": "USD",
+  "years": [
+   {
+    "fy_end": "2022-07-31",
+    "revenue": 5501500000,
+    "ocf": 1984700000,
+    "capex": 192800000,
+    "fcf": 1791900000,
+    "sbc": 1011100000,
+    "shares_diluted": 591200000.0,
+    "debt_total": 3676800000,
+    "cash": 2118500000,
+    "net_income": -267000000,
+    "buybacks": 892300000
+   },
+   {
+    "fy_end": "2023-07-31",
+    "revenue": 6892700000,
+    "ocf": 2777500000,
+    "capex": 146300000,
+    "fcf": 2631200000,
+    "sbc": 1074500000,
+    "shares_diluted": 684500000,
+    "debt_total": 1991500000,
+    "cash": 1135300000,
+    "net_income": 439700000,
+    "buybacks": 272700000
+   },
+   {
+    "fy_end": "2024-07-31",
+    "revenue": 8027000000,
+    "ocf": 3258000000,
+    "capex": 157000000,
+    "fcf": 3101000000,
+    "sbc": 1076000000,
+    "shares_diluted": 708000000,
+    "debt_total": null,
+    "cash": 1535000000,
+    "net_income": 2578000000,
+    "buybacks": 567000000
+   },
+   {
+    "fy_end": "2025-07-31",
+    "revenue": 9221000000,
+    "ocf": 3716000000,
+    "capex": 247000000,
+    "fcf": 3469000000,
+    "sbc": 1295000000,
+    "shares_diluted": 709000000,
+    "debt_total": null,
+    "cash": 2269000000,
+    "net_income": 1134000000,
+    "buybacks": 0
+   },
+   {
+    "fy_end": "2026-07-31",
+    "revenue": 11480000000,
+    "ocf": 4553000000,
+    "capex": 440000000,
+    "fcf": 4113000000,
+    "sbc": 1774000000,
+    "shares_diluted": 764000000,
+    "debt_total": null,
+    "cash": 2514000000,
+    "net_income": 307000000,
+    "buybacks": 1000000000
+   }
+  ]
+ },
+ "CRWD_US_EQ": {
+  "currency": "USD",
+  "years": [
+   {
+    "fy_end": "2022-01-31",
+    "revenue": 1451594000,
+    "ocf": 574784000,
+    "capex": 112143000,
+    "fcf": 462641000,
+    "sbc": 309952000,
+    "shares_diluted": 227142000,
+    "debt_total": null,
+    "cash": 1996633000,
+    "net_income": -234802000,
+    "buybacks": null
+   },
+   {
+    "fy_end": "2023-01-31",
+    "revenue": 2241236000,
+    "ocf": 941007000,
+    "capex": 235019000,
+    "fcf": 705988000,
+    "sbc": 526504000,
+    "shares_diluted": 233139000,
+    "debt_total": null,
+    "cash": 2455369000,
+    "net_income": -183245000,
+    "buybacks": null
+   },
+   {
+    "fy_end": "2024-01-31",
+    "revenue": 3055555000,
+    "ocf": 1166207000,
+    "capex": 176529000,
+    "fcf": 989678000,
+    "sbc": 648665000,
+    "shares_diluted": 243635000,
+    "debt_total": null,
+    "cash": 3375069000,
+    "net_income": 72181000,
+    "buybacks": null
+   },
+   {
+    "fy_end": "2025-01-31",
+    "revenue": 3953624000,
+    "ocf": 1381727000,
+    "capex": 254852000,
+    "fcf": 1126875000,
+    "sbc": 861391000,
+    "shares_diluted": 244750000,
+    "debt_total": null,
+    "cash": 4323295000,
+    "net_income": -15241000,
+    "buybacks": null
+   },
+   {
+    "fy_end": "2026-01-31",
+    "revenue": 4812005000,
+    "ocf": 1612349000,
+    "capex": 302108000,
+    "fcf": 1310241000,
+    "sbc": 1096679000,
+    "shares_diluted": 250576000,
+    "debt_total": null,
+    "cash": 5230125000,
+    "net_income": -162502000,
+    "buybacks": null
+   }
+  ]
+ },
+ "VST_US_EQ": {
+  "currency": "USD",
+  "years": [
+   {
+    "fy_end": "2021-12-31",
+    "revenue": 12077000000,
+    "ocf": -206000000,
+    "capex": 1033000000,
+    "fcf": -1239000000,
+    "sbc": 47000000,
+    "shares_diluted": 482214544,
+    "debt_total": 10731000000,
+    "cash": 1325000000,
+    "net_income": -1274000000,
+    "buybacks": 471000000
+   },
+   {
+    "fy_end": "2022-12-31",
+    "revenue": 13728000000,
+    "ocf": 485000000,
+    "capex": 1301000000,
+    "fcf": -816000000,
+    "sbc": 63000000,
+    "shares_diluted": 422447074,
+    "debt_total": 11971000000,
+    "cash": 455000000,
+    "net_income": -1227000000,
+    "buybacks": 1949000000
+   },
+   {
+    "fy_end": "2023-12-31",
+    "revenue": 14779000000,
+    "ocf": 5453000000,
+    "capex": 1676000000,
+    "fcf": 3777000000,
+    "sbc": 77000000,
+    "shares_diluted": 375193110,
+    "debt_total": 14402000000,
+    "cash": 3485000000,
+    "net_income": 1493000000,
+    "buybacks": 1245000000
+   },
+   {
+    "fy_end": "2024-12-31",
+    "revenue": 17224000000,
+    "ocf": 4563000000,
+    "capex": 2078000000,
+    "fcf": 2485000000,
+    "sbc": 100000000,
+    "shares_diluted": 352567060,
+    "debt_total": 16298000000,
+    "cash": 1188000000,
+    "net_income": 2659000000,
+    "buybacks": 1266000000
+   },
+   {
+    "fy_end": "2025-12-31",
+    "revenue": 17738000000,
+    "ocf": 4070000000,
+    "capex": 2752000000,
+    "fcf": 1318000000,
+    "sbc": 113000000,
+    "shares_diluted": 345656067,
+    "debt_total": 17043000000,
+    "cash": 785000000,
+    "net_income": 944000000,
+    "buybacks": 1028000000
+   }
+  ]
+ }
+}

@@ -93,13 +93,16 @@ def company_rows(facts: dict, sic, series: dict, cfg: dict, company_id: str) -> 
         r = screener.score_company(snap, price, cfg, date(y, 4, 30))
         rows.append({"company_id": company_id, "year": y, "total": r["total"], "eligible": r["eligible"],
                      "scores": r["scores"], "failed_gates": r["failed_gates"], "fwd_return": fwd,
-                     "template": template})
+                     "template": template, "sic": sic, "market_cap": r["valuation"].get("market_cap"),
+                     "decision_price": px})
     return rows
 
 
 def collect(securities: list[dict], sec, out_path: Path, cfg: dict | None = None, get=_get,
             log=print) -> list[dict]:
     """Fetch, score and append rows per company to `out_path` (JSONL, resumable)."""
+    # Audit fields (sic, market_cap, decision_price) were added to rows on 2026-10-14 after the first run;
+    # they do not change any score.
     cfg = cfg or screener.load_config()
     done = set()
     if out_path.exists():
