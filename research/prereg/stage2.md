@@ -100,3 +100,17 @@ Any of these counts as a new trial:
 
 A new trial gets an id, is added to `TRIALS` in `stage2.py` with its date, and raises the count used by
 the deflated Sharpe. Bug fixes that change no definition are noted in the results file with the commit.
+
+## Addendum 1: S6c and S7 (written 2026-10-14, after the first 11 ran, before these three ran)
+
+These are three new trials, which brings the trial count to 14. The deflated Sharpe for every trial is
+recomputed with 14. The window, universe, costs and pass rules are unchanged.
+
+| Id | Family | Definition | Higher is better |
+|---|---|---|---|
+| S6c | Price momentum | Residual momentum. Regress monthly excess returns on Fama-French Mkt-RF, SMB and HML over months t−36 to t−2, needing at least 24 months. The score is the mean residual over t−12 to t−2 divided by its standard deviation, needing at least 9 of the 11 months. | yes |
+| S7a | Insider behaviour | Count distinct officers and directors with open-market purchases (Form 4, code P) and with open-market sales (code S), filed in months t−5 to t. The score is (buyers − sellers) / (buyers + sellers). Unscored when nobody traded. | yes |
+| S7b | Insider behaviour | Value of officer and director open-market purchases filed in months t−5 to t, divided by market cap. Zero when there were none. | yes |
+
+**Data:** SEC Form 3/4/5 quarterly data sets for 2014q1 to 2022q4, from
+`python -m equity`'s `insiders.build`. Dated by filing date. Amendments (4/A) count as filings.

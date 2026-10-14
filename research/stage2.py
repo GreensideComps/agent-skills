@@ -101,6 +101,63 @@ def prepare(df: pd.DataFrame, companies: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
+def residual_momentum(df: pd.DataFrame, ff3: pd.DataFrame) -> pd.Series:
+    """S6c (added 2026-10-14, before running): FF3 residual momentum.
+
+    Monthly total returns are regressed on Mkt-RF, SMB and HML over months t-36..t-2 (at least 24). The score is
+    the mean residual over t-12..t-2 divided by their standard deviation (at least 9 of the 11 months).
+    """
+    r = df["adjclose"] / lag(df, "adjclose", 1) - 1
+    f = ff3.copy()
+    f.index = f.index.to_period("M")
+    out = pd.Series(np.nan, index=df.index)
+    for _, idx in df.groupby("cik").groups.items():
+        g = df.loc[idx]
+        rr = pd.Series(r.loc[idx].to_numpy(), index=g["p"].to_numpy())
+        if rr.notna().sum() < 24:
+            continue
+        j = pd.concat([rr.rename("r"), f], axis=1, join="inner")
+        y = (j["r"] - j["RF"]).to_numpy()
+        X = np.column_stack([np.ones(len(j)), j[["Mkt-RF", "SMB", "HML"]].to_numpy()])
+        pos = {p: i for i, p in enumerate(j.index)}
+        for row, p in zip(idx, g["p"]):
+            ks = [pos.get(p - k) for k in range(2, 37)]
+            ks = [k for k in ks if k is not None and not np.isnan(y[k])]
+            if len(ks) < 24:
+                continue
+            b, *_ = np.linalg.lstsq(X[ks], y[ks], rcond=None)
+            form = [pos.get(p - k) for k in range(2, 13)]
+            form = [k for k in form if k is not None and not np.isnan(y[k])]
+            if len(form) < 9:
+                continue
+            e = y[form] - X[form] @ b
+            sd = e.std(ddof=1)
+            if sd > 0:
+                out[row] = e.mean() / sd
+    return out
+
+
+def insider_features(df: pd.DataFrame, trades: pd.DataFrame) -> pd.DataFrame:
+    """S7 (added 2026-10-14, before running): officer and director open-market trades filed in the last 6
+    months (filing month t-5..t). S7a: (distinct buyers - distinct sellers) / (buyers + sellers), unscored when
+    nobody traded. S7b: purchase value / market cap, 0 when there were no purchases."""
+    t = trades.copy()
+    t["p"] = pd.to_datetime(t["filed"]).dt.to_period("M")
+    t["value"] = (t["shares"] * t["price"]).where(t["code"] == "P", 0.0)
+    win = pd.concat([t.assign(p=t["p"] + k) for k in range(6)])
+    who = win.drop_duplicates(["issuer_cik", "owner_cik", "code", "p"])
+    cnt = who.groupby(["issuer_cik", "p", "code"]).size().unstack(fill_value=0)
+    val = win.groupby(["issuer_cik", "p"])["value"].sum()
+    agg = pd.DataFrame({"buyers": cnt.get("P", 0), "sellers": cnt.get("S", 0)}).join(val.rename("buy_value"), how="outer")
+    agg = agg.fillna(0).reset_index().rename(columns={"issuer_cik": "cik"})
+    m = df[["cik", "p"]].merge(agg, on=["cik", "p"], how="left")
+    b, s_ = m["buyers"].fillna(0), m["sellers"].fillna(0)
+    out = pd.DataFrame(index=df.index)
+    out["s7a_net_buyers"] = ((b - s_) / (b + s_)).where(b + s_ > 0).to_numpy()
+    out["s7b_buy_value"] = (m["buy_value"].fillna(0) / df["mcap"].to_numpy()).to_numpy()
+    return out
+
+
 def _neutral(col: str, exclude_fin: bool):
     def f(g: pd.DataFrame) -> pd.Series:
         x = g[col].where(~g["financial"]) if exclude_fin else g[col]
@@ -127,9 +184,12 @@ TRIALS = {
     "S5b": ("S5", "Low asset growth, year on year", _raw("s5b_low_asset_growth")),
     "S6a": ("S6", "12-1 month price momentum", _raw("s6a_mom_12_1")),
     "S6b": ("S6", "Close / 12-month high", _raw("s6b_52w_high")),
+    # Added 2026-10-14 after the first 11 ran; pre-registered in prereg/stage2.md (addendum) before running.
+    "S6c": ("S6", "FF3 residual momentum, 12-2 months", _raw("s6c_resid_mom")),
+    "S7a": ("S7", "Insider net buyers ratio, 6 months", _raw("s7a_net_buyers")),
+    "S7b": ("S7", "Insider purchase value / market cap, 6 months", _raw("s7b_buy_value")),
 }
-NOT_RUN = {"S6c": "residual momentum: needs factor betas per stock, built in a later trial",
-           "S7": "insider purchases: Form 4 data not yet built", "S8": "estimate revisions: paid data only",
+NOT_RUN = {"S8": "estimate revisions: paid data only",
            "S9": "expectations gap: needs the Stage 3 expectations engine"}
 
 
@@ -272,6 +332,10 @@ def main(out: Path) -> None:
     df = xsection.load()
     comp = pd.read_csv(xsection.DATA / "sec_companies.csv.gz", dtype={"cik": int, "sic": str})
     df = prepare(df, comp)
+    ff3 = data_sources.french("F-F_Research_Data_Factors")
+    df["s6c_resid_mom"] = residual_momentum(df, ff3)
+    trades = pd.read_csv(xsection.DATA / "insider_trades.csv.gz")
+    df = df.join(insider_features(df, trades))
     f5 = data_sources.french("F-F_Research_Data_5_Factors_2x3")
     mom = data_sources.french("F-F_Momentum_Factor")
     factors = pd.concat([f5.drop(columns=["RF"]), mom], axis=1, sort=True)
