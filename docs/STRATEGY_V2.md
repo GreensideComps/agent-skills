@@ -305,6 +305,14 @@ survivor bias stated on every result, until the owner decides on survivorship-fr
 **Acceptance:** a promotion table where each signal is E3-pass, fail, or inconclusive, with the evidence
 committed. **Zero passes is an acceptable, reportable outcome.**
 
+**Interim result (2026-10-14; `equity/reports/research/stage2_signals.md`, pre-registration
+`research/prereg/stage2.md`):** 0 of 11 trials pass in large caps from 2015-01 to 2022-11. Nine fail; gross
+profitability (S2a) and revenue acceleration (S3b) are inconclusive (IC t 1.18 and 1.37). The largest
+large-cap IC is 0.013, and no top quintile beats the universe after costs except low net issuance (+0.7% a year,
+DSR 0.15). Some small caps have IC t > 2 (FCF yield, gross profitability, low issuance), but that band is not
+the deciding one and is the most exposed to survivor bias. Still to run before the §2.5 kill rule is applied:
+S6c residual momentum, S7 insider buying and S9 expectations gap.
+
 ### Stage 3: expectations engine (replaces val-1.0)
 
 - Base-rate tables (growth persistence by size and starting growth) built from the SEC history.
