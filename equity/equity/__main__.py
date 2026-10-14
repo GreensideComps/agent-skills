@@ -13,7 +13,7 @@ import sys
 from datetime import date
 from pathlib import Path
 
-from . import index, pipeline
+from . import index, pipeline, research
 from .ingest import ingest_company, last_snapshot, latest_securities, resolve
 from .jobs import JobSkipped, job, job_health
 from .sec import SecClient, SecError
@@ -151,7 +151,7 @@ def cmd_status(store: Store, a) -> int:
     snap = last_snapshot(store, s["company_id"])
     gates = {"data_confidence": snap["confidence"] if snap else None,
              "industry_supported": snap.get("screen_supported") if snap else None,
-             "bear_case_recorded": False}  # bear-case records arrive with the bear-case agent (milestone 3)
+             "bear_case_recorded": research.current_bear_case(store, s["company_id"], snap) is not None}
     try:
         t = pipeline.transition(store, s["company_id"], a.to, a.reason, a.evidence, a.actor, gates)
     except pipeline.TransitionError as e:
@@ -284,10 +284,14 @@ def cmd_prices(store: Store, a) -> int:
 
 def cmd_screen(store: Store, a) -> int:
     from . import screener  # noqa: PLC0415
+    from . import alerts, valuation  # noqa: PLC0415
     with job(store, "screen", {}, redact=_secrets()) as j:
         rec = screener.run(store)
-        j["outputs"] = {"rid": rec["rid"], "companies": rec["companies"], "eligible": rec["eligible"]}
-    md = screener.report(rec, a.top)
+        vals = valuation.run(store, rec)
+        al = alerts.run(store, rec)
+        j["outputs"] = {"rid": rec["rid"], "companies": rec["companies"], "eligible": rec["eligible"],
+                        "valuations": len(vals), "alerts": len(al["alerts"]), "alert_baseline": al["baseline"]}
+    md = screener.report(rec, a.top, {v["company_id"]: v for v in vals}, al)
     out = Path(__file__).resolve().parent.parent / "reports" / "screens" / f"{rec['as_of']}.md"
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(md)
@@ -315,6 +319,63 @@ def cmd_explain(store: Store, a) -> int:
     for g in r["gates"]:
         print(f"  gate {g['gate']:<20} {g['result']:<7} {g['detail']}")
     print("  valuation", json.dumps(r["valuation"]))
+    return 0
+
+
+def cmd_valuate(store: Store, a) -> int:
+    from . import valuation  # noqa: PLC0415
+    s = resolve(store, symbol=a.symbol)
+    v = [x for x in store.valuations.read() if s and x["company_id"] == s["company_id"]]
+    if not v:
+        print("no valuation (run `screen`; companies without a market value are not valued)")
+        return 1
+    v = max(v, key=lambda x: x["ts_utc"])
+    print(f"{v['entity_name']} ({valuation.METHOD_VERSION}) price {v['price']} market cap {v['market_cap']:,.0f} "
+          f"EV {v['enterprise_value']:,.0f}")
+    print("  multiples:", {k: (None if x is None else round(x, 3)) for k, x in v["multiples"].items()})
+    print(f"  base FCF {v.get('base_fcf')}, history growth {v.get('history_growth')}")
+    for name, sc in (v.get("scenarios") or {}).items():
+        print(f"  {name:<5} growth {sc['growth_5y']:+.1%}/yr -> {sc['value_per_share']:,.2f}/share ({sc['upside']:+.0%})")
+    ig = v.get("implied_growth_5y")
+    print("  price implies", "n/a" if ig is None else f"{ig:+.1%}/yr FCF growth for 5 years", "|", "; ".join(v["notes"]))
+    print("  assumptions:", json.dumps(v["assumptions"]))
+    return 0
+
+
+def _pairs(items: list[str], evidence: list[str], watch: list[str] | None = None) -> list[dict]:
+    if len(evidence) != len(items) or (watch is not None and len(watch) != len(items)):
+        raise research.ResearchError("give one --evidence (and one --watch for objections) per point, in order")
+    return [{("objection" if watch is not None else "claim"): t, "evidence": [e for e in ev.split("|") if e],
+             **({"watch": watch[i]} if watch is not None else {})} for i, (t, ev) in enumerate(zip(items, evidence))]
+
+
+def cmd_thesis(store: Store, a) -> int:
+    s = resolve(store, symbol=a.symbol)
+    try:
+        r = research.add_thesis(store, s["company_id"], a.actor, a.summary, _pairs(a.point, a.evidence))
+    except research.ResearchError as e:
+        print("REFUSED:", e)
+        return 2
+    print("recorded", r["rid"])
+    return 0
+
+
+def cmd_bearcase(store: Store, a) -> int:
+    s = resolve(store, symbol=a.symbol)
+    try:
+        r = research.add_bear_case(store, s["company_id"], a.actor, _pairs(a.objection, a.evidence, a.watch or []))
+    except research.ResearchError as e:
+        print("REFUSED:", e)
+        return 2
+    print("recorded", r["rid"])
+    return 0
+
+
+def cmd_alerts(store: Store, a) -> int:
+    al = sorted(store.alerts.read(), key=lambda x: x["ts_utc"])[-a.limit:]
+    for x in al:
+        print(f"{x['as_of']} {x['kind']:<15} {x.get('entity_name') or x['company_id']}: {x['text']}")
+    print(f"{len(al)} alerts")
     return 0
 
 
@@ -357,6 +418,16 @@ def main(argv=None) -> int:
     s = sub.add_parser("prices"); s.add_argument("--symbol", action="append")  # noqa: E702
     s = sub.add_parser("screen"); s.add_argument("--top", type=int, default=25)  # noqa: E702
     s = sub.add_parser("explain"); s.add_argument("symbol")  # noqa: E702
+    s = sub.add_parser("valuate"); s.add_argument("symbol")  # noqa: E702
+    s = sub.add_parser("alerts"); s.add_argument("--limit", type=int, default=50)  # noqa: E702
+    s = sub.add_parser("thesis", help="record a thesis: --summary, then --point/--evidence pairs ('|' separates sources)")
+    s.add_argument("symbol"); s.add_argument("--summary", required=True)  # noqa: E702
+    s.add_argument("--point", action="append", required=True); s.add_argument("--evidence", action="append", required=True)  # noqa: E702
+    s.add_argument("--actor", required=True)
+    s = sub.add_parser("bearcase", help="record a bear case: --objection/--evidence/--watch triples")
+    s.add_argument("symbol"); s.add_argument("--objection", action="append", required=True)  # noqa: E702
+    s.add_argument("--evidence", action="append", required=True); s.add_argument("--watch", action="append", required=True)  # noqa: E702
+    s.add_argument("--actor", required=True)
     s = sub.add_parser("coverage")
     s.add_argument("--method", help="only snapshots of this method version, e.g. fund-2.0")
     s.add_argument("--json", help="also write the survey to this file")
@@ -366,6 +437,7 @@ def main(argv=None) -> int:
     handler = {"sync-universe": cmd_sync_universe, "ingest": cmd_ingest, "show": cmd_show,
                "discover": cmd_discover, "status": cmd_status, "search": cmd_search, "health": cmd_health,
                "coverage": cmd_coverage, "prices": cmd_prices, "screen": cmd_screen, "explain": cmd_explain,
+               "valuate": cmd_valuate, "thesis": cmd_thesis, "bearcase": cmd_bearcase, "alerts": cmd_alerts,
                "crosscheck": cmd_crosscheck}
     return handler[a.cmd](store, a)
 

@@ -219,7 +219,7 @@ def explain(store: Store, company_id: str, cfg: dict | None = None) -> tuple[dic
     return r, full
 
 
-def report(rec: dict, top: int = 25) -> str:
+def report(rec: dict, top: int = 25, valuations: dict | None = None, alerts: dict | None = None) -> str:
     """Markdown summary of a run: ranked list, then why the others were not ranked."""
     from collections import Counter  # noqa: PLC0415
     res = rec["results"]
@@ -228,9 +228,12 @@ def report(rec: dict, top: int = 25) -> str:
              f"{rec['companies']} companies scored, **{rec['eligible']} passed every gate**. Weights: "
              + ", ".join(f"{k} {v}" for k, v in rec["weights"].items())
              + ". Scores are 0-100 on absolute scales (`config/screener.json`). This is a screen for research, "
-             "not a recommendation: a ranked company still needs the bear case and valuation work of M4.", "",
-             "| # | Company | Total | FCF/sh | Quality | Growth | Valuation | Risk | Data | FCF yield |",
-             "|---|---|---|---|---|---|---|---|---|---|"]
+             "not a recommendation: a ranked company still needs a recorded, independent bear case before it can "
+             "become a candidate. Valuation columns use mechanical DCF assumptions, not price targets.", "",
+             "| # | Company | Total | FCF/sh | Quality | Growth | Valuation | Risk | Data | FCF yield | Price implies "
+             "(5y FCF growth) | Base-case value vs price |",
+             "|---|---|---|---|---|---|---|---|---|---|---|---|"]
+    valuations = valuations or {}
 
     def f(x):
         return "" if x is None else f"{x:.0f}"
@@ -238,7 +241,8 @@ def report(rec: dict, top: int = 25) -> str:
         sc, v = r["scores"], r["valuation"]
         lines.append(f"| {r['rank']} | {r['entity_name']} | **{r['total']:.0f}** | {f(sc['fcf_per_share'])} | "
                      f"{f(sc['quality'])} | {f(sc['growth'])} | {f(sc['valuation'])} | {f(sc['risk_fit'])} | "
-                     f"{r['data_confidence']} | {v['fcf_yield']:.1%} |")
+                     f"{r['data_confidence']} | {v['fcf_yield']:.1%} | {_implied(valuations.get(r['company_id']))} | "
+                     f"{_upside(valuations.get(r['company_id']))} |")
     fails = Counter(g for r in res if not r["eligible"] for g in r["failed_gates"] + r["unknown_critical_gates"])
     lines += ["", "## Why the others were not ranked", "",
               "A company can fail several gates; counts are per gate.", "",
@@ -252,4 +256,23 @@ def report(rec: dict, top: int = 25) -> str:
         for r in near:
             g = next(x for x in r["gates"] if x["result"] == "fail")
             lines.append(f"| {r['entity_name']} | {r['total']:.0f} | {g['gate']} | {g['detail']} |")
+    if alerts is not None:
+        lines += ["", "## Alerts (changes since the previous run)", ""]
+        if alerts.get("baseline"):
+            lines.append("First run of this method: baseline recorded, nothing to compare with.")
+        elif not alerts["alerts"]:
+            lines.append("No changes.")
+        lines += [f"- **{a['kind']}** {a.get('entity_name')}: {a['text']}" for a in alerts.get("alerts", [])]
+    lines += ["", "Valuation method and assumptions: `equity/equity/valuation.py` (stored with every record in "
+              "`valuations.jsonl`). Base-case values are mechanical, not price targets."]
     return "\n".join(lines) + "\n"
+
+
+def _implied(v: dict | None) -> str:
+    ig = (v or {}).get("implied_growth_5y")
+    return "" if ig is None else f"{ig:+.0%}/yr"
+
+
+def _upside(v: dict | None) -> str:
+    b = ((v or {}).get("scenarios") or {}).get("base")
+    return "" if not b or b.get("upside") is None else f"{b['upside']:+.0%}"
