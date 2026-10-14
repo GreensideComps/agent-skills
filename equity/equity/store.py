@@ -96,3 +96,6 @@ class Store:
         self.methods = Ledger(self.root / "methods.jsonl")            # metric formulas per method version
         self.prices = Ledger(self.root / "prices.jsonl")              # daily closes used for valuation
         self.screens = Ledger(self.root / "screens.jsonl")            # screener runs (scores, gates, ranks)
+        self.valuations = Ledger(self.root / "valuations.jsonl")      # DCF scenarios, reverse DCF, multiples
+        self.research = Ledger(self.root / "research.jsonl")          # theses and bear cases
+        self.alerts = Ledger(self.root / "alerts.jsonl")              # changes between screen runs
