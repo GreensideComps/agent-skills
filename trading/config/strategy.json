@@ -1,9 +1,19 @@
 {
-  "name": "nasdaq3x_trend_sma100_v1",
+  "name": "discretionary_intraday_v1",
+  "mode": "discretionary",
+  "decision_limits": {
+    "universe": ["LQQ3l_EQ", "EQQQl_EQ", "VUAGl_EQ", "SGLNl_EQ", "3LGO1l_EQ"],
+    "max_decisions_per_day": 8,
+    "daily_loss_stop": 0.10,
+    "note": "Owner override 2026-10-14: Claude trades the whole demo account intraday, 3x ETPs allowed. Long-only, no borrowing, no inverse products. The trend rule (signal) is kept only as the paper shadow B_live_rules_at_close."
+  },
   "targets": {
     "LQQ3l_EQ": 1.0
   },
   "yahoo_symbols": {
+    "EQQQl_EQ": "EQQQ.L",
+    "SGLNl_EQ": "SGLN.L",
+    "3LGO1l_EQ": "3LGO.L",
     "VWRPl_EQ": "VWRP.L",
     "IWMOl_EQ": "IWMO.L",
     "VUAGl_EQ": "VUAG.L",

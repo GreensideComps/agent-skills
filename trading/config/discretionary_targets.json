@@ -1,0 +1,5 @@
+{
+ "targets": {"LQQ3l_EQ": 1.0},
+ "reason": "Starting point: keep the 3x Nasdaq-100 position bought by the trend rule at 08:21 today (QQQ 3.2% above its 100-day average).",
+ "set_utc": "2026-10-14T08:00:00+00:00"
+}
