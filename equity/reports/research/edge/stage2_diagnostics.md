@@ -2,7 +2,7 @@
 
 Decisions from 2015-01; outcomes end by 2022-12 at every horizon (last decision: 1 month 2022-11, 3 months 2022-09, 6 months 2022-06, 12 months 2021-12). The dataset was cut at 2022-12 before any score was built. Information only: Stage 2 verdicts are unchanged. Survivor bias as in the Stage 1 report.
 
-Programme trial count after registering these looks: 66 (`research/edge/trials.jsonl`).
+Programme trial count after registering these looks: 66 (`research/edge/trials.jsonl`); 96 after the later quality and point-in-time sensitivity looks.
 
 ## Reproduction of Stage 2 (large caps, 1 month)
 

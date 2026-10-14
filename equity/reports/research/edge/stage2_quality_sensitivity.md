@@ -1,6 +1,6 @@
 # Stage 2 with and without the data-quality exclusion (edge-discovery Phase A verification)
 
-Large caps, 1-month IC, decisions 2015-01 to 2022-11 (outcomes to 2022-12), Stage 2's scoring. The exclusion drops company-months with an adjusted close <= 0 or a share count over 10x or under 1/10 of the company's median, the median taken on data up to 2022-12 only. Registered before running as `QX-<trial>` diagnostics; the programme's trial count is now 81.
+Large caps, 1-month IC, decisions 2015-01 to 2022-11 (outcomes to 2022-12), Stage 2's scoring. The exclusion drops company-months with an adjusted close <= 0 or a share count over 10x or under 1/10 of the company's median, the median taken on data up to 2022-12 only. Registered before running as `QX-<trial>` diagnostics; the programme's trial count was then 81 (96 after the point-in-time sensitivity).
 
 | Trial | IC (all) | t (all) | IC (excl.) | t (excl.) | Months | Large rows excluded |
 |---|---:|---:|---:|---:|---:|---:|

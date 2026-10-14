@@ -5,8 +5,8 @@ Evidence is cited as files, commits or command output from this session. Where s
 checked, it says so.
 
 **Update, same evening:** the owner's decisions and the verification review they asked for are in §10. That
-section supersedes §7-§9 and the counts it corrects: the trial count is now 81, and 253 large-cap months are
-flagged as share-count outliers.
+section supersedes §7-§9 and the counts it corrects. §11 records the owner's PR #18 review: the trial count is
+now 96 (101 registry entries), and 253 large-cap months are flagged as share-count outliers.
 
 **Bottom line.** The repository has a sound core for honest testing: point-in-time SEC data, a cross-sectional
 harness, pre-registered Stage 2 tests that reproduce exactly, Newey-West statistics, factor alpha and a deflated
@@ -178,7 +178,7 @@ Phase A.
 | Power / minimum detectable effect | M | V | not reported | MDE and power in `ic_stats` | `test_ic_stats_mde_and_power`; diagnostics report |
 | Factor-adjusted alpha | U | V | no test | planted-alpha test | `test_stage2_factor_alpha_recovers_planted_alpha_and_betas` |
 | Deflated Sharpe | U | V | monotonicity test only | hand-computed check | `test_stage2_deflated_sharpe_matches_a_hand_computation` |
-| Trial count spanning all looks | P | V | Stage 2 counted its own 15 only | `edge_registry.n_trials` (81 after §10) | registry tests |
+| Trial count spanning all looks | P | V | Stage 2 counted its own 15 only | `edge_registry.n_trials` (96 after §11) | registry tests |
 | Written statistical specification | P | V | scattered across prereg docs | `docs/edge/EVALUATION_SPEC.md` §3, §5 | reviewed by the owner 2026-10-14 |
 
 ### 4.3 Data
@@ -441,3 +441,90 @@ New in this review:
 ### 10.7 Next action
 
 The owner reviews and merges PR #18. Phase B then builds the backtester to `docs/edge/PHASE_B_PLAN.md`.
+
+## 11. Owner's PR #18 review: targeted fixes (2026-10-14, evening)
+
+The owner asked for seven targeted fixes before merge. Each is below with its evidence. Nothing in this section ran
+or inspected a holdout outcome on purpose; one accidental exposure is disclosed in §11.8.
+
+### 11.1 Non-positive prices
+
+- **Source:** 344 price rows are ≤ 0; 263 company-months to 2022-12, 4 of them in the large band (NFE, 2022:
+  Yahoo's adjusted close for NFE is negative from 2019-01 to 2022-12, an adjustment error).
+- **Defect found:** `forward_return` used only the two endpoint prices, so an h-month return could pass through an
+  invalid or missing month. 302 one-month returns to 2022-12 touch a price ≤ 0; 4 cross the sign change.
+- **Fix:** `forward_return` now compounds the h one-month returns and treats a price ≤ 0 as missing. 0 programme
+  returns touch an invalid price; 0 invalid company-months are eligible (`bad_price` sets `quality_ok` False).
+  Inputs to the published diagnostics change by 4 large-cap 1-month and 2 large-cap 3-month values; the
+  diagnostics were not rerun (a rerun would be a new trial).
+- **Integrity report** now separates *source* checks (defects in the files; "prices: positive prices" stays FAIL
+  there) from *programme* checks (can the defect still reach a result; all PASS). It exits 1 only on a programme
+  FAIL.
+- **Unchanged:** Stage 2, `xsection.load` and the signal log keep their behaviour.
+
+### 11.2 Point-in-time share-count exclusion
+
+Registered first as 15 `QX-PIT-*` trials. Results in §1 of `EVALUATION_SPEC.md` and
+`equity/reports/research/edge/stage2_pit_sensitivity.md`: 20 rows (6 companies) excluded only by the approved rule,
+115 rows (12 companies) only by the point-in-time rule; IC changes ≤ 0.0006, t changes ≤ 0.06. **Recommendation:
+keep the approved rule** (its look-ahead touches 20 rows with no measurable effect, while the point-in-time rule
+wrongly drops genuine post-merger months); rerun under the point-in-time rule for any E2 candidate. The approved
+rule is not changed.
+
+### 11.3 Execution timing
+
+Trading at the decision close is not achievable (the signal needs that close; some filings dated t are accepted
+after it). Default: next trading day's close; robustness: next month-end close. Encoded in `edge_rules`
+(`execution_time`, `exploration_execution`, `decision_frame`, `assert_executable`) and specified with the
+per-rebalance alignment of prices, returns and turnover in `PHASE_B_PLAN.md` §2.1-2.2. The default needs a free
+daily first-trading-day price build (Phase B step B1).
+
+### 11.4 Delistings and missing prices
+
+`edge_rules.holding_return`: close at the last valid price, then −30% (default) or −100% (stress); 0% only as a
+labelled optimistic bound; a positive value is refused. Ticker changes and acquisitions cannot be told apart on
+free data and get the same conservative treatment. **This does not remove survivorship bias:** companies delisted
+before 2026 have no prices at all and are never held. `PHASE_B_PLAN.md` §2.4.
+
+### 11.5 Benchmark
+
+Three segments, labelled in every result: actual VWRP from 2019-09; VWRL-based 2012-06 to 2019-08; Ken French
+developed proxy before 2012-06. Exploration checks: VWRP vs VWRL tracking error 0.37%/yr (40 months); VWRL vs proxy
+2.82%/yr, mean difference −0.93%/yr (127 months). FX for these checks came from Yahoo GBPUSD because FRED was
+unreachable; `dataset.build()` fails without FRED, to be fixed in B1. `PHASE_B_PLAN.md` §2.5.
+
+### 11.6 Multiple testing and the deflated Sharpe
+
+`edge_registry.deflated_sharpe` now takes a `stat` and pools the Sharpe variance only across results of that
+statistic; N is every counted trial (96). Reconciliation, tested against the committed registry: 96 counted trials,
+15 with a Sharpe (Stage 2, `xsection_q5_net_vs_universe`), 0 portfolio results; the 75 diagnostics are IC-only and
+count in N only. A new kind, `exposure`, records an accidental look without counting it.
+
+### 11.7 Reconciled counts
+
+| Item | Value | Where |
+|---|---:|---|
+| Registry entries | 101 | `research/edge/trials.jsonl` (hash chain valid) |
+| Counted trials (N for the DSR) | 96 | 15 Stage 2 + 6 M8 + 45 diagnostics + 15 QX + 15 QX-PIT |
+| Holdout exposures recorded (not counted) | 5 | 4 inherited earlier looks plus `REVIEW-NFE-PRICES-2023` |
+| Trials marked as having touched the holdout | 11 | 6 M8 + 5 exposures |
+| Holdout (confirmation) runs | 0 | registry |
+| Large-cap share-count outliers | 253 of 43,220 | integrity report |
+
+DECISIONS.md, SPLIT_POLICY.md, EVALUATION_SPEC.md and the reports now carry these numbers; earlier counts (66, 81)
+are marked as superseded where they remain as history.
+
+### 11.8 Disclosure: an accidental holdout look
+
+While diagnosing NFE's negative prices I printed its adjusted prices for 2023-01 to 2023-03, which are holdout
+months. One company, three months, no return or signal computed, and no result depended on it. It is recorded in
+the registry as `REVIEW-NFE-PRICES-2023` (kind `exposure`), and the example it produced was removed from code and
+reports.
+
+### 11.9 Tests
+
+New `research/tests/test_edge_rules.py`, plus additions to `test_edge.py`: invalid prices cannot enter a return,
+an eligible row or a holding; timing (next-day, next-month, weekend month-ends, decision close refused, exploration
+boundary); a perturbation test proving decision inputs ignore later data; filing look-ahead refusal; holding
+returns at −30%, −100% and an invalid mid-holding price; positive missing returns refused; point-in-time flags;
+DSR pooling, floor, equality with `stage2.deflated_sharpe`, and reconciliation with the committed registry.

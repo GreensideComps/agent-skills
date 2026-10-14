@@ -110,4 +110,4 @@ The options as they were put to the owner are kept below for the record.
 3. **What a holdout pass earns,** given §3: full E3 (demo allocation), or "conditional E3" that needs, for example,
    12 months of consistent prospective evidence before any demo capital.
 4. **Whether Stage 2's 15 trials and the M8 looks count** in the programme's deflated Sharpe. Default here: they
-   count (21 trials before Phase A's diagnostics, 66 after), which is the stricter choice.
+   count (21 trials before Phase A's diagnostics; 96 after the PR #18 review), which is the stricter choice.

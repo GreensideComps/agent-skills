@@ -57,9 +57,12 @@ def manifest(data: Path = xsection.DATA) -> dict:
     return out
 
 
-def _r(check: str, ok: bool | None, detail: str, warn: bool = False) -> dict:
+def _r(check: str, ok: bool | None, detail: str, warn: bool = False, scope: str = "source") -> dict:
+    """scope "source": a property of the data files (a FAIL is a defect in the data, which the programme may
+    already neutralise). scope "programme": whether a defect can still reach a programme result (a FAIL here
+    means results cannot be trusted)."""
     status = "PASS" if ok else ("WARN" if warn or ok is None else "FAIL")
-    return {"check": check, "status": status, "detail": detail}
+    return {"check": check, "status": status, "detail": detail, "scope": scope}
 
 
 def check_metrics(m: pd.DataFrame) -> list[dict]:
@@ -101,17 +104,18 @@ def check_universe(df: pd.DataFrame) -> list[dict]:
     so, bp = int(fl["share_outlier"].sum()), int(fl["bad_price"].sum())
     nl = int(leak[cut["band"].notna()].sum())
     return [
-        _r("universe: quality flags computed without 2023-26 data", True,
-           f"flags use the share-count median of 2022-12 and earlier only. Computed on the whole dataset, {nl:,} "
+        _r("programme: quality flags computed without 2023-26 data", True, scope="programme", detail=
+           (f"flags use the share-count median of 2022-12 and earlier only. Computed on the whole dataset, {nl:,} "
            "banded company-months up to 2022-12 would have been flagged differently; the Phase A draft did that "
-           "in its report, fixed on 2026-10-14 (exploration never used the exclusion before the fix)."),
+           "in its report, fixed on 2026-10-14 (exploration never used the exclusion before the fix).")),
         _r("universe: share-count outliers in the large band (2015-01..2022-11)", so == 0,
            f"{so:,} of {len(big):,} large-cap company-months ({big.loc[fl['share_outlier'], 'cik'].nunique()} companies) "
            "have a share count over 10x or under 1/10 of the company's median, e.g. 1.9e14 shares. Most are XBRL "
            "scaling errors that inflate market cap and put a small company in the large band.", warn=True),
         _r("universe: negative adjusted prices in the large band (2015-01..2022-11)", bp == 0,
-           f"{bp:,} large-cap company-months have an adjusted close <= 0 (a Yahoo adjustment error), so their "
-           "returns are wrong"),
+           f"{bp:,} large-cap company-months have an adjusted close <= 0 (a Yahoo adjustment error: NFE's adjusted "
+           "close is negative from 2019-01 to 2022-12). Stage 2 included them unchanged. Programme exposure: see "
+           "the programme checks."),
     ]
 
 
@@ -173,22 +177,58 @@ def check_holdout_rows(m: pd.DataFrame, p: pd.DataFrame) -> list[dict]:
                f"{a:,} metric rows and {b:,} price rows in 2023-01..2026-09")]
 
 
+def check_programme(df: pd.DataFrame, p: pd.DataFrame) -> list[dict]:
+    """Can a non-positive price still reach a programme result? On exploration data only (to 2022-12)."""
+    usd = p[(p["currency"] == "USD") & (pd.to_datetime(p["month"]) <= edge_split.EXPLORATION_LAST_OUTCOME)]
+    usd = usd.sort_values(["cik", "month"]).drop_duplicates(["cik", "month"], keep="last").reset_index(drop=True)
+    new = edge_split.forward_return(usd, 1)
+    nxt = usd.groupby("cik")["adjclose"].shift(-1)
+    gap = (pd.to_datetime(usd.groupby("cik")["month"].shift(-1)).dt.to_period("M")
+           - pd.to_datetime(usd["month"]).dt.to_period("M"))
+    consecutive = gap.map(lambda x: getattr(x, "n", None) == 1)
+    invalid_end = consecutive & ((usd["adjclose"] <= 0) | (nxt <= 0))
+    leaked = int((invalid_end & new.notna()).sum())
+    cross = invalid_end & ((usd["adjclose"] > 0) != (nxt > 0))
+    names = ", ".join(sorted(usd.loc[invalid_end, "ticker"].unique()))
+    out = [_r("programme: no return starts or ends on a price <= 0", leaked == 0, scope="programme", detail=(
+        f"{int(invalid_end.sum()):,} month-to-month returns to 2022-12 touch a price <= 0 ({names}); "
+        f"{int(cross.sum())} of them cross the sign change and would be nonsense (a ratio of a positive and a negative price). "
+        f"`edge_split.forward_return` treats such prices as missing: {leaked} reach a programme return."))]
+    cut = df[df["month"] <= edge_split.EXPLORATION_LAST_OUTCOME]
+    q = edge_split.quality_flags(cut)
+    bad = cut["adjclose"].le(0) | cut["close_raw"].le(0)
+    elig = int((bad & ~q.any(axis=1)).sum())
+    lb = int((bad & cut["band"].eq("large")).sum())
+    out.append(_r("programme: company-months with a price <= 0 are never eligible", elig == 0, scope="programme",
+                  detail=f"{int(bad.sum()):,} such company-months to 2022-12 ({lb} in the large band) are flagged "
+                         f"`bad_price`, so `quality_ok` is False; {elig} would be eligible. A holding whose next "
+                         "price is invalid is treated as a missing price (`edge_rules.holding_return`)."))
+    return out
+
+
 def run(data: Path = xsection.DATA) -> dict:
     m = pd.read_csv(data / "monthly_metrics.csv.gz", usecols=["cik", "month", "last_filed", "ttm_end", "shares_out"])
     p = pd.read_csv(data / "prices_monthly.csv.gz")
     c = pd.read_csv(data / "sec_companies.csv.gz", dtype={"sic": str})
     t = pd.read_csv(data / "insider_trades.csv.gz", usecols=["filed"])
     fetched = datetime.fromtimestamp((data / "prices_monthly.csv.gz").stat().st_mtime, timezone.utc).date()
-    checks = (check_metrics(m) + check_prices(p, fetched) + check_universe(xsection.load(data)) + check_companies(c)
-              + check_insiders(t) + check_holdout_rows(m, p))
+    df = xsection.load(data)
+    checks = (check_metrics(m) + check_prices(p, fetched) + check_universe(df) + check_companies(c)
+              + check_insiders(t) + check_holdout_rows(m, p) + check_programme(df, p))
     return {"manifest": manifest(data), "checks": checks}
 
 
 def report(res: dict) -> str:
     L = ["# Research dataset integrity (edge-discovery Phase A)", "",
          "Read-only checks. FAIL = a defect to fix before trusting results; WARN = a known limitation results must "
-         "state. Returns are inspected only up to 2022-12.", "", "| Check | Status | Detail |", "|---|---|---|"]
-    L += [f"| {c['check']} | **{c['status']}** | {c['detail']} |" for c in res["checks"]]
+         "state. Returns are inspected only up to 2022-12.", "",
+         "Two kinds of check. **Source** checks describe the data files: a FAIL there is a defect in the data, which "
+         "the programme may already neutralise. **Programme** checks ask whether a defect can still reach a "
+         "programme result: a FAIL there means programme results cannot be trusted. The script exits 1 only on a "
+         "programme FAIL.", "", "## Programme exposure", "", "| Check | Status | Detail |", "|---|---|---|"]
+    L += [f"| {c['check']} | **{c['status']}** | {c['detail']} |" for c in res["checks"] if c.get("scope") == "programme"]
+    L += ["", "## Source data", "", "| Check | Status | Detail |", "|---|---|---|"]
+    L += [f"| {c['check']} | **{c['status']}** | {c['detail']} |" for c in res["checks"] if c.get("scope") != "programme"]
     L += ["", "## Manifest", "", "Results are reproducible only against these exact files; the monthly signal log "
           "rebuilds them.", "", "| File | Rows | Months | Modified (UTC) | SHA-256 (first 16) |", "|---|---:|---|---|---|"]
     for k, v in res["manifest"].items():
@@ -205,4 +245,4 @@ if __name__ == "__main__":
     out.write_text(report(res))
     out.with_suffix(".json").write_text(json.dumps(res, indent=1, default=str))
     print(out.read_text())
-    sys.exit(1 if any(c["status"] == "FAIL" for c in res["checks"]) else 0)
+    sys.exit(1 if any(c["status"] == "FAIL" and c.get("scope") == "programme" for c in res["checks"]) else 0)

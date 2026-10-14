@@ -8,7 +8,7 @@ The owner's decisions on the Phase A review, given in the project thread "Edge-d
 | D1 | **The split is approved provisionally.** Exploration covers outcomes to 2022-12; confirmation covers outcomes from 2023-01 to 2026-09, counted by the month an outcome is realised. | `edge_split` boundaries; `edge_split.OWNER_SPLIT_APPROVAL`, which `holdout_gate` requires; `SPLIT_POLICY.md` |
 | D2 | **There is one confirmation batch only.** | `edge_split.MAX_CONFIRMATION_BATCHES = 1` (`holdout_gate` refuses a second batch); `edge_registry.MAX_BATCHES = 1` (`validate` rejects a second `batch` event) |
 | D3 | **A holdout pass earns conditional E3.** It allows no demo allocation until 12 months of prospective evidence support it. | `EVALUATION_SPEC.md` §6 |
-| D4 | **Inherited trials and relevant prior looks count** in the multiple-testing adjustment. | `edge_registry.n_trials` (81 after the verification review) |
+| D4 | **Inherited trials and relevant prior looks count** in the multiple-testing adjustment. | `edge_registry.n_trials` (96 after the PR #18 review) |
 | D5 | **The data-quality exclusions and band-specific cost assumptions stay,** provided they are validated as correctly implemented and consistently applied. | Exclusions: `edge_split.quality_flags`, computed on period-cut data (`with_quality`); the sensitivity is in `equity/reports/research/edge/stage2_quality_sensitivity.md`. Costs: validated by the Phase B backtester's tests. |
 | D6 | **The stale ETF research loop is paused** until it is reviewed and explicitly retargeted. | The scheduled task "T212 demo: research loop" is disabled. The scheduler showed it disabled at 2026-10-14 20:50:18 UTC. |
 

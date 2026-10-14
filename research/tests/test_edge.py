@@ -231,7 +231,9 @@ def test_committed_registry_is_valid():
     assert not edge_registry.holdout_runs(ev)  # Phase A ran no confirmation
     touched = {i for i, e in reg.items() if e["touched_holdout"]}
     assert {"M8-T1", "M8-AUDIT-fcf_per_share", "PROGRAMME-DOC-FACTOR-TABLE"} <= touched
-    assert all(e["phase"] != "exploration" for i, e in reg.items() if i in touched)
+    # no exploration trial touched the holdout; the one exploration-time exposure is recorded as such, uncounted
+    assert all(e["phase"] != "exploration" or (e["kind"] == "exposure" and not e["counts_for_dsr"])
+               for i, e in reg.items() if i in touched)
 
 
 # --- diagnostics maths ---------------------------------------------------------------------------------------

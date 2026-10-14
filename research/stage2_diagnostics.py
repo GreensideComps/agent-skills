@@ -346,6 +346,110 @@ def main_quality(out: Path) -> None:
     print(out.read_text())
 
 
+PIT_PREFIX = "QX-PIT-"
+
+
+def register_pit_sensitivity(path: Path = edge_registry.PATH) -> list[str]:
+    """Register the point-in-time share-count sensitivity (large caps, 1 month, one per Stage 2 trial)."""
+    have = edge_registry.registered(edge_registry.load(path))
+    new = []
+    for tid, (fam, desc, _) in stage2.TRIALS.items():
+        i = f"{PIT_PREFIX}{tid}"
+        if i in have:
+            continue
+        edge_registry.append({
+            "event": "register", "id": i, "kind": "diagnostic", "phase": "exploration", "hypothesis": fam,
+            "definition": f"Stage 2 {tid} ({desc}), IC vs 1-month return, large caps, excluding adjusted close <= 0 "
+                          "and share counts over 10x or under 1/10 of the company's point-in-time median "
+                          "(expanding median of its rows dated on or before the month: edge_split.share_outliers_pit)",
+            "universe": "US large band, Stage 2 filters plus the point-in-time quality rule", "horizon_months": 1,
+            "window": {"decisions": [START[:7], f"{edge_split.last_exploration_decision(1):%Y-%m}"],
+                       "outcomes": ["2015-02", "2022-12"]},
+            "counts_for_dsr": True, "touched_holdout": False, "source": "research/stage2_diagnostics.py --pit",
+            "note": "Owner review of PR #18, item 2: point-in-time vs exploration-period share-count median."}, path)
+        new.append(i)
+    return new
+
+
+def _large_ics(s_h: pd.DataFrame, mask: pd.Series, tid: str) -> dict:
+    ics = []
+    for mo, g in s_h[mask & s_h["band"].eq("large")].groupby("month"):
+        g = g[[tid, "ret_1m"]].dropna()
+        if len(g) >= 30:
+            ics.append((mo, g[tid].rank().corr(g["ret_1m"].rank())))
+    st = ic_stats(pd.Series(dict(ics)), 1)
+    return {k: st.get(k) for k in ("months", "mean_ic", "t_nw")}
+
+
+def pit_sensitivity(d: pd.DataFrame) -> dict:
+    """Approved rule (median over the exploration period) vs the point-in-time rule, large caps, 1 month."""
+    s_h = scored(d, 1)
+    period_ok = s_h["quality_ok"]
+    pit_ok = ~(s_h["bad_price"] | s_h["share_outlier_pit"])
+    big = s_h["band"].eq("large")
+    only_period = big & ~period_ok & pit_ok   # flagged only with the later-data median: look-ahead exclusions
+    only_pit = big & period_ok & ~pit_ok      # flagged only point in time: mostly the months after a level shift
+    comp = {}
+    for name, m in (("excluded_only_by_period_rule", only_period), ("excluded_only_by_pit_rule", only_pit)):
+        x = s_h[m]
+        comp[name] = {"company_months": int(m.sum()), "companies": int(x["cik"].nunique()),
+                      "median_mcap_bn": float(x["mcap"].median() / 1e9) if len(x) else None,
+                      "sectors": x["group"].value_counts().head(5).to_dict() if "group" in x and len(x) else {}}
+    out = {"eligible_large_company_months": {"no_exclusion": int(big.sum()), "period_rule": int((big & period_ok).sum()),
+                                             "pit_rule": int((big & pit_ok).sum()),
+                                             "both_rules": int((big & period_ok & pit_ok).sum())},
+           "composition": comp, "trials": {}}
+    for tid in stage2.TRIALS:
+        out["trials"][tid] = {"period_rule": _large_ics(s_h, period_ok, tid), "pit_rule": _large_ics(s_h, pit_ok, tid)}
+    return out
+
+
+def pit_report(r: dict, n_trials: int) -> str:
+    e, c = r["eligible_large_company_months"], r["composition"]
+    L = ["# Share-count exclusion: exploration-period median vs point-in-time median (PR #18 review)", "",
+         "Large caps, 1-month IC, decisions 2015-01 to 2022-11, Stage 2's scoring, data cut at 2022-12. Registered "
+         f"before running as `{PIT_PREFIX}<trial>`; the programme's trial count is now {n_trials}.", "",
+         "| Eligible large-cap company-months | Count |", "|---|---:|",
+         f"| No exclusion | {e['no_exclusion']:,} |", f"| Approved rule (exploration-period median) | {e['period_rule']:,} |",
+         f"| Point-in-time rule (expanding median) | {e['pit_rule']:,} |", f"| Eligible under both | {e['both_rules']:,} |", "",
+         "| Rows excluded by one rule only | Company-months | Companies | Median market cap ($bn) | Top sector groups |",
+         "|---|---:|---:|---:|---|"]
+    for k, v in c.items():
+        mc = "" if v["median_mcap_bn"] is None else f"{v['median_mcap_bn']:.1f}"
+        L.append(f"| {k.replace('_', ' ')} | {v['company_months']:,} | {v['companies']:,} | {mc} | "
+                 f"{', '.join(f'{a} {b}' for a, b in v['sectors'].items())} |")
+    L += ["", "| Trial | IC (approved) | t (approved) | IC (point in time) | t (point in time) |", "|---|---:|---:|---:|---:|"]
+    for tid, t in r["trials"].items():
+        a, b = t["period_rule"], t["pit_rule"]
+        L.append(f"| {tid} | {_f(a['mean_ic'], '.4f')} | {_f(a['t_nw'], '.2f')} | {_f(b['mean_ic'], '.4f')} | {_f(b['t_nw'], '.2f')} |")
+    return "\n".join(L) + "\n"
+
+
+def main_pit(out: Path) -> None:
+    new = register_pit_sensitivity()
+    print(f"registered {len(new)} point-in-time sensitivity looks before running")
+    for tid in stage2.TRIALS:
+        edge_registry.require(f"{PIT_PREFIX}{tid}")
+    d = load_exploration()
+    flags = edge_split.quality_flags(d)
+    d = d.assign(bad_price=flags["bad_price"], share_outlier_pit=edge_split.share_outliers_pit(d))
+    d = investable(d)
+    edge_split.assert_exploration_only(d)
+    r = pit_sensitivity(d)
+    rel = out.resolve()
+    try:
+        rel = rel.relative_to(Path(__file__).resolve().parent.parent)
+    except ValueError:
+        pass
+    for tid, t in r["trials"].items():
+        edge_registry.append({"event": "result", "id": f"{PIT_PREFIX}{tid}", "band": "large",
+                              "mean_ic": t["pit_rule"]["mean_ic"], "ic_t_nw": t["pit_rule"]["t_nw"],
+                              "evidence": f"{rel.with_suffix('.json')}"})
+    out.write_text(pit_report(r, edge_registry.n_trials(edge_registry.load())))
+    out.with_suffix(".json").write_text(json.dumps(r, indent=1, default=str))
+    print(out.read_text())
+
+
 def main(out: Path) -> None:
     new = register_diagnostics()
     print(f"registered {len(new)} diagnostic looks before running")
@@ -370,7 +474,9 @@ def main(out: Path) -> None:
 
 if __name__ == "__main__":
     args = sys.argv[1:]
-    if args[:1] == ["--quality"]:
+    if args[:1] == ["--pit"]:
+        main_pit(Path(args[1]) if len(args) > 1 else Path("stage2_pit_sensitivity.md"))
+    elif args[:1] == ["--quality"]:
         main_quality(Path(args[1]) if len(args) > 1 else Path("stage2_quality_sensitivity.md"))
     else:
         main(Path(args[0]) if args else Path("stage2_diagnostics.md"))

@@ -19,6 +19,8 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
+import statistics
 import sys
 from datetime import date
 from pathlib import Path
@@ -26,7 +28,7 @@ from pathlib import Path
 PATH = Path(__file__).resolve().parent / "edge" / "trials.jsonl"
 GENESIS = "0" * 64
 MAX_BATCHES = 1  # owner decision D2 (docs/edge/DECISIONS.md): one confirmation batch, ever
-KINDS = {"trial", "diagnostic", "inherited"}
+KINDS = {"trial", "diagnostic", "inherited", "exposure"}  # exposure: holdout data seen, nothing tested
 PHASES = {"exploration", "confirmation", "prospective", "pre-programme"}
 REQUIRED = {
     "register": {"id", "date", "kind", "phase", "hypothesis", "definition", "universe", "horizon_months", "window",
@@ -83,11 +85,13 @@ def validate(path: Path = PATH) -> list[str]:
             tid = e.get("id")
             if tid in trials:
                 problems.append(f"line {n}: duplicate trial id {tid}")
+            if e.get("kind") == "exposure" and e.get("counts_for_dsr"):
+                problems.append(f"line {n}: exposure {tid} cannot count as a trial")
             if e.get("kind") not in KINDS:
                 problems.append(f"line {n}: kind {e.get('kind')!r} not in {sorted(KINDS)}")
             if e.get("phase") not in PHASES:
                 problems.append(f"line {n}: phase {e.get('phase')!r} not in {sorted(PHASES)}")
-            if e.get("phase") == "exploration" and e.get("touched_holdout"):
+            if e.get("phase") == "exploration" and e.get("touched_holdout") and e.get("kind") != "exposure":
                 problems.append(f"line {n}: {tid} is an exploration trial but touched the holdout")
             trials[tid] = e
         elif ev == "result":
@@ -163,14 +167,56 @@ def n_trials(events: list[dict]) -> int:
     return sum(1 for e in registered(events).values() if e.get("counts_for_dsr"))
 
 
-def sharpe_list(events: list[dict]) -> list[float]:
-    """Monthly Sharpe ratios recorded in results for trials that count, for the DSR's cross-trial variance."""
+# Stage 2's results (seeded from stage2_signals.json) carry `sr_monthly` without a `stat` field: it is the monthly
+# Sharpe of the large-cap top quintile's return net of costs minus the universe (stage2.run, `q5_net`).
+LEGACY_STAT = "xsection_q5_net_vs_universe"
+
+
+def result_stat(e: dict) -> str | None:
+    """Which statistic a result's `sr_monthly` measures. Results without a Sharpe (IC-only) return None."""
+    if e.get("sr_monthly") is None:
+        return None
+    return e.get("stat") or LEGACY_STAT
+
+
+def sharpe_list(events: list[dict], stat: str | None = None) -> list[float]:
+    """Monthly Sharpe ratios recorded in results of counted trials, for the DSR's cross-trial variance. With
+    `stat`, only results measuring that same statistic: a top-quintile spread's Sharpe and a concentrated
+    portfolio's excess-over-VWRP Sharpe are different quantities and are never pooled. Missing or non-finite
+    values are left out (the trial still counts in `n_trials`)."""
     reg = registered(events)
     out = {}
     for e in events:
-        if e.get("event") == "result" and reg.get(e["id"], {}).get("counts_for_dsr") and e.get("sr_monthly") is not None:
-            out[e["id"]] = float(e["sr_monthly"])  # a later result for the same trial replaces the earlier one
+        if e.get("event") != "result" or not reg.get(e["id"], {}).get("counts_for_dsr"):
+            continue
+        st = result_stat(e)
+        if st is None or (stat is not None and st != stat):
+            continue
+        v = float(e["sr_monthly"])
+        if math.isfinite(v):
+            out[e["id"]] = v
     return list(out.values())
+
+
+def deflated_sharpe(sr: float, n_months: int, skew: float, kurt: float, stat: str, events: list[dict]) -> dict:
+    """Deflated Sharpe ratio (Bailey and Lopez de Prado 2014) for a monthly Sharpe `sr` measuring `stat`.
+
+    N, the number of trials, is `n_trials(events)`: every counted look, whatever statistic it reported (owner
+    decision D4). Correlated variants are counted as separate trials, which overstates the effective N and makes
+    the test stricter. The cross-trial variance of Sharpe ratios comes only from results of the same `stat`, and is
+    floored at 1/n_months, the variance of a Sharpe estimate under the null; with fewer than two comparable
+    results the floor is used. `kurt` is raw (normal = 3)."""
+    n = n_trials(events)
+    comp = sharpe_list(events, stat)
+    floor = 1.0 / n_months
+    emp = statistics.variance(comp) if len(comp) >= 2 else 0.0
+    var = max(emp, floor)
+    g = 0.5772156649
+    nd = statistics.NormalDist()
+    sr0 = math.sqrt(var) * ((1 - g) * nd.inv_cdf(1 - 1 / n) + g * nd.inv_cdf(1 - 1 / (n * math.e))) if n > 1 else 0.0
+    den = math.sqrt(max(1 - skew * sr + (kurt - 1) / 4 * sr ** 2, 1e-12))
+    return {"dsr": nd.cdf((sr - sr0) * math.sqrt(n_months - 1) / den), "n_trials": n, "n_comparable": len(comp),
+            "var_used": var, "floor_used": var == floor, "sr0": sr0, "stat": stat}
 
 
 def holdout_runs(events: list[dict]) -> set[str]:

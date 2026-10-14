@@ -64,13 +64,29 @@ def period_of_outcome(decision, horizon: int) -> str:
 
 
 def forward_return(df: pd.DataFrame, horizon: int, price: str = "adjclose") -> pd.Series:
-    """Compound h-month forward return per company from month-end prices; NaN unless all h months exist."""
+    """Compound h-month forward return per company from month-end prices: the product of the h one-month returns
+    from t to t+h, so it is NaN unless every month t..t+h has a valid price.
+
+    A price <= 0 is invalid (a Yahoo adjustment error, e.g. NFE's adjusted close is negative from 2019-01 to
+    2022-12 and positive after) and is treated as missing, so no return starts, ends or passes through one: a
+    ratio across the sign change is a meaningless "return". Stage 2 and `xsection.load` are unchanged."""
     d = df[["cik", "month", price]].copy()
+    d[price] = d[price].where(d[price] > 0)
     d["p"] = pd.to_datetime(d["month"]).dt.to_period("M")
-    src = d[["cik", "p", price]].copy()
-    src["p"] = src["p"] - horizon
-    m = d[["cik", "p"]].merge(src, on=["cik", "p"], how="left")
-    return pd.Series(m[price].to_numpy() / d[price].to_numpy() - 1, index=df.index)
+    key = d[["cik", "p"]]
+
+    def ahead(k: int) -> pd.Series:
+        src = d[["cik", "p", price]].copy()
+        src["p"] = src["p"] - k
+        return pd.Series(key.merge(src, on=["cik", "p"], how="left")[price].to_numpy(), index=df.index)
+
+    growth = pd.Series(1.0, index=df.index)
+    prev = pd.Series(d[price].to_numpy(), index=df.index)
+    for k in range(1, horizon + 1):
+        nxt = ahead(k)
+        growth = growth * (nxt / prev)
+        prev = nxt
+    return growth - 1
 
 
 def cut_exploration(df: pd.DataFrame) -> pd.DataFrame:
@@ -90,6 +106,15 @@ def share_outliers(df: pd.DataFrame) -> pd.Series:
     (`cut_exploration`): on the full dataset the median would use 2023-26 share counts."""
     sh = df["shares_out"].where(df["shares_out"] > 0, df["shares_diluted"])
     med = sh.groupby(df["cik"]).transform("median")
+    return (sh > 10 * med) | (sh < med / 10)
+
+
+def share_outliers_pit(df: pd.DataFrame) -> pd.Series:
+    """Sensitivity variant, NOT the approved rule: the median is taken over the company's rows dated on or before
+    each month (expanding, including the month itself), so a flag uses no later information at all."""
+    sh = df["shares_out"].where(df["shares_out"] > 0, df["shares_diluted"])
+    order = df.assign(_sh=sh, _m=pd.to_datetime(df["month"])).sort_values(["cik", "_m"])
+    med = order.groupby("cik")["_sh"].transform(lambda x: x.expanding().median()).reindex(df.index)
     return (sh > 10 * med) | (sh < med / 10)
 
 
