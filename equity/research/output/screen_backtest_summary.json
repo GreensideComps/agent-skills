@@ -1,0 +1,165 @@
+{
+ "years": [
+  {
+   "year": 2012,
+   "scored": 32,
+   "ranked": 22,
+   "ic": -0.2694281524926686,
+   "ranked_return": 0.2680529738936245,
+   "scored_return": 0.2503208357783365,
+   "ranked_minus_scored": 0.017732138115287954,
+   "top_minus_bottom_quintile": 0.010743692143858924,
+   "spy_return": 0.16702231334575868
+  },
+  {
+   "year": 2013,
+   "scored": 61,
+   "ranked": 44,
+   "ic": -0.0795346377578001,
+   "ranked_return": 0.2229289531440674,
+   "scored_return": 0.2516909905980529,
+   "ranked_minus_scored": -0.02876203745398548,
+   "top_minus_bottom_quintile": -0.08819889278909016,
+   "spy_return": 0.2030690599127558
+  },
+  {
+   "year": 2014,
+   "scored": 59,
+   "ranked": 45,
+   "ic": 0.04880187025131502,
+   "ranked_return": 0.08775580798179852,
+   "scored_return": 0.06010669556660551,
+   "ranked_minus_scored": 0.027649112415193015,
+   "top_minus_bottom_quintile": 0.001443884626679933,
+   "spy_return": 0.12869195005877043
+  },
+  {
+   "year": 2015,
+   "scored": 61,
+   "ranked": 49,
+   "ic": 0.1197778952934955,
+   "ranked_return": -0.00017814011787446878,
+   "scored_return": -0.005751654490326476,
+   "ranked_minus_scored": 0.005573514372452007,
+   "top_minus_bottom_quintile": 0.03933678455288126,
+   "spy_return": 0.010904678189104677
+  },
+  {
+   "year": 2016,
+   "scored": 69,
+   "ranked": 47,
+   "ic": 0.11088783339422725,
+   "ranked_return": 0.1988052615724273,
+   "scored_return": 0.18130894125993766,
+   "ranked_minus_scored": 0.017496320312489655,
+   "top_minus_bottom_quintile": 0.06506803620385124,
+   "spy_return": 0.17771172904673116
+  },
+  {
+   "year": 2017,
+   "scored": 68,
+   "ranked": 55,
+   "ic": 0.3156086574798641,
+   "ranked_return": 0.1503308852763496,
+   "scored_return": 0.13124590494615013,
+   "ranked_minus_scored": 0.01908498033019948,
+   "top_minus_bottom_quintile": 0.22092597643292386,
+   "spy_return": 0.13222322557180521
+  },
+  {
+   "year": 2018,
+   "scored": 78,
+   "ranked": 57,
+   "ic": 0.173889401737503,
+   "ranked_return": 0.13918012716087313,
+   "scored_return": 0.10185544286698239,
+   "ranked_minus_scored": 0.03732468429389074,
+   "top_minus_bottom_quintile": 0.11536849535540857,
+   "spy_return": 0.13312979705618377
+  },
+  {
+   "year": 2019,
+   "scored": 85,
+   "ranked": 57,
+   "ic": -0.004807504397107681,
+   "ranked_return": -0.15092265779358854,
+   "scored_return": -0.17056026389374573,
+   "ranked_minus_scored": 0.01963760610015719,
+   "top_minus_bottom_quintile": -0.03613876399261434,
+   "spy_return": 0.008146557434457469
+  },
+  {
+   "year": 2020,
+   "scored": 81,
+   "ranked": 58,
+   "ic": 0.1249096657633243,
+   "ranked_return": 0.9792825330961442,
+   "scored_return": 0.9491072455524351,
+   "ranked_minus_scored": 0.03017528754370913,
+   "top_minus_bottom_quintile": 0.027744252312165374,
+   "spy_return": 0.4596255398217157
+  },
+  {
+   "year": 2021,
+   "scored": 85,
+   "ranked": 53,
+   "ic": 0.11786202853234316,
+   "ranked_return": -0.060576933402351894,
+   "scored_return": 0.0538925880103121,
+   "ranked_minus_scored": -0.11446952141266399,
+   "top_minus_bottom_quintile": -0.15923111532558015,
+   "spy_return": 0.0002916504551195853
+  },
+  {
+   "year": 2022,
+   "scored": 93,
+   "ranked": 64,
+   "ic": 0.1466384172361314,
+   "ranked_return": 0.09788566204188301,
+   "scored_return": 0.054954083235500294,
+   "ranked_minus_scored": 0.042931578806382716,
+   "top_minus_bottom_quintile": -0.012637067101158445,
+   "spy_return": 0.026642990023049817
+  },
+  {
+   "year": 2023,
+   "scored": 77,
+   "ranked": 53,
+   "ic": 0.109154003890846,
+   "ranked_return": 0.27527989734473435,
+   "scored_return": 0.25521555822304154,
+   "ranked_minus_scored": 0.02006433912169281,
+   "top_minus_bottom_quintile": 0.1245824557350223,
+   "spy_return": 0.2243629164949148
+  },
+  {
+   "year": 2024,
+   "scored": 92,
+   "ranked": 55,
+   "ic": 0.25959033953423855,
+   "ranked_return": -0.014162050264226261,
+   "scored_return": -0.018895482261315384,
+   "ranked_minus_scored": 0.004733431997089123,
+   "top_minus_bottom_quintile": 0.2995321102753136,
+   "spy_return": 0.11876550613974124
+  },
+  {
+   "year": 2025,
+   "scored": 96,
+   "ranked": 61,
+   "ic": -0.09427563754747693,
+   "ranked_return": 0.42389654920333353,
+   "scored_return": 0.44651802743417074,
+   "ranked_minus_scored": -0.02262147823083721,
+   "top_minus_bottom_quintile": -0.04000276535277181,
+   "spy_return": 0.31081319981703714
+  }
+ ],
+ "mean_ic": 0.07707672720844536,
+ "ic_t": 1.9182879548269496,
+ "ranked_win_rate": 0.7857142857142857,
+ "pass": false,
+ "companies": 600,
+ "companies_with_rows": 541,
+ "errors": 9
+}

@@ -241,3 +241,16 @@ for predictive value. That test is M5 (paper portfolio, recommendations logged b
 | Ledger size | `fundamentals.jsonl` would have reached about 70 MB at full coverage. It is now sharded into 16 files by company (`data/fundamentals/0-f.jsonl`), and the job log by month (`data/jobs/YYYY-MM.jsonl`). The existing records were moved unchanged (444 snapshots and 1,088 job events, same rids). The size check warns at 60 MB per file |
 | Tests | `equity/tests`: 98 passed (10 new); `trading/tests`: 139 passed |
 
+
+## 15. Milestone 8, test 1: does the screen score predict returns? (2026-10-14)
+
+Pre-registered in [`../equity/research/screen_backtest_prereg.md`](../equity/research/screen_backtest_prereg.md)
+(commit 51c9031, pushed before the run). Results: [`../equity/research/screen_backtest_results.md`](../equity/research/screen_backtest_results.md).
+
+| Item | Result |
+|---|---|
+| Method | `python3 -m equity backtest`. For 600 random SEC-linked companies, every XBRL fact filed after each 30 April (2012-2025) is dropped, the screen is re-scored as it would have looked then, and the score is compared with the next 12 months' total return (Yahoo monthly, dividend-adjusted; unadjusted price for market cap) |
+| Verdict | **FAIL**, narrowly. Mean IC is +0.077 with t = 1.92; the pass bar was t >= 2. The ranked basket beat all scored companies in 11 of 14 years (79%), by about 2 points in the median year, but lost 11 points in 2021-22 |
+| Reading | Weak positive evidence that the score ranks companies the right way. It is not strong enough to call it predictive. Weights stay as they are; changing them is the owner's decision, and every further variant tried must be counted as a new trial |
+| Biases | Survivorship (only companies listed today), 32-96 scored companies a year (many lack a total score early on), no costs, unofficial prices |
+| Tests | `equity/tests`: 102 passed (4 new); `trading/tests`: 139 passed |
