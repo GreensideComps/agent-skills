@@ -32,9 +32,17 @@ ideas are appended with a priority and a pre-registration. Status values:
 - **Log:** 2026-10-13: Trading 212 lists the same iShares fund (IE00BP3QZ825) as `IWFM_EQ` (GBX, no FX fee), alongside `IWMOl_EQ` (USD) and `IS3Rd_EQ` (EUR). Xtrackers MSCI World Momentum is listed as `XDEMl_EQ` (GBX). Note: GBX/GBP tickers are not always `…l_EQ`, so search by name and currency, not suffix. A switch from IWMO to IWFM costs about £0.10–0.15 in spread (the exit FX fee is paid either way) and saves the 0.15% fee only on future rebalance trades (≈£0.01/yr at £100), so it breaks even only after more than 10 years. **Decision:** keep IWMO and use `IWFM_EQ` (Yahoo `IWFM.L`) at the next full rebalance. Open follow-up: compare XDEM vs IWFM (different index methodology? OCF and tracking).
 
 ## P4: Quality + momentum combination
-- **Status:** OPEN
+- **Status:** IN PROGRESS (2026-10-14, E013)
 - **Rationale:** Quality is a crash hedge for momentum (negative correlation in drawdowns). Profitability (RMW) is still significant in developed markets after 2010 (t=2.0, round 1).
 - **Rule:** sleeve = 50% IWMO + 50% IWQU (or the GBP line), vs the champion.
+- **Pre-registration (frozen 2026-10-14, before any out-of-sample result; script `research/h07_quality_momentum.py`):**
+  - Data (Ken French, survivorship-free, value-weighted USD): MKT = Mkt-RF+RF; MOM = BIG HiPRIOR (6_Portfolios_ME_Prior_12_2); QUAL = BIG HiOP (6_Portfolios_ME_OP_2x3, robust profitability); Developed equivalents. Tradeable check: VWRL.L / IWFM.L / IWFQ.L (all GBP/GBX) 2014-11..2026-08, month-end signal executed same day and next day.
+  - Grid (static weights MKT/MOM/QUAL, monthly rebalance): Q1 50/25/25 (the literal P4 rule), Q2 0/50/50, Q3 34/33/33. Neighbours (knife-edge check only): Q1 50/30/20 and 50/20/30; Q2 0/60/40 and 0/40/60. Pick per market = best in-sample Sharpe among Q1-Q3. 7 configs x 2 markets = 14 trials.
+  - Splits: US IS 1963-07..2000-12, OOS 2001-01..2026-08. Developed IS 1991-07..2005-12, OOS 2006-01..2026-08.
+  - Benchmarks: (a) **gate benchmark = live champion** `nasdaq3x_trend_sma100_v1`, monthly returns of the synthetic 3x Nasdaq-100 + SMA100 rule from `h03_leveraged_trend.py` (USD, costs included); Stage 2 is applied vs this on the US OOS window, regimes 1986-2000 / 2001-2013 / 2014-2026. (b) design benchmark = previous champion 50 MKT / 50 MOM, full Stage 2 in both markets, reported for information (decides only whether Q is a better *shadow D*).
+  - Costs: OCF MKT 0.22%, MOM 0.30%, QUAL 0.25% p.a.; one-way trading MKT 0.10%, MOM 0.35% (incl. 0.15% FX, USD line), QUAL 0.20% (GBX line IWFQ); stress x3.
+  - Deflated Sharpe uses the cumulative trial count (106 + 14 = 120) with the variance of this run's active Sharpe ratios.
+  - Decision rule: promotable/shadow only if every Stage 2 test passes vs the live champion; otherwise REJECTED (or INSURANCE_ONLY if it cuts max drawdown by 10pp+ while losing on return).
 - **Log:** (none yet)
 
 ## P5: Fill-quality and timing study (operations)
