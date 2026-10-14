@@ -99,3 +99,6 @@ class Store:
         self.valuations = Ledger(self.root / "valuations.jsonl")      # DCF scenarios, reverse DCF, multiples
         self.research = Ledger(self.root / "research.jsonl")          # theses and bear cases
         self.alerts = Ledger(self.root / "alerts.jsonl")              # changes between screen runs
+        self.recommendations = Ledger(self.root / "recommendations.jsonl")  # paper picks, logged before outcomes
+        self.paper = Ledger(self.root / "paper_trades.jsonl")          # simulated fills (portfolio + benchmark)
+        self.paper_nav = Ledger(self.root / "paper_nav.jsonl")         # daily marks of both books

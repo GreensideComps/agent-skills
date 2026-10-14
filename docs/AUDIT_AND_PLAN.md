@@ -138,7 +138,7 @@ confidence. Agents propose; only rule-checked code paths change statuses, and me
 | **M2 (built 2026-10-14, see below)** | Coverage and correctness: IFRS (`ifrs-full`) filers; a concept-coverage survey across all ~5,500 SEC companies; SIC-based industry classification with bank, insurer, REIT and SPAC templates (or exclusions); slimmer snapshots so a full-universe pass fits in git (~32 KB/company today) | M1 | XBRL inconsistency across filers | Usable data for most of the US universe |
 | **M3 (built 2026-10-14, §11)** | **Master Stock Screener v1**: separate quality, growth, valuation, risk and data-confidence scores; your 30/25/20/20/5 baseline weights; mandatory gates with explained pass/fail; needs prices for valuation | M2, price source | Encoding "business quality" quantitatively; overfitting the weights | The core of your process |
 | **M4 (built 2026-10-14, §12)** | Valuation: multiples, FCF yield, reverse DCF and DCF scenarios with stored assumptions; bear-case and thesis records; alerts with de-duplication | M3 | False precision in DCFs | Explainable candidates |
-| **M5** | Internal paper portfolio for screener picks: mandate, sizing, costs, benchmark, recommendations logged before outcomes are known | M3, M4 | Too few decisions for statistics for a long time | The evidence test you asked for |
+| **M5 (started 2026-10-14, §13)** | Internal paper portfolio for screener picks: mandate, sizing, costs, benchmark, recommendations logged before outcomes are known | M3, M4 | Too few decisions for statistics for a long time | The evidence test you asked for |
 | **M6** | Invest monitoring (read-only key), exposure, concentration and correlation risk engine, daily and weekly reports on GitHub Actions | Your Invest key; M1 | Credential handling | Real-portfolio oversight |
 | **M7** | Reliability agent (missed and stuck runs, freshness, reconciliation), routine split (one per session), learning agent | M1 job ledger | Scheduler limits | Trustworthy unattended running |
 | **M8+** | Quant signals (factors, momentum) tested via `research/` for added information; news and events; options and microstructure **only if** you choose a licensed data provider | M3, M5 | Cost; licensing | Incremental |
@@ -219,3 +219,13 @@ for predictive value. That test is M5 (paper portfolio, recommendations logged b
 | Bear cases | Record type with enforced independence, evidence and `watch` items; the `candidate` gate now uses it. No bear cases written yet: that is judgement work for a research routine (M7) |
 | Alerts | Change-only, date-keyed (no repeats); first run of a method records a baseline |
 | Tests | `equity/tests`: 83 passed (10 new); `trading/tests`: 139 passed |
+
+## 13. Milestone 5: paper portfolio (started 2026-10-14)
+
+| Item | Result |
+|---|---|
+| Mandate | `equity/config/paper_portfolio.json`: 10,000 USD notional; top 10 ranked companies with total >= 60; equal weight; monthly rebalance; 25 bps per trade; SPY benchmark, same cash, same costs |
+| First decision, 2026-10-14 | 9 holdings (only 9 ranked companies scored >= 60): Adobe, NVIDIA, Ralph Lauren, Alphabet, MSCI, Microsoft, Apple, Costco, Gates Industrial. Both books start at -0.25% (entry costs). Report: `equity/reports/paper/2026-10-14.md` |
+| Integrity | Recommendations logged before outcomes, append-only; fills at the logged price only; all prices validated before any write |
+| Not yet | Running it on a schedule (daily mark, monthly rebalance) is part of M7; dividends are excluded from both books; statistical power will be low for years |
+| Tests | `equity/tests`: 88 passed (5 new); `trading/tests`: 139 passed |

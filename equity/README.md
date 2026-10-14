@@ -1,4 +1,4 @@
-# equity: company research database and stock screener (Milestones 1-4)
+# equity: company research database and stock screener (Milestones 1-5)
 
 This is the foundation of the stock-discovery and screening system: a security master for every stock tradable on
 Trading 212, fundamentals extracted from SEC filings with provenance on every number, an auditable pipeline of
@@ -11,7 +11,7 @@ System-wide audit and roadmap: [`../docs/AUDIT_AND_PLAN.md`](../docs/AUDIT_AND_P
 
 ```bash
 export SEC_USER_AGENT="my-research-app me@example.com"   # SEC requires a contact email
-python3 -m pytest -q                                     # 83 offline tests
+python3 -m pytest -q                                     # 88 offline tests
 python3 -m equity sync-universe                          # T212 instruments + SEC ticker map -> security master
 python3 -m equity ingest --symbol AAPL --symbol KO       # fundamentals snapshot(s) from SEC XBRL
 python3 -m equity ingest --all-sec --random 40 --seed 1  # random sample of SEC-linked companies
@@ -25,6 +25,7 @@ python3 -m equity valuate RL                             # multiples, bear/base/
 python3 -m equity thesis RL --actor A --summary S --point P --evidence ACCN   # one --evidence per --point
 python3 -m equity bearcase RL --actor B --objection O --evidence E --watch W  # >= 3 triples, B != thesis author
 python3 -m equity alerts                                 # changes between screen runs
+python3 -m equity paper                                  # paper portfolio: monthly rebalance if due, mark vs SPY
 python3 -m equity discover TICKER --source S --reason R --evidence URL
 python3 -m equity status TICKER --to research_queue --reason R --evidence E
 python3 -m equity crosscheck --symbol AAPL ...           # independent check vs Yahoo -> reports/verification/
@@ -47,6 +48,7 @@ python3 -m equity health                                 # last ok/failed run pe
 | Prices and market cap (M3) | Yahoo's chart endpoint (free, unofficial, delayed), one record per listing per day in `prices.jsonl`. Market cap = price × cover-page shares outstanding (summed over classes), else latest diluted weighted shares as a labelled proxy. 20-F/40-F filers' US lines are usually ADRs with an unknown ratio, so their valuation is reported unavailable rather than guessed. |
 | Valuation (M4) | `valuation.py` (`val-1.0`): base FCF = 3-year mean; 5 years at a scenario rate, fade to 2.5% over 5 more, 9% discount; bear/base/bull rates derived mechanically from the company's own history with caps; a reverse DCF gives the 5-year FCF growth the current EV implies. Every record stores its assumptions, snapshot and price ids. `screen` runs it for every company with a market value. |
 | Research records and alerts (M4) | `research.py`: theses and bear cases, append-only. A bear case needs >= 3 objections, each with evidence and a `watch` (what would confirm it), from someone other than the thesis author, and goes stale when a newer annual filing arrives. `status --to candidate` now checks it. `alerts.py`: alerts only on changes between runs (entered/left ranking, score move >= 10, a company with a bear case dropping out), keyed by date so repeats are impossible. |
+| Paper portfolio (M5) | `paper.py` + `config/paper_portfolio.json` (`paper-1.0`): 10,000 USD notional, top 10 ranked with total >= 60, equal weight, monthly rebalance, 25 bps per trade (spread + T212 FX fee), SPY buy-and-hold benchmark with the same cash and costs. Recommendations are logged with the decision price, rank, scores and implied growth before any outcome exists (`recommendations.jsonl`); fills only use the logged price; every price is checked before anything is written. Dividends are excluded from both books. No broker is touched. |
 | Share splits | Filings are chained through the periods they both report, which gives every filing a cumulative multiplier to the current share basis. Splits are adjusted (`split_adj`, `v_as_filed`) and are not counted as restatements. |
 | Data quality | Flags for missing inputs, stale annual data (>15 months), short history, restatements, concept switches, mixed currencies, unlinked split basis. Confidence is `high`/`medium`/`low`; missing revenue, OCF, capex or shares, or stale data, means `low`. |
 | Gates | The pipeline refuses transitions without a reason and evidence, and paths that aren't allowed. `candidate` additionally requires a recorded bear case, data confidence that is not `low`, and a classified, supported industry template (snapshots from before M2 are unclassified until re-ingested). The bear-case record arrives in M4, so nothing can reach `candidate` yet. |
