@@ -4,7 +4,8 @@ import pytest
 
 from t212bot.shadow import COST, PriceBook, gem_nav, gem_signal, static_nav
 
-IDX = pd.bdate_range("2024-01-01", "2026-10-13")
+# Runs past today: report.build starts shadows at the first order date, which in test_report_renders is "now".
+IDX = pd.bdate_range("2024-01-01", max(pd.Timestamp("2026-10-13"), pd.Timestamp.today().normalize() + pd.Timedelta(days=7)))
 
 
 def series(annual_growth, currency="GBP"):
