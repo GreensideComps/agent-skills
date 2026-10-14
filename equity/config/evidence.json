@@ -1,0 +1,15 @@
+{
+  "note": "Evidence tier of each method version that produces scores, valuations or picks (docs/STRATEGY_V2.md, Part 3.4). Only E3 and above may drive rankings or sizing. Changing a tier needs committed evidence; raising one above E2 needs a passed pre-registered out-of-sample test.",
+  "tiers": {
+    "E0": "Idea, anecdote, narrative",
+    "E1": "Economic rationale plus published literature",
+    "E2": "Positive in-sample historical test",
+    "E3": "Passed a pre-registered out-of-sample test with costs and deflated Sharpe, in the relevant size band",
+    "E4": "E3 plus at least 24 months of consistent prospective evidence"
+  },
+  "methods": {
+    "screen-1.0": {"tier": "E1", "evidence": "Pre-registered backtest failed (mean IC +0.077, t = 1.92 vs bar 2.0); no evidence among companies over $10bn (IC t = 0.6) or in technology. equity/research/audit_2026-10-14/", "allowed_use": "research priority only"},
+    "val-1.0": {"tier": "E0", "evidence": "Untested. Growth caps (15% base, 20% bull) and a 3-year average FCF base rate most large companies as 50-90% overvalued by construction (validation of 2026-10-14).", "allowed_use": "descriptive only; never a buy or sell signal"},
+    "paper-1.0": {"tier": "E1", "evidence": "Forward test of screen-1.0, started 2026-10-14. Statistically uninformative for years (STRATEGY_V2 Part 2.4).", "allowed_use": "prospective record of screen-1.0; not advice"}
+  }
+}

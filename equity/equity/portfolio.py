@@ -24,6 +24,7 @@ import time
 from datetime import date, datetime, timezone
 from pathlib import Path
 
+from .evidence import banner
 from .prices import PriceError, _get
 from .store import Store, content_hash, utc_now
 
@@ -245,6 +246,7 @@ def report(a: dict, failed: list[str] | None = None) -> str:
     lines = [f"# Portfolio monitor, {a['as_of']}", "",
              "Read-only. Source: the Trading 212 **demo** account, holding copies of the owner's ISA pies (real "
              "weights, not real average prices or profits).", "",
+             banner("screen-1.0", "val-1.0"), "",
              f"Total value £{a['total_value']:,.2f} in {c['holdings']} holdings; cash {pc(c['cash_weight'])}.", ""]
     lines += ["## Flags", ""] + ([f"- {f}" for f in a["flags"]] or ["- none"]) + [""]
     lines += ["## Concentration and risk", "", "| Measure | Value |", "|---|---|",

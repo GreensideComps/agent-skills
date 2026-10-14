@@ -224,7 +224,9 @@ def report(rec: dict, top: int = 25, valuations: dict | None = None, alerts: dic
     from collections import Counter  # noqa: PLC0415
     res = rec["results"]
     ranked = sorted((r for r in res if r.get("rank")), key=lambda r: r["rank"])
+    from .evidence import banner  # noqa: PLC0415
     lines = [f"# Stock screen {rec['as_of']} ({rec['method_version']})", "",
+             banner(rec["method_version"], "val-1.0"), "",
              f"{rec['companies']} companies scored, **{rec['eligible']} passed every gate**. Weights: "
              + ", ".join(f"{k} {v}" for k, v in rec["weights"].items())
              + ". Scores are 0-100 on absolute scales (`config/screener.json`). This is a screen for research, "
