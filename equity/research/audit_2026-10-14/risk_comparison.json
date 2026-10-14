@@ -1,0 +1,678 @@
+{
+ "method": {
+  "returns": "Yahoo adjclose (dividends reinvested), converted to GBP daily with GBPUSD=X; VWRP.L already GBP",
+  "benchmark_relative": "beta, correlation and tracking error use weekly returns (London vs New York close timing)",
+  "rebalancing": "constant weights, rebalanced daily (an idealisation); names without history on a date are dropped and the rest renormalised",
+  "windows_end": "2026-10-14",
+  "benchmark": "VWRP.L (Vanguard FTSE All-World, GBP line)",
+  "scenario": "linear: portfolio shock = sum(weight x 5y beta to SOXX or QQQ) x index shock; ignores non-linearity and idiosyncratic moves"
+ },
+ "portfolios": {
+  "A keep": {
+   "weights": {
+    "NVDA_US_EQ": 0.1294,
+    "GOOGL_US_EQ": 0.1092,
+    "AVGO_US_EQ": 0.1092,
+    "MSFT_US_EQ": 0.0997,
+    "AMZN_US_EQ": 0.0884,
+    "FB_US_EQ": 0.0615,
+    "TSM_US_EQ": 0.0615,
+    "ASML_US_EQ": 0.0613,
+    "SPCX_US_EQ": 0.054,
+    "PLTR_US_EQ": 0.0539,
+    "VRT_US_EQ": 0.0308,
+    "AMD_US_EQ": 0.0307,
+    "BE_US_EQ": 0.0228,
+    "PANW_US_EQ": 0.0162,
+    "VST_US_EQ": 0.0139,
+    "INTC_US_EQ": 0.0138,
+    "CRWD_US_EQ": 0.0116,
+    "TEM_US_EQ": 0.0091,
+    "AAPL_US_EQ": 0.007,
+    "TSLA_US_EQ": 0.0069,
+    "IBTAl_EQ": 0.0046,
+    "UBER_US_EQ": 0.0046
+   },
+   "exposures": {
+    "semis_direct": 0.40586436437209444,
+    "semis_incl_vwrp_lookthrough_lb": 0.40586436437209444,
+    "ai_linked_total": 0.8951148315752081,
+    "ai_groups": {
+     "not AI-linked": 0.10488516842479187,
+     "hyperscalers": 0.35886604784777676,
+     "compute/semis": 0.40586436437209444,
+     "AI software": 0.06296816840934716,
+     "AI infrastructure & power": 0.06741625094598977
+    },
+    "sector": {
+     "Technology": 0.7435788530742738,
+     "Consumer discretionary": 0.09530943518618623,
+     "Industrials": 0.0886450337467373,
+     "unclassified (SpaceX)": 0.05395616785333684,
+     "Utilities": 0.013877090830463186,
+     "Bond ETF": 0.004633419309002734
+    },
+    "country": {
+     "United States": 0.8726195808299999,
+     "Taiwan": 0.061462307133921264,
+     "Netherlands": 0.06128469272707616,
+     "US (Treasuries)": 0.004633419309002734
+    },
+    "usd_underlying": 1.0,
+    "largest": 0.12942684603147636,
+    "top5": 0.5359244443758012,
+    "effective_n": 12.674123736551415,
+    "holdings": 22
+   },
+   "windows": {
+    "1y": {
+     "ann_return": 0.3914835039377158,
+     "ann_vol": 0.2640739529865112,
+     "max_drawdown": -0.14028028503837386,
+     "worst_21d": -0.10819723545675186,
+     "return_over_vol": 1.482476781637425,
+     "beta_vs_vwrp_weekly": 1.829098608618429,
+     "corr_vs_vwrp_weekly": 0.8074085961353205,
+     "tracking_error_vs_vwrp_weekly": 0.1758556891076166,
+     "min_weight_with_history": 0.9460438321466632
+    },
+    "3y": {
+     "ann_return": 0.5625907689946585,
+     "ann_vol": 0.29604517876190156,
+     "max_drawdown": -0.3206135140961657,
+     "worst_21d": -0.19106098901470892,
+     "return_over_vol": 1.9003544369392684,
+     "beta_vs_vwrp_weekly": 1.8934367859882297,
+     "corr_vs_vwrp_weekly": 0.7748173349778423,
+     "tracking_error_vs_vwrp_weekly": 0.2068566135140518,
+     "min_weight_with_history": 0.9369623303010178
+    },
+    "5y": {
+     "ann_return": 0.3975883667687894,
+     "ann_vol": 0.31570100995968586,
+     "max_drawdown": -0.3546156374009095,
+     "worst_21d": -0.19106098901470892,
+     "return_over_vol": 1.2593826254137113,
+     "beta_vs_vwrp_weekly": 1.7700051453497823,
+     "corr_vs_vwrp_weekly": 0.7452196578611967,
+     "tracking_error_vs_vwrp_weekly": 0.21369123387311548,
+     "min_weight_with_history": 0.9369623303010178
+    },
+    "2022 bear (2022-01-03..2022-12-30)": {
+     "ann_return": -0.31135439876684523,
+     "ann_vol": 0.40727894453301433,
+     "max_drawdown": -0.33747096078074257,
+     "worst_21d": -0.1542766674847258,
+     "return_over_vol": -0.764474576813304,
+     "beta_vs_vwrp_weekly": 1.8258603995510971,
+     "corr_vs_vwrp_weekly": 0.7749022694421714,
+     "tracking_error_vs_vwrp_weekly": 0.2349620989492515,
+     "min_weight_with_history": 0.9369623303010178
+    }
+   },
+   "scenarios": {
+    "semis index -40%": -0.2802811900828563,
+    "Nasdaq-100 -30%": -0.3951113189210229,
+    "beta_soxx": 0.7007029752071408,
+    "beta_qqq": 1.317037729736743
+   }
+  },
+  "B exit hard-risk only": {
+   "weights": {
+    "NVDA_US_EQ": 0.1356,
+    "GOOGL_US_EQ": 0.1144,
+    "AVGO_US_EQ": 0.1144,
+    "MSFT_US_EQ": 0.1045,
+    "AMZN_US_EQ": 0.0926,
+    "FB_US_EQ": 0.0645,
+    "TSM_US_EQ": 0.0644,
+    "ASML_US_EQ": 0.0642,
+    "SPCX_US_EQ": 0.0565,
+    "PLTR_US_EQ": 0.0565,
+    "VRT_US_EQ": 0.0323,
+    "AMD_US_EQ": 0.0321,
+    "PANW_US_EQ": 0.017,
+    "VST_US_EQ": 0.0145,
+    "CRWD_US_EQ": 0.0121,
+    "AAPL_US_EQ": 0.0073,
+    "TSLA_US_EQ": 0.0072,
+    "IBTAl_EQ": 0.0049,
+    "UBER_US_EQ": 0.0048
+   },
+   "exposures": {
+    "semis_direct": 0.41078653503803203,
+    "semis_incl_vwrp_lookthrough_lb": 0.41078653503803203,
+    "ai_linked_total": 0.8900954847062631,
+    "ai_groups": {
+     "not AI-linked": 0.10990451529373686,
+     "hyperscalers": 0.3760398122673572,
+     "compute/semis": 0.410786535038032,
+     "AI software": 0.056465447483411556,
+     "AI infrastructure & power": 0.046803689917462366
+    },
+    "sector": {
+     "Technology": 0.7551464638290986,
+     "Consumer discretionary": 0.09987052921184657,
+     "Industrials": 0.06904838970707233,
+     "unclassified (SpaceX)": 0.05653827480174786,
+     "Utilities": 0.014541187894481306,
+     "Bond ETF": 0.004855154555753358
+    },
+    "country": {
+     "United States": 0.8665237093380806,
+     "Taiwan": 0.0644036251820683,
+     "Netherlands": 0.06421751092409775,
+     "US (Treasuries)": 0.004855154555753358
+    },
+    "usd_underlying": 1.0,
+    "largest": 0.13562065059071046,
+    "top5": 0.5615714516912121,
+    "effective_n": 11.659875938900539,
+    "holdings": 19
+   },
+   "windows": {
+    "1y": {
+     "ann_return": 0.34625314157485976,
+     "ann_vol": 0.25253041083435734,
+     "max_drawdown": -0.14254200988115828,
+     "worst_21d": -0.091198033411519,
+     "return_over_vol": 1.3711344326049433,
+     "beta_vs_vwrp_weekly": 1.7459880481793317,
+     "corr_vs_vwrp_weekly": 0.8034762522202847,
+     "tracking_error_vs_vwrp_weekly": 0.1669701487265376,
+     "min_weight_with_history": 0.9434617251982521
+    },
+    "3y": {
+     "ann_return": 0.5249548089523923,
+     "ann_vol": 0.29315922438702285,
+     "max_drawdown": -0.3228273129896245,
+     "worst_21d": -0.1955011191888506,
+     "return_over_vol": 1.7906815316831295,
+     "beta_vs_vwrp_weekly": 1.8554118323118542,
+     "corr_vs_vwrp_weekly": 0.7642420182481183,
+     "tracking_error_vs_vwrp_weekly": 0.20680462580934286,
+     "min_weight_with_history": 0.9434617251982521
+    },
+    "5y": {
+     "ann_return": 0.38215212443419433,
+     "ann_vol": 0.3141973423294805,
+     "max_drawdown": -0.35908519861152166,
+     "worst_21d": -0.1955011191888506,
+     "return_over_vol": 1.216280575770923,
+     "beta_vs_vwrp_weekly": 1.7396808676202513,
+     "corr_vs_vwrp_weekly": 0.7335535619084204,
+     "tracking_error_vs_vwrp_weekly": 0.21519231042119993,
+     "min_weight_with_history": 0.9434617251982521
+    },
+    "2022 bear (2022-01-03..2022-12-30)": {
+     "ann_return": -0.31905453879496004,
+     "ann_vol": 0.4062644046949363,
+     "max_drawdown": -0.34525499774683255,
+     "worst_21d": -0.1501166819295645,
+     "return_over_vol": -0.7853371723140202,
+     "beta_vs_vwrp_weekly": 1.8216212587940896,
+     "corr_vs_vwrp_weekly": 0.7697589159914693,
+     "tracking_error_vs_vwrp_weekly": 0.23725277056372518,
+     "min_weight_with_history": 0.9434617251982521
+    }
+   },
+   "scenarios": {
+    "semis index -40%": -0.27547756316575167,
+    "Nasdaq-100 -30%": -0.3924030714886519,
+    "beta_soxx": 0.6886939079143791,
+    "beta_qqq": 1.3080102382955063
+   }
+  },
+  "C proposed plan": {
+   "weights": {
+    "NVDA_US_EQ": 0.1102,
+    "GOOGL_US_EQ": 0.1094,
+    "MSFT_US_EQ": 0.0999,
+    "AMZN_US_EQ": 0.0701,
+    "AVGO_US_EQ": 0.0701,
+    "FB_US_EQ": 0.0616,
+    "SPCX_US_EQ": 0.054,
+    "ASML_US_EQ": 0.0501,
+    "TSM_US_EQ": 0.0501,
+    "PLTR_US_EQ": 0.0401,
+    "ADBE_US_EQ": 0.0401,
+    "COST_US_EQ": 0.0401,
+    "MSCI_US_EQ": 0.0401,
+    "VRT_US_EQ": 0.0308,
+    "RL_US_EQ": 0.03,
+    "VWRP.L": 0.03,
+    "A_US_EQ": 0.02,
+    "PANW_US_EQ": 0.0163,
+    "VST_US_EQ": 0.0139,
+    "CRWD_US_EQ": 0.0116,
+    "AAPL_US_EQ": 0.007,
+    "IBTAl_EQ": 0.0046
+   },
+   "exposures": {
+    "semis_direct": 0.28042127940828215,
+    "semis_incl_vwrp_lookthrough_lb": 0.2831553868825129,
+    "ai_linked_total": 0.7061952153551144,
+    "ai_groups": {
+     "not AI-linked": 0.26375964756542675,
+     "hyperscalers": 0.3409803876984483,
+     "compute/semis": 0.28042127940828215,
+     "AI software": 0.04006018277261173,
+     "AI infrastructure & power": 0.04473336547577228
+    },
+    "sector": {
+     "Technology": 0.6670331028451318,
+     "Consumer discretionary": 0.14021063970414108,
+     "Industrials": 0.0901354112383764,
+     "unclassified (SpaceX)": 0.054037348647859786,
+     "VWRP (look-through: ICB tech 34%)": 0.0300451370794588,
+     "Utilities": 0.013897969875512239,
+     "Bond ETF": 0.004640390609519947
+    },
+    "country": {
+     "United States": 0.8837018649575179,
+     "Taiwan": 0.051066717989386806,
+     "Netherlands": 0.05007522846576467,
+     "US (Treasuries)": 0.004640390609519947,
+     "other (VWRP)": 0.003485235901217221,
+     "Japan": 0.001802708224767528,
+     "United Kingdom": 0.0009914895236221404,
+     "Canada": 0.000901354112383764,
+     "China": 0.0008112187011453876,
+     "Korea": 0.00075112842698647,
+     "France": 0.000600902741589176,
+     "Switzerland": 0.000600902741589176,
+     "Germany": 0.0005708576045097172
+    },
+    "usd_underlying": 0.9884927124985673,
+    "largest": 0.11160766920449629,
+    "top5": 0.4642683511593939,
+    "effective_n": 15.180364821224654,
+    "holdings": 22
+   },
+   "windows": {
+    "1y": {
+     "ann_return": 0.2678485361866023,
+     "ann_vol": 0.20170433751650624,
+     "max_drawdown": -0.12934791438323023,
+     "worst_21d": -0.0702554811784617,
+     "return_over_vol": 1.3279265061153345,
+     "beta_vs_vwrp_weekly": 1.4730190949774549,
+     "corr_vs_vwrp_weekly": 0.811777357494242,
+     "tracking_error_vs_vwrp_weekly": 0.12974508968342435,
+     "min_weight_with_history": 0.9459626513521402
+    },
+    "3y": {
+     "ann_return": 0.4121776786727671,
+     "ann_vol": 0.2446841257260812,
+     "max_drawdown": -0.2966661478464324,
+     "worst_21d": -0.17891582826427854,
+     "return_over_vol": 1.6845297072282959,
+     "beta_vs_vwrp_weekly": 1.6020126147149814,
+     "corr_vs_vwrp_weekly": 0.7857853922717433,
+     "tracking_error_vs_vwrp_weekly": 0.16196101921945666,
+     "min_weight_with_history": 0.9459626513521402
+    },
+    "5y": {
+     "ann_return": 0.30812377623729237,
+     "ann_vol": 0.27258674063245,
+     "max_drawdown": -0.31765673572524433,
+     "worst_21d": -0.17891582826427854,
+     "return_over_vol": 1.1303696413200075,
+     "beta_vs_vwrp_weekly": 1.5688502983913621,
+     "corr_vs_vwrp_weekly": 0.7617836513482011,
+     "tracking_error_vs_vwrp_weekly": 0.1759935049783254,
+     "min_weight_with_history": 0.9459626513521402
+    },
+    "2022 bear (2022-01-03..2022-12-30)": {
+     "ann_return": -0.26859675234701563,
+     "ann_vol": 0.369691823901342,
+     "max_drawdown": -0.2960924894284819,
+     "worst_21d": -0.14132231805985496,
+     "return_over_vol": -0.7265423116814584,
+     "beta_vs_vwrp_weekly": 1.7364668481189076,
+     "corr_vs_vwrp_weekly": 0.7902151910891781,
+     "tracking_error_vs_vwrp_weekly": 0.21176986708262402,
+     "min_weight_with_history": 0.9459626513521402
+    }
+   },
+   "scenarios": {
+    "semis index -40%": -0.23183222553119395,
+    "Nasdaq-100 -30%": -0.34593052046488293,
+    "beta_soxx": 0.5795805638279848,
+    "beta_qqq": 1.153101734882943
+   }
+  },
+  "VWRP (global benchmark)": {
+   "weights": {
+    "VWRP.L": 1.0
+   },
+   "exposures": {
+    "semis_direct": 0,
+    "semis_incl_vwrp_lookthrough_lb": 0.091,
+    "ai_linked_total": 0,
+    "ai_groups": {},
+    "sector": {
+     "VWRP (look-through: ICB tech 34%)": 1.0
+    },
+    "country": {
+     "United States": 0.617,
+     "other (VWRP)": 0.11599999999999999,
+     "Japan": 0.06,
+     "Taiwan": 0.033,
+     "United Kingdom": 0.033,
+     "Canada": 0.03,
+     "China": 0.027,
+     "Korea": 0.025,
+     "France": 0.02,
+     "Switzerland": 0.02,
+     "Germany": 0.019
+    },
+    "usd_underlying": 0.617,
+    "largest": 0.048,
+    "top5": 0.182,
+    "effective_n": 1.0,
+    "holdings": 1
+   },
+   "windows": {
+    "1y": {
+     "ann_return": 0.18531235319782602,
+     "ann_vol": 0.11197395114610954,
+     "max_drawdown": -0.07097267123178042,
+     "worst_21d": -0.06884996729180393,
+     "return_over_vol": 1.6549594910339516,
+     "beta_vs_vwrp_weekly": 1.0,
+     "corr_vs_vwrp_weekly": 1.0,
+     "tracking_error_vs_vwrp_weekly": 0.0,
+     "min_weight_with_history": 1.0
+    },
+    "3y": {
+     "ann_return": 0.17822936151459268,
+     "ann_vol": 0.11670907788787956,
+     "max_drawdown": -0.1764199702099063,
+     "worst_21d": -0.10758670475750298,
+     "return_over_vol": 1.527125093780748,
+     "beta_vs_vwrp_weekly": 1.0,
+     "corr_vs_vwrp_weekly": 1.0,
+     "tracking_error_vs_vwrp_weekly": 0.0,
+     "min_weight_with_history": 1.0
+    },
+    "5y": {
+     "ann_return": 0.11644964533712154,
+     "ann_vol": 0.12826445780805484,
+     "max_drawdown": -0.17641997020990552,
+     "worst_21d": -0.10758670475750298,
+     "return_over_vol": 0.9078870899012887,
+     "beta_vs_vwrp_weekly": 1.0,
+     "corr_vs_vwrp_weekly": 1.0,
+     "tracking_error_vs_vwrp_weekly": 0.0,
+     "min_weight_with_history": 1.0
+    },
+    "2022 bear (2022-01-03..2022-12-30)": {
+     "ann_return": -0.0825357783821078,
+     "ann_vol": 0.1642207887571542,
+     "max_drawdown": -0.14188030710247546,
+     "worst_21d": -0.07524627330529354,
+     "return_over_vol": -0.5025903176251317,
+     "beta_vs_vwrp_weekly": 1.0,
+     "corr_vs_vwrp_weekly": 1.0,
+     "tracking_error_vs_vwrp_weekly": 0.0,
+     "min_weight_with_history": 1.0
+    }
+   },
+   "scenarios": {
+    "semis index -40%": -0.055688214371920355,
+    "Nasdaq-100 -30%": -0.07691088539166702,
+    "beta_soxx": 0.13922053592980088,
+    "beta_qqq": 0.2563696179722234
+   }
+  },
+  "B2 = B + semis capped at 25% (info)": {
+   "weights": {
+    "GOOGL_US_EQ": 0.1144,
+    "MSFT_US_EQ": 0.1045,
+    "AMZN_US_EQ": 0.0926,
+    "NVDA_US_EQ": 0.0825,
+    "AVGO_US_EQ": 0.0696,
+    "PANW_US_EQ": 0.0683,
+    "FB_US_EQ": 0.0645,
+    "SPCX_US_EQ": 0.0565,
+    "PLTR_US_EQ": 0.0565,
+    "CRWD_US_EQ": 0.0487,
+    "TSM_US_EQ": 0.0392,
+    "ASML_US_EQ": 0.0391,
+    "VRT_US_EQ": 0.0323,
+    "AAPL_US_EQ": 0.0292,
+    "TSLA_US_EQ": 0.0291,
+    "AMD_US_EQ": 0.0196,
+    "IBTAl_EQ": 0.0195,
+    "UBER_US_EQ": 0.0194,
+    "VST_US_EQ": 0.0145
+   },
+   "exposures": {
+    "semis_direct": 0.24999999999999997,
+    "semis_incl_vwrp_lookthrough_lb": 0.24999999999999997,
+    "ai_linked_total": 0.7293089496682311,
+    "ai_groups": {
+     "not AI-linked": 0.2706910503317689,
+     "hyperscalers": 0.3760398122673572,
+     "compute/semis": 0.24999999999999997,
+     "AI software": 0.056465447483411556,
+     "AI infrastructure & power": 0.046803689917462366
+    },
+    "sector": {
+     "Technology": 0.7292788320389314,
+     "Consumer discretionary": 0.12169068825036645,
+     "Industrials": 0.058467822879823654,
+     "unclassified (SpaceX)": 0.05653827480174786,
+     "Bond ETF": 0.019483194134649374,
+     "Utilities": 0.014541187894481306
+    },
+    "country": {
+     "United States": 0.9022394494189802,
+     "Taiwan": 0.039195311730523,
+     "Netherlands": 0.03908204471584753,
+     "US (Treasuries)": 0.019483194134649374
+    },
+    "usd_underlying": 1.0,
+    "largest": 0.11444408480336625,
+    "top5": 0.4637090985028912,
+    "effective_n": 14.495867048244238,
+    "holdings": 19
+   },
+   "windows": {
+    "1y": {
+     "ann_return": 0.36010436425311054,
+     "ann_vol": 0.23392109476407552,
+     "max_drawdown": -0.17044508606918052,
+     "worst_21d": -0.0907117169959295,
+     "return_over_vol": 1.5394266370730652,
+     "beta_vs_vwrp_weekly": 1.647050936669059,
+     "corr_vs_vwrp_weekly": 0.7710973552152479,
+     "tracking_error_vs_vwrp_weekly": 0.16839351243822726,
+     "min_weight_with_history": 0.9434617251982521
+    },
+    "3y": {
+     "ann_return": 0.4834600672527283,
+     "ann_vol": 0.26924570177820023,
+     "max_drawdown": -0.2984431680005817,
+     "worst_21d": -0.19229587176753538,
+     "return_over_vol": 1.7956092300072963,
+     "beta_vs_vwrp_weekly": 1.7395223637379011,
+     "corr_vs_vwrp_weekly": 0.7674447990812594,
+     "tracking_error_vs_vwrp_weekly": 0.1889948496125449,
+     "min_weight_with_history": 0.9434617251982521
+    },
+    "5y": {
+     "ann_return": 0.34915674953073483,
+     "ann_vol": 0.2943069148646331,
+     "max_drawdown": -0.3576040040668218,
+     "worst_21d": -0.19229587176753538,
+     "return_over_vol": 1.186369507122624,
+     "beta_vs_vwrp_weekly": 1.6516884861476826,
+     "corr_vs_vwrp_weekly": 0.7395259043643218,
+     "tracking_error_vs_vwrp_weekly": 0.1988279651682245,
+     "min_weight_with_history": 0.9434617251982521
+    },
+    "2022 bear (2022-01-03..2022-12-30)": {
+     "ann_return": -0.3146202826949521,
+     "ann_vol": 0.39228704734067,
+     "max_drawdown": -0.340408490212567,
+     "worst_21d": -0.15969390246570214,
+     "return_over_vol": -0.8020154752184043,
+     "beta_vs_vwrp_weekly": 1.7439432475530419,
+     "corr_vs_vwrp_weekly": 0.7658006583110101,
+     "tracking_error_vs_vwrp_weekly": 0.2266295492955443,
+     "min_weight_with_history": 0.9434617251982521
+    }
+   },
+   "scenarios": {
+    "semis index -40%": -0.2455299457435119,
+    "Nasdaq-100 -30%": -0.3702589798281863,
+    "beta_soxx": 0.6138248643587797,
+    "beta_qqq": 1.2341965994272877
+   }
+  }
+ },
+ "name_betas_5y_gbp": {
+  "SPCX_US_EQ": {
+   "soxx": 0.4183861382753477,
+   "qqq": 1.690083197424996
+  },
+  "MSFT_US_EQ": {
+   "soxx": 0.3614473234889412,
+   "qqq": 0.8766791557610545
+  },
+  "ASML_US_EQ": {
+   "soxx": 0.9334695975923007,
+   "qqq": 1.3806201217232843
+  },
+  "PLTR_US_EQ": {
+   "soxx": 0.7468497451894707,
+   "qqq": 1.603382514649686
+  },
+  "NVDA_US_EQ": {
+   "soxx": 1.0178046519687325,
+   "qqq": 1.7224165771850468
+  },
+  "CRWD_US_EQ": {
+   "soxx": 0.5922111764140062,
+   "qqq": 1.2669594169122564
+  },
+  "TSM_US_EQ": {
+   "soxx": 0.7820698482513864,
+   "qqq": 1.1532840072841448
+  },
+  "AMD_US_EQ": {
+   "soxx": 1.1933369977093125,
+   "qqq": 1.7748952919606784
+  },
+  "BE_US_EQ": {
+   "soxx": 1.0483894080278842,
+   "qqq": 1.589496194843757
+  },
+  "IBTAl_EQ": {
+   "soxx": 0.02776383707010128,
+   "qqq": 0.08371545926305735
+  },
+  "AMZN_US_EQ": {
+   "soxx": 0.5089143546014799,
+   "qqq": 1.1540595376078204
+  },
+  "UBER_US_EQ": {
+   "soxx": 0.5002341280124953,
+   "qqq": 1.0164692368238264
+  },
+  "VRT_US_EQ": {
+   "soxx": 1.0271432154060134,
+   "qqq": 1.650367793010158
+  },
+  "VST_US_EQ": {
+   "soxx": 0.567204069060736,
+   "qqq": 0.9228531764615869
+  },
+  "FB_US_EQ": {
+   "soxx": 0.5572110833931855,
+   "qqq": 1.2577795177375317
+  },
+  "GOOGL_US_EQ": {
+   "soxx": 0.42531961262400125,
+   "qqq": 0.9687876537994679
+  },
+  "TSLA_US_EQ": {
+   "soxx": 0.7966241817811396,
+   "qqq": 1.596169053323196
+  },
+  "AVGO_US_EQ": {
+   "soxx": 0.87314486438585,
+   "qqq": 1.367510154051317
+  },
+  "AAPL_US_EQ": {
+   "soxx": 0.37818990349414033,
+   "qqq": 0.8602449110948371
+  },
+  "TEM_US_EQ": {
+   "soxx": 0.7493408013896657,
+   "qqq": 1.6319467401865166
+  },
+  "INTC_US_EQ": {
+   "soxx": 0.9253671612333261,
+   "qqq": 1.2850186213739263
+  },
+  "PANW_US_EQ": {
+   "soxx": 0.4178476799629678,
+   "qqq": 0.9537760873766851
+  },
+  "ADBE_US_EQ": {
+   "soxx": 0.33334531697144704,
+   "qqq": 0.8849618812936846
+  },
+  "COST_US_EQ": {
+   "soxx": 0.20777629474603826,
+   "qqq": 0.5346973852220374
+  },
+  "MSCI_US_EQ": {
+   "soxx": 0.3002105458652308,
+   "qqq": 0.7214093716245673
+  },
+  "RL_US_EQ": {
+   "soxx": 0.4788995513805569,
+   "qqq": 0.8650347538253965
+  },
+  "A_US_EQ": {
+   "soxx": 0.34506583977356264,
+   "qqq": 0.665338431838652
+  },
+  "META_US_EQ": {
+   "soxx": 0.5572040300754237,
+   "qqq": 1.2577727871555353
+  },
+  "GTES_US_EQ": {
+   "soxx": 0.50076064008949,
+   "qqq": 0.8211553757410746
+  },
+  "LOW_US_EQ": {
+   "soxx": 0.2506817201236186,
+   "qqq": 0.5437329588293193
+  },
+  "VWRP.L": {
+   "soxx": 0.13922053592980088,
+   "qqq": 0.2563696179722234
+  },
+  "SPY": {
+   "soxx": 0.3651285260065917,
+   "qqq": 0.7289218573667203
+  },
+  "ACWI": {
+   "soxx": 0.3476252673639694,
+   "qqq": 0.6670584976340248
+  },
+  "IBTA.L": {
+   "soxx": 0.02776383707010128,
+   "qqq": 0.08371545926305735
+  }
+ },
+ "data_check_avg_pairwise_corr": {
+  "1y": 0.2594547047058417,
+  "5y": 0.4012550198704025
+ }
+}
