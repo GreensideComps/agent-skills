@@ -72,7 +72,7 @@ def evaluate(df: pd.DataFrame, signal, name: str, start: str = "2012-01-31", end
     d["score"] = np.nan
     for mo, g in d.groupby("month"):
         d.loc[g.index, "score"] = signal(g)
-    out = {"signal": name, "start": start, "end": end, "bands": {}}
+    out = {"signal": name, "start": start, "end": end, "bands": {}, "series": {}}
     for b in bands:
         x = d[(d["band"] == b) & d["score"].notna()]
         rows, prev_top = [], set()
@@ -93,6 +93,7 @@ def evaluate(df: pd.DataFrame, signal, name: str, start: str = "2012-01-31", end
             out["bands"][b] = {"months": 0}
             continue
         net = r["q5_minus_univ"] - 2 * COST_PER_TURNOVER * r["q5_turnover"]
+        out["series"][b] = r.assign(q5_net=net)
         out["bands"][b] = {
             "months": len(r), "avg_names": float(r["n"].mean()),
             "mean_ic": float(r["ic"].mean()), "ic_t_nw": newey_west_t(r["ic"]), "ic_pos_share": float((r["ic"] > 0).mean()),
