@@ -168,3 +168,4 @@ class Store:
         self.recommendations = Ledger(self.root / "recommendations.jsonl")  # paper picks, logged before outcomes
         self.paper = Ledger(self.root / "paper_trades.jsonl")          # simulated fills (portfolio + benchmark)
         self.paper_nav = Ledger(self.root / "paper_nav.jsonl")         # daily marks of both books
+        self.portfolio = Ledger(self.root / "portfolio.jsonl")         # read-only snapshots of the owner's holdings

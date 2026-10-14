@@ -63,6 +63,18 @@
     "job": "paper_portfolio"
    },
    "trigger_id": "trig_01PYai2PEsqMTtFSMDCD99BY"
+  },
+  {
+   "name": "Equity daily pipeline: portfolio monitor",
+   "cron": "27 22 * * 1-5",
+   "tz": "Europe/London",
+   "active_from": "2026-10-14T21:00:00Z",
+   "grace_minutes": 180,
+   "evidence": {
+    "type": "job",
+    "job": "portfolio_monitor"
+   },
+   "trigger_id": "trig_01PYai2PEsqMTtFSMDCD99BY"
   }
  ],
  "lookback_days": 3,

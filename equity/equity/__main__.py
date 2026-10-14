@@ -28,6 +28,14 @@ def _secrets() -> list[str]:
     return [os.environ.get(k, "") for k in SECRET_ENV]
 
 
+def _t212_readonly():
+    sys.path.insert(0, str(TRADING_DIR))
+    from t212bot.client import T212Client  # noqa: PLC0415
+    from t212bot.config import load_credentials  # noqa: PLC0415
+    from t212bot.readonly import ReadOnlyClient  # noqa: PLC0415
+    return ReadOnlyClient(T212Client(load_credentials()))
+
+
 def _t212_instruments() -> list[dict]:
     sys.path.insert(0, str(TRADING_DIR))
     from t212bot.client import T212Client  # noqa: PLC0415
@@ -463,6 +471,36 @@ def cmd_backtest(store: Store, a) -> int:
     return 0
 
 
+def cmd_portfolio(store: Store, a) -> int:
+    """Read-only portfolio monitor: snapshot, research join, exposure, concentration, co-movement."""
+    from . import portfolio  # noqa: PLC0415
+    with job(store, "portfolio_monitor", {}, redact=_secrets()) as j:
+        snap = portfolio.snapshot(_t212_readonly())
+        store.portfolio.append(snap)
+        if a.ingest_missing:  # research every SEC-linked holding that has no snapshot yet
+            have = {f["company_id"] for f in store.fundamentals.read()}
+            secs = latest_securities(store)
+            todo = [secs[p["t212_ticker"]] for p in snap["positions"] if p["t212_ticker"] in secs
+                    and secs[p["t212_ticker"]].get("sec_match") == "high"
+                    and secs[p["t212_ticker"]]["company_id"] not in have]
+            sec = SecClient()
+            for s in todo:
+                try:
+                    ingest_company(store, sec, s)
+                except (SecError, ValueError, KeyError) as e:
+                    print(f"{s['symbol']}: ingest failed: {e}")
+        rets, bench, failed = portfolio.fetch_returns(snap, store)
+        an = portfolio.analyse(snap, store, rets, bench)
+        j["outputs"] = {"holdings": len(snap["positions"]), "flags": len(an["flags"]), "total": an["total_value"]}
+    md = portfolio.report(an, failed)
+    out = Path(__file__).resolve().parent.parent / "reports" / "portfolio" / f"{snap['as_of']}.md"
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(md)
+    print(md)
+    print("->", out)
+    return 0  # flags are in the report; a non-zero exit means the run itself failed
+
+
 def main(argv=None) -> int:
     p = argparse.ArgumentParser(prog="equity")
     p.add_argument("--data", default=None, help="ledger directory (default equity/data)")
@@ -495,6 +533,8 @@ def main(argv=None) -> int:
     sub.add_parser("health")
     s = sub.add_parser("backtest", help="pre-registered point-in-time test of the screen score")
     s.add_argument("--n", type=int, default=600); s.add_argument("--seed", type=int, default=7)  # noqa: E702
+    s = sub.add_parser("portfolio", help="read-only monitor of the owner's holdings (demo account for now)")
+    s.add_argument("--ingest-missing", action="store_true", help="research SEC-linked holdings not yet in the DB")
     sub.add_parser("reliability", help="missed scheduled runs, stuck jobs, stale data (exit 0/1/2)")
     s = sub.add_parser("prices"); s.add_argument("--symbol", action="append")  # noqa: E702
     s = sub.add_parser("screen"); s.add_argument("--top", type=int, default=25)  # noqa: E702
@@ -520,7 +560,7 @@ def main(argv=None) -> int:
                "discover": cmd_discover, "status": cmd_status, "search": cmd_search, "health": cmd_health,
                "coverage": cmd_coverage, "prices": cmd_prices, "screen": cmd_screen, "explain": cmd_explain,
                "valuate": cmd_valuate, "paper": cmd_paper, "thesis": cmd_thesis, "bearcase": cmd_bearcase, "alerts": cmd_alerts,
-               "crosscheck": cmd_crosscheck, "reliability": cmd_reliability, "backtest": cmd_backtest}
+               "crosscheck": cmd_crosscheck, "reliability": cmd_reliability, "backtest": cmd_backtest, "portfolio": cmd_portfolio}
     return handler[a.cmd](store, a)
 
 

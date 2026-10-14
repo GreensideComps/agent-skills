@@ -2,7 +2,8 @@
 # Daily equity research pipeline (used by the "Equity: daily research pipeline" routine).
 # Research only: no broker calls, no orders. Needs SEC_USER_AGENT="<app> <email>" in the environment.
 #   1. tests  2. grow the universe (NEW companies)  3. rolling re-check of old snapshots
-#   4. prices  5. screen + valuation + alerts  6. paper portfolio  7. reliability  8. commit and push
+#   4. prices  5. screen + valuation + alerts  6. paper portfolio  7. portfolio monitor  8. reliability
+#   9. commit and push
 # Exit code: the reliability check's (0 ok, 1 warn, 2 critical), or 3+ if a step failed.
 set -uo pipefail
 BRANCH="${EQUITY_BRANCH:-master}"
@@ -24,6 +25,10 @@ python3 -m equity ingest --all-sec --refresh "$REFRESH" | tail -n 1
 python3 -m equity prices >/dev/null || FAILED="$FAILED prices"
 python3 -m equity screen --top 25 >/dev/null || FAILED="$FAILED screen"
 python3 -m equity paper >/dev/null || FAILED="$FAILED paper"
+# Read-only portfolio monitor (needs the T212 read-only variables; skipped without them).
+if [ -n "${T212_API_KEY:-}" ]; then
+  python3 -m equity portfolio --ingest-missing >/dev/null || FAILED="$FAILED portfolio"
+fi
 python3 -m equity reliability; RC=$?
 [ -n "$FAILED" ] && echo "EQUITY: steps with failures:$FAILED (see equity/data/jobs/)"
 
