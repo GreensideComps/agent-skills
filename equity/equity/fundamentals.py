@@ -22,7 +22,7 @@ from datetime import date
 
 from .industry import NOT_MEANINGFUL, NOT_REQUIRED
 
-METHOD_VERSION = "fund-2.0"
+METHOD_VERSION = "fund-2.1"
 ANNUAL_FORMS = {"10-K", "10-K/A", "10-KT", "10-KT/A", "20-F", "20-F/A", "40-F", "40-F/A"}
 HISTORY_YEARS = 10
 
@@ -142,7 +142,8 @@ METHODS = {
     "share_change_cagr": "CAGR of diluted share count (negative = net buybacks)",
     "taxonomy": "us-gaap or ifrs-full, whichever has the most recent annual revenue/OCF/net income; ties go "
                 "to us-gaap. IFRS: net income = profit attributable to owners of the parent; debt = borrowings.",
-    "reporting_currency": "the currency with the most annual-form money facts; other currencies are ignored",
+    "reporting_currency": "the currency of the latest annual revenue/OCF/net income (ties: the one most annual "
+                          "facts use); values in other currencies are ignored, never converted or mixed",
 }
 
 
@@ -162,18 +163,31 @@ def _unit_for(kind: str, units: dict, currency: str | None) -> str | None:
 
 
 def reporting_currency(tax_facts: dict, concepts: dict) -> str | None:
-    """The currency used by most annual-form money facts. Some foreign filers also tag
-    convenience translations (e.g. USD next to TWD); taking one currency avoids mixing them."""
+    """The currency of the latest annual statements. Companies can change presentation
+    currency (Diageo moved from GBP to USD in FY2024), so the latest annual revenue, OCF or
+    net income decides. Some filers also tag a convenience translation of the same period
+    (TSMC: USD next to TWD); among currencies at the latest period, the one used by most
+    annual-form money facts overall wins. Values in other currencies are never mixed in."""
     counts: dict[str, int] = {}
+    latest: dict[str, str] = {}
+    core = {n for m in ("revenue", "ocf", "net_income") for n in concepts[m][2]}
     for _metric, (_kind, unit_kind, names) in concepts.items():
         if unit_kind != "money":
             continue
         for name in names:
             for u, entries in tax_facts.get(name, {}).get("units", {}).items():
-                if _is_currency(u):
-                    counts[u] = counts.get(u, 0) + sum(1 for e in entries if e.get("form") in ANNUAL_FORMS)
-    counts = {u: n for u, n in counts.items() if n}
-    return max(sorted(counts), key=lambda u: counts[u]) if counts else None
+                if not _is_currency(u):
+                    continue
+                annual = [e for e in entries if e.get("form") in ANNUAL_FORMS and "end" in e]
+                counts[u] = counts.get(u, 0) + len(annual)
+                if name in core and annual:
+                    latest[u] = max(latest.get(u, ""), max(e["end"] for e in annual))
+    if latest:
+        newest = max(latest.values())
+        cands = [u for u, end in latest.items() if end == newest]
+    else:
+        cands = [u for u, n in counts.items() if n]
+    return max(sorted(cands), key=lambda u: counts.get(u, 0)) if cands else None
 
 
 def choose_taxonomy(facts: dict) -> str:

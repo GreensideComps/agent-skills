@@ -81,6 +81,22 @@ def test_convenience_translation_is_ignored_not_mixed():
     assert "ignored_currencies:USD" in a["flags"] and a["confidence"] == "high"
 
 
+def test_presentation_currency_change_follows_the_latest_statements():
+    """Diageo-like: GBP for older years, then USD from FY2024 (older years have more facts)."""
+    facts, ends, rev = make_ifrs(cur="GBP", n_years=6)
+    g = facts["facts"]["ifrs-full"]
+    for name, node in g.items():
+        for u in list(node["units"]):
+            if u in ("GBP", "GBP/shares"):
+                usd = [dict(e) for e in node["units"][u] if e["end"] >= ends[-2]]
+                node["units"][u] = [e for e in node["units"][u] if e["end"] < ends[-2]]
+                node["units"][u.replace("GBP", "USD")] = usd
+    a = analyse(facts, TODAY)
+    assert a["reporting_currency"] == "USD"
+    assert sorted(a["years"]) == ends[-2:] and "stale_annual_data" not in a["flags"]
+    assert "ignored_currencies:GBP" in a["flags"]
+
+
 def test_us_gaap_company_is_unchanged_by_m2():
     facts, ends, rev = make_facts()
     a = analyse(facts, TODAY)

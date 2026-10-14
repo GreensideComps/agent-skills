@@ -11,7 +11,7 @@ System-wide audit and roadmap: [`../docs/AUDIT_AND_PLAN.md`](../docs/AUDIT_AND_P
 
 ```bash
 export SEC_USER_AGENT="my-research-app me@example.com"   # SEC requires a contact email
-python3 -m pytest -q                                     # 60 offline tests
+python3 -m pytest -q                                     # 61 offline tests
 python3 -m equity sync-universe                          # T212 instruments + SEC ticker map -> security master
 python3 -m equity ingest --symbol AAPL --symbol KO       # fundamentals snapshot(s) from SEC XBRL
 python3 -m equity ingest --all-sec --random 40 --seed 1  # random sample of SEC-linked companies

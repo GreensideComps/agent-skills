@@ -184,10 +184,13 @@ survey command. Code and tests are in `equity/`; usage in [`../equity/README.md`
 |---|---|
 | IFRS (`ifrs-full`) filers | Parallel concept map; per-company taxonomy choice (most recent annual data wins); one reporting currency per company, other currencies ignored and flagged rather than mixed |
 | Industry classification | SIC from SEC submissions → `industrial` / `bank` / `insurer` / `financial_other` / `reit` / `spac`; non-industrial metrics that don't apply are blanked and flagged; such companies are excluded from screening and blocked at the `candidate` gate |
-| Snapshot size | Lossless packing, methods stored once per version: 36 KB → 13 KB per snapshot on the 54 existing M1 snapshots, round trip exact on all 54 |
+| Snapshot size | Lossless packing, methods stored once per version: 36 KB → 13 KB per snapshot (12.9 KB average over the 128 live `fund-2.1` snapshots); round trip exact on all 54 M1 snapshots |
 | Coverage survey | `python3 -m equity coverage`: confidence by taxonomy and template, most common gaps, concepts in use |
-| Tests | `equity/tests`: 60 passed (31 M1 + 29 M2); `trading/tests`: 139 passed, unchanged |
-| Live run against SEC | **Not done yet.** SEC requires a contact email in `SEC_USER_AGENT`, which is not set in this environment (decision 2 in §8). Re-ingesting the 54 companies plus a random IFRS and financials sample is the acceptance step once it is set. |
+| Tests | `equity/tests`: 61 passed (31 M1 + 30 M2); `trading/tests`: 139 passed, unchanged |
+| Live run against SEC (2026-10-14, owner's account email as the SEC contact, owner's choice) | 128 companies re-ingested at `fund-2.1`, 0 failures: the 54 M1 companies, 18 chosen IFRS filers, banks, REITs and insurers, and a random 60 (seed 7; 2 had no XBRL at SEC, HTTP 404). Record: `equity/reports/verification/2026-10-14-coverage-fund-2.1.json` |
+| Result on the 54 M1 companies | low 24 → 19, medium 12 → 17, high 18 → 18. 44 of 54 are supported for screening; 10 are banks, insurers, REITs, other financials or a SPAC |
+| Result on the random 60 | high 12, medium 28, low 18 (no data 2); 47 supported for screening; 7 read from IFRS |
+| Bug found on live data and fixed | Diageo changed its presentation currency from GBP to USD in FY2024. Choosing the currency used by the most facts picked GBP and left the data stale at FY2023. The currency now follows the latest annual statements (regression test added), and the method version went to `fund-2.1` so the earlier `fund-2.0` snapshots are superseded. |
+| Gaps that are SEC's, not ours | TSMC's FY2025 20-F and Diageo's FY2026 20-F are not in SEC's companyfacts yet, so both stay `stale_annual_data`. Recent capex for Diageo, Infosys, Shell and BP uses company-specific tags that companyfacts leaves out, so it shows `missing:capex`. Toyota tags its cash flow in us-gaap but the rest in IFRS. |
 
-Method version is now `fund-2.0`, so the next ingest writes a new snapshot for every company (old ones stay in the
-ledger, linked by `previous_snapshot`).
+The method version is now `fund-2.1`. Old snapshots stay in the ledger, linked by `previous_snapshot`.
