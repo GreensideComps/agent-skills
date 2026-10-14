@@ -11,7 +11,7 @@ System-wide audit and roadmap: [`../docs/AUDIT_AND_PLAN.md`](../docs/AUDIT_AND_P
 
 ```bash
 export SEC_USER_AGENT="my-research-app me@example.com"   # SEC requires a contact email
-python3 -m pytest -q                                     # 88 offline tests
+python3 -m pytest -q                                     # 97 offline tests
 python3 -m equity sync-universe                          # T212 instruments + SEC ticker map -> security master
 python3 -m equity ingest --symbol AAPL --symbol KO       # fundamentals snapshot(s) from SEC XBRL
 python3 -m equity ingest --all-sec --random 40 --seed 1  # random sample of SEC-linked companies
@@ -30,7 +30,16 @@ python3 -m equity discover TICKER --source S --reason R --evidence URL
 python3 -m equity status TICKER --to research_queue --reason R --evidence E
 python3 -m equity crosscheck --symbol AAPL ...           # independent check vs Yahoo -> reports/verification/
 python3 -m equity health                                 # last ok/failed run per job, stuck jobs, coverage
+python3 -m equity ingest --all-sec --new-only --limit 200  # grow the universe: companies with no snapshot yet
+python3 -m equity ingest --all-sec --refresh 300         # re-check the 300 oldest snapshots (over 7 days old)
+python3 -m equity reliability                            # missed runs, stuck jobs, stale data -> reports/health/
+bash daily_run.sh                                        # the whole daily pipeline, then commit + push (needs SEC_USER_AGENT)
 ```
+
+Scheduling: the "Equity: daily research pipeline" routine runs `daily_run.sh` on weekdays at 22:27 London.
+`config/schedule.json` lists every scheduled run (the T212 demo bot's routines included) and the evidence that
+proves it ran: a commit with a given prefix on a branch, or an ok job in `data/jobs.jsonl`. `reliability`
+compares the two; it never trusts that a schedule exists.
 
 ## Design
 
