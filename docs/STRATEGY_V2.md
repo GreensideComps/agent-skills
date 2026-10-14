@@ -313,8 +313,13 @@ DSR 0.12 after 14 trials). Some small caps have IC t > 2 (FCF yield, gross profi
 that band is not the deciding one and is the most exposed to survivor bias. Addendum 1 (residual momentum S6c,
 insider net buyers S7a, insider purchase value S7b) also fails: 0 of 14. Addendum 2 (S9 expectations gap, the
 core thesis) fails too (IC −0.002, t −0.12): **0 of 15 pass in large caps.** The §2.5 project kill rule is
-therefore met on free data. Every Stage 2 signal stays at E0/E1: none may drive rankings or sizing. Next steps
-are the owner's decision (paid data, universe, or the satellite-and-VWRP default).
+therefore met on free data. Every Stage 2 signal stays at E0/E1: none may drive rankings or sizing.
+
+**Owner decision (2026-10-14): satellite mode.** VWRP is the core allocation. No paid data for now. The system
+keeps researching and logs all 15 signals for the whole universe every month, before outcomes exist
+(`research/signal_log.py`, run by `research/monthly_signal_log.sh`; report `equity/reports/research/signal_log.md`).
+The log starts with decisions at 2026-10-31, so the 2023-01..2026-09 holdout stays unread. Paid data is revisited
+only if the live log shows something worth confirming.
 
 ### Stage 3: expectations engine (replaces val-1.0)
 
