@@ -306,12 +306,13 @@ survivor bias stated on every result, until the owner decides on survivorship-fr
 committed. **Zero passes is an acceptable, reportable outcome.**
 
 **Interim result (2026-10-14; `equity/reports/research/stage2_signals.md`, pre-registration
-`research/prereg/stage2.md`):** 0 of 11 trials pass in large caps from 2015-01 to 2022-11. Nine fail; gross
+`research/prereg/stage2.md`):** 0 of 11 trials pass in large caps (first batch) from 2015-01 to 2022-11. Nine fail; gross
 profitability (S2a) and revenue acceleration (S3b) are inconclusive (IC t 1.18 and 1.37). The largest
 large-cap IC is 0.013, and no top quintile beats the universe after costs except low net issuance (+0.7% a year,
-DSR 0.15). Some small caps have IC t > 2 (FCF yield, gross profitability, low issuance), but that band is not
-the deciding one and is the most exposed to survivor bias. Still to run before the §2.5 kill rule is applied:
-S6c residual momentum, S7 insider buying and S9 expectations gap.
+DSR 0.12 after 14 trials). Some small caps have IC t > 2 (FCF yield, gross profitability, low issuance), but
+that band is not the deciding one and is the most exposed to survivor bias. Addendum 1 (residual momentum S6c,
+insider net buyers S7a, insider purchase value S7b) also fails: **0 of 14**. Still to run before the §2.5 kill
+rule is applied: S9 expectations gap.
 
 ### Stage 3: expectations engine (replaces val-1.0)
 
