@@ -9,6 +9,7 @@ its source **and** `claude/trading212-agent-skills-r71zy3` as its output branch,
 | Routine | When | What it does |
 |---|---|---|
 | **T212 demo: trading ops** | Weekdays 08:20 London (moved from 10:07 on 2026-10-13) | `trading/ops_run.sh`: tests → `run --execute` (trades only if a rebalance is due) → report → commit journal |
+| **T212 demo: monitor** | Hourly, weekdays 08:00–21:00 London (LSE + US sessions) | `trading/monitor_run.sh`: read-only `t212bot monitor` (account, drawdown, holdings vs signal, live distance to the 100-day average, intraday moves, failed/stale runs, KILL). Never trades; alerts the owner on WARN/CRITICAL. |
 | **T212 demo: research loop** | Daily 01:13 and 13:13 London | Follows [`../research/LOOP.md`](../research/LOOP.md): next agenda item → rigorous test → [promotion gate](../research/PROMOTION_GATE.md) → log → commit |
 
 ### Lessons from setup (2026-10-13)

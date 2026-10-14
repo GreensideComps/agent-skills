@@ -5,7 +5,9 @@
       "Bash(cd trading && python3 -m t212bot status)",
       "Bash(cd trading && python3 -m t212bot report)",
       "Bash(cd trading && python3 -m t212bot reconcile)",
-      "Bash(cd trading && python3 -m pytest -q)"
+      "Bash(cd trading && python3 -m pytest -q)",
+      "Bash(bash trading/monitor_run.sh)",
+      "Bash(cd trading && python3 -m t212bot monitor)"
     ]
   }
 }

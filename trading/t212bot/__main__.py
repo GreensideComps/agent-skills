@@ -6,6 +6,7 @@
     python -m t212bot run --execute --force   rebalance to target now
     python -m t212bot reconcile           match placed orders to fills
     python -m t212bot report              write PERFORMANCE.md (real vs shadow portfolios)
+    python -m t212bot monitor             read-only health and market check (no orders)
 
 Run from the trading/ directory. Demo account only (see README.md).
 """
@@ -48,6 +49,7 @@ def main(argv=None) -> int:
     d.add_argument("--respect-schedule", action="store_true", help="only run if the UK-local report time has passed and today's report is not yet delivered")
     d.add_argument("--sample", action="store_true", help="render the EXAMPLE-DATA sample report (no API calls)")
     sub.add_parser("advise", help="print today's withdrawal recommendation (read-only)")
+    sub.add_parser("monitor", help="read-only health/market check; exit 0 ok, 1 warn, 2 critical")
     sub.add_parser("email-check", help="validate email configuration without sending")
     vr = sub.add_parser("verify-report", help="re-fetch raw API data and independently check a stored report")
     vr.add_argument("--date", default=None)
@@ -67,6 +69,17 @@ def main(argv=None) -> int:
         print(json.dumps({k: v for k, v in res.items() if k != "alerts"}, indent=1, default=str))
         for al in res.get("alerts", []):
             print(f"{al['level']}: {al['msg']}", file=sys.stderr)
+        return res["exit"]
+    if a.cmd == "monitor":
+        from . import monitor
+        try:
+            res = monitor.run()
+        except Exception as e:
+            print(f"FAILED: {type(e).__name__}: {e}", file=sys.stderr)
+            return 2
+        print(json.dumps({k: v for k, v in res.items() if k not in ("alerts", "exit")}, indent=1, default=str))
+        for al in res["alerts"]:
+            print(f"{al['level']}: {al['msg']}")
         return res["exit"]
     if a.cmd == "advise":
         from . import daily
