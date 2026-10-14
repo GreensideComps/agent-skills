@@ -60,7 +60,7 @@ ideas are appended with a priority and a pre-registration. Status values:
 - **Task:** find a free, legitimate source for MSCI World Momentum/Quality index levels back to 1994–1999 (MSCI end-of-day index search, iShares factsheet data). That would give an independent long test of the champion.
 
 ## P8: Generate new hypotheses (recurring)
-- **Status:** RECURRING (every 5th research run)
+- **Status:** RECURRING (every 5th research run). Last run 2026-10-14 (run 10): added P10-P13.
 - **Task:** scan recent factor/asset-allocation literature (SSRN, NBER, Alpha Architect, Research Affiliates, AQR) for ideas that are implementable with Trading 212 UCITS ETFs at £100. Add each with a pre-registration. Prefer ideas with an economic rationale and out-of-sample evidence after publication.
 
 
@@ -75,6 +75,24 @@ ideas are appended with a priority and a pre-registration. Status values:
   - Split: first half of the trading days in-sample (pick = best Sharpe), second half out-of-sample. Benchmarks: holding LQQ3 over the same days; cash.
   - Decision rule: cannot pass the gate's 20-year history test, so the best outcome is AWAITING_EVIDENCE (paper-track live); REJECTED if the out-of-sample pick loses money after base costs.
 - **Log:** 2026-10-14 (E014, `h08_tjr_smc.py`, `output/h08_tjr_summary.csv`): 49 trading days 2026-08-05..2026-10-14. All 6 long-only configs lost over the whole sample after 0.15%/side: 'next' entries -8.3% to -9.2% on 35 trades (win rate 34%), FVG entries -1.4% on 6 trades. In-sample pick fvg50 1.5R: OOS 4 trades, -1.2% (-2.4% at 0.30%/side) while holding LQQ3 made +14.9%. Even the untradable both-directions version lost (-0.2% to -13.6%). **Rejected.**
+
+
+## P10: Volatility-managed leverage on the Nasdaq trend rule (priority 1)
+- **Status:** OPEN (added 2026-10-14 by P8)
+- **Rationale:** Volatility clusters while expected returns barely rise with it, so scaling exposure down when recent volatility is high raises Sharpe (Moreira & Muir 2017, "Volatility-Managed Portfolios", JF). For a daily-reset 3x product the volatility drag is about 3x(3-1)/2 = 3 times the index variance, so cutting leverage in high-vol spells should help most where the drag is worst. Who is on the other side: investors who hold constant leverage through turbulence.
+- **Rule to pre-register before running:** while QQQ > SMA100 (as now), weight in LQQ3 = clip(target_vol / realised_vol_20d(3x), 0, 1), remainder in EQQQ (1x) or cash; off-signal = cash. Grid: target_vol in {30%, 45%, 60%} x remainder {EQQQ, cash} = 6 configs. Data: `h03_leveraged_trend.py` synthetic 3x on ^NDX/QQQ 1986-2026, IS 1986-2005 / OOS 2006-2026, champion = current rule.
+
+## P11: Trend sleeve rotates to gold instead of cash (priority 2)
+- **Status:** OPEN (added 2026-10-14 by P8)
+- **Rationale:** When the Nasdaq trend is off the account sits in cash. Gold has had low or negative correlation to equities in equity bear markets (2000-02, 2008, 2022 partially). Rule: off-signal -> SGLN if gold > its own SMA100, else cash. Grid: gold SMA {100, 200} = 2 configs. Data: GC=F/gold from 2000 (Yahoo), so ~26 years; IS 2000-2012 / OOS 2013-2026.
+
+## P12: Turn-of-the-month leverage tilt (priority 3)
+- **Status:** OPEN (added 2026-10-14 by P8)
+- **Rationale:** US equity returns concentrate in the last trading day and first three trading days of each month (Lakonishok & Smidt 1988; McConnell & Xu 2008, FAJ), linked to month-end pension and payroll flows. Rule: inside the trend-on state, hold 3x during the turn-of-month window and 1x (EQQQ) otherwise; variant 1x outside -> cash. 2 configs. Post-publication decay must be checked: OOS 2006-2026 only counts.
+
+## P13: Pre-FOMC drift (priority 4)
+- **Status:** OPEN (added 2026-10-14 by P8)
+- **Rationale:** US equities rose on average in the 24 hours before scheduled FOMC announcements (Lucca & Moench 2015, JF); later studies report the effect weakened after publication. Rule: hold 3x from the close two days before a scheduled FOMC decision to the announcement day close even when the trend is off. Needs a point-in-time list of scheduled FOMC dates (federalreserve.gov calendars). 1 config. Expect decay; most likely outcome is rejection.
 
 ---
 
