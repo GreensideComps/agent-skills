@@ -78,7 +78,7 @@ ideas are appended with a priority and a pre-registration. Status values:
 
 
 ## P10: Volatility-managed leverage on the Nasdaq trend rule (priority 1)
-- **Status:** OPEN (added 2026-10-14 by P8)
+- **Status:** IN PROGRESS (2026-10-14, E015; grid frozen as below before running `research/h09_vol_managed_leverage.py`)
 - **Rationale:** Volatility clusters while expected returns barely rise with it, so scaling exposure down when recent volatility is high raises Sharpe (Moreira & Muir 2017, "Volatility-Managed Portfolios", JF). For a daily-reset 3x product the volatility drag is about 3x(3-1)/2 = 3 times the index variance, so cutting leverage in high-vol spells should help most where the drag is worst. Who is on the other side: investors who hold constant leverage through turbulence.
 - **Rule to pre-register before running:** while QQQ > SMA100 (as now), weight in LQQ3 = clip(target_vol / realised_vol_20d(3x), 0, 1), remainder in EQQQ (1x) or cash; off-signal = cash. Grid: target_vol in {30%, 45%, 60%} x remainder {EQQQ, cash} = 6 configs. Data: `h03_leveraged_trend.py` synthetic 3x on ^NDX/QQQ 1986-2026, IS 1986-2005 / OOS 2006-2026, champion = current rule.
 
