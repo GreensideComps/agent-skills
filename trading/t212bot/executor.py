@@ -10,7 +10,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from .client import AmbiguousOrderError, ApiError, NotFound, T212Client
-from .config import ROOT, SafetyError, StrategyConfig, kill_switch_engaged
+from .config import ROOT, SafetyError, StrategyConfig, kill_switch_engaged, load_discretionary
 from .journal import Journal, utcnow
 from .market import YahooQuotes, check_against_t212, check_fresh, to_gbp, tradable_now
 from .planner import Holding, plan_rebalance, round_down
@@ -28,9 +28,11 @@ class Bot:
     def __init__(self, client: T212Client, cfg: StrategyConfig, journal: Journal,
                  quotes: YahooQuotes | None = None, now=utcnow, sleep=time.sleep,
                  instruments: list[dict] | None = None, exchanges: list[dict] | None = None,
-                 env: dict | None = None, kill_file: Path | None = None, daily_loader=None):
+                 env: dict | None = None, kill_file: Path | None = None, daily_loader=None,
+                 disc_path: Path | None = None):
         self.c, self.cfg, self.j = client, cfg, journal
         self._daily_loader = daily_loader
+        self._disc_path = disc_path
         self.q = quotes or YahooQuotes()
         self.now, self.sleep = now, sleep
         self._instruments, self._exchanges = instruments, exchanges
@@ -285,6 +287,10 @@ class Bot:
     def _resolve_signal(self, state: dict) -> StrategyConfig:
         """Static strategies pass through; a trend strategy gets today's targets.
         Any data problem raises SafetyError before an order can be planned."""
+        if self.cfg.mode == "discretionary":
+            d = load_discretionary(self.cfg, self._disc_path) if self._disc_path else load_discretionary(self.cfg)
+            self.j.event("discretionary_targets", targets=d["targets"], set_utc=d.get("set_utc"), reason=d.get("reason"))
+            return dataclasses.replace(self.cfg, targets=d["targets"], signal=None)
         if self.cfg.signal is None:
             return self.cfg
         if self._daily_loader is None:

@@ -99,6 +99,12 @@ def check(cfg, journal, ro, quotes, daily_loader, now: datetime, kill_file: Path
                 _alert(alerts, "INFO", f"{sig['symbol']} is {gap_live:+.2%} from its {sig['window']}-day average")
         except Exception as e:
             _alert(alerts, "CRITICAL", f"signal data problem: {type(e).__name__}: {e}")
+    if getattr(cfg, "mode", "rules") == "discretionary":
+        try:
+            from .config import load_discretionary
+            targets = load_discretionary(cfg)["targets"]
+        except Exception as e:
+            _alert(alerts, "CRITICAL", f"discretionary targets unreadable: {e}")
     held_target = {t: w * (1 - cfg.cash_buffer_pct) for t, w in targets.items()}
     for t in set(held_target) | set(weights):
         diff = weights.get(t, 0.0) - held_target.get(t, 0.0)

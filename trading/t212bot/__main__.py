@@ -7,6 +7,7 @@
     python -m t212bot reconcile           match placed orders to fills
     python -m t212bot report              write PERFORMANCE.md (real vs shadow portfolios)
     python -m t212bot monitor             read-only health and market check (no orders)
+    python -m t212bot decide --set T=w --reason "..." [--execute]   discretionary targets (mode=discretionary)
 
 Run from the trading/ directory. Demo account only (see README.md).
 """
@@ -49,6 +50,12 @@ def main(argv=None) -> int:
     d.add_argument("--respect-schedule", action="store_true", help="only run if the UK-local report time has passed and today's report is not yet delivered")
     d.add_argument("--sample", action="store_true", help="render the EXAMPLE-DATA sample report (no API calls)")
     sub.add_parser("advise", help="print today's withdrawal recommendation (read-only)")
+    dc = sub.add_parser("decide", help="discretionary mode: set target holdings and trade to them (demo only)")
+    g = dc.add_mutually_exclusive_group(required=True)
+    g.add_argument("--set", nargs="+", metavar="TICKER=WEIGHT", help="e.g. LQQ3l_EQ=1.0 (weights sum <= 1)")
+    g.add_argument("--cash", action="store_true", help="sell everything, hold cash")
+    dc.add_argument("--reason", required=True)
+    dc.add_argument("--execute", action="store_true", help="place orders (otherwise dry run)")
     sub.add_parser("monitor", help="read-only health/market check; exit 0 ok, 1 warn, 2 critical")
     sub.add_parser("email-check", help="validate email configuration without sending")
     vr = sub.add_parser("verify-report", help="re-fetch raw API data and independently check a stored report")
@@ -152,6 +159,23 @@ def main(argv=None) -> int:
         print(f"SAFETY: {e}", file=sys.stderr)
         return 2
     bot = Bot(client, cfg, j)
+    if a.cmd == "decide":
+        from datetime import datetime, timezone
+        from . import decide
+        try:
+            targets = {} if a.cash else decide.parse_targets(a.set)
+            res = decide.decide(bot, cfg, j, targets, a.reason, a.execute, datetime.now(timezone.utc))
+        except Exception as e:
+            j.event("run_failed", error_type=type(e).__name__, error=str(e)[:800], source="decide")
+            print(f"FAILED: {type(e).__name__}: {e}", file=sys.stderr)
+            return 1
+        print(f"status: {res['status']}" + (f" ({res.get('reason')})" if res.get("reason") else ""))
+        if "plan" in res:
+            print(_fmt_plan(res["plan"]))
+        for k in ("placed", "reconciled"):
+            if res.get(k):
+                print(k + ":", json.dumps(res[k], indent=1, default=str))
+        return 0
     if a.cmd == "reconcile":
         print(json.dumps(bot.reconcile(), indent=1, default=str))
         return 0

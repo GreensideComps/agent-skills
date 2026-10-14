@@ -16,6 +16,7 @@ ROOT = Path(__file__).resolve().parent.parent          # trading/
 JOURNAL_DIR = ROOT / "journal"
 CONFIG_PATH = ROOT / "config" / "strategy.json"
 KILL_FILE = ROOT / "KILL"
+DISCRETIONARY_PATH = ROOT / "config" / "discretionary_targets.json"
 
 
 class SafetyError(RuntimeError):
@@ -74,8 +75,14 @@ class StrategyConfig:
     # Optional trend signal (see signals.py). When set, `targets` is replaced at run time
     # by signal["on_targets"] or signal["off_targets"] (which may be empty = all cash).
     signal: dict | None = None
+    # "rules": targets come from `targets` / the signal. "discretionary": targets come from
+    # config/discretionary_targets.json, set by `t212bot decide` (owner override 2026-10-14).
+    mode: str = "rules"
+    decision_limits: dict = field(default_factory=dict)
 
     def __post_init__(self):
+        if self.mode not in ("rules", "discretionary"):
+            raise SafetyError(f"unknown mode {self.mode!r}")
         sets = [self.targets]
         if self.signal is not None:
             if self.signal.get("type") != "sma_trend":
@@ -86,7 +93,7 @@ class StrategyConfig:
         for tg in sets:
             s = sum(tg.values())
             # a signal strategy may hold all cash (empty targets); a static one may not
-            lo_ok = s > 0 or (self.signal is not None and not tg)
+            lo_ok = s > 0 or ((self.signal is not None or self.mode == "discretionary") and not tg)
             if not (lo_ok and s <= 1 + 1e-9):
                 raise SafetyError(f"target weights must sum to (0, 1], got {s}")
             if any(w < 0 for w in tg.values()):
@@ -98,3 +105,28 @@ class StrategyConfig:
 
 def load_strategy(path: Path = CONFIG_PATH) -> StrategyConfig:
     return StrategyConfig(**json.loads(Path(path).read_text()))
+
+
+def validate_targets(targets: dict, cfg: StrategyConfig) -> dict[str, float]:
+    """Discretionary targets: long-only, sum <= 1 (empty = all cash), only the configured universe."""
+    t = {k: float(v) for k, v in targets.items() if float(v) != 0}
+    if any(w < 0 for w in t.values()):
+        raise SafetyError("negative target weights (shorting) are not allowed")
+    if sum(t.values()) > 1 + 1e-9:
+        raise SafetyError(f"target weights sum to {sum(t.values()):.3f} > 1 (no borrowing)")
+    universe = set(cfg.decision_limits.get("universe") or [])
+    bad = set(t) - universe
+    if bad:
+        raise SafetyError(f"not in the discretionary universe: {sorted(bad)}")
+    missing = set(t) - set(cfg.yahoo_symbols)
+    if missing:
+        raise SafetyError(f"no reference-price symbol for {sorted(missing)}")
+    return t
+
+
+def load_discretionary(cfg: StrategyConfig, path: Path = DISCRETIONARY_PATH) -> dict:
+    if not Path(path).exists():
+        raise SafetyError(f"discretionary mode but {Path(path).name} is missing")
+    d = json.loads(Path(path).read_text())
+    d["targets"] = validate_targets(d.get("targets") or {}, cfg)
+    return d
