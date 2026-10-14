@@ -490,7 +490,7 @@ def cmd_research_data(store: Store, a) -> int:
                       ("submissions.zip", "https://www.sec.gov/Archives/edgar/daily-index/bulkdata/submissions.zip")):
         if not (work / name).exists() or a.refresh:
             subprocess.run(["curl", "-sS", "--fail", "-A", ua, "-o", str(work / name), url], check=True)
-    steps = a.step or ["facts", "companies", "monthly", "prices"]
+    steps = a.step or ["facts", "companies", "monthly", "prices", "insiders"]
     if "facts" in steps:
         print(panel.build(work / "companyfacts.zip", out / "sec_facts_panel.csv.gz"))
     if "companies" in steps:
@@ -498,7 +498,21 @@ def cmd_research_data(store: Store, a) -> int:
     if "monthly" in steps:
         print(monthly.build(out / "sec_facts_panel.csv.gz", out / "monthly_metrics.csv.gz"))
     if "prices" in steps:
-        print(monthly.fetch_prices(out / "sec_companies.csv.gz", out / "prices_monthly.csv.gz"))
+        from datetime import date  # noqa: PLC0415
+        part = out / f"prices_monthly.{date.today():%Y-%m}.partial.csv.gz"  # resumable within this month only
+        print(monthly.fetch_prices(out / "sec_companies.csv.gz", part))
+        part.replace(out / "prices_monthly.csv.gz")
+    if "insiders" in steps:
+        from datetime import date  # noqa: PLC0415, F811
+
+        from . import insiders  # noqa: PLC0415
+
+        def get(url):
+            return subprocess.run(["curl", "-sS", "--fail", "-A", ua, url], check=True, capture_output=True).stdout
+        today = date.today()
+        q = (today.month - 1) // 3  # last completed quarter
+        last = f"{today.year}q{q}" if q else f"{today.year - 1}q4"
+        print(insiders.build(out / "insider_trades.csv.gz", "2014q1", last, get))
     return 0
 
 
@@ -588,7 +602,7 @@ def main(argv=None) -> int:
     s = sub.add_parser("research-data", help="build the Stage 1 research dataset from SEC bulk files (large)")
     s.add_argument("--out", default="/mnt/project-files/research-data")
     s.add_argument("--work", default="/tmp/equity-bulk", help="where the SEC zip files are downloaded (~3 GB)")
-    s.add_argument("--step", action="append", choices=["facts", "companies", "monthly", "prices"])
+    s.add_argument("--step", action="append", choices=["facts", "companies", "monthly", "prices", "insiders"])
     s.add_argument("--refresh", action="store_true", help="download the SEC zip files again")
     a = p.parse_args(argv)
     store = Store(Path(a.data)) if a.data else Store()

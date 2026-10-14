@@ -73,8 +73,16 @@ def build(out_path: Path, first: str, last: str, get, log=print) -> dict:
     with gzip.open(out_path, "wt", newline="") as gz:
         w = csv.DictWriter(gz, fieldnames=FIELDS)
         w.writeheader()
-        for q in quarters(first, last):
-            rows = parse_quarter(get(URL.format(q=q)))
+        qs = quarters(first, last)
+        for i, q in enumerate(qs):
+            try:
+                body = get(URL.format(q=q))
+            except Exception:  # noqa: BLE001 - SEC publishes a quarter some weeks after it ends
+                if i >= len(qs) - 2:
+                    stats["missing_recent"] = q
+                    break
+                raise
+            rows = parse_quarter(body)
             w.writerows(rows)
             stats["quarters"] += 1
             stats["trades"] += len(rows)

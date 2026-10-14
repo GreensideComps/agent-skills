@@ -384,16 +384,20 @@ def report(res: dict, groups: dict, out: Path) -> None:
     print("\n".join(L))
 
 
-def main(out: Path) -> None:
-    df = xsection.load()
+def build_features(df: pd.DataFrame, months) -> pd.DataFrame:
+    """Every Stage 2 signal input, for scoring in `months` (S9's base rates are computed only there)."""
     comp = pd.read_csv(xsection.DATA / "sec_companies.csv.gz", dtype={"cik": int, "sic": str})
     df = prepare(df, comp)
-    ff3 = data_sources.french("F-F_Research_Data_Factors")
-    df["s6c_resid_mom"] = residual_momentum(df, ff3)
-    trades = pd.read_csv(xsection.DATA / "insider_trades.csv.gz")
-    df = df.join(insider_features(df, trades))
-    months = sorted(df.loc[(df["month"] >= START) & (df["month"] <= END), "month"].unique())
+    df["s6c_resid_mom"] = residual_momentum(df, data_sources.french("F-F_Research_Data_Factors"))
+    df = df.join(insider_features(df, pd.read_csv(xsection.DATA / "insider_trades.csv.gz")))
     df["s9_expectations_gap"] = expectations_gap(df, months)
+    return df
+
+
+def main(out: Path) -> None:
+    df = xsection.load()
+    months = sorted(df.loc[(df["month"] >= START) & (df["month"] <= END), "month"].unique())
+    df = build_features(df, months)
     f5 = data_sources.french("F-F_Research_Data_5_Factors_2x3")
     mom = data_sources.french("F-F_Momentum_Factor")
     factors = pd.concat([f5.drop(columns=["RF"]), mom], axis=1, sort=True)
