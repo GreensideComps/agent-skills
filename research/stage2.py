@@ -158,6 +158,60 @@ def insider_features(df: pd.DataFrame, trades: pd.DataFrame) -> pd.DataFrame:
     return out
 
 
+R_DISCOUNT, G_TERMINAL, BASE_YEARS, HORIZON = 0.09, 0.025, 3, 10
+
+
+def dcf_multiple(g: np.ndarray) -> np.ndarray:
+    """Value of 1 unit of current FCF: growth g for BASE_YEARS, linear fade to G_TERMINAL by HORIZON,
+    then a growing perpetuity, all discounted at R_DISCOUNT."""
+    g = np.asarray(g, dtype=float)
+    v, f = np.zeros_like(g), np.ones_like(g)
+    for k in range(1, HORIZON + 1):
+        gk = g if k <= BASE_YEARS else g + (G_TERMINAL - g) * (k - BASE_YEARS) / (HORIZON - BASE_YEARS)
+        f = f * (1 + gk)
+        v = v + f / (1 + R_DISCOUNT) ** k
+    return v + f * (1 + G_TERMINAL) / (R_DISCOUNT - G_TERMINAL) / (1 + R_DISCOUNT) ** HORIZON
+
+
+def base_rate_growth(df: pd.DataFrame, months) -> pd.Series:
+    """S9 base rate (added 2026-10-14, before running). For each decision month t, the cohort is every company
+    observed at months t-47..t-36 with revenue > 0 and revenue known 36 months later (so by t). Its realised
+    3-year revenue CAGR, clipped to [-50%, +100%], is summarised as the median within 5 x 5 buckets of
+    (log revenue quintile, 1-year revenue growth quintile), breakpoints from the cohort. A company at t gets its
+    bucket's median; without a growth figure, its size quintile's median."""
+    rev36 = lag(df, "ttm_revenue", -36)  # the value 36 months later, as of the later month
+    cagr = ((rev36 / df["ttm_revenue"]) ** (1 / 3) - 1).where((df["ttm_revenue"] > 0) & (rev36 > 0)).clip(-0.5, 1.0)
+    base = pd.Series(np.nan, index=df.index)
+    for t in months:
+        p = pd.Timestamp(t).to_period("M")
+        coh = df[(df["p"] >= p - 47) & (df["p"] <= p - 36) & cagr.notna()]
+        cur = df[(df["p"] == p) & (df["ttm_revenue"] > 0)]
+        if len(coh) < 500 or cur.empty:
+            continue
+        size_q = np.quantile(np.log(coh["ttm_revenue"]), [0.2, 0.4, 0.6, 0.8])
+        g_ok = coh["rev_g"].notna()
+        grow_q = np.quantile(coh.loc[g_ok, "rev_g"], [0.2, 0.4, 0.6, 0.8])
+        cs = np.searchsorted(size_q, np.log(coh["ttm_revenue"]))
+        cg = np.where(g_ok, np.searchsorted(grow_q, coh["rev_g"].fillna(0)), -1)
+        c = pd.DataFrame({"s": cs, "g": cg, "y": cagr.loc[coh.index].to_numpy()})
+        by2 = c[c["g"] >= 0].groupby(["s", "g"])["y"].median()
+        by1 = c.groupby("s")["y"].median()
+        us = np.searchsorted(size_q, np.log(cur["ttm_revenue"]))
+        ug = np.searchsorted(grow_q, cur["rev_g"].fillna(0))
+        val = [by2.get((a, b), by1.get(a)) if pd.notna(rg) else by1.get(a)
+               for a, b, rg in zip(us, ug, cur["rev_g"])]
+        base.loc[cur.index] = val
+    return base
+
+
+def expectations_gap(df: pd.DataFrame, months) -> pd.Series:
+    """S9: log(value of current FCF growing at the base rate / market cap). Positive FCF only."""
+    fcf = df["ttm_ocf"] - df["ttm_capex"].fillna(0)
+    base = base_rate_growth(df, months)
+    value = fcf * dcf_multiple(base.fillna(0).to_numpy())
+    return np.log(value / df["mcap"]).where((fcf > 0) & base.notna() & (df["mcap"] > 0))
+
+
 def _neutral(col: str, exclude_fin: bool):
     def f(g: pd.DataFrame) -> pd.Series:
         x = g[col].where(~g["financial"]) if exclude_fin else g[col]
@@ -188,9 +242,11 @@ TRIALS = {
     "S6c": ("S6", "FF3 residual momentum, 12-2 months", _raw("s6c_resid_mom")),
     "S7a": ("S7", "Insider net buyers ratio, 6 months", _raw("s7a_net_buyers")),
     "S7b": ("S7", "Insider purchase value / market cap, 6 months", _raw("s7b_buy_value")),
+    # Added 2026-10-14 after 14 had run; pre-registered in prereg/stage2.md (addendum 2) before running.
+    "S9": ("S9", "Expectations gap: base-rate DCF value / market cap, ex financials", _raw("s9_expectations_gap", True)),
 }
 NOT_RUN = {"S8": "estimate revisions: paid data only",
-           "S9": "expectations gap: needs the Stage 3 expectations engine"}
+           }
 
 
 def sharpe_stats(x: pd.Series) -> dict:
@@ -336,6 +392,8 @@ def main(out: Path) -> None:
     df["s6c_resid_mom"] = residual_momentum(df, ff3)
     trades = pd.read_csv(xsection.DATA / "insider_trades.csv.gz")
     df = df.join(insider_features(df, trades))
+    months = sorted(df.loc[(df["month"] >= START) & (df["month"] <= END), "month"].unique())
+    df["s9_expectations_gap"] = expectations_gap(df, months)
     f5 = data_sources.french("F-F_Research_Data_5_Factors_2x3")
     mom = data_sources.french("F-F_Momentum_Factor")
     factors = pd.concat([f5.drop(columns=["RF"]), mom], axis=1, sort=True)
