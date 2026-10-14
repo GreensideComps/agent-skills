@@ -10,14 +10,19 @@ date it came from. Two values exist for each period:
 Derived metrics state their formula in METHODS. Nothing is estimated or filled in:
 a missing input gives a missing output plus a flag.
 
-Scope of this module (milestone 1): annual 10-K / 20-F / 40-F data in us-gaap.
-Quarterly data, IFRS filers (ifrs-full taxonomy) and segment data are not yet handled.
+Scope (milestone 2): annual 10-K / 20-F / 40-F data in either the us-gaap or the
+ifrs-full taxonomy (one per company: the one with the most recent annual data). All
+money values come from one reporting currency. Quarterly and segment data are not yet
+handled. Industry templates (see industry.py) blank out metrics that do not mean
+anything for banks, insurers, REITs and SPACs instead of reporting them.
 """
 from __future__ import annotations
 
 from datetime import date
 
-METHOD_VERSION = "fund-1.2"
+from .industry import NOT_MEANINGFUL, NOT_REQUIRED
+
+METHOD_VERSION = "fund-2.0"
 ANNUAL_FORMS = {"10-K", "10-K/A", "10-KT", "10-KT/A", "20-F", "20-F/A", "40-F", "40-F/A"}
 HISTORY_YEARS = 10
 
@@ -71,6 +76,54 @@ CONCEPTS: dict[str, tuple[str, str, list[str]]] = {
     "inventory": ("instant", "money", ["InventoryNet"]),
 }
 
+# The same metrics in the IFRS taxonomy (20-F / 40-F filers such as TSMC, Novo Nordisk, Shell).
+# Kind and unit kind are shared with CONCEPTS; only the concept names differ. IFRS has no standard
+# short-term investments line, and its current-borrowings line already includes short-term debt,
+# so those two fallbacks are empty or folded in rather than double counted.
+IFRS_CONCEPTS: dict[str, list[str]] = {
+    "revenue": ["Revenue", "RevenueFromContractsWithCustomers"],
+    "cost_of_revenue": ["CostOfSales"],
+    "gross_profit": ["GrossProfit"],
+    "operating_income": ["ProfitLossFromOperatingActivities"],
+    "pretax_income": ["ProfitLossBeforeTax"],
+    "income_tax": ["IncomeTaxExpenseContinuingOperations"],
+    "net_income": ["ProfitLossAttributableToOwnersOfParent", "ProfitLoss"],
+    "eps_diluted": ["DilutedEarningsLossPerShare", "DilutedEarningsLossPerShareFromContinuingOperations"],
+    "eps_basic": ["BasicEarningsLossPerShare", "BasicEarningsLossPerShareFromContinuingOperations"],
+    "shares_diluted": ["AdjustedWeightedAverageShares"],
+    "ocf": ["CashFlowsFromUsedInOperatingActivities"],
+    "capex": ["PurchaseOfPropertyPlantAndEquipmentClassifiedAsInvestingActivities",
+              "PurchaseOfPropertyPlantAndEquipment",
+              "PurchaseOfPropertyPlantAndEquipmentIntangibleAssetsOtherThanGoodwillInvestmentPropertyAndOtherNoncurrentAssets"],
+    "d_and_a": ["DepreciationAndAmortisationExpense", "AdjustmentsForDepreciationAndAmortisationExpense",
+                "DepreciationAmortisationAndImpairmentLossReversalOfImpairmentLossRecognisedInProfitOrLoss"],
+    "sbc": ["AdjustmentsForSharebasedPayments", "ExpenseFromSharebasedPaymentTransactionsWithEmployees"],
+    "interest_expense": ["InterestExpense", "FinanceCosts"],
+    "dividends_paid": ["DividendsPaidClassifiedAsFinancingActivities", "DividendsPaid"],
+    "buybacks": ["PaymentsToAcquireOrRedeemEntitysShares"],
+    "acquisitions": ["CashFlowsUsedInObtainingControlOfSubsidiariesOrOtherBusinessesClassifiedAsInvestingActivities"],
+    "cash": ["CashAndCashEquivalents"],
+    "short_investments": [],
+    "debt_total": ["Borrowings"],
+    "debt_noncurrent": ["NoncurrentPortionOfNoncurrentBorrowings", "LongtermBorrowings"],
+    "debt_current": ["CurrentBorrowingsAndCurrentPortionOfNoncurrentBorrowings",
+                     "CurrentPortionOfNoncurrentBorrowings"],
+    "short_borrowings": [],
+    "equity": ["EquityAttributableToOwnersOfParent", "Equity"],
+    "total_assets": ["Assets"],
+    "goodwill": ["Goodwill"],
+    "receivables": ["TradeAndOtherCurrentReceivables", "CurrentTradeReceivables"],
+    "inventory": ["Inventories"],
+}
+assert set(IFRS_CONCEPTS) == set(CONCEPTS)
+TAXONOMIES = ("us-gaap", "ifrs-full")
+
+
+def concepts_for(taxonomy: str) -> dict[str, tuple[str, str, list[str]]]:
+    if taxonomy == "us-gaap":
+        return CONCEPTS
+    return {m: (k, u, IFRS_CONCEPTS[m]) for m, (k, u, _) in CONCEPTS.items()}
+
 METHODS = {
     "fcf": "ocf - capex (capex = cash paid for PP&E; leases and acquisitions not deducted)",
     "fcf_per_share": "fcf / weighted average diluted shares",
@@ -87,24 +140,58 @@ METHODS = {
     "cagr": "(end / start) ** (1 / years) - 1, only when both ends are positive",
     "sbc_pct_revenue": "sbc / revenue",
     "share_change_cagr": "CAGR of diluted share count (negative = net buybacks)",
+    "taxonomy": "us-gaap or ifrs-full, whichever has the most recent annual revenue/OCF/net income; ties go "
+                "to us-gaap. IFRS: net income = profit attributable to owners of the parent; debt = borrowings.",
+    "reporting_currency": "the currency with the most annual-form money facts; other currencies are ignored",
 }
 
 
-def _money_unit(units: dict) -> str | None:
-    if "USD" in units:
-        return "USD"
-    cur = [u for u in units if len(u) == 3 and u.isalpha() and u.isupper()]
-    return cur[0] if cur else None
+def _is_currency(u: str) -> bool:
+    return len(u) == 3 and u.isalpha() and u.isupper()
 
 
-def _unit_for(kind: str, units: dict) -> str | None:
+def _unit_for(kind: str, units: dict, currency: str | None) -> str | None:
     if kind == "money":
-        return _money_unit(units)
+        return currency if currency in units else None
     if kind == "shares":
         return "shares" if "shares" in units else None
     if kind == "per_share":
-        return next((u for u in units if u.endswith("/shares")), None)
+        want = f"{currency}/shares"
+        return want if want in units else None
     return None
+
+
+def reporting_currency(tax_facts: dict, concepts: dict) -> str | None:
+    """The currency used by most annual-form money facts. Some foreign filers also tag
+    convenience translations (e.g. USD next to TWD); taking one currency avoids mixing them."""
+    counts: dict[str, int] = {}
+    for _metric, (_kind, unit_kind, names) in concepts.items():
+        if unit_kind != "money":
+            continue
+        for name in names:
+            for u, entries in tax_facts.get(name, {}).get("units", {}).items():
+                if _is_currency(u):
+                    counts[u] = counts.get(u, 0) + sum(1 for e in entries if e.get("form") in ANNUAL_FORMS)
+    counts = {u: n for u, n in counts.items() if n}
+    return max(sorted(counts), key=lambda u: counts[u]) if counts else None
+
+
+def choose_taxonomy(facts: dict) -> str:
+    """The taxonomy with the most recent annual revenue, OCF or net income (companies can switch)."""
+    best, best_end = "us-gaap", ""
+    for tax in TAXONOMIES:
+        tf = facts.get("facts", {}).get(tax, {})
+        conc = concepts_for(tax)
+        last = ""
+        for metric in ("revenue", "ocf", "net_income"):
+            for name in conc[metric][2]:
+                for entries in tf.get(name, {}).get("units", {}).values():
+                    for e in entries:
+                        if e.get("form") in ANNUAL_FORMS and e.get("end", "") > last:
+                            last = e["end"]
+        if last > best_end:
+            best, best_end = tax, last
+    return best
 
 
 def _days(a: str, b: str) -> int:
@@ -183,25 +270,28 @@ def share_basis(entries: list[dict]) -> dict[str, float]:
 
 
 def extract_annual(facts: dict) -> tuple[dict[str, dict], list[str], dict]:
-    """Returns (years, flags, currencies): years[fy_end][metric] = provenance-tagged value."""
-    gaap = facts.get("facts", {}).get("us-gaap", {})
+    """Returns (years, flags, meta): years[fy_end][metric] = provenance-tagged value."""
+    taxonomy = choose_taxonomy(facts)
+    concept_map = concepts_for(taxonomy)
+    gaap = facts.get("facts", {}).get(taxonomy, {})
+    currency = reporting_currency(gaap, concept_map)
     flags: list[str] = []
-    currencies: set[str] = set()
+    other_currencies = sorted({u for name in {n for _, _, ns in concept_map.values() for n in ns}
+                               for u in gaap.get(name, {}).get("units", {})
+                               if _is_currency(u) and u != currency})
     per_metric: dict[str, dict[str, dict]] = {}
-    for metric, (kind, unit_kind, concepts) in CONCEPTS.items():
+    for metric, (kind, unit_kind, concepts) in concept_map.items():
         merged: dict[str, dict] = {}
         for concept in concepts:  # earlier concepts win for a given period
             node = gaap.get(concept)
             if not node:
                 continue
-            unit = _unit_for(unit_kind, node.get("units", {}))
+            unit = _unit_for(unit_kind, node.get("units", {}), currency)
             if not unit:
                 continue
             for end, pt in _annual_points(node["units"][unit], kind).items():
                 if end not in merged:
                     merged[end] = {"pt": pt, "concept": concept, "unit": unit}
-                    if unit_kind == "money":
-                        currencies.add(unit)
         per_metric[metric] = merged
 
     # Fiscal year ends come from the core flow statements, not from stray balance-sheet dates.
@@ -215,7 +305,7 @@ def extract_annual(facts: dict) -> tuple[dict[str, dict], list[str], dict]:
             dedup.append(end)
     fy_ends = dedup[-HISTORY_YEARS:]
 
-    shares_node = gaap.get("WeightedAverageNumberOfDilutedSharesOutstanding", {}).get("units", {})
+    shares_node = gaap.get(concept_map["shares_diluted"][2][0], {}).get("units", {})
     basis = share_basis(shares_node.get("shares", []))
     if all(m == 1.0 for m in basis.values()):
         basis = {}  # no split anywhere: every filing is already on the current basis
@@ -234,7 +324,7 @@ def extract_annual(facts: dict) -> tuple[dict[str, dict], list[str], dict]:
             o, l_ = hit["pt"]["original"], hit["pt"]["latest"]
             lv, ov = l_["val"], o["val"]
             v = {"v": lv, "c": hit["concept"], "u": hit["unit"], "a": l_["accn"], "f": l_["filed"],
-                 "form": l_["form"], "orig": ov, "orig_f": o["filed"]}
+                 "form": l_["form"], "orig": ov, "orig_a": o["accn"], "orig_f": o["filed"]}
             if metric in per_share_scaled and basis:
                 ml, mo = basis.get(l_["accn"]), basis.get(o["accn"])
                 if ml is None or mo is None:
@@ -268,10 +358,9 @@ def extract_annual(facts: dict) -> tuple[dict[str, dict], list[str], dict]:
             flags.append(f"concept_switch:{metric}")
     if basis:
         flags.append("share_split_adjusted")
-    if len(currencies) > 1:
-        flags.append("mixed_currencies:" + ",".join(sorted(currencies)))
-    return years, flags, {"reporting_currency": sorted(currencies)[0] if len(currencies) == 1 else
-                          (sorted(currencies) or [None])[0]}
+    if other_currencies:
+        flags.append("ignored_currencies:" + ",".join(other_currencies))
+    return years, flags, {"reporting_currency": currency, "taxonomy": taxonomy}
 
 
 def _g(row: dict, k: str):
@@ -410,22 +499,34 @@ def _avg(xs):
 
 
 CRITICAL_FLAGS = ("missing:revenue", "missing:ocf", "missing:capex", "missing:shares_diluted",
-                  "stale_annual_data", "no_annual_data", "mixed_currencies")
+                  "stale_annual_data", "no_annual_data")
+# Informational: they describe how a value was obtained, not a gap in the data.
+INFO_FLAGS = ("restated", "concept_switch", "share_split_adjusted", "ignored_currencies", "not_meaningful")
 
 
 def confidence(flags: list[str]) -> str:
     crit = [f for f in flags if f.startswith(CRITICAL_FLAGS)]
     if crit:
         return "low"
-    soft = [f for f in flags if not f.startswith(("restated", "concept_switch", "share_split_adjusted"))]
+    soft = [f for f in flags if not f.startswith(INFO_FLAGS)]
     return "medium" if soft else "high"
 
 
-def analyse(facts: dict, today: date | None = None) -> dict:
-    years, flags, cur = extract_annual(facts)
+def analyse(facts: dict, today: date | None = None, template: str = "industrial") -> dict:
+    """`template` comes from industry.classify(SIC). Metrics a template marks as not
+    meaningful are removed from the summary (and flagged) so no screen can rank on them;
+    the reported inputs stay in `years`. Missing inputs that a template does not need
+    (e.g. capex for a bank) do not lower confidence."""
+    years, flags, meta = extract_annual(facts)
     derived = derive(years)
     summary, more = summarise(years, derived, today)
+    not_needed = NOT_REQUIRED.get(template, ())
+    more = [f for f in more if f not in {f"missing:{k}" for k in not_needed}]
+    for k in NOT_MEANINGFUL.get(template, ()):
+        if k in summary:
+            summary[k] = None
+            more.append(f"not_meaningful:{k}")
     flags = sorted(set(flags + more))
     return {"entity_name": facts.get("entityName"), "years": years, "derived": derived,
             "summary": summary, "flags": flags, "confidence": confidence(flags),
-            "method_version": METHOD_VERSION, **cur}
+            "method_version": METHOD_VERSION, "industry_template": template, **meta}

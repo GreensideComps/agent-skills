@@ -253,8 +253,11 @@ def test_candidate_gate_and_reversible_history(store):
     with pytest.raises(pipeline.TransitionError, match="confidence"):
         pipeline.transition(store, cid, "candidate", "cheap", ["snap:1"], "t",
                             {"bear_case_recorded": True, "data_confidence": "low"})
+    with pytest.raises(pipeline.TransitionError, match="industry"):  # unclassified counts as unsupported
+        pipeline.transition(store, cid, "candidate", "cheap", ["snap:1"], "t",
+                            {"bear_case_recorded": True, "data_confidence": "medium"})
     pipeline.transition(store, cid, "candidate", "cheap", ["snap:1"], "t",
-                        {"bear_case_recorded": True, "data_confidence": "medium"})
+                        {"bear_case_recorded": True, "data_confidence": "medium", "industry_supported": True})
     pipeline.transition(store, cid, "rejected", "thesis failed", ["10-Q accn"], "t")
     pipeline.transition(store, cid, "research_queue", "material change: new CEO", ["8-K accn"], "t")
     h = pipeline.history(store, cid)
@@ -272,7 +275,8 @@ def test_snapshot_written_only_on_change_and_requires_verified_link(store, make_
     s1, w1 = ingest_company(store, sec, exmp, TODAY)
     s2, w2 = ingest_company(store, sec, exmp, TODAY)
     assert w1 and not w2 and s1["rid"] == s2["rid"]
-    assert s1["source_url"].endswith("CIK0000001234.json") and s1["years"] and s1["methods"]
+    assert s1["source_url"].endswith("CIK0000001234.json") and s1["years"]
+    assert store.methods.read()[0]["methods"]["fcf"] and s1["industry_template"] == "industrial"
     # A new filing produces a new snapshot linked to the previous one.
     facts2 = copy.deepcopy(facts)
     facts2["facts"]["us-gaap"]["Revenues"]["units"]["USD"].append(
