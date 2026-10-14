@@ -1,0 +1,112 @@
+{
+ "manifest": {
+  "sec_facts_panel.csv.gz": {
+   "sha256": "2a56736fdea7825485233697705b63c0c0d4fbb6c47fcd905b8bfe6183765453",
+   "bytes": 129043228,
+   "rows": 12768511
+  },
+  "sec_companies.csv.gz": {
+   "sha256": "acf5e3f746c355aa2c0aa2b76c0c3f55413daf5e927524672537d0389d214a90",
+   "bytes": 796395,
+   "rows": 20458
+  },
+  "monthly_metrics.csv.gz": {
+   "sha256": "ae5429b661bd060d040109138d35cb4ea22356d4a549056c8616c3a2a7e87561",
+   "bytes": 34398025,
+   "rows": 1440013,
+   "first": "2009-12-31",
+   "last": "2026-09-30"
+  },
+  "prices_monthly.csv.gz": {
+   "sha256": "505115711f7ef59c8df417671f8afecf77dd2240e13a2a3bdff453721b3d801a",
+   "bytes": 8961141,
+   "rows": 676241,
+   "first": "2011-01-31",
+   "last": "2026-10-31"
+  },
+  "insider_trades.csv.gz": {
+   "sha256": "82e99ff117d2ec0c2a33aeb0dd9f412b897aa3ced936e4e1e07e19bcdef8c676",
+   "bytes": 8781581,
+   "rows": 920082,
+   "first": "2014-01-02",
+   "last": "2022-12-30"
+  }
+ },
+ "checks": [
+  {
+   "check": "metrics: one row per company-month",
+   "status": "PASS",
+   "detail": "0 duplicate (cik, month) rows"
+  },
+  {
+   "check": "metrics: months are month-ends",
+   "status": "PASS",
+   "detail": "every month value is a calendar month-end"
+  },
+  {
+   "check": "metrics: point in time (last filing on or before the month)",
+   "status": "PASS",
+   "detail": "0 rows use a filing dated after their month"
+  },
+  {
+   "check": "metrics: TTM period ends on or before the month",
+   "status": "WARN",
+   "detail": "106 rows (15 companies) report a period ending after the month, though filed before it: mis-tagged XBRL period dates, not look-ahead"
+  },
+  {
+   "check": "metrics: no negative share counts",
+   "status": "WARN",
+   "detail": "4 rows"
+  },
+  {
+   "check": "prices: one USD row per company-month",
+   "status": "PASS",
+   "detail": "0 duplicates (xsection.load keeps the last)"
+  },
+  {
+   "check": "prices: one ticker per company",
+   "status": "WARN",
+   "detail": "5,360 companies priced, 0 with more than one ticker. Each company is priced from the first ticker in today's SEC list (equity/monthly.py), so other share classes are ignored and a ticker since reused by another company can be mis-linked."
+  },
+  {
+   "check": "prices: non-USD rows excluded from tests",
+   "status": "WARN",
+   "detail": "0.0% of price rows are not USD"
+  },
+  {
+   "check": "prices: positive prices",
+   "status": "FAIL",
+   "detail": "344 rows with a price <= 0"
+  },
+  {
+   "check": "prices: monthly moves over 100% (to 2022-12)",
+   "status": "WARN",
+   "detail": "3,864 of 453,156 monthly returns; largest +166666659944%, smallest -441%. Review before trusting small-cap results; large caps rarely move this much."
+  },
+  {
+   "check": "universe: share-count outliers in the large band (2015-01..2022-11)",
+   "status": "WARN",
+   "detail": "283 of 43,220 large-cap company-months (53 companies) have a share count over 10x or under 1/10 of the company's median, e.g. 1.9e14 shares. Most are XBRL scaling errors that inflate market cap and put a small company in the large band."
+  },
+  {
+   "check": "universe: negative adjusted prices in the large band (2015-01..2022-11)",
+   "status": "FAIL",
+   "detail": "4 large-cap company-months have an adjusted close <= 0 (a Yahoo adjustment error), so their returns are wrong"
+  },
+  {
+   "check": "companies: SIC code is today's, not point in time",
+   "status": "WARN",
+   "detail": "17,489 companies have one SIC from today's SEC submissions. Sector-neutral signals and sector caps use today's industry, a mild look-ahead."
+  },
+  {
+   "check": "insiders: Form 4 data covers the holdout",
+   "status": "WARN",
+   "detail": "filings 2014-01-02 to 2022-12-30. A confirmation run of any insider signal needs 2023-2026 quarters built first (`python -m equity research-data --step insiders`)."
+  },
+  {
+   "check": "holdout: rows exist for a later confirmation run (counted, not read)",
+   "status": "PASS",
+   "detail": "346,024 metric rows and 213,349 price rows in 2023-01..2026-09"
+  }
+ ]
+}
