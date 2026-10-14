@@ -73,15 +73,16 @@ def main(out: Path) -> None:
     lines += ["", f"Operating companies that stopped periodic filing between 2010 and {cutoff}: {len(stopped):,}; "
               f"with a ticker in SEC data today: {(stopped['tickers'].fillna('') != '').sum():,}.", "",
               "Consequence: tests on this dataset include failed and acquired companies in the fundamentals but "
-              "not in returns. Results are biased toward survivors, most in small caps and least in large caps; "
-              "every Stage 2 result must state this, and survivorship-free prices are an owner decision.", ""]
+              "not in returns, so results are biased toward survivors. The gap is largest in early years, when "
+              "more of that year's companies have since disappeared. Every Stage 2 result must state this; "
+              "survivorship-free prices are an owner decision.", ""]
 
     # Harness sanity check against the French market factor.
     ff = data_sources.french("F-F_Research_Data_Factors")
     mkt = ff["Mkt-RF"] + ff["RF"]
     ew = inv[inv["band"] == "large"].groupby("month")["ret_next"].mean()
     ew.index = ew.index + pd.offsets.MonthEnd(1)  # ret_next of month m is the return over month m+1
-    j = pd.concat([ew.rename("ew_large"), mkt.rename("ff_mkt")], axis=1).dropna()
+    j = pd.concat([ew.rename("ew_large"), mkt.rename("ff_mkt")], axis=1, sort=True).dropna()
     j = j[j.index >= "2012-01-31"]
     lines += ["## Harness check", "",
               f"Equal-weighted large-band monthly return vs the Ken French US market return, {j.index.min():%Y-%m} to "

@@ -288,6 +288,14 @@ either pass or fail.
 - Test 1 still reproduces (t = 1.918).
 - Owner decision recorded on buying survivorship-free prices.
 
+**Result (2026-10-14, free data; report `equity/reports/research/stage1_coverage.md`):** built (12.8M facts,
+17,066 companies, 1.44M company-months, prices for 5,360 tickers). Coverage targets **not met**: scored US
+companies a month from 2012 range 693 to 2,286 (median 1,648); large caps from 2015 range 297 to 707 (median 504).
+The shortfall is survivorship: companies that later stopped filing have fundamentals but no free prices (0% priced
+among stopped filers with $1bn+ assets). Harness check: equal-weighted large-band return vs French US market,
+correlation 0.969. The annual backtest code is unchanged. Stage 2 may run on large caps from 2015, with the
+survivor bias stated on every result, until the owner decides on survivorship-free prices.
+
 ### Stage 2: signal tests S1 to S7 and S9 (the core research)
 
 - One pre-registration per signal, committed before it runs; S8 only if estimates data is bought.
