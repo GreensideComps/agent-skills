@@ -275,8 +275,9 @@ def cmd_prices(store: Store, a) -> int:
     ids = {s["company_id"] for s in store.fundamentals.read()}
     if a.symbol:
         ids &= {resolve(store, symbol=x)["company_id"] for x in a.symbol if resolve(store, symbol=x)}
+    from .paper import benchmark_security, load_config  # noqa: PLC0415
     with job(store, "update_prices", {"companies": len(ids)}, redact=_secrets()) as j:
-        res = update_prices(store, _primary_priced(store, ids))
+        res = update_prices(store, _primary_priced(store, ids) + [benchmark_security(load_config())])
         j["outputs"] = {k: (len(v) if isinstance(v, list) else v) for k, v in res.items()}
     print(json.dumps(res, indent=1))
     return 1 if res["failed"] and not res["written"] else 0
@@ -379,6 +380,30 @@ def cmd_alerts(store: Store, a) -> int:
     return 0
 
 
+def cmd_paper(store: Store, a) -> int:
+    """Rebalance the paper portfolio if due (monthly), mark both books, write the report."""
+    from . import paper  # noqa: PLC0415
+    from .prices import latest_prices  # noqa: PLC0415
+    runs = store.screens.read()
+    if not runs:
+        print("no screen run yet")
+        return 1
+    rec = max(runs, key=lambda r: r["ts_utc"])
+    vals = {v["company_id"]: v for v in store.valuations.read() if v.get("screen_rid") == rec["rid"]}
+    prices = latest_prices(store)
+    with job(store, "paper_portfolio", {"screen_rid": rec["rid"]}, redact=_secrets()) as j:
+        rb = paper.rebalance(store, rec, prices, valuations=vals, force=a.force)
+        nav = paper.mark(store, prices, rec["as_of"])
+        j["outputs"] = {"rebalanced": rb["rebalanced"], "excess_return": nav["excess_return"]}
+    md = paper.report(store)
+    out = Path(__file__).resolve().parent.parent / "reports" / "paper" / f"{rec['as_of']}.md"
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(md)
+    print(json.dumps(rb, default=str))
+    print(md)
+    return 0
+
+
 def cmd_health(store: Store, a) -> int:
     h = job_health(store)
     scans = store.scans.read()
@@ -428,6 +453,7 @@ def main(argv=None) -> int:
     s.add_argument("symbol"); s.add_argument("--objection", action="append", required=True)  # noqa: E702
     s.add_argument("--evidence", action="append", required=True); s.add_argument("--watch", action="append", required=True)  # noqa: E702
     s.add_argument("--actor", required=True)
+    s = sub.add_parser("paper"); s.add_argument("--force", action="store_true", help="rebalance even if not due")  # noqa: E702
     s = sub.add_parser("coverage")
     s.add_argument("--method", help="only snapshots of this method version, e.g. fund-2.0")
     s.add_argument("--json", help="also write the survey to this file")
@@ -437,7 +463,7 @@ def main(argv=None) -> int:
     handler = {"sync-universe": cmd_sync_universe, "ingest": cmd_ingest, "show": cmd_show,
                "discover": cmd_discover, "status": cmd_status, "search": cmd_search, "health": cmd_health,
                "coverage": cmd_coverage, "prices": cmd_prices, "screen": cmd_screen, "explain": cmd_explain,
-               "valuate": cmd_valuate, "thesis": cmd_thesis, "bearcase": cmd_bearcase, "alerts": cmd_alerts,
+               "valuate": cmd_valuate, "paper": cmd_paper, "thesis": cmd_thesis, "bearcase": cmd_bearcase, "alerts": cmd_alerts,
                "crosscheck": cmd_crosscheck}
     return handler[a.cmd](store, a)
 

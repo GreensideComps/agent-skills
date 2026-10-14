@@ -1,0 +1,13 @@
+{
+  "method_version": "paper-1.0",
+  "note": "Internal simulated portfolio for screener picks. No broker is touched. Mandate changes need the owner's approval and a new method_version.",
+  "base_currency": "USD",
+  "starting_cash": 10000.0,
+  "max_positions": 10,
+  "min_total_score": 60,
+  "weighting": "equal",
+  "rebalance": "monthly: the first screen run in a calendar month, or the first run ever",
+  "costs": {"commission_bps": 0, "spread_bps": 10, "fx_bps": 15},
+  "benchmark": {"symbol": "SPY", "name": "SPDR S&P 500 ETF (total price, dividends not included)"},
+  "max_price_age_days": 5
+}
