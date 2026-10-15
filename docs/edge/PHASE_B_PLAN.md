@@ -212,3 +212,27 @@ The proxy is therefore not a substitute for the fund.
 - Paid data.
 - Any change to the signal log, Stage 2, the price builder, trading code or accounts.
 - A model combining signals.
+
+## 6. B1 result (2026-10-15)
+
+Built by `research/edge_exec_prices.py` into `/mnt/project-files/research-data/edge/` (manifest with SHA-256
+hashes; `edge_exec_prices.load` refuses a file that no longer matches it). Report:
+`equity/reports/research/edge/exec_prices_integrity.md`. No integrity check failed.
+
+- **Cutoff:** every request ended at 2022-12-31; 0 dates after it in any file. Decisions 2009-12 to 2022-11.
+- **Execution dates:** all 482,357 rows execute on the first NYSE trading day after the month-end.
+- **Coverage:** 99.8% of the research dataset's USD company-months have a usable row; 5 of 4,374 tickers
+  returned nothing (BLFS, SLP, WBD, LIVG, GBTG).
+- **Agreement:** month-end returns from the daily data match the research dataset's monthly returns in 100.00% of
+  447,969 cases (within 0.1 points).
+- **Row status:** 482,028 usable; 314 with a price ≤ 0 (4 large-cap), 11 with no trade on the execution day, 4
+  with a stale month-end close. The backtester treats all non-usable rows through `edge_rules.holding_return`.
+- **FX:** FRED did not respond, so all 3,430 days come from Yahoo GBPUSD=X (source recorded per day).
+- **Benchmarks:** VWRP from 2019-07-25 and VWRL from 2012-05-22, in GBP.
+
+**Found, not fixed (owner's call before B2):** 3 large-band company-months that pass the approved quality rule
+show impossible overnight moves (ATLX 2015-01 and 2015-04 +100%; ATXG 2022-08 −95%). Both are tiny companies
+whose price or share-count history is mis-scaled, so they land in the large band. Large-cap overnight moves are
+otherwise ordinary (median 1.0%, 99th percentile 7.0%). Changing the exclusion rule is a methodology change, so
+this is flagged for the owner, not applied. Options: a registered extra quality rule (exclude a company-month
+whose decision-to-execution move exceeds 50%), or leave the rule and rely on the backtester's tests.
