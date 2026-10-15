@@ -1,0 +1,216 @@
+{
+ "eligible_large_company_months": {
+  "no_exclusion": 43216,
+  "period_rule": 42963,
+  "pit_rule": 42868,
+  "both_rules": 42848
+ },
+ "composition": {
+  "excluded_only_by_period_rule": {
+   "company_months": 20,
+   "companies": 6,
+   "median_mcap_bn": 17.294518607097558,
+   "sectors": {
+    "instruments_medtech": 9,
+    "services": 6,
+    "transport_utilities_telecom": 2,
+    "chemicals_pharma": 2,
+    "software_it": 1
+   }
+  },
+  "excluded_only_by_pit_rule": {
+   "company_months": 115,
+   "companies": 12,
+   "median_mcap_bn": 20.640379470825195,
+   "sectors": {
+    "transport_utilities_telecom": 47,
+    "chemicals_pharma": 35,
+    "mining_energy": 14,
+    "finance": 7,
+    "other_manufacturing": 6
+   }
+  }
+ },
+ "trials": {
+  "S1a": {
+   "period_rule": {
+    "months": 95,
+    "mean_ic": 0.007498702144171516,
+    "t_nw": 0.669450850886609
+   },
+   "pit_rule": {
+    "months": 95,
+    "mean_ic": 0.007408938929397592,
+    "t_nw": 0.6658264116076827
+   }
+  },
+  "S1b": {
+   "period_rule": {
+    "months": 95,
+    "mean_ic": -0.005470746485957167,
+    "t_nw": -0.4363154230642383
+   },
+   "pit_rule": {
+    "months": 95,
+    "mean_ic": -0.005319228309863803,
+    "t_nw": -0.4235954014330531
+   }
+  },
+  "S2a": {
+   "period_rule": {
+    "months": 95,
+    "mean_ic": 0.0125654213282381,
+    "t_nw": 1.1236127948600123
+   },
+   "pit_rule": {
+    "months": 95,
+    "mean_ic": 0.012073382545995865,
+    "t_nw": 1.074046906027271
+   }
+  },
+  "S2b": {
+   "period_rule": {
+    "months": 95,
+    "mean_ic": -0.002949296181957299,
+    "t_nw": -0.3540217967748061
+   },
+   "pit_rule": {
+    "months": 95,
+    "mean_ic": -0.0027282966843242894,
+    "t_nw": -0.3252925349459284
+   }
+  },
+  "S3a": {
+   "period_rule": {
+    "months": 95,
+    "mean_ic": -0.006271446171701322,
+    "t_nw": -0.3610381722237919
+   },
+   "pit_rule": {
+    "months": 95,
+    "mean_ic": -0.006458687182054852,
+    "t_nw": -0.3704815275931297
+   }
+  },
+  "S3b": {
+   "period_rule": {
+    "months": 95,
+    "mean_ic": 0.013559970817443381,
+    "t_nw": 1.4105451769845834
+   },
+   "pit_rule": {
+    "months": 95,
+    "mean_ic": 0.012953946933660724,
+    "t_nw": 1.3477424414256285
+   }
+  },
+  "S4": {
+   "period_rule": {
+    "months": 93,
+    "mean_ic": 0.007496339066958345,
+    "t_nw": 0.5123673999389047
+   },
+   "pit_rule": {
+    "months": 93,
+    "mean_ic": 0.007401875405953925,
+    "t_nw": 0.5062655037321353
+   }
+  },
+  "S5a": {
+   "period_rule": {
+    "months": 95,
+    "mean_ic": 0.009024811930795377,
+    "t_nw": 0.525383508319498
+   },
+   "pit_rule": {
+    "months": 95,
+    "mean_ic": 0.009055324255521538,
+    "t_nw": 0.5283499054290155
+   }
+  },
+  "S5b": {
+   "period_rule": {
+    "months": 95,
+    "mean_ic": -0.006720834574905734,
+    "t_nw": -0.4676940344683697
+   },
+   "pit_rule": {
+    "months": 95,
+    "mean_ic": -0.0071028384324771585,
+    "t_nw": -0.4926849768645474
+   }
+  },
+  "S6a": {
+   "period_rule": {
+    "months": 95,
+    "mean_ic": 0.0007044370979390552,
+    "t_nw": 0.039708556797965665
+   },
+   "pit_rule": {
+    "months": 95,
+    "mean_ic": 0.0005141712408138599,
+    "t_nw": 0.028879365068478602
+   }
+  },
+  "S6b": {
+   "period_rule": {
+    "months": 95,
+    "mean_ic": 0.008433580201009715,
+    "t_nw": 0.48841982844246096
+   },
+   "pit_rule": {
+    "months": 95,
+    "mean_ic": 0.008634699752013583,
+    "t_nw": 0.49993466084710203
+   }
+  },
+  "S6c": {
+   "period_rule": {
+    "months": 95,
+    "mean_ic": -0.014601551202725221,
+    "t_nw": -1.167418007163595
+   },
+   "pit_rule": {
+    "months": 95,
+    "mean_ic": -0.014484971616744849,
+    "t_nw": -1.1585035773673003
+   }
+  },
+  "S7a": {
+   "period_rule": {
+    "months": 95,
+    "mean_ic": 0.002308616163152407,
+    "t_nw": 0.33184225497795133
+   },
+   "pit_rule": {
+    "months": 95,
+    "mean_ic": 0.0023900572018214178,
+    "t_nw": 0.34379068704998644
+   }
+  },
+  "S7b": {
+   "period_rule": {
+    "months": 95,
+    "mean_ic": 0.002555222840900197,
+    "t_nw": 0.4755917585224809
+   },
+   "pit_rule": {
+    "months": 95,
+    "mean_ic": 0.0026587345219095757,
+    "t_nw": 0.4959410660472058
+   }
+  },
+  "S9": {
+   "period_rule": {
+    "months": 95,
+    "mean_ic": -0.002684520212213205,
+    "t_nw": -0.1477679331258888
+   },
+   "pit_rule": {
+    "months": 95,
+    "mean_ic": -0.002753952386314868,
+    "t_nw": -0.1519653106527797
+   }
+  }
+ }
+}

@@ -1,0 +1,245 @@
+"""Trial registry for the edge-discovery programme (Phase A). Separate from Stage 2's `TRIALS` and from the ETF
+research registry in `research/experiments/`; neither of those is changed.
+
+The registry is an append-only JSON-lines file, `research/edge/trials.jsonl`. Each line is one event:
+
+* `register`: a trial (or an inherited earlier look at the data) exists, with its definition. Written before
+  the trial runs. Ids are unique.
+* `result`: a registered trial has run; carries the numbers the deflated Sharpe needs and where they came from.
+* `batch`: a confirmation batch is pre-registered (trial ids, pre-registration commit).
+* `holdout_run`: a batch used the holdout. At most one per batch, ever.
+
+Every line stores `prev`, the SHA-256 of the line before it, so an edited or deleted line breaks the chain and
+`validate` reports it even without git. `n_trials` is what the deflated Sharpe counts: every registered trial
+with `counts_for_dsr`, whether or not it was reported.
+
+    python3 edge_registry.py            # validate and summarise
+"""
+from __future__ import annotations
+
+import hashlib
+import json
+import math
+import statistics
+import sys
+from datetime import date
+from pathlib import Path
+
+PATH = Path(__file__).resolve().parent / "edge" / "trials.jsonl"
+GENESIS = "0" * 64
+MAX_BATCHES = 1  # owner decision D2 (docs/edge/DECISIONS.md): one confirmation batch, ever
+KINDS = {"trial", "diagnostic", "inherited", "exposure"}  # exposure: holdout data seen, nothing tested
+PHASES = {"exploration", "confirmation", "prospective", "pre-programme"}
+REQUIRED = {
+    "register": {"id", "date", "kind", "phase", "hypothesis", "definition", "universe", "horizon_months", "window",
+                 "counts_for_dsr", "touched_holdout"},
+    "result": {"id", "date", "evidence"},
+    "batch": {"batch", "date", "trials", "prereg_commit"},
+    "holdout_run": {"batch", "date", "evidence"},
+}
+
+
+def line_hash(line: str) -> str:
+    return hashlib.sha256(line.encode()).hexdigest()
+
+
+def load(path: Path = PATH) -> list[dict]:
+    if not path.exists():
+        return []
+    return [json.loads(l) for l in path.read_text().splitlines() if l.strip()]
+
+
+def validate(path: Path = PATH) -> list[str]:
+    """Problems found (empty list = valid): broken hash chain, missing fields, duplicate ids, results or
+    batches naming unknown trials, a result before its registration, a second holdout run for a batch, a
+    holdout run without a batch, or a trial in two batches."""
+    problems: list[str] = []
+    if not path.exists():
+        return [f"{path} missing"]
+    prev = GENESIS
+    trials: dict[str, dict] = {}
+    batches: dict[str, dict] = {}
+    runs: set[str] = set()
+    in_batch: dict[str, str] = {}
+    resulted: set[str] = set()
+    for n, raw in enumerate(path.read_text().splitlines(), 1):
+        if not raw.strip():
+            continue
+        try:
+            e = json.loads(raw)
+        except json.JSONDecodeError as x:
+            problems.append(f"line {n}: not JSON ({x})")
+            prev = line_hash(raw)
+            continue
+        if e.get("prev") != prev:
+            problems.append(f"line {n}: hash chain broken (a line was edited, removed or reordered)")
+        prev = line_hash(raw)
+        ev = e.get("event")
+        if ev not in REQUIRED:
+            problems.append(f"line {n}: unknown event {ev!r}")
+            continue
+        missing = REQUIRED[ev] - e.keys()
+        if missing:
+            problems.append(f"line {n}: {ev} missing {sorted(missing)}")
+        if ev == "register":
+            tid = e.get("id")
+            if tid in trials:
+                problems.append(f"line {n}: duplicate trial id {tid}")
+            if e.get("kind") == "exposure" and e.get("counts_for_dsr"):
+                problems.append(f"line {n}: exposure {tid} cannot count as a trial")
+            if e.get("kind") not in KINDS:
+                problems.append(f"line {n}: kind {e.get('kind')!r} not in {sorted(KINDS)}")
+            if e.get("phase") not in PHASES:
+                problems.append(f"line {n}: phase {e.get('phase')!r} not in {sorted(PHASES)}")
+            if e.get("phase") == "exploration" and e.get("touched_holdout") and e.get("kind") != "exposure":
+                problems.append(f"line {n}: {tid} is an exploration trial but touched the holdout")
+            trials[tid] = e
+        elif ev == "result":
+            if e.get("id") not in trials:
+                problems.append(f"line {n}: result for unregistered trial {e.get('id')}")
+            elif e.get("id") in resulted:
+                problems.append(f"line {n}: second result for {e.get('id')} (a rerun is a new trial)")
+            resulted.add(e.get("id"))
+        elif ev == "batch":
+            b = e.get("batch")
+            if b in batches:
+                problems.append(f"line {n}: duplicate batch {b}")
+            elif len(batches) >= MAX_BATCHES:
+                problems.append(f"line {n}: batch {b} exceeds the {MAX_BATCHES} confirmation batch allowed")
+            for t in e.get("trials", []):
+                if t not in trials:
+                    problems.append(f"line {n}: batch {b} names unregistered trial {t}")
+                elif trials[t].get("phase") != "exploration":
+                    problems.append(f"line {n}: batch {b} confirms {t}, which is not an exploration trial")
+                if t in in_batch:
+                    problems.append(f"line {n}: trial {t} already confirmed in batch {in_batch[t]}")
+                in_batch[t] = b
+            batches[b] = e
+        elif ev == "holdout_run":
+            b = e.get("batch")
+            if b not in batches:
+                problems.append(f"line {n}: holdout run for unregistered batch {b}")
+            if b in runs:
+                problems.append(f"line {n}: batch {b} used the holdout twice")
+            runs.add(b)
+    return problems
+
+
+def append(event: dict, path: Path = PATH) -> dict:
+    """Append one event, chaining it to the last line. Refuses if the file is already invalid or the result
+    would be invalid; the file is left untouched in that case."""
+    problems = validate(path) if path.exists() else []
+    if problems:
+        raise ValueError(f"registry invalid before append: {problems}")
+    lines = path.read_text().splitlines() if path.exists() else []
+    lines = [l for l in lines if l.strip()]
+    e = {"prev": line_hash(lines[-1]) if lines else GENESIS, "date": date.today().isoformat(), **event}
+    new = "\n".join(lines + [json.dumps(e, sort_keys=True)]) + "\n"
+    tmp = path.with_suffix(".tmp")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp.write_text(new)
+    after = validate(tmp)
+    if after:
+        tmp.unlink()
+        raise ValueError(f"event rejected: {after}")
+    tmp.replace(path)
+    return e
+
+
+def require(trial_id: str, path: Path = PATH) -> dict:
+    """The registration of `trial_id`, or an error if it is not registered or already has a result. Research
+    code calls this before computing anything, so an unregistered or repeated look cannot run."""
+    events = load(path)
+    reg = registered(events).get(trial_id)
+    if reg is None:
+        raise KeyError(f"{trial_id} is not registered: append a register event before running it")
+    if any(e.get("event") == "result" and e.get("id") == trial_id for e in events):
+        raise ValueError(f"{trial_id} already has a result; register a new trial to look again")
+    return reg
+
+
+def registered(events: list[dict]) -> dict[str, dict]:
+    return {e["id"]: e for e in events if e.get("event") == "register"}
+
+
+def n_trials(events: list[dict]) -> int:
+    """The trial count the deflated Sharpe uses: every registered trial marked counts_for_dsr."""
+    return sum(1 for e in registered(events).values() if e.get("counts_for_dsr"))
+
+
+# Stage 2's results (seeded from stage2_signals.json) carry `sr_monthly` without a `stat` field: it is the monthly
+# Sharpe of the large-cap top quintile's return net of costs minus the universe (stage2.run, `q5_net`).
+LEGACY_STAT = "xsection_q5_net_vs_universe"
+
+
+def result_stat(e: dict) -> str | None:
+    """Which statistic a result's `sr_monthly` measures. Results without a Sharpe (IC-only) return None."""
+    if e.get("sr_monthly") is None:
+        return None
+    return e.get("stat") or LEGACY_STAT
+
+
+def sharpe_list(events: list[dict], stat: str | None = None) -> list[float]:
+    """Monthly Sharpe ratios recorded in results of counted trials, for the DSR's cross-trial variance. With
+    `stat`, only results measuring that same statistic: a top-quintile spread's Sharpe and a concentrated
+    portfolio's excess-over-VWRP Sharpe are different quantities and are never pooled. Missing or non-finite
+    values are left out (the trial still counts in `n_trials`)."""
+    reg = registered(events)
+    out = {}
+    for e in events:
+        if e.get("event") != "result" or not reg.get(e["id"], {}).get("counts_for_dsr"):
+            continue
+        st = result_stat(e)
+        if st is None or (stat is not None and st != stat):
+            continue
+        v = float(e["sr_monthly"])
+        if math.isfinite(v):
+            out[e["id"]] = v
+    return list(out.values())
+
+
+def deflated_sharpe(sr: float, n_months: int, skew: float, kurt: float, stat: str, events: list[dict]) -> dict:
+    """Deflated Sharpe ratio (Bailey and Lopez de Prado 2014) for a monthly Sharpe `sr` measuring `stat`.
+
+    N, the number of trials, is `n_trials(events)`: every counted look, whatever statistic it reported (owner
+    decision D4). Correlated variants are counted as separate trials, which overstates the effective N and makes
+    the test stricter. The cross-trial variance of Sharpe ratios comes only from results of the same `stat`, and is
+    floored at 1/n_months, the variance of a Sharpe estimate under the null; with fewer than two comparable
+    results the floor is used. `kurt` is raw (normal = 3)."""
+    n = n_trials(events)
+    comp = sharpe_list(events, stat)
+    floor = 1.0 / n_months
+    emp = statistics.variance(comp) if len(comp) >= 2 else 0.0
+    var = max(emp, floor)
+    g = 0.5772156649
+    nd = statistics.NormalDist()
+    sr0 = math.sqrt(var) * ((1 - g) * nd.inv_cdf(1 - 1 / n) + g * nd.inv_cdf(1 - 1 / (n * math.e))) if n > 1 else 0.0
+    den = math.sqrt(max(1 - skew * sr + (kurt - 1) / 4 * sr ** 2, 1e-12))
+    return {"dsr": nd.cdf((sr - sr0) * math.sqrt(n_months - 1) / den), "n_trials": n, "n_comparable": len(comp),
+            "var_used": var, "floor_used": var == floor, "sr0": sr0, "stat": stat}
+
+
+def holdout_runs(events: list[dict]) -> set[str]:
+    return {e["batch"] for e in events if e.get("event") == "holdout_run"}
+
+
+def summary(events: list[dict]) -> str:
+    reg = registered(events)
+    by = {}
+    for e in reg.values():
+        by.setdefault((e["phase"], e["kind"]), 0)
+        by[(e["phase"], e["kind"])] += 1
+    lines = [f"trials registered: {len(reg)}; counted for deflated Sharpe: {n_trials(events)}; "
+             f"touched holdout: {sum(1 for e in reg.values() if e.get('touched_holdout'))}; "
+             f"holdout runs: {len(holdout_runs(events))}"]
+    lines += [f"  {p} / {k}: {c}" for (p, k), c in sorted(by.items())]
+    return "\n".join(lines)
+
+
+if __name__ == "__main__":
+    probs = validate()
+    print(summary(load()))
+    if probs:
+        print("INVALID:\n  " + "\n  ".join(probs))
+        sys.exit(1)
+    print("valid")
