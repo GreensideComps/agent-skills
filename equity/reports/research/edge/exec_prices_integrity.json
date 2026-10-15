@@ -33,7 +33,7 @@
   {
    "check": "overnight moves over 50% (decision close to execution close)",
    "status": "WARN",
-   "detail": "1299 of 482,028; median absolute move 1.265%"
+   "detail": "1341 of 482,028; median absolute move 1.265%"
   },
   {
    "check": "coverage of the research dataset's USD company-months",
@@ -90,6 +90,11 @@
    "benchmarks_daily_gbp_to_2022.csv.gz": {
     "rows": 2681,
     "sha256": "0ec17f8631a17cc6f7cc3ca7e1f8054437371e2012739926d4ccfffa0b1f6fc6"
+   },
+   "nyse_calendar_to_2022.csv.gz": {
+    "rows": 3314,
+    "sha256": "58bde006e5b9685efaca2d481578764048dd7fb0388ffa1b8cc6e89bf13465db",
+    "added_utc": "2026-10-15T12:47:33+00:00"
    }
   },
   "checks": {
@@ -105,6 +110,23 @@
    "FX: positive, cut at 2022-12, source recorded": "PASS",
    "FX: a rate within 7 days of every decision month-end": "PASS",
    "benchmarks: cut at 2022-12, positive": "PASS"
-  }
+  },
+  "provenance": {
+   "exec_prices_to_2022.csv.gz": "Yahoo Finance chart API v8, daily close and adjclose, first SEC ticker per company; requests ended at 2022-12-31 (Yahoo period2 = 2023-01-01T00:00Z, FRED coed = 2022-12-31)",
+   "nyse_calendar_to_2022.csv.gz": "Yahoo Finance chart API v8, SPY trading days; requests ended at 2022-12-31 (Yahoo period2 = 2023-01-01T00:00Z, FRED coed = 2022-12-31)",
+   "benchmarks_daily_gbp_to_2022.csv.gz": "Yahoo Finance chart API v8, VWRP.L and VWRL.L adjclose, currency as reported by Yahoo (GBP); requests ended at 2022-12-31 (Yahoo period2 = 2023-01-01T00:00Z, FRED coed = 2022-12-31)",
+   "gbpusd_daily_to_2022.csv.gz": "FRED DEXUSUK first, Yahoo GBPUSD=X close where FRED has no value; source per day in column `source`; requests ended at 2022-12-31 (Yahoo period2 = 2023-01-01T00:00Z, FRED coed = 2022-12-31)",
+   "fred_status": "not recorded at build; the stored FX file has 0 FRED days, so FRED supplied nothing",
+   "fx_days_by_source": {
+    "Yahoo:GBPUSD=X": 3430
+   },
+   "fred_retry": "2026-10-15T12:52:10+00:00: FRED retried and failed (RuntimeError: failed to fetch https://fred.stlouisfed.org/graph/fredgraph.csv?id=DEXUSUK&cosd=2009-11-01&coed=2022-12-31: Remote end closed connection without response). Stored FX file unchanged."
+  },
+  "history": [
+   {
+    "utc": "2026-10-15T12:52:14+00:00",
+    "action": "annotate: provenance, calendar file, checks rerun on the stored files; data files unchanged (hashes verified)"
+   }
+  ]
  }
 }

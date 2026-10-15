@@ -155,8 +155,10 @@ def gbpusd(get) -> pd.DataFrame:
     unreachable from the research container on 2026-10-14). Column `source` records which, per day."""
     try:
         fred = parse_fred(get(fred_url("DEXUSUK")))
-    except Exception:  # noqa: BLE001 - fall back, recorded in `source`
+        fred_status = f"used: {len(fred):,} days" if len(fred) else "reached, but returned no rows"
+    except Exception as e:  # noqa: BLE001 - fall back, recorded in `source` and `fred_status`
         fred = pd.Series(dtype=float)
+        fred_status = f"failed: {type(e).__name__}: {str(e)[:160]}"
     try:
         yh = parse_daily(get(chart_url("GBPUSD=X")), "GBPUSD=X")["close"]
     except Exception:  # noqa: BLE001
@@ -171,6 +173,7 @@ def gbpusd(get) -> pd.DataFrame:
     out.loc[fill, "source"] = "Yahoo:GBPUSD=X"
     out = out.dropna(subset=["usd_per_gbp"])
     assert_cut(out.index, "GBPUSD")
+    out.attrs["fred_status"] = fred_status
     return out
 
 
@@ -265,9 +268,16 @@ def report(checks: list[dict], manifest: dict) -> str:
              "| Check | Status | Detail |", "|---|---|---|"]
     lines += [f"| {c['check']} | **{c['status']}** | {c['detail']} |" for c in checks]
     lines += ["", "## Files", "", "| File | Rows | SHA-256 |", "|---|---:|---|"]
-    lines += [f"| {f} | {v['rows']:,} | `{v['sha256'][:16]}…` |" for f, v in manifest["files"].items()]
-    lines += ["", f"Built {manifest['built_utc']} from Yahoo chart (daily) and FRED; {manifest['tickers_failed']} "
-              f"of {manifest['tickers']} tickers returned no data.", "",
+    lines += [f"| {f} | {v['rows']:,} | `{v['sha256']}` |" for f, v in manifest["files"].items()]
+    lines += ["", f"Built {manifest['built_utc']}; {manifest['tickers_failed']} of {manifest['tickers']} tickers "
+              "returned no data."]
+    prov = manifest.get("provenance")
+    if prov:
+        lines += ["", "## Provenance", "", "| Item | Source |", "|---|---|"]
+        lines += [f"| {k} | {v} |" for k, v in prov.items()]
+    for h in manifest.get("history", []):
+        lines += ["", f"{h['utc']}: {h['action']}."]
+    lines += ["",
               "Prices are for returns only: Yahoo adjusts history for splits and dividends known today. Survivorship "
               "bias is unchanged by this file (`edge_rules.STANDING_LIMITATIONS`)."]
     return "\n".join(lines) + "\n"
@@ -323,7 +333,9 @@ def build(out_dir: Path = OUT_DIR, get=_get, workers: int = 4, limit: int | None
              "benchmarks_daily_gbp_to_2022.csv.gz": bench.rename_axis("date")}
     man = {"built_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"), "cutoff": str(CUTOFF.date()),
            "decisions": [str(FIRST_DECISION.date()), str(LAST_DECISION.date())], "calendar": CALENDAR_SYMBOL,
-           "tickers": len(tickers), "tickers_failed": len(failed), "failed_sample": failed[:20], "files": {}}
+           "tickers": len(tickers), "tickers_failed": len(failed), "failed_sample": failed[:20], "files": {},
+           "provenance": provenance(fx.attrs.get("fred_status", "not recorded"), fx)}
+    files["nyse_calendar_to_2022.csv.gz"] = pd.DataFrame(index=calendar.rename("date"))
     for name, frame in files.items():
         p = out_dir / name
         with gzip.open(p, "wt", newline="") as f:
@@ -337,6 +349,73 @@ def build(out_dir: Path = OUT_DIR, get=_get, workers: int = 4, limit: int | None
     (rep.with_suffix(".json")).write_text(json.dumps({"checks": checks, "manifest": man}, indent=1))
     log(rep.read_text())
     return man
+
+
+def provenance(fred_status: str, fx: pd.DataFrame) -> dict:
+    """Which source supplied each file, and whether FRED was used for FX."""
+    req = f"requests ended at {CUTOFF.date()} (Yahoo period2 = {(CUTOFF + pd.Timedelta(days=1)).date()}T00:00Z, " \
+          f"FRED coed = {CUTOFF.date()})"
+    src = fx["source"].value_counts().to_dict() if "source" in fx else {}
+    return {
+        "exec_prices_to_2022.csv.gz": f"Yahoo Finance chart API v8, daily close and adjclose, first SEC ticker per "
+                                      f"company; {req}",
+        "nyse_calendar_to_2022.csv.gz": f"Yahoo Finance chart API v8, {CALENDAR_SYMBOL} trading days; {req}",
+        "benchmarks_daily_gbp_to_2022.csv.gz": f"Yahoo Finance chart API v8, VWRP.L and VWRL.L adjclose, currency "
+                                               f"as reported by Yahoo (GBP); {req}",
+        "gbpusd_daily_to_2022.csv.gz": f"FRED DEXUSUK first, Yahoo GBPUSD=X close where FRED has no value; source "
+                                       f"per day in column `source`; {req}",
+        "fred_status": fred_status,
+        "fx_days_by_source": {k: int(v) for k, v in src.items()},
+    }
+
+
+def annotate(out_dir: Path = OUT_DIR, get=_get, log=print) -> dict:
+    """Add provenance and the trading calendar to an existing build without changing its data files.
+
+    The stored hashes are verified first and kept; a mismatch stops everything. FRED is tried once more and
+    the outcome recorded; if it answers, its rates are compared with the stored Yahoo rates, but the stored FX file
+    is not changed. The integrity checks are then rerun on the stored files and the report regenerated."""
+    man = json.loads((out_dir / "manifest.json").read_text())
+    for name, v in man["files"].items():
+        if _sha(out_dir / name) != v["sha256"]:
+            raise RuntimeError(f"{name} does not match its manifest; not annotating")
+    cal = parse_daily(get(chart_url(CALENDAR_SYMBOL)), CALENDAR_SYMBOL).index
+    p = out_dir / "nyse_calendar_to_2022.csv.gz"
+    if p.name not in man["files"]:
+        with gzip.open(p, "wt", newline="") as f:
+            pd.DataFrame(index=cal.rename("date")).to_csv(f)
+        man["files"][p.name] = {"rows": len(cal), "sha256": _sha(p), "added_utc": _now()}
+    fx = pd.read_csv(out_dir / "gbpusd_daily_to_2022.csv.gz", index_col=0, parse_dates=True)
+    stored_status = "not recorded at build; the stored FX file has 0 FRED days, so FRED supplied nothing"
+    try:
+        fred = parse_fred(get(fred_url("DEXUSUK")))
+        j = pd.concat([fred.rename("fred"), fx["usd_per_gbp"].rename("yahoo")], axis=1).dropna()
+        retry = (f"{_now()}: FRED answered with {len(fred):,} days; vs stored Yahoo rates on {len(j):,} common "
+                 f"days, median absolute difference {((j['fred'] / j['yahoo'] - 1).abs().median()):.4%}, maximum "
+                 f"{((j['fred'] / j['yahoo'] - 1).abs().max()):.4%}. Stored FX file unchanged.")
+    except Exception as e:  # noqa: BLE001
+        retry = f"{_now()}: FRED retried and failed ({type(e).__name__}: {str(e)[:160]}). Stored FX file unchanged."
+    prov = provenance(man.get("provenance", {}).get("fred_status", stored_status), fx)
+    prov["fred_retry"] = retry
+    man["provenance"] = prov
+    rows = load(out_dir)
+    bench = pd.read_csv(out_dir / "benchmarks_daily_gbp_to_2022.csv.gz", index_col=0, parse_dates=True)
+    import xsection  # noqa: PLC0415
+    monthly = edge_split.cut_exploration(pd.read_csv(xsection.DATA / "prices_monthly.csv.gz", dtype={"cik": int}))
+    checks = check(rows, cal, monthly, fx, bench)
+    man["checks"] = {c["check"]: c["status"] for c in checks}
+    man.setdefault("history", []).append({"utc": _now(), "action": "annotate: provenance, calendar file, checks "
+                                          "rerun on the stored files; data files unchanged (hashes verified)"})
+    (out_dir / "manifest.json").write_text(json.dumps(man, indent=1))
+    rep = Path(__file__).resolve().parent.parent / "equity" / "reports" / "research" / "edge" / "exec_prices_integrity.md"
+    rep.write_text(report(checks, man))
+    rep.with_suffix(".json").write_text(json.dumps({"checks": checks, "manifest": man}, indent=1))
+    log(rep.read_text())
+    return man
+
+
+def _now() -> str:
+    return datetime.now(timezone.utc).isoformat(timespec="seconds")
 
 
 def load(out_dir: Path = OUT_DIR) -> pd.DataFrame:
@@ -355,6 +434,7 @@ if __name__ == "__main__":
     ap.add_argument("--out", default=str(OUT_DIR))
     ap.add_argument("--limit", type=int)
     ap.add_argument("--workers", type=int, default=4)
+    ap.add_argument("--annotate", action="store_true", help="add provenance to an existing build; data unchanged")
     a = ap.parse_args()
-    m = build(Path(a.out), workers=a.workers, limit=a.limit)
+    m = annotate(Path(a.out)) if a.annotate else build(Path(a.out), workers=a.workers, limit=a.limit)
     sys.exit(1 if "FAIL" in m["checks"].values() else 0)

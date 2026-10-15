@@ -488,7 +488,7 @@ before 2026 have no prices at all and are never held. `PHASE_B_PLAN.md` §2.4.
 
 ### 11.5 Benchmark
 
-Three segments, labelled in every result: actual VWRP from 2019-09; VWRL-based 2012-06 to 2019-08; Ken French
+Three segments, labelled in every result: actual VWRP from 2019-08 (corrected 2026-10-15 from 2019-09, which was one month late; see PHASE_B_PLAN.md §7.4); VWRL-based 2012-06 to 2019-07; Ken French
 developed proxy before 2012-06. Exploration checks: VWRP vs VWRL tracking error 0.37%/yr (40 months); VWRL vs proxy
 2.82%/yr, mean difference −0.93%/yr (127 months). FX for these checks came from Yahoo GBPUSD because FRED was
 unreachable; `dataset.build()` fails without FRED, to be fixed in B1. `PHASE_B_PLAN.md` §2.5.
@@ -573,4 +573,4 @@ backtest report that does not open with it (tested). In short:
    same conservative mark-down; acquisitions are therefore penalised and failures possibly under-penalised.
 3. **The holdout is partly seen** (above), so a holdout pass is weaker than a clean out-of-sample test (D3).
 4. **One ticker per company, today's SIC codes, and an unofficial free price source** (Yahoo).
-5. **Benchmark segments:** actual VWRP only from 2019-09; VWRL before that.
+5. **Benchmark segments:** actual VWRP only from 2019-08 (corrected from 2019-09 on 2026-10-15); VWRL before that.

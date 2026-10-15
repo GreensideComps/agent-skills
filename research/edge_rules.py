@@ -45,7 +45,7 @@ STANDING_LIMITATIONS = """**Standing limitations (not solved by anything in this
    conservative mark-down.
 3. **The 2023-2026 holdout is partly seen**, so a holdout pass is weaker than a clean out-of-sample test.
 4. **One ticker per company, today's SIC codes, unofficial free prices (Yahoo).**
-5. **Benchmark:** actual VWRP only from 2019-09; VWRL (its distributing twin) before that.
+5. **Benchmark:** actual VWRP only from 2019-08 (first full monthly return; first price 25 July 2019); VWRL (its distributing twin) before that.
 """
 
 

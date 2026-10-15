@@ -130,15 +130,15 @@ disappearances. Every report opens with `edge_rules.STANDING_LIMITATIONS`, and
 
 | Period (monthly returns) | Series | Fee | Currency | Coverage vs FTSE All-World |
 |---|---|---|---|---|
-| From 2019-09 | **Actual VWRP** (VWRP.L, accumulating; launched 2019-07-25) | In the price (fund OCF) | GBP | Same index |
-| 2012-06 to 2019-08 | **VWRL-based**: VWRL.L (same fund, distributing share class), Yahoo adjusted close with dividends reinvested | In the price | GBP | Same index |
+| From 2019-08 | **Actual VWRP** (VWRP.L, accumulating; first price 2019-07-25, first month-end 2019-07-31) | In the price (fund OCF) | GBP | Same index |
+| 2012-06 to 2019-07 | **VWRL-based**: VWRL.L (same fund, distributing share class), Yahoo adjusted close with dividends reinvested | In the price | GBP | Same index |
 | Before 2012-06 | **Proxy**: Ken French developed-markets market return − 0.2%/yr | Haircut | USD → GBP, month-end FX | Developed only (no emerging markets, about 10% of the index); includes small caps |
 
 **Measured on exploration data** (to 2022-12), monthly in GBP:
 
 | Pair | Months | Mean difference | Tracking error | Correlation |
 |---|---:|---:|---:|---:|
-| VWRP vs VWRL | 40 (2019-09 to 2022-12) | −0.02%/yr | 0.37%/yr | 0.9996 |
+| VWRP vs VWRL | 40 (2019-09 to 2022-12; measured before the start-date correction, August 2019 omitted) | −0.02%/yr | 0.37%/yr | 0.9996 |
 | VWRL vs proxy | 127 (2012-06 to 2022-12) | −0.93%/yr | 2.82%/yr | 0.970 |
 
 The proxy is therefore not a substitute for the fund.
@@ -146,8 +146,8 @@ The proxy is therefore not a substitute for the fund.
 **Rules:**
 
 - Comparisons are labelled by series and period.
-- **"vs actual VWRP" is reported only from 2019-09.**
-- 2015-01 to 2019-08 is "vs VWRL (VWRP's distributing twin)".
+- **"vs actual VWRP" is reported only from 2019-08** (first full monthly return; corrected from 2019-09 on 2026-10-15, see §7.4).
+- 2015-01 to 2019-07 is "vs VWRL (VWRP's distributing twin)".
 - No proxy period falls inside the 2015-2022 large-cap window, so the proxy is not used for it.
 - `dataset.build()["WORLD"]` (VWRL from 2012-06, proxy before) is used only where these labels are kept.
 
@@ -184,7 +184,7 @@ The proxy is therefore not a substitute for the fund.
    the weight, and cash earns 0%.
 8. **Currency.** A constant FX rate gives GBP = USD; a known FX path matches a hand calculation.
 9. **Benchmarks.** IR, tracking error and relative drawdown match a hand calculation. Series labels change at
-   2019-09 and 2012-06. A 2023 benchmark value is refused.
+   2019-08 (first execution-date period 2019-08-01) and 2012-06. A 2023 benchmark value is refused.
 10. **Registration and DSR.** An unregistered or already-reported trial is refused. Each result records `stat`.
     The DSR uses N = `n_trials` and pools only the same `stat`.
 11. **Reproduction.** Set the backtester to Stage 2's harness:
@@ -236,3 +236,97 @@ whose price or share-count history is mis-scaled, so they land in the large band
 otherwise ordinary (median 1.0%, 99th percentile 7.0%). Changing the exclusion rule is a methodology change, so
 this is flagged for the owner, not applied. Options: a registered extra quality rule (exclude a company-month
 whose decision-to-execution move exceeds 50%), or leave the rule and rely on the backtester's tests.
+
+## 7. B1 audit (owner review, 2026-10-15 12:41Z)
+
+The owner accepted the B1 data build conditionally (not approval to run signal trials), subject to five points.
+Script: `research/edge_exec_audit.py` (read-only, data to 2022-12-31). Report:
+`equity/reports/research/edge/exec_prices_audit.md`, with `exec_prices_audit_moves.csv` (every move over 50%)
+and `exec_prices_audit_coverage_by_month.csv`.
+
+### 7.1 Overnight moves (decision close to execution close)
+
+1,341 of 482,028 usable rows move more than 50% overnight. Each is classified in this order:
+
+- `split_like`: within 2% of a split ratio.
+- `extreme`: more than 10x either way.
+- `reversal`: the next month-end is back within 20% of the decision close.
+- `penny`: decision close under $1, which is outside the universe anyway.
+- `plausible`: anything else.
+
+The first three are probable data errors; `plausible` moves are treated as genuine.
+
+| Group | Rows | Probable data errors | Plausible (kept) | Penny |
+|---|---:|---:|---:|---:|
+| All rows | 1,341 | 557 | 199 | 585 |
+| Eligible universe (banded, quality ok) | 27 | 12 | 14 | 1 |
+| of which large band | 3 | 3 (ATLX 2015-01, 2015-04; ATXG 2022-08) | 0 | 0 |
+
+**Decision:**
+
+- Genuine moves are preserved, and nothing is excluded from the main run.
+- One sensitivity analysis is registered before any run: `B1-SENS-DATA-ERRORS` in `research/edge/trials.jsonl` (diagnostic, not counted in the DSR).
+- That sensitivity reruns a future exploration backtest with the 12 eligible probable-error company-months barred from new purchases.
+- A conclusion that holds only with the exclusion is treated as not holding.
+- The sensitivity has not been run.
+
+**Count reconciliation:**
+
+- The build-time integrity report said 1,299 rows. Rerunning the same check on the stored, hash-verified file gives 1,341.
+- 322 usable rows move by exactly 50% (prices on a tick grid). In-memory floats and floats read back from the CSV differ in the last bit, so about 42 of these flip across the `> 0.5` threshold.
+- The data files are unchanged (hashes verified). The integrity report was regenerated from the stored files and now says 1,341.
+
+### 7.2 Non-usable execution rows: what the backtester does
+
+These behaviours are tested in `research/tests/test_edge_backtest.py` (section 7).
+
+| Case | New entry | Existing holding |
+|---|---|---|
+| `missing_exec` (no trade on the execution day) | Not bought; logged `skipped_entry`; the next buyable name fills the slot | Exits at the last valid price × (1 − 30%); proceeds held as cash at 0% until the next rebalance; logged `exit` |
+| `invalid_price` (price ≤ 0) | As above | As above |
+| absent (no row at all) | As above | As above |
+| `stale_month_end` (decision close not on the month-end) | Not bought (the decision price is stale) | Kept and valued on the execution close, which is valid |
+
+**Guarantees, each tested:**
+
+- No missing-price case drops a position silently: NAV equals the exit value plus the other holdings.
+- No missing-price case creates a favourable return: the closing price is capped at the last valid price, and a positive `missing_return` is refused.
+- Ordering holds: 0% ≥ −30% ≥ −100%.
+- All of these follow `edge_rules.holding_return`, the documented exit policy.
+- **Effect on the investable universe:** a company-month without a usable execution row cannot be bought at that rebalance, but it stays in the ranking. Ranks are not recomputed, so the next-ranked buyable name takes the slot.
+
+### 7.3 Coverage by month and eligibility group
+
+| Group | Company-months | Usable | Coverage |
+|---|---:|---:|---:|
+| Large, quality ok | 55,991 | 55,941 | 99.91% |
+| Mid, quality ok | 83,030 | 83,005 | 99.97% |
+| Small, quality ok | 100,858 | 100,757 | 99.90% |
+
+- Eligible universe by month: minimum 99.79% (2022-09), median 99.93%; 0 of 143 months below 99%.
+- Large band by month: minimum 99.58% (2012-04).
+
+### 7.4 Benchmark dates
+
+| | VWRP |
+|---|---|
+| First price | 2019-07-25 |
+| First month-end close | 2019-07-31 |
+| First full monthly return | **2019-08** |
+| First execution-date period | starts 2019-08-01 |
+
+- The earlier statement "actual VWRP from 2019-09" was one month late. It is corrected in §2.5, `EVALUATION_SPEC.md`, `PHASE_A_AUDIT.md` and `edge_rules.STANDING_LIMITATIONS`.
+- VWRL-based returns cover 2012-06 to 2019-07.
+- The 40-month VWRP-vs-VWRL tracking figure in §2.5 was measured from 2019-09 and is left as measured.
+
+### 7.5 FX and provenance
+
+- The manifest now records a provenance entry for every file.
+- **FRED was not used.** It failed at build and failed again on retry (2026-10-15 12:52Z: remote end closed the connection).
+- All 3,430 FX days come from Yahoo GBPUSD=X (source column per day).
+- The SPY trading calendar is now stored as `nyse_calendar_to_2022.csv.gz` with its own hash.
+- **Hashes are preserved and verified:**
+  - exec prices: `dd6608f6…47dc`
+  - FX: `fd9f8e7d…0d65`
+  - benchmarks: `0ec17f86…fc6`
+- **The strict 2022-12-31 cutoff is unchanged.** Full hashes are in `exec_prices_integrity.md`.
