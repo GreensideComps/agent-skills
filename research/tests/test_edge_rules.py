@@ -244,3 +244,13 @@ def test_exposures_are_recorded_but_never_counted(tmp_path):
         edge_registry.append({**e, "id": "X2", "counts_for_dsr": True}, p)
     with pytest.raises(ValueError):   # an exploration trial (not an exposure) still may not touch the holdout
         edge_registry.append({**_reg("X3"), "touched_holdout": True}, p)
+
+
+def test_report_must_open_with_standing_limitations():
+    ok = "# Backtest\n\n" + edge_rules.STANDING_LIMITATIONS + "\nResults..."
+    assert edge_rules.require_disclosure(ok) == ok
+    assert "Survivorship bias" in edge_rules.STANDING_LIMITATIONS
+    with pytest.raises(ValueError):
+        edge_rules.require_disclosure("# Backtest\n\nResults first.\n\n" + edge_rules.STANDING_LIMITATIONS)
+    with pytest.raises(ValueError):
+        edge_rules.require_disclosure("# Backtest\n\nNo disclosure.")

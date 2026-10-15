@@ -528,3 +528,49 @@ an eligible row or a holding; timing (next-day, next-month, weekend month-ends, 
 boundary); a perturbation test proving decision inputs ignore later data; filing look-ahead refusal; holding
 returns at −30%, −100% and an invalid mid-holding price; positive missing returns refused; point-in-time flags;
 DSR pooling, floor, equality with `stage2.deflated_sharpe`, and reconciliation with the committed registry.
+
+### 11.10 Reconciliations the owner asked for before merge (2026-10-15)
+
+**(a) "11 entries touched the holdout" versus "0 holdout runs".** These count different things.
+
+- A *holdout run* is the single, pre-registered confirmation batch that the programme will use to test candidates
+  on 2023-01 to 2026-09 (registry event `holdout_run`, enforced by `holdout_gate` and D2). **None has happened;
+  the one allowed batch is unused.**
+- `touched_holdout` marks every earlier look, inside or outside the programme, that saw some holdout-period
+  data. They are listed so the holdout is never described as clean:
+
+| Registry id | What was seen | Counted in N? |
+|---|---|---|
+| M8-T1 | screen-1.0 12-month IC for 2023-2025 cohorts | yes |
+| M8-AUDIT-fcf_per_share, -quality, -growth, -valuation, -risk_fit | post-hoc sub-score ICs pooled over 14 cohorts, 3 of them in the holdout | yes (5) |
+| STAGE1-HARNESS | equal-weighted large-band return vs the market to 2026-08 | no (exposure) |
+| ETF-RESEARCH-E001-E015 | factor and ETF research with out-of-sample periods to 2026-09 | no (exposure) |
+| PORTFOLIO-VALIDATION-2026-10-14 | 5-year prices of the 22 demo holdings and VWRP | no (exposure) |
+| PROGRAMME-DOC-FACTOR-TABLE | US factor means for 2023-2026 | no (exposure) |
+| REVIEW-NFE-PRICES-2023 | one company's prices, 2023-01 to 2023-03 (§11.8) | no (exposure) |
+
+So: 11 looks touched holdout data, 6 of them signal tests that count in the deflated Sharpe; 0 confirmation runs.
+
+**(b) What the NFE look changes.** Very little, and nothing it could bias:
+
+- It showed three monthly prices of one company. NFE is not a candidate, no return, rank, IC or signal was
+  computed from them, and they cannot inform which hypotheses are chosen.
+- It does not move the holdout from "clean" to "seen": the holdout was already partly seen through the M8 looks,
+  the sub-score audit (the origin of H1) and the factor table. D3 already treats a holdout pass as conditional
+  E3 for that reason, and requires 12 months of prospective evidence before any demo allocation.
+- What it does show is that interactive inspection can leak. From B1 on, every data build is cut at 2022-12 at
+  the download itself (no later date is requested), so an interactive look at the exploration files cannot see
+  2023.
+
+**(c) Limitations that no Phase B result may imply are solved.** They are in code, not only here:
+`edge_rules.STANDING_LIMITATIONS` holds the text, and `edge_rules.require_disclosure(report)` refuses any
+backtest report that does not open with it (tested). In short:
+
+1. **Survivorship bias.** Companies that stopped trading before 2026 have no free prices, so they are never held.
+   Every backtest is biased upward by an unknown amount. The missing-price stresses (−30%, −100%) apply only to
+   companies that *are* in the data and do not remove this bias.
+2. **Missing prices are indistinguishable.** Delistings, acquisitions and ticker changes look the same and get the
+   same conservative mark-down; acquisitions are therefore penalised and failures possibly under-penalised.
+3. **The holdout is partly seen** (above), so a holdout pass is weaker than a clean out-of-sample test (D3).
+4. **One ticker per company, today's SIC codes, and an unofficial free price source** (Yahoo).
+5. **Benchmark segments:** actual VWRP only from 2019-09; VWRL before that.

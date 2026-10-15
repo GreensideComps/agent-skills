@@ -34,6 +34,29 @@ STRESS_MISSING_RETURNS = (-0.30, -1.0)
 FORBIDDEN_PREFIXES = ("ret_", "exec_")
 
 
+# Every backtest report opens with this (docs/edge/PHASE_A_AUDIT.md §11.10, owner 2026-10-15). It states what no
+# result can fix on free data, so a report cannot imply the limitations have been solved.
+STANDING_LIMITATIONS = """**Standing limitations (not solved by anything in this report):**
+
+1. **Survivorship bias.** Companies that stopped trading before 2026 have no free prices and are never held, so
+   every result is biased upward by an unknown amount. The missing-price stresses (-30%, -100%) apply only to
+   companies that are in the data; they do not remove this bias.
+2. **Missing prices are indistinguishable.** Delistings, acquisitions and ticker changes all get the same
+   conservative mark-down.
+3. **The 2023-2026 holdout is partly seen**, so a holdout pass is weaker than a clean out-of-sample test.
+4. **One ticker per company, today's SIC codes, unofficial free prices (Yahoo).**
+5. **Benchmark:** actual VWRP only from 2019-09; VWRL (its distributing twin) before that.
+"""
+
+
+def require_disclosure(report: str) -> str:
+    """Return the report unchanged if it opens (after its title) with STANDING_LIMITATIONS; raise otherwise."""
+    body = report.split("\n", 1)[1] if report.startswith("#") else report
+    if not body.lstrip().startswith(STANDING_LIMITATIONS.strip()):
+        raise ValueError("a backtest report must open with edge_rules.STANDING_LIMITATIONS")
+    return report
+
+
 class LookAhead(RuntimeError):
     """Raised when a decision could use information that is not available before its trade executes."""
 

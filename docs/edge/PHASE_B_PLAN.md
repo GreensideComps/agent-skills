@@ -123,7 +123,8 @@ A result whose conclusion changes between 0% and −100% is marked fragile.
 **Limitation: stress tests do not remove survivorship bias.** Companies that stopped trading before 2026 are
 absent from the data altogether: 318 of 323 large companies that stopped filing in 2023 to March 2026, and all
 that stopped by 2022. The backtester never holds them, so these rules apply only to the rare in-sample
-disappearances. Every result states this survivorship bias first.
+disappearances. Every report opens with `edge_rules.STANDING_LIMITATIONS`, and
+`edge_rules.require_disclosure` refuses one that does not (PHASE_A_AUDIT §11.10).
 
 ### 2.5 Benchmark: what "VWRP" means in each period
 
