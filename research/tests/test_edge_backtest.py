@@ -405,3 +405,38 @@ def test_6_next_month_close_convention_trades_at_the_following_month_end():
     assert list(res.nav_usd.index) == [m + pd.offsets.MonthEnd(1) for m in months[:-1]]
     # held 1 and 2 at equal weight; each period name 1 earns 10%, name 2 nothing, then rebalanced, no costs
     assert list(res.nav_usd) == pytest.approx([1.0, 1.05, 1.05 ** 2])
+
+
+# ---------- B3 reproduction modes ----------
+
+def test_b3_stage2_top_quintile_matches_the_stage2_harness_rule_including_ties():
+    months = month_ends("2020-01-31", 1)
+    rng = np.random.default_rng(11)
+    n = 47
+    scores = {c: [float(rng.integers(0, 6))] for c in range(1, n + 1)}  # many ties
+    panel, _ = world({c: [10] for c in scores}, scores, months)
+    q = pd.qcut(panel["score"].rank(method="first"), 10, labels=False)
+    expected = list(panel.loc[q >= 8, "cik"])
+    assert bt.stage2_top_quintile(panel, cfg(n=0)) == expected
+    assert bt.stage2_top_quintile(panel.iloc[:29], cfg(n=0)) == []  # Stage 2 skipped such a month
+
+
+def test_b3_decision_close_is_refused_for_registered_trials(tmp_path):
+    reg = tmp_path / "trials.jsonl"
+    _register(reg, "B3-X")
+    months, panel, ex = random_world(n_cos=40, n_months=3, seed=2)
+    with pytest.raises(ValueError):
+        bt.run_trial("B3-X", reg, panel, ex, flat_fx(months), cfg(convention=bt.REPRO_CONVENTION))
+
+
+def test_b3_decision_close_returns_month_end_to_month_end():
+    months = month_ends("2020-01-31", 3)
+    rows = []
+    for c, px in {1: [10, 11, 12.1], 2: [10, 10, 10]}.items():
+        for m, p in zip(months, px):
+            rows.append({"cik": c, "month": m.date().isoformat(), "me_adjclose": p, "status": "ok",
+                         "exec_date": m.date().isoformat()})
+    panel, _ = world({1: [10, 11, 12.1], 2: [10, 10, 10]}, {1: [2, 2, 2], 2: [1, 1, 1]}, months)
+    res = bt.run(panel, pd.DataFrame(rows), flat_fx(months), cfg(convention=bt.REPRO_CONVENTION))
+    assert list(res.nav_usd.index) == months
+    assert list(res.nav_usd) == pytest.approx([1.0, 1.05, 1.05 ** 2])

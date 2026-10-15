@@ -1,0 +1,1333 @@
+{
+ "run_utc": "2026-10-15T15:02:26+00:00",
+ "hashes": {
+  "monthly_metrics.csv.gz": "ae5429b661bd060d040109138d35cb4ea22356d4a549056c8616c3a2a7e87561",
+  "prices_monthly.csv.gz": "505115711f7ef59c8df417671f8afecf77dd2240e13a2a3bdff453721b3d801a",
+  "sec_companies.csv.gz": "acf5e3f746c355aa2c0aa2b76c0c3f55413daf5e927524672537d0389d214a90",
+  "insider_trades.csv.gz": "82e99ff117d2ec0c2a33aeb0dd9f412b897aa3ced936e4e1e07e19bcdef8c676",
+  "F-F_Research_Data_Factors.csv": "d7d7fe37b150b5b15c9c069b3ba101dfe1af568c6d7b5db6e73cd0a6c0c9e5e5",
+  "exec_prices_to_2022.csv.gz": "dd6608f62ae2676fd4fd5b3b256105d5f52eb720ba3a10a2965cf504e17d47dc"
+ },
+ "trials": {
+  "S1a": {
+   "desc": "FCF yield, within SIC group, ex financials",
+   "published_vs_rerun": {
+    "months": {
+     "published": 95,
+     "rerun": 95,
+     "diff": 0
+    },
+    "avg_names": {
+     "published": 354.7263157894737,
+     "rerun": 354.7263157894737,
+     "diff": 0.0
+    },
+    "mean_ic": {
+     "published": 0.009027076112081797,
+     "rerun": 0.009027076112081797,
+     "diff": 0.0
+    },
+    "q5_minus_univ_ann_gross": {
+     "published": -0.0014092366384949049,
+     "rerun": -0.001409236638494904,
+     "diff": 8.673617379884035e-19
+    },
+    "q5_minus_univ_ann_net": {
+     "published": -0.011567951502569826,
+     "rerun": -0.011567951502569828,
+     "diff": -1.734723475976807e-18
+    },
+    "q5_turnover_monthly": {
+     "published": 0.14109326200104047,
+     "rerun": 0.14109326200104047,
+     "diff": 0.0
+    }
+   },
+   "pass_published_vs_rerun": true,
+   "engine_vs_rerun_max_abs_monthly": {
+    "q5_minus_univ": 0.00044797887437104597,
+    "q5_turnover": 0.0,
+    "q5_net": 0.00044797887437104597
+   },
+   "engine_vs_rerun_annual": {
+    "rerun_q5_net_ann": -0.011567951502569828,
+    "engine_q5_net_ann": -0.011574926382876487,
+    "diff": -6.974880306659034e-06
+   },
+   "same_holdings": true,
+   "pass_engine_vs_rerun": false,
+   "holdings_differ": {},
+   "nonpositive_price_rows": [
+    [
+     1749723,
+     "NFE",
+     "2022-07"
+    ],
+    [
+     1749723,
+     "NFE",
+     "2022-08"
+    ],
+    [
+     1749723,
+     "NFE",
+     "2022-10"
+    ],
+    [
+     1749723,
+     "NFE",
+     "2022-11"
+    ]
+   ],
+   "months_over_tol": [
+    "2022-07",
+    "2022-08",
+    "2022-10",
+    "2022-11"
+   ],
+   "max_abs_monthly_outside_nonpositive_months": 3.95516952522712e-16,
+   "months": 95,
+   "engine_missing_exits": 0,
+   "nextday": {
+    "months": 94,
+    "q5_net_ann": -0.014199195421087676,
+    "stage2_same_months_ann": -0.01255945916519293,
+    "diff": -0.0016397362558947456,
+    "turnover_weight_monthly": 0.15810064848150113,
+    "missing_exits": 0,
+    "skipped_entries": 9
+   }
+  },
+  "S1b": {
+   "desc": "EBIT / EV, within SIC group, ex financials",
+   "published_vs_rerun": {
+    "months": {
+     "published": 95,
+     "rerun": 95,
+     "diff": 0
+    },
+    "avg_names": {
+     "published": 313.0421052631579,
+     "rerun": 313.0421052631579,
+     "diff": 0.0
+    },
+    "mean_ic": {
+     "published": -0.0037407054492028507,
+     "rerun": -0.0037407054492028507,
+     "diff": 0.0
+    },
+    "q5_minus_univ_ann_gross": {
+     "published": 0.001943324005365843,
+     "rerun": 0.001943324005365839,
+     "diff": -3.903127820947816e-18
+    },
+    "q5_minus_univ_ann_net": {
+     "published": -0.008350928624235712,
+     "rerun": -0.008350928624235723,
+     "diff": -1.0408340855860843e-17
+    },
+    "q5_turnover_monthly": {
+     "published": 0.14297573096668834,
+     "rerun": 0.14297573096668834,
+     "diff": 0.0
+    }
+   },
+   "pass_published_vs_rerun": true,
+   "engine_vs_rerun_max_abs_monthly": {
+    "q5_minus_univ": 0.0005066885713088908,
+    "q5_turnover": 0.0,
+    "q5_net": 0.0005066885713088908
+   },
+   "engine_vs_rerun_annual": {
+    "rerun_q5_net_ann": -0.008350928624235723,
+    "engine_q5_net_ann": -0.008356649792248068,
+    "diff": -5.721168012345554e-06
+   },
+   "same_holdings": true,
+   "pass_engine_vs_rerun": false,
+   "holdings_differ": {},
+   "nonpositive_price_rows": [
+    [
+     1749723,
+     "NFE",
+     "2022-07"
+    ],
+    [
+     1749723,
+     "NFE",
+     "2022-08"
+    ],
+    [
+     1749723,
+     "NFE",
+     "2022-10"
+    ],
+    [
+     1749723,
+     "NFE",
+     "2022-11"
+    ]
+   ],
+   "months_over_tol": [
+    "2022-07",
+    "2022-08",
+    "2022-10",
+    "2022-11"
+   ],
+   "max_abs_monthly_outside_nonpositive_months": 2.914335439641036e-16,
+   "months": 95,
+   "engine_missing_exits": 0,
+   "nextday": {
+    "months": 94,
+    "q5_net_ann": -0.012451715458432776,
+    "stage2_same_months_ann": -0.009145694029790171,
+    "diff": -0.003306021428642605,
+    "turnover_weight_monthly": 0.16011093497412784,
+    "missing_exits": 0,
+    "skipped_entries": 9
+   }
+  },
+  "S2a": {
+   "desc": "Gross profit / assets, within SIC group, ex financials",
+   "published_vs_rerun": {
+    "months": {
+     "published": 95,
+     "rerun": 95,
+     "diff": 0
+    },
+    "avg_names": {
+     "published": 272.6,
+     "rerun": 272.6,
+     "diff": 0.0
+    },
+    "mean_ic": {
+     "published": 0.013382883685011702,
+     "rerun": 0.013382883685011702,
+     "diff": 0.0
+    },
+    "q5_minus_univ_ann_gross": {
+     "published": -0.0022989792599674838,
+     "rerun": -0.002298979259967494,
+     "diff": -1.0408340855860843e-17
+    },
+    "q5_minus_univ_ann_net": {
+     "published": -0.009213729536395519,
+     "rerun": -0.009213729536395529,
+     "diff": -1.0408340855860843e-17
+    },
+    "q5_turnover_monthly": {
+     "published": 0.0960381982837227,
+     "rerun": 0.0960381982837227,
+     "diff": 0.0
+    }
+   },
+   "pass_published_vs_rerun": true,
+   "engine_vs_rerun_max_abs_monthly": {
+    "q5_minus_univ": 0.0006061304347678015,
+    "q5_turnover": 0.0,
+    "q5_net": 0.0006061304347678015
+   },
+   "engine_vs_rerun_annual": {
+    "rerun_q5_net_ann": -0.009213729536395529,
+    "engine_q5_net_ann": -0.009221406125937125,
+    "diff": -7.67658954159596e-06
+   },
+   "same_holdings": true,
+   "pass_engine_vs_rerun": false,
+   "holdings_differ": {},
+   "nonpositive_price_rows": [
+    [
+     1749723,
+     "NFE",
+     "2022-07"
+    ],
+    [
+     1749723,
+     "NFE",
+     "2022-08"
+    ],
+    [
+     1749723,
+     "NFE",
+     "2022-10"
+    ],
+    [
+     1749723,
+     "NFE",
+     "2022-11"
+    ]
+   ],
+   "months_over_tol": [
+    "2022-07",
+    "2022-08",
+    "2022-10",
+    "2022-11"
+   ],
+   "max_abs_monthly_outside_nonpositive_months": 4.649058915617843e-16,
+   "months": 95,
+   "engine_missing_exits": 0,
+   "nextday": {
+    "months": 94,
+    "q5_net_ann": -0.008621562183176158,
+    "stage2_same_months_ann": -0.010021226264581658,
+    "diff": 0.0013996640814055005,
+    "turnover_weight_monthly": 0.11502190790691796,
+    "missing_exits": 0,
+    "skipped_entries": 0
+   }
+  },
+  "S2b": {
+   "desc": "Low accruals (OCF - NI) / assets, ex financials",
+   "published_vs_rerun": {
+    "months": {
+     "published": 95,
+     "rerun": 95,
+     "diff": 0
+    },
+    "avg_names": {
+     "published": 346.2631578947368,
+     "rerun": 346.2631578947368,
+     "diff": 0.0
+    },
+    "mean_ic": {
+     "published": -0.0056378428447492095,
+     "rerun": -0.0056378428447492095,
+     "diff": 0.0
+    },
+    "q5_minus_univ_ann_gross": {
+     "published": -0.0019460173160737609,
+     "rerun": -0.001946017316073766,
+     "diff": -5.204170427930421e-18
+    },
+    "q5_minus_univ_ann_net": {
+     "published": -0.01119965183332318,
+     "rerun": -0.011199651833323184,
+     "diff": -5.204170427930421e-18
+    },
+    "q5_turnover_monthly": {
+     "published": 0.12852270162846416,
+     "rerun": 0.12852270162846416,
+     "diff": 0.0
+    }
+   },
+   "pass_published_vs_rerun": true,
+   "engine_vs_rerun_max_abs_monthly": {
+    "q5_minus_univ": 0.0004556736106815923,
+    "q5_turnover": 0.0,
+    "q5_net": 0.0004556736106815923
+   },
+   "engine_vs_rerun_annual": {
+    "rerun_q5_net_ann": -0.011199651833323184,
+    "engine_q5_net_ann": -0.011206300749941491,
+    "diff": -6.648916618307021e-06
+   },
+   "same_holdings": true,
+   "pass_engine_vs_rerun": false,
+   "holdings_differ": {},
+   "nonpositive_price_rows": [
+    [
+     1749723,
+     "NFE",
+     "2022-07"
+    ],
+    [
+     1749723,
+     "NFE",
+     "2022-08"
+    ],
+    [
+     1749723,
+     "NFE",
+     "2022-10"
+    ],
+    [
+     1749723,
+     "NFE",
+     "2022-11"
+    ]
+   ],
+   "months_over_tol": [
+    "2022-07",
+    "2022-08",
+    "2022-10",
+    "2022-11"
+   ],
+   "max_abs_monthly_outside_nonpositive_months": 3.95516952522712e-16,
+   "months": 95,
+   "engine_missing_exits": 0,
+   "nextday": {
+    "months": 94,
+    "q5_net_ann": -0.00790880934807417,
+    "stage2_same_months_ann": -0.0077338145978968695,
+    "diff": -0.00017499475017729998,
+    "turnover_weight_monthly": 0.15151644866895836,
+    "missing_exits": 0,
+    "skipped_entries": 0
+   }
+  },
+  "S3a": {
+   "desc": "TTM revenue growth, year on year",
+   "published_vs_rerun": {
+    "months": {
+     "published": 95,
+     "rerun": 95,
+     "diff": 0
+    },
+    "avg_names": {
+     "published": 413.82105263157894,
+     "rerun": 413.82105263157894,
+     "diff": 0.0
+    },
+    "mean_ic": {
+     "published": -0.007569673107902513,
+     "rerun": -0.007569673107902513,
+     "diff": 0.0
+    },
+    "q5_minus_univ_ann_gross": {
+     "published": -0.018423793145070453,
+     "rerun": -0.01842379314507044,
+     "diff": 1.3877787807814457e-17
+    },
+    "q5_minus_univ_ann_net": {
+     "published": -0.026769798533799703,
+     "rerun": -0.02676979853379969,
+     "diff": 1.3877787807814457e-17
+    },
+    "q5_turnover_monthly": {
+     "published": 0.11591674151012862,
+     "rerun": 0.11591674151012862,
+     "diff": 0.0
+    }
+   },
+   "pass_published_vs_rerun": true,
+   "engine_vs_rerun_max_abs_monthly": {
+    "q5_minus_univ": 0.0013051955756596435,
+    "q5_turnover": 0.00847134970493052,
+    "q5_net": 0.0012559979032914538
+   },
+   "engine_vs_rerun_annual": {
+    "rerun_q5_net_ann": -0.02676979853379969,
+    "engine_q5_net_ann": -0.026789826799149506,
+    "diff": -2.0028265349816832e-05
+   },
+   "same_holdings": false,
+   "pass_engine_vs_rerun": false,
+   "holdings_differ": {
+    "2022-07": [
+     1749723
+    ],
+    "2022-08": [
+     1749723
+    ],
+    "2022-10": [
+     1749723
+    ],
+    "2022-11": [
+     1749723
+    ]
+   },
+   "nonpositive_price_rows": [
+    [
+     1749723,
+     "NFE",
+     "2022-07"
+    ],
+    [
+     1749723,
+     "NFE",
+     "2022-08"
+    ],
+    [
+     1749723,
+     "NFE",
+     "2022-10"
+    ],
+    [
+     1749723,
+     "NFE",
+     "2022-11"
+    ]
+   ],
+   "months_over_tol": [
+    "2022-07",
+    "2022-08",
+    "2022-10",
+    "2022-11"
+   ],
+   "max_abs_monthly_outside_nonpositive_months": 4.649058915617843e-16,
+   "months": 95,
+   "engine_missing_exits": 0,
+   "nextday": {
+    "months": 94,
+    "q5_net_ann": -0.025676295560967823,
+    "stage2_same_months_ann": -0.023070234556790022,
+    "diff": -0.0026060610041778003,
+    "turnover_weight_monthly": 0.136352785616126,
+    "missing_exits": 0,
+    "skipped_entries": 9
+   }
+  },
+  "S3b": {
+   "desc": "Revenue growth acceleration (vs 3 months earlier)",
+   "published_vs_rerun": {
+    "months": {
+     "published": 95,
+     "rerun": 95,
+     "diff": 0
+    },
+    "avg_names": {
+     "published": 410.4526315789474,
+     "rerun": 410.4526315789474,
+     "diff": 0.0
+    },
+    "mean_ic": {
+     "published": 0.01319409667578929,
+     "rerun": 0.01319409667578929,
+     "diff": 0.0
+    },
+    "q5_minus_univ_ann_gross": {
+     "published": 0.009338735861514322,
+     "rerun": 0.009338735861514319,
+     "diff": -3.469446951953614e-18
+    },
+    "q5_minus_univ_ann_net": {
+     "published": -0.011523852934275056,
+     "rerun": -0.011523852934275058,
+     "diff": -1.734723475976807e-18
+    },
+    "q5_turnover_monthly": {
+     "published": 0.2897581777192968,
+     "rerun": 0.2897581777192968,
+     "diff": 0.0
+    }
+   },
+   "pass_published_vs_rerun": true,
+   "engine_vs_rerun_max_abs_monthly": {
+    "q5_minus_univ": 0.001227486969833897,
+    "q5_turnover": 0.006788926115323557,
+    "q5_net": 0.0011867534131419569
+   },
+   "engine_vs_rerun_annual": {
+    "rerun_q5_net_ann": -0.011523852934275058,
+    "engine_q5_net_ann": -0.011728997511318746,
+    "diff": -0.000205144577043688
+   },
+   "same_holdings": false,
+   "pass_engine_vs_rerun": false,
+   "holdings_differ": {
+    "2022-07": [
+     1749723
+    ]
+   },
+   "nonpositive_price_rows": [
+    [
+     1749723,
+     "NFE",
+     "2022-07"
+    ],
+    [
+     1749723,
+     "NFE",
+     "2022-08"
+    ],
+    [
+     1749723,
+     "NFE",
+     "2022-10"
+    ],
+    [
+     1749723,
+     "NFE",
+     "2022-11"
+    ]
+   ],
+   "months_over_tol": [
+    "2022-07",
+    "2022-08",
+    "2022-10",
+    "2022-11"
+   ],
+   "max_abs_monthly_outside_nonpositive_months": 3.8510861166685117e-16,
+   "months": 95,
+   "engine_missing_exits": 0,
+   "nextday": {
+    "months": 94,
+    "q5_net_ann": -0.013562191518913233,
+    "stage2_same_months_ann": -0.012197709544745304,
+    "diff": -0.0013644819741679293,
+    "turnover_weight_monthly": 0.30259172110507615,
+    "missing_exits": 0,
+    "skipped_entries": 7
+   }
+  },
+  "S4": {
+   "desc": "Standardised unexpected EPS, new quarter within 75 days",
+   "published_vs_rerun": {
+    "months": {
+     "published": 93,
+     "rerun": 93,
+     "diff": 0
+    },
+    "avg_names": {
+     "published": 173.63440860215053,
+     "rerun": 173.63440860215053,
+     "diff": 0.0
+    },
+    "mean_ic": {
+     "published": 0.007832109724389111,
+     "rerun": 0.007832109724389111,
+     "diff": 0.0
+    },
+    "q5_minus_univ_ann_gross": {
+     "published": 0.0066587244647576035,
+     "rerun": 0.0066587244647576,
+     "diff": -3.469446951953614e-18
+    },
+    "q5_minus_univ_ann_net": {
+     "published": -0.05203436877301619,
+     "rerun": -0.05203436877301619,
+     "diff": 0.0
+    },
+    "q5_turnover_monthly": {
+     "published": 0.8151818505246362,
+     "rerun": 0.8151818505246362,
+     "diff": 0.0
+    }
+   },
+   "pass_published_vs_rerun": true,
+   "engine_vs_rerun_max_abs_monthly": {
+    "q5_minus_univ": 3.400058012914542e-16,
+    "q5_turnover": 0.0,
+    "q5_net": 3.400058012914542e-16
+   },
+   "engine_vs_rerun_annual": {
+    "rerun_q5_net_ann": -0.05203436877301619,
+    "engine_q5_net_ann": -0.05203436877301619,
+    "diff": 0.0
+   },
+   "same_holdings": true,
+   "pass_engine_vs_rerun": true,
+   "holdings_differ": {},
+   "nonpositive_price_rows": [],
+   "months_over_tol": [],
+   "max_abs_monthly_outside_nonpositive_months": 3.400058012914542e-16,
+   "months": 93,
+   "engine_missing_exits": 0,
+   "nextday": {
+    "months": 92,
+    "q5_net_ann": -0.05822417324255953,
+    "stage2_same_months_ann": -0.05104660896106012,
+    "diff": -0.0071775642814994114,
+    "turnover_weight_monthly": 0.8661434127188712,
+    "missing_exits": 0,
+    "skipped_entries": 0
+   }
+  },
+  "S5a": {
+   "desc": "Low net issuance (12-month market cap change less return)",
+   "published_vs_rerun": {
+    "months": {
+     "published": 95,
+     "rerun": 95,
+     "diff": 0
+    },
+    "avg_names": {
+     "published": 443.42105263157896,
+     "rerun": 443.42105263157896,
+     "diff": 0.0
+    },
+    "mean_ic": {
+     "published": 0.01080241860333279,
+     "rerun": 0.01080241860333279,
+     "diff": 0.0
+    },
+    "q5_minus_univ_ann_gross": {
+     "published": 0.015058531967976657,
+     "rerun": 0.015058531967976664,
+     "diff": 6.938893903907228e-18
+    },
+    "q5_minus_univ_ann_net": {
+     "published": 0.0066855069521907125,
+     "rerun": 0.0066855069521907125,
+     "diff": 0.0
+    },
+    "q5_turnover_monthly": {
+     "published": 0.11629201410813812,
+     "rerun": 0.11629201410813812,
+     "diff": 0.0
+    }
+   },
+   "pass_published_vs_rerun": true,
+   "engine_vs_rerun_max_abs_monthly": {
+    "q5_minus_univ": 0.0013567086175743717,
+    "q5_turnover": 0.008239891267414215,
+    "q5_net": 0.0013079634438291979
+   },
+   "engine_vs_rerun_annual": {
+    "rerun_q5_net_ann": 0.0066855069521907125,
+    "engine_q5_net_ann": 0.006742246248388533,
+    "diff": 5.6739296197820706e-05
+   },
+   "same_holdings": false,
+   "pass_engine_vs_rerun": false,
+   "holdings_differ": {
+    "2022-07": [
+     1749723
+    ],
+    "2022-08": [
+     1749723
+    ],
+    "2022-10": [
+     1749723
+    ],
+    "2022-11": [
+     1749723
+    ]
+   },
+   "nonpositive_price_rows": [
+    [
+     1749723,
+     "NFE",
+     "2022-07"
+    ],
+    [
+     1749723,
+     "NFE",
+     "2022-08"
+    ],
+    [
+     1749723,
+     "NFE",
+     "2022-10"
+    ],
+    [
+     1749723,
+     "NFE",
+     "2022-11"
+    ]
+   ],
+   "months_over_tol": [
+    "2022-07",
+    "2022-08",
+    "2022-10",
+    "2022-11"
+   ],
+   "max_abs_monthly_outside_nonpositive_months": 4.2674197509029455e-16,
+   "months": 95,
+   "engine_missing_exits": 0,
+   "nextday": {
+    "months": 94,
+    "q5_net_ann": 0.005536319301750249,
+    "stage2_same_months_ann": 0.006038303582327039,
+    "diff": -0.0005019842805767897,
+    "turnover_weight_monthly": 0.13135760251451992,
+    "missing_exits": 0,
+    "skipped_entries": 4
+   }
+  },
+  "S5b": {
+   "desc": "Low asset growth, year on year",
+   "published_vs_rerun": {
+    "months": {
+     "published": 95,
+     "rerun": 95,
+     "diff": 0
+    },
+    "avg_names": {
+     "published": 441.41052631578947,
+     "rerun": 441.41052631578947,
+     "diff": 0.0
+    },
+    "mean_ic": {
+     "published": -0.006488421826180788,
+     "rerun": -0.006488421826180788,
+     "diff": 0.0
+    },
+    "q5_minus_univ_ann_gross": {
+     "published": -0.005983770650532131,
+     "rerun": -0.0059837706505321345,
+     "diff": -3.469446951953614e-18
+    },
+    "q5_minus_univ_ann_net": {
+     "published": -0.01744061286831628,
+     "rerun": -0.01744061286831627,
+     "diff": 1.0408340855860843e-17
+    },
+    "q5_turnover_monthly": {
+     "published": 0.1591228085803353,
+     "rerun": 0.1591228085803353,
+     "diff": 0.0
+    }
+   },
+   "pass_published_vs_rerun": true,
+   "engine_vs_rerun_max_abs_monthly": {
+    "q5_minus_univ": 0.00035666122846025536,
+    "q5_turnover": 0.0,
+    "q5_net": 0.00035666122846025536
+   },
+   "engine_vs_rerun_annual": {
+    "rerun_q5_net_ann": -0.01744061286831627,
+    "engine_q5_net_ann": -0.017447040816011172,
+    "diff": -6.427947694901542e-06
+   },
+   "same_holdings": true,
+   "pass_engine_vs_rerun": false,
+   "holdings_differ": {},
+   "nonpositive_price_rows": [
+    [
+     1749723,
+     "NFE",
+     "2022-07"
+    ],
+    [
+     1749723,
+     "NFE",
+     "2022-08"
+    ],
+    [
+     1749723,
+     "NFE",
+     "2022-10"
+    ],
+    [
+     1749723,
+     "NFE",
+     "2022-11"
+    ]
+   ],
+   "months_over_tol": [
+    "2022-07",
+    "2022-08",
+    "2022-10",
+    "2022-11"
+   ],
+   "max_abs_monthly_outside_nonpositive_months": 3.885780586188048e-16,
+   "months": 95,
+   "engine_missing_exits": 0,
+   "nextday": {
+    "months": 94,
+    "q5_net_ann": -0.019284191250714785,
+    "stage2_same_months_ann": -0.019264747889828022,
+    "diff": -1.944336088676238e-05,
+    "turnover_weight_monthly": 0.17500061856621021,
+    "missing_exits": 0,
+    "skipped_entries": 0
+   }
+  },
+  "S6a": {
+   "desc": "12-1 month price momentum",
+   "published_vs_rerun": {
+    "months": {
+     "published": 95,
+     "rerun": 95,
+     "diff": 0
+    },
+    "avg_names": {
+     "published": 447.0421052631579,
+     "rerun": 447.0421052631579,
+     "diff": 0.0
+    },
+    "mean_ic": {
+     "published": 0.0018437141626344343,
+     "rerun": 0.0018437141626344343,
+     "diff": 0.0
+    },
+    "q5_minus_univ_ann_gross": {
+     "published": 0.010108256208101327,
+     "rerun": 0.01010825620810133,
+     "diff": 3.469446951953614e-18
+    },
+    "q5_minus_univ_ann_net": {
+     "published": -0.009192170218351964,
+     "rerun": -0.009192170218351963,
+     "diff": 1.734723475976807e-18
+    },
+    "q5_turnover_monthly": {
+     "published": 0.26806147814518466,
+     "rerun": 0.26806147814518466,
+     "diff": 0.0
+    }
+   },
+   "pass_published_vs_rerun": true,
+   "engine_vs_rerun_max_abs_monthly": {
+    "q5_minus_univ": 0.001102270898618439,
+    "q5_turnover": 0.007089241034195143,
+    "q5_net": 0.001060351941934698
+   },
+   "engine_vs_rerun_annual": {
+    "rerun_q5_net_ann": -0.009192170218351963,
+    "engine_q5_net_ann": -0.009116315936176693,
+    "diff": 7.585428217526946e-05
+   },
+   "same_holdings": false,
+   "pass_engine_vs_rerun": false,
+   "holdings_differ": {
+    "2022-07": [
+     1749723
+    ],
+    "2022-08": [
+     1749723
+    ],
+    "2022-10": [
+     1749723
+    ],
+    "2022-11": [
+     1749723
+    ]
+   },
+   "nonpositive_price_rows": [
+    [
+     1749723,
+     "NFE",
+     "2022-07"
+    ],
+    [
+     1749723,
+     "NFE",
+     "2022-08"
+    ],
+    [
+     1749723,
+     "NFE",
+     "2022-10"
+    ],
+    [
+     1749723,
+     "NFE",
+     "2022-11"
+    ]
+   ],
+   "months_over_tol": [
+    "2022-07",
+    "2022-08",
+    "2022-10",
+    "2022-11"
+   ],
+   "max_abs_monthly_outside_nonpositive_months": 3.469446951953614e-16,
+   "months": 95,
+   "engine_missing_exits": 0,
+   "nextday": {
+    "months": 94,
+    "q5_net_ann": -0.012419948768087271,
+    "stage2_same_months_ann": -0.009758854322881982,
+    "diff": -0.0026610944452052886,
+    "turnover_weight_monthly": 0.282469953071072,
+    "missing_exits": 0,
+    "skipped_entries": 4
+   }
+  },
+  "S6b": {
+   "desc": "Close / 12-month high",
+   "published_vs_rerun": {
+    "months": {
+     "published": 95,
+     "rerun": 95,
+     "diff": 0
+    },
+    "avg_names": {
+     "published": 447.7473684210526,
+     "rerun": 447.7473684210526,
+     "diff": 0.0
+    },
+    "mean_ic": {
+     "published": 0.009811658160128842,
+     "rerun": 0.009811658160128842,
+     "diff": 0.0
+    },
+    "q5_minus_univ_ann_gross": {
+     "published": 0.018989402270743798,
+     "rerun": 0.018989402270743798,
+     "diff": 0.0
+    },
+    "q5_minus_univ_ann_net": {
+     "published": -0.015526024430584416,
+     "rerun": -0.015526024430584415,
+     "diff": 1.734723475976807e-18
+    },
+    "q5_turnover_monthly": {
+     "published": 0.47938092640733615,
+     "rerun": 0.47938092640733615,
+     "diff": 0.0
+    }
+   },
+   "pass_published_vs_rerun": true,
+   "engine_vs_rerun_max_abs_monthly": {
+    "q5_minus_univ": 0.0013055430995803849,
+    "q5_turnover": 0.006505421184320237,
+    "q5_net": 0.00126921333712114
+   },
+   "engine_vs_rerun_annual": {
+    "rerun_q5_net_ann": -0.015526024430584415,
+    "engine_q5_net_ann": -0.01548432541559376,
+    "diff": 4.1699014990655495e-05
+   },
+   "same_holdings": false,
+   "pass_engine_vs_rerun": false,
+   "holdings_differ": {
+    "2022-07": [
+     1749723
+    ],
+    "2022-08": [
+     1749723
+    ],
+    "2022-10": [
+     1749723
+    ],
+    "2022-11": [
+     1749723
+    ]
+   },
+   "nonpositive_price_rows": [
+    [
+     1749723,
+     "NFE",
+     "2022-07"
+    ],
+    [
+     1749723,
+     "NFE",
+     "2022-08"
+    ],
+    [
+     1749723,
+     "NFE",
+     "2022-10"
+    ],
+    [
+     1749723,
+     "NFE",
+     "2022-11"
+    ]
+   ],
+   "months_over_tol": [
+    "2022-07",
+    "2022-08",
+    "2022-10",
+    "2022-11"
+   ],
+   "max_abs_monthly_outside_nonpositive_months": 3.365363543395006e-16,
+   "months": 95,
+   "engine_missing_exits": 0,
+   "nextday": {
+    "months": 94,
+    "q5_net_ann": -0.021188658331829487,
+    "stage2_same_months_ann": -0.017016834028162606,
+    "diff": -0.004171824303666881,
+    "turnover_weight_monthly": 0.4770111629046071,
+    "missing_exits": 0,
+    "skipped_entries": 4
+   }
+  },
+  "S6c": {
+   "desc": "FF3 residual momentum, 12-2 months",
+   "published_vs_rerun": {
+    "months": {
+     "published": 95,
+     "rerun": 95,
+     "diff": 0
+    },
+    "avg_names": {
+     "published": 435.88421052631577,
+     "rerun": 435.88421052631577,
+     "diff": 0.0
+    },
+    "mean_ic": {
+     "published": -0.013964835042203272,
+     "rerun": -0.013964835042203272,
+     "diff": 0.0
+    },
+    "q5_minus_univ_ann_gross": {
+     "published": -0.016729463757784765,
+     "rerun": -0.016729463757784772,
+     "diff": -6.938893903907228e-18
+    },
+    "q5_minus_univ_ann_net": {
+     "published": -0.03901996692376955,
+     "rerun": -0.03901996692376956,
+     "diff": -6.938893903907228e-18
+    },
+    "q5_turnover_monthly": {
+     "published": 0.30959032174978873,
+     "rerun": 0.30959032174978873,
+     "diff": 0.0
+    }
+   },
+   "pass_published_vs_rerun": true,
+   "engine_vs_rerun_max_abs_monthly": {
+    "q5_minus_univ": 0.0009602451605278256,
+    "q5_turnover": 0.00691823899371069,
+    "q5_net": 0.0010017545944900896
+   },
+   "engine_vs_rerun_annual": {
+    "rerun_q5_net_ann": -0.03901996692376956,
+    "engine_q5_net_ann": -0.03884465983938549,
+    "diff": 0.00017530708438406872
+   },
+   "same_holdings": false,
+   "pass_engine_vs_rerun": false,
+   "holdings_differ": {
+    "2022-10": [
+     1749723
+    ],
+    "2022-11": [
+     1749723
+    ]
+   },
+   "nonpositive_price_rows": [
+    [
+     1749723,
+     "NFE",
+     "2022-07"
+    ],
+    [
+     1749723,
+     "NFE",
+     "2022-08"
+    ],
+    [
+     1749723,
+     "NFE",
+     "2022-10"
+    ],
+    [
+     1749723,
+     "NFE",
+     "2022-11"
+    ]
+   ],
+   "months_over_tol": [
+    "2022-07",
+    "2022-08",
+    "2022-10",
+    "2022-11"
+   ],
+   "max_abs_monthly_outside_nonpositive_months": 4.0245584642661925e-16,
+   "months": 95,
+   "engine_missing_exits": 0,
+   "nextday": {
+    "months": 94,
+    "q5_net_ann": -0.03626328198925722,
+    "stage2_same_months_ann": -0.039364594701820486,
+    "diff": 0.0031013127125632672,
+    "turnover_weight_monthly": 0.32145630594433916,
+    "missing_exits": 0,
+    "skipped_entries": 2
+   }
+  },
+  "S7a": {
+   "desc": "Insider net buyers ratio, 6 months",
+   "published_vs_rerun": {
+    "months": {
+     "published": 95,
+     "rerun": 95,
+     "diff": 0
+    },
+    "avg_names": {
+     "published": 411.8315789473684,
+     "rerun": 411.8315789473684,
+     "diff": 0.0
+    },
+    "mean_ic": {
+     "published": 0.001757203238741097,
+     "rerun": 0.001757203238741097,
+     "diff": 0.0
+    },
+    "q5_minus_univ_ann_gross": {
+     "published": 0.004709098632591924,
+     "rerun": 0.0047090986325919225,
+     "diff": -1.734723475976807e-18
+    },
+    "q5_minus_univ_ann_net": {
+     "published": -0.009191795383815066,
+     "rerun": -0.009191795383815073,
+     "diff": -6.938893903907228e-18
+    },
+    "q5_turnover_monthly": {
+     "published": 0.19306797245009702,
+     "rerun": 0.19306797245009702,
+     "diff": 0.0
+    }
+   },
+   "pass_published_vs_rerun": true,
+   "engine_vs_rerun_max_abs_monthly": {
+    "q5_minus_univ": 3.3306690738754696e-16,
+    "q5_turnover": 0.0,
+    "q5_net": 3.3306690738754696e-16
+   },
+   "engine_vs_rerun_annual": {
+    "rerun_q5_net_ann": -0.009191795383815073,
+    "engine_q5_net_ann": -0.009191795383815406,
+    "diff": -3.3306690738754696e-16
+   },
+   "same_holdings": true,
+   "pass_engine_vs_rerun": true,
+   "holdings_differ": {},
+   "nonpositive_price_rows": [],
+   "months_over_tol": [],
+   "max_abs_monthly_outside_nonpositive_months": 3.3306690738754696e-16,
+   "months": 95,
+   "engine_missing_exits": 0,
+   "nextday": {
+    "months": 94,
+    "q5_net_ann": -0.007866674560032899,
+    "stage2_same_months_ann": -0.00817307963706653,
+    "diff": 0.0003064050770336304,
+    "turnover_weight_monthly": 0.20932764938537593,
+    "missing_exits": 0,
+    "skipped_entries": 13
+   }
+  },
+  "S7b": {
+   "desc": "Insider purchase value / market cap, 6 months",
+   "published_vs_rerun": {
+    "months": {
+     "published": 95,
+     "rerun": 95,
+     "diff": 0
+    },
+    "avg_names": {
+     "published": 454.94736842105266,
+     "rerun": 454.94736842105266,
+     "diff": 0.0
+    },
+    "mean_ic": {
+     "published": 0.00236553384433796,
+     "rerun": 0.00236553384433796,
+     "diff": 0.0
+    },
+    "q5_minus_univ_ann_gross": {
+     "published": 0.0033566000646854796,
+     "rerun": 0.003356600064685472,
+     "diff": -7.37257477290143e-18
+    },
+    "q5_minus_univ_ann_net": {
+     "published": -0.009533384843672246,
+     "rerun": -0.00953338484367225,
+     "diff": -5.204170427930421e-18
+    },
+    "q5_turnover_monthly": {
+     "published": 0.179027568171635,
+     "rerun": 0.179027568171635,
+     "diff": 0.0
+    }
+   },
+   "pass_published_vs_rerun": true,
+   "engine_vs_rerun_max_abs_monthly": {
+    "q5_minus_univ": 0.0003480838163654222,
+    "q5_turnover": 0.0,
+    "q5_net": 0.0003480838163654222
+   },
+   "engine_vs_rerun_annual": {
+    "rerun_q5_net_ann": -0.00953338484367225,
+    "engine_q5_net_ann": -0.009539228147725207,
+    "diff": -5.843304052956591e-06
+   },
+   "same_holdings": true,
+   "pass_engine_vs_rerun": false,
+   "holdings_differ": {},
+   "nonpositive_price_rows": [
+    [
+     1749723,
+     "NFE",
+     "2022-07"
+    ],
+    [
+     1749723,
+     "NFE",
+     "2022-08"
+    ],
+    [
+     1749723,
+     "NFE",
+     "2022-10"
+    ],
+    [
+     1749723,
+     "NFE",
+     "2022-11"
+    ]
+   ],
+   "months_over_tol": [
+    "2022-07",
+    "2022-08",
+    "2022-10",
+    "2022-11"
+   ],
+   "max_abs_monthly_outside_nonpositive_months": 4.0419056990259605e-16,
+   "months": 95,
+   "engine_missing_exits": 0,
+   "nextday": {
+    "months": 94,
+    "q5_net_ann": -0.007592498013431502,
+    "stage2_same_months_ann": -0.007892465808731536,
+    "diff": 0.0002999677953000341,
+    "turnover_weight_monthly": 0.19509912734919627,
+    "missing_exits": 0,
+    "skipped_entries": 13
+   }
+  },
+  "S9": {
+   "desc": "Expectations gap: base-rate DCF value / market cap, ex financials",
+   "published_vs_rerun": {
+    "months": {
+     "published": 95,
+     "rerun": 95,
+     "diff": 0
+    },
+    "avg_names": {
+     "published": 307.7894736842105,
+     "rerun": 307.7894736842105,
+     "diff": 0.0
+    },
+    "mean_ic": {
+     "published": -0.0022448384506986016,
+     "rerun": -0.0022448384506986016,
+     "diff": 0.0
+    },
+    "q5_minus_univ_ann_gross": {
+     "published": -0.014436547205984845,
+     "rerun": -0.014436547205984862,
+     "diff": -1.734723475976807e-17
+    },
+    "q5_minus_univ_ann_net": {
+     "published": -0.025210980602969377,
+     "rerun": -0.02521098060296939,
+     "diff": -1.3877787807814457e-17
+    },
+    "q5_turnover_monthly": {
+     "published": 0.14964490829145174,
+     "rerun": 0.14964490829145174,
+     "diff": 0.0
+    }
+   },
+   "pass_published_vs_rerun": true,
+   "engine_vs_rerun_max_abs_monthly": {
+    "q5_minus_univ": 3.608224830031759e-16,
+    "q5_turnover": 0.0,
+    "q5_net": 3.608224830031759e-16
+   },
+   "engine_vs_rerun_annual": {
+    "rerun_q5_net_ann": -0.02521098060296939,
+    "engine_q5_net_ann": -0.02521098060296948,
+    "diff": -9.020562075079397e-17
+   },
+   "same_holdings": true,
+   "pass_engine_vs_rerun": true,
+   "holdings_differ": {},
+   "nonpositive_price_rows": [],
+   "months_over_tol": [],
+   "max_abs_monthly_outside_nonpositive_months": 3.608224830031759e-16,
+   "months": 95,
+   "engine_missing_exits": 0,
+   "nextday": {
+    "months": 94,
+    "q5_net_ann": -0.027235343317270864,
+    "stage2_same_months_ann": -0.024588549991319368,
+    "diff": -0.0026467933259514964,
+    "turnover_weight_monthly": 0.16748108088545932,
+    "missing_exits": 0,
+    "skipped_entries": 12
+   }
+  }
+ }
+}

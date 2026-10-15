@@ -41,6 +41,7 @@ import edge_split
 FX_FEE = 0.0015
 SPREAD = {"large": 0.0015, "mid": 0.0030, "small": 0.0060}
 STAT = "portfolio_excess_vs_vwrp"
+REPRO_CONVENTION = "decision_close"  # Stage 2's assumption; B3 reproduction only, refused by run_trial
 BENCH_STALE_DAYS = 5
 
 
@@ -57,6 +58,9 @@ class Config:
     missing_return: float = edge_rules.DEFAULT_MISSING_RETURN
     convention: str = edge_rules.DEFAULT_CONVENTION
     select_all: bool = False  # the equal-weighted eligible universe (a benchmark), no buffer or cap
+    # "top_n" (the programme's portfolio) or "stage2_top_quintile" (Stage 2's rule: qcut of rank(method="first")
+    # into deciles, keep deciles 8-9, rows in input order; B3 reproduction and comparison only)
+    selection: str = "top_n"
 
     def cap(self) -> int | None:
         if self.select_all or self.sector_cap == 0:
@@ -113,13 +117,19 @@ def price_table(exec_rows: pd.DataFrame, convention: str = edge_rules.DEFAULT_CO
         months = sorted(d["month"].unique())
         dates = pd.Series([m + pd.offsets.MonthEnd(1) for m in months], index=pd.DatetimeIndex(months))
         dates = dates[dates.isin(set(months))]
+    elif convention == REPRO_CONVENTION:
+        # B3 only: trade at the decision month-end close, as Stage 2's harness assumed (docs/edge/B3_STAGE2_SPEC.md)
+        valid = d["me_adjclose"] > 0
+        px = d.assign(date=d["month"], p=d["me_adjclose"].where(valid), e=valid)
+        dates = pd.Series(sorted(d["month"].unique()), index=pd.DatetimeIndex(sorted(d["month"].unique())))
     else:
         raise ValueError(f"convention must be one of {edge_rules.CONVENTIONS}")
     table = px.pivot_table(index="date", columns="cik", values="p", aggfunc="last", dropna=False).sort_index()
     entry = px.pivot_table(index="date", columns="cik", values="e", aggfunc="last", dropna=False).sort_index()
     entry = entry.reindex(index=table.index, columns=table.columns).fillna(False).astype(bool)
-    for m, e in dates.items():
-        edge_rules.assert_executable(m, e)
+    if convention != REPRO_CONVENTION:  # the reproduction trades at the decision close by construction
+        for m, e in dates.items():
+            edge_rules.assert_executable(m, e)
     return table, dates.sort_index(), entry
 
 
@@ -181,6 +191,19 @@ def select(ranked: pd.DataFrame, held: set, buyable: set, cfg: Config) -> tuple[
     return chosen, passed
 
 
+def stage2_top_quintile(frame: pd.DataFrame, cfg: Config) -> list:
+    """Stage 2's top quintile (`xsection.evaluate`): eligible rows in input order, deciles of rank(method="first")
+    by `pd.qcut`, deciles 8 and 9. Stage 2 skipped a month with fewer than 30 names; here it returns no names."""
+    f = frame[frame["quality_ok"].astype(bool) & frame["band"].isin(cfg.bands) & frame["score"].notna()
+              & (frame["close_raw"] >= cfg.min_price)]
+    if f.empty:  # no decision rows this month (e.g. a valuation-only month after the last decision)
+        return []
+    if len(f) < 30:  # Stage 2 skipped the month (no row in its series); here: hold nothing, and the caller drops it
+        return []
+    q = pd.qcut(f["score"].rank(method="first"), 10, labels=False)
+    return list(f.loc[q >= 8, "cik"])
+
+
 def target_weights(chosen: list, ranked: pd.DataFrame, cfg: Config) -> dict:
     if not chosen:
         return {}
@@ -239,7 +262,14 @@ def run(panel: pd.DataFrame, exec_rows: pd.DataFrame, fx: pd.Series, cfg: Config
             ranked = eligible(frame, cfg)
             ok_d = entry_ok.loc[d] if d in entry_ok.index else pd.Series(dtype=bool)
             buyable = {c for c in ranked["cik"] if c in ok_d.index and bool(ok_d[c])}
-            chosen, passed = select(ranked, set(pos), buyable, cfg)
+            if cfg.selection == "stage2_top_quintile" and not cfg.select_all:
+                top = stage2_top_quintile(frame, cfg)
+                chosen = [c for c in top if c in pos or c in buyable]
+                passed = [(c, "no execution price") for c in top if c not in pos and c not in buyable]
+            elif cfg.selection in ("top_n", "stage2_top_quintile"):
+                chosen, passed = select(ranked, set(pos), buyable, cfg)
+            else:
+                raise ValueError("selection must be top_n or stage2_top_quintile")
             for c, why in passed:
                 if why == "no execution price":
                     res.log.append({"date": d, "event": "skipped_entry", "cik": c, "reason": why})
@@ -332,6 +362,9 @@ def metrics(nav_gbp: pd.Series, bench: pd.DataFrame | None = None, res: Result |
 def run_trial(trial_id: str, registry, *args, **kwargs) -> Result:
     """Run a registered trial: refuses an unregistered trial or one that already has a result."""
     edge_registry.require(trial_id, registry)
+    cfg = kwargs.get("cfg", args[3] if len(args) > 3 else None)
+    if cfg is not None and cfg.convention == REPRO_CONVENTION:
+        raise ValueError("decision_close is for the B3 reproduction only, never for a registered trial")
     return run(*args, **kwargs)
 
 
