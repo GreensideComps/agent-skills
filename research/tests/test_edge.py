@@ -139,13 +139,15 @@ def test_new_research_code_reads_data_only_through_the_guard():
     """Only these modules may read the research dataset directly. Anything new must go through edge_split
     (cut_exploration / exploration_view), so a holdout outcome cannot be read by a path the guard does not see."""
     allowed = {"xsection.py", "stage2.py", "stage1_coverage.py", "signal_log.py", "edge_integrity.py",
-               "stage2_diagnostics.py"}
+               "stage2_diagnostics.py", "edge_exec_prices.py"}
     root = Path(__file__).resolve().parent.parent
     offenders = [f.name for f in root.glob("*.py") if f.name not in allowed
                  and any(k in f.read_text() for k in ("xsection.load(", "prices_monthly", "monthly_metrics"))]
     assert offenders == []
     diag = (root / "stage2_diagnostics.py").read_text()
     assert "edge_split.cut_exploration(xsection.load())" in diag
+    b1 = (root / "edge_exec_prices.py").read_text()
+    assert "monthly = edge_split.cut_exploration(monthly)" in b1  # cut straight after reading
 
 
 # --- registry ------------------------------------------------------------------------------------------------
