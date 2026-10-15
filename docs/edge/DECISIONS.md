@@ -40,3 +40,37 @@ The owner also set these conditions:
 | D7 | **PR #18 merged** (merge commit 9527e6e). The approval covers Phase A governance, integrity checks and research controls **only**. It does not establish that any signal has an edge, and it authorises no confirmation run, demo allocation, or change to the real ISA, holdings or trading configuration. |
 | D8 | **Phase B is authorised for step B1 only:** permitted point-in-time execution-price data and an FX fallback, with integrity checks and a strict cutoff at 2022-12. No signal exploration until the data pipeline is validated and the owner has seen the B1 report. |
 | D9 | **The gates stay:** synthetic backtester validation, Stage 2 reproduction, an owner-reviewed validation report, and registration of each exploration trial before it runs. No confirmation run is authorised. |
+
+## 2026-10-15 18:24 UTC: B3 accepted; B4 report requested
+
+| # | Decision |
+|---|---|
+| D10 | **B3 is accepted as reproduced.** The NFE discrepancy is documented and the negative-price safeguard is retained (details below). |
+| D11 | **Next step: prepare the B4 validation report for review.** It must distinguish reproduction success from validation of the engine for investable research, and list the remaining blockers. Nothing beyond the report is authorised (details below). |
+
+**D10 in full:**
+
+1. **The original Stage 2 reproduction is accepted.** All 15 published results were reproduced by the original code on the frozen exploration-period dataset.
+2. **The new-engine discrepancy is accepted as explained.** It comes from NFE's invalid negative adjusted prices; the largest annual-result difference reported is 0.021 percentage points.
+3. **The safeguard stays and the frozen reproduction stands.**
+   - Negative-price trading is not permitted to force agreement.
+   - No rerun with NFE excluded is to replace the frozen reproduction.
+4. **Next-day execution results stay separate from the reproduction.**
+   - S5a's +0.55% annual net result is exploratory only.
+   - It is not an approved investment signal.
+5. **The stated limitations are preserved:**
+   - survivorship bias;
+   - historical data defects;
+   - the original Stage 2 look-ahead assumptions.
+
+Report: `equity/reports/research/edge/b3_reproduction.md`. Spec: `B3_STAGE2_SPEC.md`.
+
+**D11 in full.** The owner's separate approval is required before any of the following:
+
+- starting B5;
+- registering or running a new signal experiment;
+- running a confirmation test;
+- allocating to the demo strategy;
+- changing the real ISA, holdings or trading configuration.
+
+`backtester_validated` is recorded only by the owner.
