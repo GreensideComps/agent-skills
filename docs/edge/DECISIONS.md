@@ -32,3 +32,11 @@ The owner also set these conditions:
   unregistered or repeated look.
 - **Untouched by this work:** the monthly signal log, the real ISA, the trading configuration and the account
   holdings.
+
+## 2026-10-15 08:17 UTC: merge approval and Phase B scope
+
+| # | Decision |
+|---|---|
+| D7 | **PR #18 merged** (merge commit 9527e6e). The approval covers Phase A governance, integrity checks and research controls **only**. It does not establish that any signal has an edge, and it authorises no confirmation run, demo allocation, or change to the real ISA, holdings or trading configuration. |
+| D8 | **Phase B is authorised for step B1 only:** permitted point-in-time execution-price data and an FX fallback, with integrity checks and a strict cutoff at 2022-12. No signal exploration until the data pipeline is validated and the owner has seen the B1 report. |
+| D9 | **The gates stay:** synthetic backtester validation, Stage 2 reproduction, an owner-reviewed validation report, and registration of each exploration trial before it runs. No confirmation run is authorised. |
