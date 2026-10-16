@@ -29,7 +29,8 @@ def company(cik=1, fps=lambda yrs: 1.0 + 0.0 * yrs, shares=lambda m: 100.0, asse
         rows.append({"cik": cik, "month": m, "ocf": fcf + 10.0, "capex": 10.0, "fcf_end": str(q_end.date()),
                      "shares_out": sh * split, "shares_diluted": sh * split, "total_assets": assets,
                      "close_raw": price / split, "adjclose": price / 2.0 * (1 + div_drift) ** ((m - MONTHS[0]).days / 365.25),
-                     "financial": financial, "foreign_form": False})
+                     "financial": financial, "foreign_form": False, "mcap": sh * split * price / split,
+                     "ocf_restated": False, "capex_restated": False})
     return pd.DataFrame(rows)
 
 
@@ -46,9 +47,10 @@ def test_constant_growth_scores_zero_acceleration_positive_deceleration_negative
     assert at(dec, b5.h1_score(dec)) < 0
 
 
-def test_foreign_form_rows_have_no_h1_score():
-    """ADDENDUM_1 §3: a row whose latest balance sheet came from a 20-F/40-F, or whose form is unknown, has no G;
+def test_foreign_form_rows_have_no_h1_score_under_rule_a(monkeypatch):
+    """ADDENDUM_1 §3 (rule A, kept for the comparison): a row whose latest balance sheet came from a 20-F/40-F, or whose form is unknown, has no G;
     so neither it nor a score that needs it 12 months later exists."""
+    monkeypatch.setattr(b5, "IDENTITY_RULE", "A")
     acc = company(fps=lambda y: 1.0 + 0.05 * y * y)
     assert not math.isnan(at(acc, b5.h1_score(acc)))
     for flag in (True, None):
@@ -61,17 +63,48 @@ def test_foreign_form_rows_have_no_h1_score():
 
 def test_identity_rule_options_a_b_c():
     """ADDENDUM_2 §3: A drops foreign-form rows, B drops CIK 1635327 only, C drops CIK 1635327 and any row with a
-    market cap above 100 x total assets. Default is A until the owner chooses."""
+    market cap above 100 x total assets. C is in force (owner, 14:17Z)."""
     df = pd.DataFrame({"cik": [1635327, 1, 2, 3, 4], "foreign_form": [True, True, False, False, None],
                        "mcap": [16e9, 15e9, 20e9, 30e9, None], "total_assets": [11e9, 0.05e9, 0.1e9, 0.3e9, 5e9]})
-    assert b5.IDENTITY_RULE == "A"
-    assert b5.identity_ok(df).tolist() == [False, False, True, True, False]
+    assert b5.IDENTITY_RULE == "C"
+    assert b5.identity_ok(df, "A").tolist() == [False, False, True, True, False]
     assert b5.identity_ok(df, "B").tolist() == [False, True, True, True, True]
     assert b5.identity_ok(df, "C").tolist() == [False, False, False, True, True]  # 300x and 200x out; exactly 100x kept
     with pytest.raises(ValueError):
         b5.identity_ok(df, "D")
     with pytest.raises(KeyError):
         b5.identity_ok(df.drop(columns="mcap"), "C")  # fails closed: the input C needs is missing
+
+
+def test_rule_c_strict_threshold_and_missing_assets():
+    """ADDENDUM_2 §3 rule C: strictly greater than 100x fails; exactly 100x passes; missing, zero or negative total
+    assets and missing mcap leave the ratio undefined, so rule C passes the row (it has no score anyway, below)."""
+    df = pd.DataFrame({"cik": [1] * 7, "mcap": [100e9, 100.0001e9, 1e12, 1e12, 1e12, np.nan, 2.3e13],
+                       "total_assets": [1e9, 1e9, np.nan, 0.0, -5e9, 1e9, 1e7]})
+    assert b5.identity_ok(df, "C").tolist() == [True, False, True, True, True, True, False]
+
+
+def test_rule_c_regression_cases_from_the_input_audit():
+    """Values from b5_input_audit.md: Medtronic 2015 (assets at the wrong scale, 2.3 million x) and Atlas Lithium
+    fail; Zoom at its 54x peak, Atlassian 39x and the residual Curis 97x / BeOne 97x pass (disclosed residual risk);
+    The Stars Group's CIK fails at 2.2x."""
+    df = pd.DataFrame({"cik": [1613103, 1540684, 1585521, 1650372, 1108205, 1651308, 1635327],
+                       "mcap": [2306440 * 46e3, 8149 * 1e6, 54 * 1e9, 39 * 1e9, 97 * 1e8, 97 * 1e8, 2.2 * 11e9],
+                       "total_assets": [46e3, 1e6, 1e9, 1e9, 1e8, 1e8, 11e9]})
+    assert b5.identity_ok(df, "C").tolist() == [False, False, True, True, True, True, False]
+
+
+def test_rule_c_and_t2_flags_remove_h1_inputs():
+    """Rule C (mcap > 100 x assets at t-12) and T2 on ocf or capex (at t or t-12) remove G, so the score is missing;
+    a missing T2 flag fails closed."""
+    acc = company(fps=lambda y: 1.0 + 0.05 * y * y)
+    assert not math.isnan(at(acc, b5.h1_score(acc)))
+    t12 = acc["month"] == pd.Timestamp("2015-06-30")
+    for col, val in (("mcap", 1e12), ("ocf_restated", True), ("capex_restated", True), ("ocf_restated", None)):
+        f = acc.copy()
+        f[col] = f[col].astype(object)
+        f.loc[t12, col] = val
+        assert math.isnan(at(f, b5.h1_score(f))), col
 
 
 def test_score_matches_a_hand_calculation():
@@ -161,7 +194,8 @@ def test_s2a_profitability_uses_only_fresh_periods():
                       "gp_end": ["2016-03-31", None, "2015-09-30"], "revenue": [np.nan, 1000.0, np.nan],
                       "cost_of_revenue": [np.nan, 600.0, np.nan], "rev_end": [None, "2016-03-31", None],
                       "cor_end": [None, "2016-03-31", None], "total_assets": [1000.0, 2000.0, 1000.0],
-                      "rev_conflict": [False] * 3, "cor_restated": [False] * 3, "foreign_form": [False] * 3})
+                      "rev_conflict": [False] * 3, "cor_restated": [False] * 3, "gp_restated": [False] * 3,
+                      "cik": [1, 2, 3], "mcap": [5e4] * 3})
     v = b5.s2a_profitability(f)
     assert v.iloc[0] == pytest.approx(0.3) and v.iloc[1] == pytest.approx(0.2) and math.isnan(v.iloc[2])
 

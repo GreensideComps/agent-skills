@@ -7,22 +7,22 @@ Run 2026-10-16. Large-band company-months 2015-01 to 2022-12 passing the Phase A
 ## 1. H1: operating cash flow and capex
 
 - Latest TTM ends differ in **1,546** of 40,217 rows (593 non-financial): no H1 score (owner decision, no alignment). An alignment step would have recovered 132 fresh rows; not adopted.
-- Rows with a fresh common end: 38,375. Of these, **1,166** (956 non-financial, 182 companies) have an OCF or capex TTM that mixes bases (test T2). **Open decision: T2 is not applied to H1 yet.**
+- Rows with a fresh common end: 38,375. Of these, **1,166** (956 non-financial, 182 companies) have an OCF or capex TTM that mixes bases at the decision date (T2, point in time): no FCF, so no H1 for them (ADDENDUM_2 §2). Available after T2: 37,209.
 
 ## 2. S2a: which gross profit each non-financial row would use
 
 | Path | Rows |
 |---|---:|
-| `GrossProfit` tag, own end ≤ 183 days | 14,687 |
-| Fallback: revenue − cost of revenue, common end ≤ 183 days | 10,084 |
-| Neither (no S2a score) | 9,853 |
+| `GrossProfit` tag, own end ≤ 183 days, passes T2 | 14,516 |
+| Fallback: revenue − cost of revenue, common end ≤ 183 days | 10,253 |
+| Neither (no S2a score) | 9,855 |
 
 - A `GrossProfit` value older than 183 days is never used: 2,587 rows; 1,855 fall back to a fresh revenue − cost of revenue, 732 have no score.
-- `GrossProfit`-tag rows whose TTM mixes bases (T2): 171 in 28 companies. **Open decision: T2 is not applied to the tag path yet.**
+- `GrossProfit`-tag rows whose TTM mixes bases (T2): 171 in 28 companies: the tag is not used; 169 of these use a fresh revenue − cost of revenue instead (123 of which fail the revenue tests), the rest have no score.
 
 ### Fallback rows blocked by the revenue tests (ADDENDUM_2 §1)
 
-**587 of 10,084 fallback rows, 63 companies.** By test (T0 revenue ≤ 0; T1 same-filing concept conflict; T2 revenue TTM mixes bases; COR-T2 cost of revenue TTM mixes bases):
+**710 of 10,253 fallback rows, 85 companies.** By test (T0 revenue ≤ 0; T1 same-filing concept conflict; T2 revenue TTM mixes bases; COR-T2 cost of revenue TTM mixes bases):
 
 | Tests failed | Rows |
 |---|---:|
@@ -31,8 +31,8 @@ Run 2026-10-16. Large-band company-months 2015-01 to 2022-12 passing the Phase A
 | T1 | 90 |
 | T1+COR-T2 | 6 |
 | T1+T2+COR-T2 | 7 |
-| T2 | 175 |
-| T2+COR-T2 | 176 |
+| T2 | 185 |
+| T2+COR-T2 | 289 |
 
 | CIK | Company | Tests | Rows | First | Last |
 |---|---|---|---:|---|---|
@@ -70,6 +70,7 @@ Run 2026-10-16. Large-band company-months 2015-01 to 2022-12 passing the Phase A
 | 1060391 | REPUBLIC SERVICES, INC. | T2 | 36 | 2015-04-30 | 2022-09-30 |
 | 8670 | AUTOMATIC DATA PROCESSING INC | T2 | 18 | 2018-11-30 | 2020-07-31 |
 | 319201 | KLA CORP | T2 | 10 | 2018-10-31 | 2019-07-31 |
+| 789019 | MICROSOFT CORP | T2 | 10 | 2017-10-31 | 2018-07-31 |
 | 1018724 | AMAZON COM INC | T2 | 10 | 2018-10-31 | 2019-09-30 |
 | 1283699 | T-Mobile US, Inc. | T2 | 10 | 2017-04-30 | 2018-01-31 |
 | 40545 | GENERAL ELECTRIC CO | T2 | 9 | 2015-05-31 | 2016-01-31 |
@@ -89,15 +90,24 @@ Run 2026-10-16. Large-band company-months 2015-01 to 2022-12 passing the Phase A
 | 1423902 | Western Midstream Partners, LP | T2 | 2 | 2019-05-31 | 2019-06-30 |
 | 813762 | ICAHN ENTERPRISES L.P. | T2 | 1 | 2015-01-31 | 2015-01-31 |
 | 1666700 | DuPont de Nemours, Inc. | T2+COR-T2 | 15 | 2019-08-31 | 2022-01-31 |
+| 936468 | LOCKHEED MARTIN CORP | T2+COR-T2 | 14 | 2016-10-31 | 2019-01-31 |
 | 1090872 | AGILENT TECHNOLOGIES, INC. | T2+COR-T2 | 14 | 2015-03-31 | 2018-07-31 |
+| 1699150 | Ingersoll Rand Inc. | T2+COR-T2 | 10 | 2021-04-30 | 2022-01-31 |
 | 47217 | HP INC | T2+COR-T2 | 9 | 2016-03-31 | 2016-11-30 |
 | 59478 | ELI LILLY & Co | T2+COR-T2 | 9 | 2019-05-31 | 2020-01-31 |
+| 833444 | Johnson Controls International plc | T2+COR-T2 | 9 | 2019-02-28 | 2019-10-31 |
+| 849399 | Gen Digital Inc. | T2+COR-T2 | 9 | 2016-02-29 | 2020-04-30 |
+| 1418135 | Keurig Dr Pepper Inc. | T2+COR-T2 | 9 | 2018-11-30 | 2019-10-31 |
 | 1442145 | Verisk Analytics, Inc. | T2+COR-T2 | 9 | 2016-05-31 | 2017-01-31 |
 | 1466258 | Trane Technologies plc | T2+COR-T2 | 9 | 2020-05-31 | 2021-01-31 |
+| 29905 | DOVER Corp | T2+COR-T2 | 8 | 2015-01-31 | 2019-01-31 |
+| 37785 | FMC CORP | T2+COR-T2 | 8 | 2017-05-31 | 2018-01-31 |
+| 1065088 | EBAY INC | T2+COR-T2 | 8 | 2015-10-31 | 2021-01-31 |
 | 1136869 | ZIMMER BIOMET HOLDINGS, INC. | T2+COR-T2 | 8 | 2022-05-31 | 2022-12-31 |
 | 2969 | Air Products & Chemicals, Inc. | T2+COR-T2 | 7 | 2017-04-30 | 2017-10-31 |
 | 732712 | VERIZON COMMUNICATIONS INC | T2+COR-T2 | 7 | 2015-07-31 | 2016-01-31 |
 | 813762 | ICAHN ENTERPRISES L.P. | T2+COR-T2 | 7 | 2018-08-31 | 2019-02-28 |
+| 1385157 | TE Connectivity plc | T2+COR-T2 | 7 | 2015-04-30 | 2015-10-31 |
 | 1467858 | General Motors Co | T2+COR-T2 | 7 | 2017-07-31 | 2018-01-31 |
 | 31462 | ECOLAB INC. | T2+COR-T2 | 6 | 2020-08-31 | 2021-01-31 |
 | 87347 | SLB LIMITED/NV | T2+COR-T2 | 6 | 2016-07-31 | 2016-12-31 |
@@ -108,14 +118,92 @@ Run 2026-10-16. Large-band company-months 2015-01 to 2022-12 passing the Phase A
 | 1645590 | Hewlett Packard Enterprise Co | T2+COR-T2 | 6 | 2017-06-30 | 2017-11-30 |
 | 30554 | EIDP, Inc. | T2+COR-T2 | 4 | 2015-10-31 | 2016-01-31 |
 | 40533 | GENERAL DYNAMICS CORP | T2+COR-T2 | 4 | 2015-01-31 | 2017-06-30 |
+| 77360 | PENTAIR plc | T2+COR-T2 | 4 | 2016-10-31 | 2017-01-31 |
 | 101829 | RTX Corp | T2+COR-T2 | 4 | 2015-10-31 | 2016-01-31 |
+| 313616 | DANAHER CORP /DE/ | T2+COR-T2 | 4 | 2016-10-31 | 2017-01-31 |
 | 773840 | HONEYWELL INTERNATIONAL INC | T2+COR-T2 | 4 | 2018-10-31 | 2019-01-31 |
+| 2488 | ADVANCED MICRO DEVICES INC | T2+COR-T2 | 3 | 2018-05-31 | 2018-07-31 |
+| 10456 | BAXTER INTERNATIONAL INC | T2+COR-T2 | 3 | 2015-11-30 | 2016-01-31 |
 | 16732 | CAMPBELL'S Co | T2+COR-T2 | 3 | 2019-06-30 | 2019-08-31 |
 | 31791 | REVVITY, INC. | T2+COR-T2 | 3 | 2018-08-31 | 2019-01-31 |
+| 701985 | Bath & Body Works, Inc. | T2+COR-T2 | 3 | 2021-12-31 | 2022-02-28 |
+| 1000228 | HENRY SCHEIN INC | T2+COR-T2 | 3 | 2019-06-30 | 2020-01-31 |
+| 1045810 | NVIDIA CORP | T2+COR-T2 | 3 | 2018-08-31 | 2018-10-31 |
 | 1423902 | Western Midstream Partners, LP | T2+COR-T2 | 3 | 2019-07-31 | 2019-09-30 |
 | 1510295 | Marathon Petroleum Corp | T2+COR-T2 | 3 | 2020-11-30 | 2021-01-31 |
+| 1571996 | Dell Technologies Inc. | T2+COR-T2 | 3 | 2017-06-30 | 2017-08-31 |
 | 1755672 | Corteva, Inc. | T2+COR-T2 | 3 | 2020-05-31 | 2020-07-31 |
 | 40545 | GENERAL ELECTRIC CO | T2+COR-T2 | 2 | 2018-05-31 | 2018-06-30 |
+| 814453 | NEWELL BRANDS INC. | T2+COR-T2 | 2 | 2018-08-31 | 2018-11-30 |
+| 62996 | MASCO CORP /DE/ | T2+COR-T2 | 1 | 2015-11-30 | 2015-11-30 |
+| 68505 | Motorola Solutions, Inc. | T2+COR-T2 | 1 | 2015-01-31 | 2015-01-31 |
+| 915913 | ALBEMARLE CORP | T2+COR-T2 | 1 | 2017-01-31 | 2017-01-31 |
+
+## 2a. When T2 is known: point in time against retrospective
+
+T2 compares the TTM used at the decision date with other filings **filed on or before that date**. The retrospective column repeats the test with every filing up to 2022-12-31; it is a diagnostic only, never used by a trial.
+
+| Input | Rows in scope | Flagged at decision date (used) | Companies | Flagged only retrospectively (not used) | Ratio 1.10-1.25 | 1.25-2 | >2 |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| Revenue (fallback rows) | 10,253 | 481 | 67 | 33 | 144 | 172 | 165 |
+| Cost of revenue (fallback rows) | 10,253 | 381 | 62 | 10 | 98 | 147 | 136 |
+| GrossProfit tag (fresh) | 14,687 | 171 | 28 | 53 | 97 | 66 | 8 |
+| Operating cash flow (H1) | 38,375 | 824 | 144 | 14 | 391 | 306 | 127 |
+| Capex (H1) | 38,375 | 503 | 78 | 2 | 164 | 123 | 216 |
+
+Largest point-in-time T2 groups, GrossProfit tag (fresh):
+
+| CIK | Company | Rows | First | Last | Median recast ratio |
+|---|---|---:|---|---|---:|
+| 37785 | FMC CORP | 16 | 2017-05-31 | 2020-01-31 | 1.20 |
+| 936468 | LOCKHEED MARTIN CORP | 14 | 2016-10-31 | 2019-01-31 | 1.19 |
+| 789019 | MICROSOFT CORP | 10 | 2017-10-31 | 2018-07-31 | 1.12 |
+| 63754 | MCCORMICK & CO INC | 10 | 2019-03-31 | 2019-12-31 | 1.13 |
+| 1699150 | Ingersoll Rand Inc. | 10 | 2021-04-30 | 2022-01-31 | 1.15 |
+| 920148 | LABCORP HOLDINGS INC. | 9 | 2018-05-31 | 2019-01-31 | 1.12 |
+| 833444 | Johnson Controls International plc | 9 | 2019-02-28 | 2019-10-31 | 1.25 |
+| 1418135 | Keurig Dr Pepper Inc. | 9 | 2018-11-30 | 2019-10-31 | 2.03 |
+| 849399 | Gen Digital Inc. | 9 | 2016-02-29 | 2020-04-30 | 1.83 |
+| 52988 | JACOBS SOLUTIONS INC. | 9 | 2019-02-28 | 2019-10-31 | 1.34 |
+| 29905 | DOVER Corp | 8 | 2015-01-31 | 2019-01-31 | 1.15 |
+| 1065088 | EBAY INC | 8 | 2015-10-31 | 2021-01-31 | 1.48 |
+
+Largest point-in-time T2 groups, Operating cash flow (H1):
+
+| CIK | Company | Rows | First | Last | Median recast ratio |
+|---|---|---:|---|---|---:|
+| 40545 | GENERAL ELECTRIC CO | 28 | 2015-07-31 | 2022-01-31 | 1.62 |
+| 1466258 | Trane Technologies plc | 22 | 2015-04-30 | 2021-01-31 | 1.26 |
+| 1385157 | TE Connectivity plc | 17 | 2015-04-30 | 2019-10-31 | 1.13 |
+| 37785 | FMC CORP | 15 | 2017-05-31 | 2020-01-31 | 1.52 |
+| 720005 | RAYMOND JAMES FINANCIAL INC | 15 | 2017-05-31 | 2019-10-31 | 1.63 |
+| 103379 | V F CORP | 15 | 2016-08-31 | 2020-04-30 | 1.29 |
+| 354190 | Arthur J. Gallagher & Co. | 15 | 2017-07-31 | 2022-07-31 | 1.29 |
+| 1138118 | CBRE GROUP, INC. | 14 | 2018-08-31 | 2021-09-30 | 1.56 |
+| 1393818 | Blackstone Inc. | 13 | 2016-05-31 | 2019-02-28 | 1.47 |
+| 922224 | PPL Corp | 13 | 2015-10-31 | 2022-01-31 | 1.42 |
+| 1000228 | HENRY SCHEIN INC | 12 | 2017-05-31 | 2021-10-31 | 1.30 |
+| 1418135 | Keurig Dr Pepper Inc. | 12 | 2017-04-30 | 2019-10-31 | 1.59 |
+
+Largest point-in-time T2 groups, Capex (H1):
+
+| CIK | Company | Rows | First | Last | Median recast ratio |
+|---|---|---:|---|---|---:|
+| 40545 | GENERAL ELECTRIC CO | 21 | 2015-07-31 | 2022-01-31 | 1.72 |
+| 37785 | FMC CORP | 16 | 2017-05-31 | 2020-01-31 | 1.50 |
+| 1070750 | HOST HOTELS & RESORTS, INC. | 16 | 2016-07-31 | 2018-01-31 | 1.22 |
+| 922224 | PPL Corp | 15 | 2015-08-31 | 2022-01-31 | 1.34 |
+| 65984 | ENTERGY CORP /DE/ | 15 | 2016-05-31 | 2022-01-31 | inf |
+| 1090012 | DEVON ENERGY CORP/DE | 15 | 2015-05-31 | 2021-10-31 | 3.75 |
+| 33213 | EQT Corp | 11 | 2015-01-31 | 2017-01-31 | inf |
+| 352915 | UNIVERSAL HEALTH SERVICES INC | 11 | 2015-11-30 | 2018-01-31 | inf |
+| 31462 | ECOLAB INC. | 10 | 2018-05-31 | 2019-02-28 | 1.10 |
+| 315293 | Aon plc | 9 | 2017-05-31 | 2018-01-31 | 1.43 |
+| 107263 | WILLIAMS COMPANIES, INC. | 9 | 2017-05-31 | 2018-01-31 | 34.48 |
+| 723125 | MICRON TECHNOLOGY INC | 9 | 2015-01-31 | 2015-09-30 | 1.20 |
+
+**Truncation check:** 6,249 rows (3,249 flagged by any test, the rest a fixed random sample) recomputed from facts filed on or before each row's month-end only: **0 differences** in any flag.
+
 
 ## 3. Company identity and price units
 

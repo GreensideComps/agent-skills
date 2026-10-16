@@ -11,23 +11,24 @@
   "fresh_common_end_rows": 38375,
   "t2_ocf_or_capex_rows": 1166,
   "t2_nonfinancial_rows": 956,
-  "t2_companies": 182
+  "t2_companies": 182,
+  "available_after_t2": 37209
  },
  "s2a": {
   "paths_nonfinancial": {
-   "gross_profit_tag": 14687,
-   "fallback": 10084,
-   "none": 9853
+   "gross_profit_tag": 14516,
+   "fallback": 10253,
+   "none": 9855
   },
   "gp_stale_nonfinancial": 2587,
   "gp_stale_then_fallback": 1855,
   "gp_stale_then_none": 732,
-  "fallback_rows": 10084,
-  "fallback_blocked_rows": 587,
-  "fallback_blocked_companies": 63,
+  "fallback_rows": 10253,
+  "fallback_blocked_rows": 710,
+  "fallback_blocked_companies": 85,
   "by_reason": {
-   "T2+COR-T2": 176,
-   "T2": 175,
+   "T2+COR-T2": 289,
+   "T2": 185,
    "T1": 90,
    "COR-T2": 79,
    "T0": 54,
@@ -308,6 +309,14 @@
     "last": "2019-07-31"
    },
    {
+    "cik": 789019,
+    "name": "MICROSOFT CORP",
+    "reasons": "T2",
+    "rows": 10,
+    "first": "2017-10-31",
+    "last": "2018-07-31"
+   },
+   {
     "cik": 1018724,
     "name": "AMAZON COM INC",
     "reasons": "T2",
@@ -460,12 +469,28 @@
     "last": "2022-01-31"
    },
    {
+    "cik": 936468,
+    "name": "LOCKHEED MARTIN CORP",
+    "reasons": "T2+COR-T2",
+    "rows": 14,
+    "first": "2016-10-31",
+    "last": "2019-01-31"
+   },
+   {
     "cik": 1090872,
     "name": "AGILENT TECHNOLOGIES, INC.",
     "reasons": "T2+COR-T2",
     "rows": 14,
     "first": "2015-03-31",
     "last": "2018-07-31"
+   },
+   {
+    "cik": 1699150,
+    "name": "Ingersoll Rand Inc.",
+    "reasons": "T2+COR-T2",
+    "rows": 10,
+    "first": "2021-04-30",
+    "last": "2022-01-31"
    },
    {
     "cik": 47217,
@@ -484,6 +509,30 @@
     "last": "2020-01-31"
    },
    {
+    "cik": 833444,
+    "name": "Johnson Controls International plc",
+    "reasons": "T2+COR-T2",
+    "rows": 9,
+    "first": "2019-02-28",
+    "last": "2019-10-31"
+   },
+   {
+    "cik": 849399,
+    "name": "Gen Digital Inc.",
+    "reasons": "T2+COR-T2",
+    "rows": 9,
+    "first": "2016-02-29",
+    "last": "2020-04-30"
+   },
+   {
+    "cik": 1418135,
+    "name": "Keurig Dr Pepper Inc.",
+    "reasons": "T2+COR-T2",
+    "rows": 9,
+    "first": "2018-11-30",
+    "last": "2019-10-31"
+   },
+   {
     "cik": 1442145,
     "name": "Verisk Analytics, Inc.",
     "reasons": "T2+COR-T2",
@@ -497,6 +546,30 @@
     "reasons": "T2+COR-T2",
     "rows": 9,
     "first": "2020-05-31",
+    "last": "2021-01-31"
+   },
+   {
+    "cik": 29905,
+    "name": "DOVER Corp",
+    "reasons": "T2+COR-T2",
+    "rows": 8,
+    "first": "2015-01-31",
+    "last": "2019-01-31"
+   },
+   {
+    "cik": 37785,
+    "name": "FMC CORP",
+    "reasons": "T2+COR-T2",
+    "rows": 8,
+    "first": "2017-05-31",
+    "last": "2018-01-31"
+   },
+   {
+    "cik": 1065088,
+    "name": "EBAY INC",
+    "reasons": "T2+COR-T2",
+    "rows": 8,
+    "first": "2015-10-31",
     "last": "2021-01-31"
    },
    {
@@ -530,6 +603,14 @@
     "rows": 7,
     "first": "2018-08-31",
     "last": "2019-02-28"
+   },
+   {
+    "cik": 1385157,
+    "name": "TE Connectivity plc",
+    "reasons": "T2+COR-T2",
+    "rows": 7,
+    "first": "2015-04-30",
+    "last": "2015-10-31"
    },
    {
     "cik": 1467858,
@@ -612,6 +693,14 @@
     "last": "2017-06-30"
    },
    {
+    "cik": 77360,
+    "name": "PENTAIR plc",
+    "reasons": "T2+COR-T2",
+    "rows": 4,
+    "first": "2016-10-31",
+    "last": "2017-01-31"
+   },
+   {
     "cik": 101829,
     "name": "RTX Corp",
     "reasons": "T2+COR-T2",
@@ -620,12 +709,36 @@
     "last": "2016-01-31"
    },
    {
+    "cik": 313616,
+    "name": "DANAHER CORP /DE/",
+    "reasons": "T2+COR-T2",
+    "rows": 4,
+    "first": "2016-10-31",
+    "last": "2017-01-31"
+   },
+   {
     "cik": 773840,
     "name": "HONEYWELL INTERNATIONAL INC",
     "reasons": "T2+COR-T2",
     "rows": 4,
     "first": "2018-10-31",
     "last": "2019-01-31"
+   },
+   {
+    "cik": 2488,
+    "name": "ADVANCED MICRO DEVICES INC",
+    "reasons": "T2+COR-T2",
+    "rows": 3,
+    "first": "2018-05-31",
+    "last": "2018-07-31"
+   },
+   {
+    "cik": 10456,
+    "name": "BAXTER INTERNATIONAL INC",
+    "reasons": "T2+COR-T2",
+    "rows": 3,
+    "first": "2015-11-30",
+    "last": "2016-01-31"
    },
    {
     "cik": 16732,
@@ -644,6 +757,30 @@
     "last": "2019-01-31"
    },
    {
+    "cik": 701985,
+    "name": "Bath & Body Works, Inc.",
+    "reasons": "T2+COR-T2",
+    "rows": 3,
+    "first": "2021-12-31",
+    "last": "2022-02-28"
+   },
+   {
+    "cik": 1000228,
+    "name": "HENRY SCHEIN INC",
+    "reasons": "T2+COR-T2",
+    "rows": 3,
+    "first": "2019-06-30",
+    "last": "2020-01-31"
+   },
+   {
+    "cik": 1045810,
+    "name": "NVIDIA CORP",
+    "reasons": "T2+COR-T2",
+    "rows": 3,
+    "first": "2018-08-31",
+    "last": "2018-10-31"
+   },
+   {
     "cik": 1423902,
     "name": "Western Midstream Partners, LP",
     "reasons": "T2+COR-T2",
@@ -660,6 +797,14 @@
     "last": "2021-01-31"
    },
    {
+    "cik": 1571996,
+    "name": "Dell Technologies Inc.",
+    "reasons": "T2+COR-T2",
+    "rows": 3,
+    "first": "2017-06-30",
+    "last": "2017-08-31"
+   },
+   {
     "cik": 1755672,
     "name": "Corteva, Inc.",
     "reasons": "T2+COR-T2",
@@ -674,10 +819,601 @@
     "rows": 2,
     "first": "2018-05-31",
     "last": "2018-06-30"
+   },
+   {
+    "cik": 814453,
+    "name": "NEWELL BRANDS INC.",
+    "reasons": "T2+COR-T2",
+    "rows": 2,
+    "first": "2018-08-31",
+    "last": "2018-11-30"
+   },
+   {
+    "cik": 62996,
+    "name": "MASCO CORP /DE/",
+    "reasons": "T2+COR-T2",
+    "rows": 1,
+    "first": "2015-11-30",
+    "last": "2015-11-30"
+   },
+   {
+    "cik": 68505,
+    "name": "Motorola Solutions, Inc.",
+    "reasons": "T2+COR-T2",
+    "rows": 1,
+    "first": "2015-01-31",
+    "last": "2015-01-31"
+   },
+   {
+    "cik": 915913,
+    "name": "ALBEMARLE CORP",
+    "reasons": "T2+COR-T2",
+    "rows": 1,
+    "first": "2017-01-31",
+    "last": "2017-01-31"
    }
   ],
   "gp_tag_t2_rows": 171,
-  "gp_tag_t2_companies": 28
+  "gp_tag_t2_companies": 28,
+  "gp_t2_then_fallback": 169,
+  "gp_t2_then_fallback_blocked": 123
+ },
+ "t2_timing": {
+  "rev": {
+   "rows_in_scope": 10253,
+   "pit_flagged": 481,
+   "pit_companies": 67,
+   "retro_flagged": 514,
+   "retro_only": 33,
+   "pit_not_retro": 0,
+   "ratio_bins": {
+    "1.10-1.25": 144,
+    "1.25-2": 172,
+    ">2": 165
+   },
+   "top_companies": [
+    {
+     "cik": 1060391,
+     "name": "REPUBLIC SERVICES, INC.",
+     "rows": 36,
+     "first": "2015-04-30",
+     "last": "2022-09-30",
+     "ratio": 1.2043841475639911
+    },
+    {
+     "cik": 1090872,
+     "name": "AGILENT TECHNOLOGIES, INC.",
+     "rows": 23,
+     "first": "2015-03-31",
+     "last": "2019-07-31",
+     "ratio": 1.312150279776179
+    },
+    {
+     "cik": 8670,
+     "name": "AUTOMATIC DATA PROCESSING INC",
+     "rows": 18,
+     "first": "2018-11-30",
+     "last": "2020-07-31",
+     "ratio": 1.486233454811734
+    },
+    {
+     "cik": 1666700,
+     "name": "DuPont de Nemours, Inc.",
+     "rows": 15,
+     "first": "2019-08-31",
+     "last": "2022-01-31",
+     "ratio": 1.4440293145566891
+    },
+    {
+     "cik": 936468,
+     "name": "LOCKHEED MARTIN CORP",
+     "rows": 14,
+     "first": "2016-10-31",
+     "last": "2019-01-31",
+     "ratio": 7.0542233688832505
+    },
+    {
+     "cik": 40545,
+     "name": "GENERAL ELECTRIC CO",
+     "rows": 11,
+     "first": "2015-05-31",
+     "last": "2018-06-30",
+     "ratio": 4.228447692515902
+    },
+    {
+     "cik": 40533,
+     "name": "GENERAL DYNAMICS CORP",
+     "rows": 11,
+     "first": "2015-01-31",
+     "last": "2018-01-31",
+     "ratio": 2.674801494628678
+    },
+    {
+     "cik": 319201,
+     "name": "KLA CORP",
+     "rows": 10,
+     "first": "2018-10-31",
+     "last": "2019-07-31",
+     "ratio": 4.598746185249711
+    },
+    {
+     "cik": 1018724,
+     "name": "AMAZON COM INC",
+     "rows": 10,
+     "first": "2018-10-31",
+     "last": "2019-09-30",
+     "ratio": 2.6260225343417196
+    },
+    {
+     "cik": 1699150,
+     "name": "Ingersoll Rand Inc.",
+     "rows": 10,
+     "first": "2021-04-30",
+     "last": "2022-01-31",
+     "ratio": 1.2340726757904672
+    },
+    {
+     "cik": 789019,
+     "name": "MICROSOFT CORP",
+     "rows": 10,
+     "first": "2017-10-31",
+     "last": "2018-07-31",
+     "ratio": 1.625138960942711
+    },
+    {
+     "cik": 1283699,
+     "name": "T-Mobile US, Inc.",
+     "rows": 10,
+     "first": "2017-04-30",
+     "last": "2018-01-31",
+     "ratio": 4.552530482712544
+    }
+   ]
+  },
+  "cor": {
+   "rows_in_scope": 10253,
+   "pit_flagged": 381,
+   "pit_companies": 62,
+   "retro_flagged": 391,
+   "retro_only": 10,
+   "pit_not_retro": 0,
+   "ratio_bins": {
+    "1.10-1.25": 98,
+    "1.25-2": 147,
+    ">2": 136
+   },
+   "top_companies": [
+    {
+     "cik": 1666700,
+     "name": "DuPont de Nemours, Inc.",
+     "rows": 15,
+     "first": "2019-08-31",
+     "last": "2022-01-31",
+     "ratio": 1.4314489928525016
+    },
+    {
+     "cik": 1090872,
+     "name": "AGILENT TECHNOLOGIES, INC.",
+     "rows": 14,
+     "first": "2015-03-31",
+     "last": "2018-07-31",
+     "ratio": 1.5983935742971886
+    },
+    {
+     "cik": 936468,
+     "name": "LOCKHEED MARTIN CORP",
+     "rows": 14,
+     "first": "2016-10-31",
+     "last": "2019-01-31",
+     "ratio": 6.872244573957577
+    },
+    {
+     "cik": 908937,
+     "name": "SIRIUS XM HOLDINGS INC.",
+     "rows": 12,
+     "first": "2015-04-30",
+     "last": "2018-06-30",
+     "ratio": 48.900528027689745
+    },
+    {
+     "cik": 40533,
+     "name": "GENERAL DYNAMICS CORP",
+     "rows": 11,
+     "first": "2015-01-31",
+     "last": "2018-01-31",
+     "ratio": 2.564230343300111
+    },
+    {
+     "cik": 773840,
+     "name": "HONEYWELL INTERNATIONAL INC",
+     "rows": 10,
+     "first": "2018-07-31",
+     "last": "2019-09-30",
+     "ratio": 5.830220713073005
+    },
+    {
+     "cik": 1699150,
+     "name": "Ingersoll Rand Inc.",
+     "rows": 10,
+     "first": "2021-04-30",
+     "last": "2022-01-31",
+     "ratio": 1.275926743159753
+    },
+    {
+     "cik": 1466258,
+     "name": "Trane Technologies plc",
+     "rows": 10,
+     "first": "2015-01-31",
+     "last": "2021-01-31",
+     "ratio": 1.2569673666783598
+    },
+    {
+     "cik": 833444,
+     "name": "Johnson Controls International plc",
+     "rows": 9,
+     "first": "2019-02-28",
+     "last": "2019-10-31",
+     "ratio": 4.479154078549849
+    },
+    {
+     "cik": 849399,
+     "name": "Gen Digital Inc.",
+     "rows": 9,
+     "first": "2016-02-29",
+     "last": "2020-04-30",
+     "ratio": 2.234513274336283
+    },
+    {
+     "cik": 59478,
+     "name": "ELI LILLY & Co",
+     "rows": 9,
+     "first": "2019-05-31",
+     "last": "2020-01-31",
+     "ratio": 1.3616476152936539
+    },
+    {
+     "cik": 732712,
+     "name": "VERIZON COMMUNICATIONS INC",
+     "rows": 9,
+     "first": "2015-07-31",
+     "last": "2018-06-30",
+     "ratio": 2.4848230521751296
+    }
+   ]
+  },
+  "gp": {
+   "rows_in_scope": 14687,
+   "pit_flagged": 171,
+   "pit_companies": 28,
+   "retro_flagged": 224,
+   "retro_only": 53,
+   "pit_not_retro": 0,
+   "ratio_bins": {
+    "1.10-1.25": 97,
+    "1.25-2": 66,
+    ">2": 8
+   },
+   "top_companies": [
+    {
+     "cik": 37785,
+     "name": "FMC CORP",
+     "rows": 16,
+     "first": "2017-05-31",
+     "last": "2020-01-31",
+     "ratio": 1.2019525211720345
+    },
+    {
+     "cik": 936468,
+     "name": "LOCKHEED MARTIN CORP",
+     "rows": 14,
+     "first": "2016-10-31",
+     "last": "2019-01-31",
+     "ratio": 1.1865614660218886
+    },
+    {
+     "cik": 789019,
+     "name": "MICROSOFT CORP",
+     "rows": 10,
+     "first": "2017-10-31",
+     "last": "2018-07-31",
+     "ratio": 1.116979934967087
+    },
+    {
+     "cik": 63754,
+     "name": "MCCORMICK & CO INC",
+     "rows": 10,
+     "first": "2019-03-31",
+     "last": "2019-12-31",
+     "ratio": 1.1339821909297991
+    },
+    {
+     "cik": 1699150,
+     "name": "Ingersoll Rand Inc.",
+     "rows": 10,
+     "first": "2021-04-30",
+     "last": "2022-01-31",
+     "ratio": 1.1535194818982908
+    },
+    {
+     "cik": 920148,
+     "name": "LABCORP HOLDINGS INC.",
+     "rows": 9,
+     "first": "2018-05-31",
+     "last": "2019-01-31",
+     "ratio": 1.1202356354684133
+    },
+    {
+     "cik": 833444,
+     "name": "Johnson Controls International plc",
+     "rows": 9,
+     "first": "2019-02-28",
+     "last": "2019-10-31",
+     "ratio": 1.246166950596252
+    },
+    {
+     "cik": 1418135,
+     "name": "Keurig Dr Pepper Inc.",
+     "rows": 9,
+     "first": "2018-11-30",
+     "last": "2019-10-31",
+     "ratio": 2.0303030303030303
+    },
+    {
+     "cik": 849399,
+     "name": "Gen Digital Inc.",
+     "rows": 9,
+     "first": "2016-02-29",
+     "last": "2020-04-30",
+     "ratio": 1.8296593186372745
+    },
+    {
+     "cik": 52988,
+     "name": "JACOBS SOLUTIONS INC.",
+     "rows": 9,
+     "first": "2019-02-28",
+     "last": "2019-10-31",
+     "ratio": 1.3357153907612622
+    },
+    {
+     "cik": 29905,
+     "name": "DOVER Corp",
+     "rows": 8,
+     "first": "2015-01-31",
+     "last": "2019-01-31",
+     "ratio": 1.1467676411832133
+    },
+    {
+     "cik": 1065088,
+     "name": "EBAY INC",
+     "rows": 8,
+     "first": "2015-10-31",
+     "last": "2021-01-31",
+     "ratio": 1.4783630048897165
+    }
+   ]
+  },
+  "ocf": {
+   "rows_in_scope": 38375,
+   "pit_flagged": 824,
+   "pit_companies": 144,
+   "retro_flagged": 838,
+   "retro_only": 14,
+   "pit_not_retro": 0,
+   "ratio_bins": {
+    "1.10-1.25": 391,
+    "1.25-2": 306,
+    ">2": 127
+   },
+   "top_companies": [
+    {
+     "cik": 40545,
+     "name": "GENERAL ELECTRIC CO",
+     "rows": 28,
+     "first": "2015-07-31",
+     "last": "2022-01-31",
+     "ratio": 1.6201205966359886
+    },
+    {
+     "cik": 1466258,
+     "name": "Trane Technologies plc",
+     "rows": 22,
+     "first": "2015-04-30",
+     "last": "2021-01-31",
+     "ratio": 1.2590034884592838
+    },
+    {
+     "cik": 1385157,
+     "name": "TE Connectivity plc",
+     "rows": 17,
+     "first": "2015-04-30",
+     "last": "2019-10-31",
+     "ratio": 1.1271317829457363
+    },
+    {
+     "cik": 37785,
+     "name": "FMC CORP",
+     "rows": 15,
+     "first": "2017-05-31",
+     "last": "2020-01-31",
+     "ratio": 1.5153029356652092
+    },
+    {
+     "cik": 720005,
+     "name": "RAYMOND JAMES FINANCIAL INC",
+     "rows": 15,
+     "first": "2017-05-31",
+     "last": "2019-10-31",
+     "ratio": 1.6287673267326732
+    },
+    {
+     "cik": 103379,
+     "name": "V F CORP",
+     "rows": 15,
+     "first": "2016-08-31",
+     "last": "2020-04-30",
+     "ratio": 1.292281551389461
+    },
+    {
+     "cik": 354190,
+     "name": "Arthur J. Gallagher & Co.",
+     "rows": 15,
+     "first": "2017-07-31",
+     "last": "2022-07-31",
+     "ratio": 1.2920932258767153
+    },
+    {
+     "cik": 1138118,
+     "name": "CBRE GROUP, INC.",
+     "rows": 14,
+     "first": "2018-08-31",
+     "last": "2021-09-30",
+     "ratio": 1.5594132681948332
+    },
+    {
+     "cik": 1393818,
+     "name": "Blackstone Inc.",
+     "rows": 13,
+     "first": "2016-05-31",
+     "last": "2019-02-28",
+     "ratio": 1.4658822344213722
+    },
+    {
+     "cik": 922224,
+     "name": "PPL Corp",
+     "rows": 13,
+     "first": "2015-10-31",
+     "last": "2022-01-31",
+     "ratio": 1.423052564914503
+    },
+    {
+     "cik": 1000228,
+     "name": "HENRY SCHEIN INC",
+     "rows": 12,
+     "first": "2017-05-31",
+     "last": "2021-10-31",
+     "ratio": 1.3048150338054962
+    },
+    {
+     "cik": 1418135,
+     "name": "Keurig Dr Pepper Inc.",
+     "rows": 12,
+     "first": "2017-04-30",
+     "last": "2019-10-31",
+     "ratio": 1.593709964180197
+    }
+   ]
+  },
+  "capex": {
+   "rows_in_scope": 38375,
+   "pit_flagged": 503,
+   "pit_companies": 78,
+   "retro_flagged": 505,
+   "retro_only": 2,
+   "pit_not_retro": 0,
+   "ratio_bins": {
+    "1.10-1.25": 164,
+    "1.25-2": 123,
+    ">2": 216
+   },
+   "top_companies": [
+    {
+     "cik": 40545,
+     "name": "GENERAL ELECTRIC CO",
+     "rows": 21,
+     "first": "2015-07-31",
+     "last": "2022-01-31",
+     "ratio": 1.7211981566820276
+    },
+    {
+     "cik": 37785,
+     "name": "FMC CORP",
+     "rows": 16,
+     "first": "2017-05-31",
+     "last": "2020-01-31",
+     "ratio": 1.503791690626797
+    },
+    {
+     "cik": 1070750,
+     "name": "HOST HOTELS & RESORTS, INC.",
+     "rows": 16,
+     "first": "2016-07-31",
+     "last": "2018-01-31",
+     "ratio": 1.2191780821917808
+    },
+    {
+     "cik": 922224,
+     "name": "PPL Corp",
+     "rows": 15,
+     "first": "2015-08-31",
+     "last": "2022-01-31",
+     "ratio": 1.3409090909090908
+    },
+    {
+     "cik": 65984,
+     "name": "ENTERGY CORP /DE/",
+     "rows": 15,
+     "first": "2016-05-31",
+     "last": "2022-01-31",
+     "ratio": Infinity
+    },
+    {
+     "cik": 1090012,
+     "name": "DEVON ENERGY CORP/DE",
+     "rows": 15,
+     "first": "2015-05-31",
+     "last": "2021-10-31",
+     "ratio": 3.7492103600758053
+    },
+    {
+     "cik": 33213,
+     "name": "EQT Corp",
+     "rows": 11,
+     "first": "2015-01-31",
+     "last": "2017-01-31",
+     "ratio": Infinity
+    },
+    {
+     "cik": 352915,
+     "name": "UNIVERSAL HEALTH SERVICES INC",
+     "rows": 11,
+     "first": "2015-11-30",
+     "last": "2018-01-31",
+     "ratio": Infinity
+    },
+    {
+     "cik": 31462,
+     "name": "ECOLAB INC.",
+     "rows": 10,
+     "first": "2018-05-31",
+     "last": "2019-02-28",
+     "ratio": 1.1036789297658862
+    },
+    {
+     "cik": 315293,
+     "name": "Aon plc",
+     "rows": 9,
+     "first": "2017-05-31",
+     "last": "2018-01-31",
+     "ratio": 1.4299065420560748
+    },
+    {
+     "cik": 107263,
+     "name": "WILLIAMS COMPANIES, INC.",
+     "rows": 9,
+     "first": "2017-05-31",
+     "last": "2018-01-31",
+     "ratio": 34.483870967741936
+    },
+    {
+     "cik": 723125,
+     "name": "MICRON TECHNOLOGY INC",
+     "rows": 9,
+     "first": "2015-01-31",
+     "last": "2015-09-30",
+     "ratio": 1.1968962172647915
+    }
+   ]
+  }
  },
  "identity": {
   "foreign_form_rows": 339,
@@ -1211,5 +1947,10 @@
    "blocked": {},
    "foreign_form_rows": 39
   }
+ },
+ "pit_invariance": {
+  "rows_checked": 6249,
+  "flagged_rows_checked": 3249,
+  "differences": []
  }
 }

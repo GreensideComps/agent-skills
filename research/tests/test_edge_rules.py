@@ -259,6 +259,19 @@ def test_b5_addendum_1_is_frozen_at_its_registered_hash_and_does_not_change_n():
     assert edge_registry.n_trials(ev) == 100
 
 
+def test_b5_addendum_2_is_frozen_at_its_registered_hash_and_does_not_change_n():
+    """ADDENDUM_2 (owner reviews 2026-10-16 13:34Z, 14:17Z) is registered (not counted) with its sha256; any later
+    edit fails here, and N stays 100. The run manifest is not registered until the owner authorises the run."""
+    import hashlib
+    spec = Path(__file__).resolve().parents[2] / "docs" / "edge" / "B5_PREREGISTRATION_ADDENDUM_2.md"
+    ev = edge_registry.load()
+    reg = edge_registry.registered(ev)
+    a = reg["B5-V2-ADDENDUM-2"]
+    assert a["spec_sha256"] == hashlib.sha256(spec.read_bytes()).hexdigest()
+    assert a["counts_for_dsr"] is False and "B5-V2-ADDENDUM-1" in a["amends"]
+    assert edge_registry.n_trials(ev) == 100 and "B5-V2-RUN-MANIFEST" not in reg
+
+
 def test_exposures_are_recorded_but_never_counted(tmp_path):
     p = tmp_path / "t.jsonl"
     e = {**_reg("X1"), "kind": "exposure", "touched_holdout": True, "counts_for_dsr": False}

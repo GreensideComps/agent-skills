@@ -81,7 +81,8 @@ def test_loader_output_feeds_h1_and_a_mismatched_row_has_no_score():
     """End to end: loader -> h1_velocity. A row whose latest ocf and capex ends differ has fcf_end None, so no G."""
     df = pd.DataFrame({"cik": [1], "month": ["2016-08-31"], "ocf": [None], "capex": [None], "fcf_end": [None],
                        "shares_out": [100.0], "shares_diluted": [100.0], "total_assets": [1000.0],
-                       "close_raw": [10.0], "adjclose": [10.0], "foreign_form": [False]})
+                       "close_raw": [10.0], "adjclose": [10.0], "foreign_form": [False], "mcap": [1e3],
+                       "ocf_restated": [False], "capex_restated": [False]})
     assert b5.h1_velocity(df)["fcf"].isna().all()
 
 
@@ -90,7 +91,7 @@ def test_loader_output_feeds_h1_and_a_mismatched_row_has_no_score():
 def s2a_row(**kw):
     base = {"month": "2016-08-31", "gross_profit": 300.0, "gp_end": "2016-06-30", "revenue": 1000.0,
             "cost_of_revenue": 600.0, "rev_end": "2016-06-30", "cor_end": "2016-06-30", "rev_conflict": False, "cor_restated": False,
-            "foreign_form": False, "total_assets": 1000.0}
+            "gp_restated": False, "foreign_form": False, "cik": 1, "mcap": 5e4, "total_assets": 1000.0}
     base.update(kw)
     return pd.DataFrame([base])
 
@@ -159,7 +160,8 @@ def test_missing_conflict_flag_fails_closed():
 
 # ---------- foreign-form rule (ADDENDUM_1 §3) ----------
 
-def test_foreign_form_balance_sheet_makes_both_scores_unavailable():
+def test_foreign_form_balance_sheet_makes_both_scores_unavailable_under_rule_a(monkeypatch):
+    monkeypatch.setattr(b5, "IDENTITY_RULE", "A")
     ta = [fact("total_assets", "", "2015-12-31", 5_000, "2016-03-01", form="40-F")]
     assert bi.foreign_form(ta, "2016-08-31") is True
     ta.append(fact("total_assets", "", "2016-06-30", 5_100, "2016-08-05", form="10-Q"))
@@ -178,7 +180,7 @@ def test_company_month_returns_every_input_with_its_own_end():
     assert c["fcf_end"] is None and (c["ocf_end"], c["capex_end"]) == ("2016-06-30", "2015-12-31")
     assert (c["gp_end"], c["rev_end"], c["cor_end"]) == ("2015-12-31", "2016-06-30", "2016-06-30")
     assert c["rev_conflict"] is True and c["foreign_form"] is False
-    row = pd.DataFrame([{**c, "month": "2016-08-31", "total_assets": 50_000.0}])
+    row = pd.DataFrame([{**c, "month": "2016-08-31", "total_assets": 50_000.0, "cik": 1, "mcap": 1e5}])
     assert math.isnan(b5.s2a_profitability(row).iloc[0])  # GP stale (244 days), fallback conflicts: no score
 
 
@@ -246,3 +248,36 @@ def test_restated_cost_of_revenue_blocks_the_fallback_but_not_the_gross_profit_t
     assert math.isnan(b5.s2a_profitability(s2a_row(gross_profit=np.nan, cor_restated=True)).iloc[0])
     assert b5.s2a_profitability(s2a_row(cor_restated=True)).iloc[0] == pytest.approx(0.3)
     assert math.isnan(b5.s2a_profitability(s2a_row(gross_profit=np.nan, cor_restated=None)).iloc[0])
+
+
+def test_gp_tag_with_mixed_bases_is_not_used_and_falls_back_only_if_clean():
+    """ADDENDUM_2 §2: a GrossProfit TTM flagged by T2 (point in time) is not used; the row may still use a clean
+    revenue - cost of revenue. A missing gp_restated fails closed for the tag."""
+    assert b5.s2a_profitability(s2a_row(gp_restated=True)).iloc[0] == pytest.approx(0.4)  # fallback 1000-600
+    assert math.isnan(b5.s2a_profitability(s2a_row(gp_restated=True, rev_conflict=True)).iloc[0])
+    assert b5.s2a_profitability(s2a_row(gp_restated=None)).iloc[0] == pytest.approx(0.4)
+
+
+def test_rule_c_on_s2a():
+    assert math.isnan(b5.s2a_profitability(s2a_row(mcap=1000.0 * 100.01)).iloc[0])
+    assert b5.s2a_profitability(s2a_row(mcap=1000.0 * 100)).iloc[0] == pytest.approx(0.3)
+    assert math.isnan(b5.s2a_profitability(s2a_row(cik=1635327)).iloc[0])
+
+
+def test_t2_is_point_in_time_later_filings_cannot_change_it():
+    """ADDENDUM_2 §2.1: deleting every fact filed after the decision date leaves every flag unchanged, and a
+    restatement filed later does not flag an earlier month (it is visible only to the retrospective diagnostic)."""
+    rows = spin_off(False)
+    later = [r for r in rows if r["filed"] > "2017-03-31"]
+    for as_of in ("2016-08-31", "2016-11-30", "2017-03-31"):
+        full = bi.company_month({"revenue": rows}, as_of)
+        cut = bi.company_month({"revenue": [r for r in rows if r["filed"] <= as_of]}, as_of)
+        assert {k: full[k] for k in full if "restated" in k or k.startswith("rev_")} == \
+               {k: cut[k] for k in cut if "restated" in k or k.startswith("rev_")}
+    # a restatement of the prior-year YTD filed after as_of: the PIT flag ignores it, the retro diagnostic sees it
+    base = year_and_ytd("revenue", 10_000, 5_000, 5_200)
+    sel_month = "2016-08-31"
+    restate = fact("revenue", "2015-01-01", "2015-06-30", 2_500, "2016-11-05", accn="R-1")
+    pit = bi.company_month({"revenue": base + [restate]}, sel_month, retro_as_of="2022-12-31")
+    assert pit["rev_restated"] is False and pit["rev_restated_retro"] is True
+    assert bi.company_month({"revenue": base}, sel_month)["rev_restated"] is False

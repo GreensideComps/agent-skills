@@ -102,7 +102,7 @@ def _ratio(a: float, b: float) -> float:
     return float("inf") if min(a, b) == 0 else max(a, b) / min(a, b)
 
 
-def restated_check(rows: list[dict], as_of: str, sel: dict | None) -> dict:
+def restated_check(rows: list[dict], as_of: str, sel: dict | None, compare_as_of: str | None = None) -> dict:
     """ADDENDUM_2 §2 (test T2): does a fy + ytd - prior_ytd TTM mix two accounting bases?
 
     The prior-year year-to-date period is taken from the latest filing, which may have recast it (a disposal,
@@ -116,7 +116,12 @@ def restated_check(rows: list[dict], as_of: str, sel: dict | None) -> dict:
     2. the annual report that supplied the fiscal year did NOT itself recast its prior-year comparative by more
        than REV_CONFLICT against that year's original value (so the fiscal year is still on the old basis).
 
-    A TTM that is a single fiscal year (`basis` "fy") is never flagged. Returns {restated, worst_ratio}."""
+    A TTM that is a single fiscal year (`basis` "fy") is never flagged. Returns {restated, worst_ratio}.
+
+    Point in time: the TTM, the values it used and every comparison come from filings on or before `as_of`, so
+    the flag is known at the decision date and later filings cannot change it. `compare_as_of` (later than
+    `as_of`) is for the retrospective diagnostic only (ADDENDUM_2 §2.3): the same TTM, compared against filings up
+    to that later date. No trial uses it."""
     none = {"restated": False, "worst_ratio": None}
     if sel is None or sel["basis"] == "fy":
         return none
@@ -124,7 +129,8 @@ def restated_check(rows: list[dict], as_of: str, sel: dict | None) -> dict:
     fy, prev = best.get(sel["periods"][0]), best.get(sel["periods"][2])
     if fy is None or prev is None:
         return none
-    known = [r for r in rows if r["filed"] <= as_of and r["start"] and r["concept"] not in CONCEPT_TEST_EXCLUDED]
+    seen = compare_as_of or as_of
+    known = [r for r in rows if r["filed"] <= seen and r["start"] and r["concept"] not in CONCEPT_TEST_EXCLUDED]
     others = [r for r in known if (r["start"], r["end"]) == (prev["start"], prev["end"]) and r["accn"] != prev["accn"]]
     recast = max((_ratio(r["val"], prev["val"]) for r in others), default=1.0)
     if recast <= 1 + REV_CONFLICT:
@@ -184,20 +190,25 @@ def foreign_form(ta_rows: list[dict], as_of: str) -> bool | None:
     return None if t is None else t["form"] in FOREIGN_FORMS
 
 
-def company_month(fx: dict[str, list[dict]], as_of: str, align: bool = False) -> dict:
-    """Every B5 TTM input for one company at one month-end, with period ends and provenance."""
+def company_month(fx: dict[str, list[dict]], as_of: str, align: bool = False, retro_as_of: str | None = None) -> dict:
+    """Every B5 TTM input for one company at one month-end, with period ends and provenance. `retro_as_of` adds
+    the retrospective T2 diagnostic (`{key}_restated_retro`); the trials never pass it."""
     g = lambda m: fx.get(m, [])  # noqa: E731
     out = fcf_inputs(g("ocf"), g("capex"), as_of, align)
     out["foreign_form"] = foreign_form(g("total_assets"), as_of)
-    for m, key in (("gross_profit", "gp"), ("revenue", "rev"), ("cost_of_revenue", "cor")):
+    for m, key in (("gross_profit", "gp"), ("revenue", "rev"), ("cost_of_revenue", "cor"), ("ocf", "ocf"),
+                   ("capex", "capex")):
         t = ttm_input(g(m), as_of)
-        out[m] = t and t["val"]
-        out[f"{key}_end"] = t and t["end"]
-        out[f"{key}_concepts"] = t and t["concepts"]
-        out[f"{key}_restated"] = restated_check(g(m), as_of, t)["restated"]
+        if m not in ("ocf", "capex"):
+            out[m] = t and t["val"]
+            out[f"{key}_end"] = t and t["end"]
+            out[f"{key}_concepts"] = t and t["concepts"]
+        out[f"{key}_basis"] = t and t["basis"]
+        rc = restated_check(g(m), as_of, t)
+        out[f"{key}_restated"], out[f"{key}_recast_ratio"] = rc["restated"], rc["worst_ratio"]
+        if retro_as_of:
+            out[f"{key}_restated_retro"] = restated_check(g(m), as_of, t, compare_as_of=retro_as_of)["restated"]
         if m == "revenue":
-            rc = revenue_check(g("revenue"), as_of, t)
-            out["rev_conflict"], out["rev_ratio"], out["rev_reasons"] = rc["conflict"], rc["worst_ratio"], rc["reasons"]
-    for m in ("ocf", "capex"):  # reported for ADDENDUM_2 §2's open decision; not applied to H1
-        out[f"{m}_restated"] = restated_check(g(m), as_of, ttm_input(g(m), as_of))["restated"]
+            rv = revenue_check(g("revenue"), as_of, t)
+            out["rev_conflict"], out["rev_ratio"], out["rev_reasons"] = rv["conflict"], rv["worst_ratio"], rv["reasons"]
     return out

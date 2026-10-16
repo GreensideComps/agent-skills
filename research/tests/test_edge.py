@@ -140,7 +140,7 @@ def test_new_research_code_reads_data_only_through_the_guard():
     (cut_exploration / exploration_view), so a holdout outcome cannot be read by a path the guard does not see."""
     allowed = {"xsection.py", "stage2.py", "stage1_coverage.py", "signal_log.py", "edge_integrity.py",
                "stage2_diagnostics.py", "edge_exec_prices.py", "edge_exec_audit.py", "edge_b3_reproduce.py",
-               "edge_ttm_checks.py", "edge_b5_handcheck.py"}
+               "edge_ttm_checks.py", "edge_b5_handcheck.py", "edge_b5_run.py"}
     root = Path(__file__).resolve().parent.parent
     offenders = [f.name for f in root.glob("*.py") if f.name not in allowed
                  and any(k in f.read_text() for k in ("xsection.load(", "prices_monthly", "monthly_metrics"))]
@@ -160,6 +160,9 @@ def test_new_research_code_reads_data_only_through_the_guard():
     hc = (root / "edge_b5_handcheck.py").read_text()
     assert "edge_split.with_quality(edge_split.cut_exploration(xsection.load()))" in hc
     assert hc.count("<= CUT]") >= 3  # raw metrics, raw prices and execution rows cut on read
+    rs = (root / "edge_b5_run.py").read_text()
+    assert "edge_split.with_quality(edge_split.cut_exploration(xsection.load()))" in rs
+    assert 'r["filed"] <= str(CUT.date())' in rs and rs.count("<= CUT]") >= 1  # facts and execution rows cut on read
     ia = (root / "edge_b5_input_audit.py").read_text()
     assert "u = tc.universe()" in ia and 'r["filed"] <= tc.CUT' in ia  # cut universe; no SEC fact filed after 2022
     assert "ret_next" not in ia and "adjclose" not in ia  # input audit reads no price or return

@@ -1,5 +1,5 @@
 """B5 trial building blocks, frozen in docs/edge/B5_PREREGISTRATION.md (version 2) as amended by
-docs/edge/B5_PREREGISTRATION_ADDENDUM_1.md. Nothing here reads data.
+docs/edge/B5_PREREGISTRATION_ADDENDUM_1.md and docs/edge/B5_PREREGISTRATION_ADDENDUM_2.md. Nothing here reads data.
 
 Owner, 2026-10-16 11:53Z: preparatory engineering and synthetic tests are approved; running H1 or S2a is not.
 This module defines the scores, the tranche combination, the placebo score for the hand-check and the frozen
@@ -70,21 +70,29 @@ def _days(a: pd.Series, b: pd.Series) -> pd.Series:
 
 IDENTITY_CIKS = frozenset({1635327})  # ADDENDUM_2 §3: The Stars Group's 40-F accounts priced with Flutter's FLUT
 IMPLAUSIBLE_MCAP_TO_ASSETS = 100.0
-# ADDENDUM_2 §3: the owner chooses A, B or C. Until then the run uses A (Addendum 1 as registered).
-IDENTITY_RULE = "A"
+IDENTITY_RULE = "C"  # ADDENDUM_2 §3 (owner preferred C, 2026-10-16 14:17Z); A and B kept for the comparison only
+
+
+def _clean(df: pd.DataFrame, col: str) -> pd.Series:
+    """A data-quality flag passes only when it is exactly False (or 0). Missing column raises; missing value fails."""
+    return df[col].map(lambda v: v is False or v == 0).astype(bool)
 
 
 def _domestic(df: pd.DataFrame) -> pd.Series:
     """ADDENDUM_1 §3: rows whose latest balance sheet came from a 10-K or 10-Q. Fails closed: a missing column
     raises, and a missing value (no balance sheet known) counts as not domestic."""
-    return df["foreign_form"].map(lambda v: v is False or v == 0).astype(bool)
+    return _clean(df, "foreign_form")
 
 
 def identity_ok(df: pd.DataFrame, rule: str | None = None) -> pd.Series:
-    """ADDENDUM_2 §3, the three options compared on input evidence only.
-    A: no 20-F/40-F balance sheet (Addendum 1 §3). B: CIK 1635327 excluded. C: CIK 1635327 excluded, and any row
-    whose market cap is more than 100 x its total assets (price and share count cannot belong to these accounts).
-    Under C a missing ratio passes this rule; such a row has no score anyway (total assets are required)."""
+    """ADDENDUM_2 §3. Rule C (in force): the row fails when its CIK is 1635327, or when
+    mcap > 100 x total_assets, strictly, with both fields as of the row's own month-end:
+      mcap = (shares_out if > 0 else shares_diluted) x close_raw  (xsection.load; shares from the latest filing
+             known at the month-end, close_raw the unadjusted month-end close);
+      total_assets = the monthly dataset's latest balance-sheet value known at the month-end.
+    Missing or non-positive total_assets, or missing mcap: the ratio is undefined and rule C does not exclude the
+    row; such a row still has no H1 or S2a score because both require total_assets > 0 (and the universe requires
+    a market cap). A missing column raises. A: no 20-F/40-F balance sheet (Addendum 1 §3). B: CIK 1635327 only."""
     rule = IDENTITY_RULE if rule is None else rule
     if rule == "A":
         return _domestic(df)
@@ -114,15 +122,15 @@ def h1_velocity(df: pd.DataFrame) -> pd.DataFrame:
 
     Required columns: cik, month, ocf, capex, fcf_end (common TTM period end of ocf and capex, None if they
     differ or either is missing: `edge_b5_inputs.fcf_inputs`), shares_out, shares_diluted, total_assets,
-    close_raw, adjclose, and the columns of the identity rule in force (`identity_ok`: foreign_form for A, cik
-    for B, cik and mcap for C)."""
+    close_raw, adjclose, ocf_restated and capex_restated (ADDENDUM_2 §2: T2, point in time; True or missing makes
+    FCF unavailable), and the columns of the identity rule in force (`identity_ok`; C needs cik and mcap)."""
     d = df.sort_values(["cik", "month"]).reset_index(drop=True).copy()
     d["month"] = pd.to_datetime(d["month"])
     d["p"] = d["month"].dt.to_period("M")
     d["sh"] = mcap_shares(d)
     d["fcf"] = (d["ocf"] - d["capex"]).where(d["ocf"].notna() & d["capex"].notna() & d["fcf_end"].notna())
     fresh = _days(d["fcf_end"], d["month"]).between(0, FRESH_DAYS)
-    d["fcf"] = d["fcf"].where(fresh & identity_ok(d))
+    d["fcf"] = d["fcf"].where(fresh & identity_ok(d) & _clean(d, "ocf_restated") & _clean(d, "capex_restated"))
     for c in ("fcf", "sh", "close_raw", "adjclose", "fcf_end"):
         d[f"{c}_12"] = _lag(d, c, 12)
     d["s"] = split_factor(d["close_raw"], d["adjclose"], d["close_raw_12"], d["adjclose_12"])
@@ -154,15 +162,15 @@ def s2a_profitability(df: pd.DataFrame) -> pd.Series:
     only when its own TTM period end is at most 183 days before the month-end, divided by total assets (> 0).
     A stale gross profit is never used; the row falls back to revenue - cost of revenue only if those are fresh.
     ADDENDUM_2 §1: the fallback is unavailable when revenue fails tests T0-T2 (`rev_conflict`, from
-    `edge_b5_inputs.revenue_check`) or cost of revenue mixes bases (`cor_restated`, test T2); ADDENDUM_1 §3:
-    rows failing the identity rule in force are unavailable (`identity_ok`, owner's choice pending in ADDENDUM_2 §3).
-    Required columns: month, gross_profit, gp_end, revenue, cost_of_revenue, rev_end, cor_end, rev_conflict,
-    cor_restated, total_assets, and the identity rule's columns. A missing flag value counts as failing (fail closed)."""
+    `edge_b5_inputs.revenue_check`) or cost of revenue mixes bases (`cor_restated`, test T2); a `GrossProfit` tag
+    whose TTM mixes bases (`gp_restated`, T2) is not used. All flags are point in time. Rows failing the identity
+    rule (`identity_ok`, ADDENDUM_2 §3) are unavailable.
+    Required columns: month, gross_profit, gp_end, gp_restated, revenue, cost_of_revenue, rev_end, cor_end,
+    rev_conflict, cor_restated, total_assets, and the identity rule's columns. A missing flag value counts as failing (fail closed)."""
     m = pd.to_datetime(df["month"])
-    gp_ok = df["gross_profit"].notna() & _days(df["gp_end"], m).between(0, FRESH_DAYS)
-    clean = lambda c: df[c].map(lambda v: v is False or v == 0).astype(bool)  # noqa: E731  (missing = not clean)
+    gp_ok = df["gross_profit"].notna() & _days(df["gp_end"], m).between(0, FRESH_DAYS) & _clean(df, "gp_restated")
     alt_ok = (df["revenue"].notna() & df["cost_of_revenue"].notna() & (df["rev_end"] == df["cor_end"])
-              & _days(df["rev_end"], m).between(0, FRESH_DAYS) & clean("rev_conflict") & clean("cor_restated"))
+              & _days(df["rev_end"], m).between(0, FRESH_DAYS) & _clean(df, "rev_conflict") & _clean(df, "cor_restated"))
     gp = df["gross_profit"].where(gp_ok, (df["revenue"] - df["cost_of_revenue"]).where(alt_ok))
     return (gp / df["total_assets"].where(df["total_assets"] > 0)).where(identity_ok(df))
 
