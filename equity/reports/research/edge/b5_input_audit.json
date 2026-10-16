@@ -1,0 +1,1215 @@
+{
+ "run": "2026-10-16",
+ "rows": 43511,
+ "nonfinancial_rows": 34624,
+ "companies": 781,
+ "h1": {
+  "both_present": 40217,
+  "mismatched_ends": 1546,
+  "mismatched_nonfinancial": 593,
+  "alignment_would_recover_fresh": 132,
+  "fresh_common_end_rows": 38375,
+  "t2_ocf_or_capex_rows": 1166,
+  "t2_nonfinancial_rows": 956,
+  "t2_companies": 182
+ },
+ "s2a": {
+  "paths_nonfinancial": {
+   "gross_profit_tag": 14687,
+   "fallback": 10084,
+   "none": 9853
+  },
+  "gp_stale_nonfinancial": 2587,
+  "gp_stale_then_fallback": 1855,
+  "gp_stale_then_none": 732,
+  "fallback_rows": 10084,
+  "fallback_blocked_rows": 587,
+  "fallback_blocked_companies": 63,
+  "by_reason": {
+   "T2+COR-T2": 176,
+   "T2": 175,
+   "T1": 90,
+   "COR-T2": 79,
+   "T0": 54,
+   "T1+T2+COR-T2": 7,
+   "T1+COR-T2": 6
+  },
+  "blocked_by_company": [
+   {
+    "cik": 908937,
+    "name": "SIRIUS XM HOLDINGS INC.",
+    "reasons": "COR-T2",
+    "rows": 12,
+    "first": "2015-04-30",
+    "last": "2018-06-30"
+   },
+   {
+    "cik": 8670,
+    "name": "AUTOMATIC DATA PROCESSING INC",
+    "reasons": "COR-T2",
+    "rows": 7,
+    "first": "2015-01-31",
+    "last": "2015-07-31"
+   },
+   {
+    "cik": 896878,
+    "name": "INTUIT INC.",
+    "reasons": "COR-T2",
+    "rows": 7,
+    "first": "2015-01-31",
+    "last": "2018-01-31"
+   },
+   {
+    "cik": 1521332,
+    "name": "Aptiv PLC",
+    "reasons": "COR-T2",
+    "rows": 7,
+    "first": "2015-07-31",
+    "last": "2016-01-31"
+   },
+   {
+    "cik": 1800227,
+    "name": "People Inc",
+    "reasons": "COR-T2",
+    "rows": 7,
+    "first": "2021-08-31",
+    "last": "2022-02-28"
+   },
+   {
+    "cik": 40545,
+    "name": "GENERAL ELECTRIC CO",
+    "reasons": "COR-T2",
+    "rows": 6,
+    "first": "2020-04-30",
+    "last": "2020-09-30"
+   },
+   {
+    "cik": 773840,
+    "name": "HONEYWELL INTERNATIONAL INC",
+    "reasons": "COR-T2",
+    "rows": 6,
+    "first": "2018-07-31",
+    "last": "2019-09-30"
+   },
+   {
+    "cik": 45012,
+    "name": "HALLIBURTON CO",
+    "reasons": "COR-T2",
+    "rows": 4,
+    "first": "2015-10-31",
+    "last": "2016-01-31"
+   },
+   {
+    "cik": 797468,
+    "name": "OCCIDENTAL PETROLEUM CORP /DE/",
+    "reasons": "COR-T2",
+    "rows": 4,
+    "first": "2020-05-31",
+    "last": "2020-08-31"
+   },
+   {
+    "cik": 101829,
+    "name": "RTX Corp",
+    "reasons": "COR-T2",
+    "rows": 3,
+    "first": "2018-04-30",
+    "last": "2018-06-30"
+   },
+   {
+    "cik": 790051,
+    "name": "CARLISLE COMPANIES INC",
+    "reasons": "COR-T2",
+    "rows": 3,
+    "first": "2022-04-30",
+    "last": "2022-06-30"
+   },
+   {
+    "cik": 874499,
+    "name": "GULFPORT ENERGY CORP",
+    "reasons": "COR-T2",
+    "rows": 3,
+    "first": "2021-05-31",
+    "last": "2021-07-31"
+   },
+   {
+    "cik": 1000697,
+    "name": "WATERS CORP /DE/",
+    "reasons": "COR-T2",
+    "rows": 3,
+    "first": "2018-05-31",
+    "last": "2018-07-31"
+   },
+   {
+    "cik": 1501585,
+    "name": "HUNTINGTON INGALLS INDUSTRIES, INC.",
+    "reasons": "COR-T2",
+    "rows": 3,
+    "first": "2018-07-31",
+    "last": "2018-09-30"
+   },
+   {
+    "cik": 732712,
+    "name": "VERIZON COMMUNICATIONS INC",
+    "reasons": "COR-T2",
+    "rows": 2,
+    "first": "2018-05-31",
+    "last": "2018-06-30"
+   },
+   {
+    "cik": 109177,
+    "name": "Spectrum Brands Holdings, Inc.",
+    "reasons": "COR-T2",
+    "rows": 1,
+    "first": "2018-07-31",
+    "last": "2018-07-31"
+   },
+   {
+    "cik": 1466258,
+    "name": "Trane Technologies plc",
+    "reasons": "COR-T2",
+    "rows": 1,
+    "first": "2015-01-31",
+    "last": "2015-01-31"
+   },
+   {
+    "cik": 1551182,
+    "name": "Eaton Corp plc",
+    "reasons": "T0",
+    "rows": 37,
+    "first": "2015-01-31",
+    "last": "2018-01-31"
+   },
+   {
+    "cik": 1681459,
+    "name": "TechnipFMC plc",
+    "reasons": "T0",
+    "rows": 11,
+    "first": "2017-05-31",
+    "last": "2018-03-31"
+   },
+   {
+    "cik": 33213,
+    "name": "EQT Corp",
+    "reasons": "T0",
+    "rows": 6,
+    "first": "2022-04-30",
+    "last": "2022-12-31"
+   },
+   {
+    "cik": 23217,
+    "name": "CONAGRA BRANDS INC.",
+    "reasons": "T1",
+    "rows": 24,
+    "first": "2015-07-31",
+    "last": "2017-06-30"
+   },
+   {
+    "cik": 46080,
+    "name": "HASBRO, INC.",
+    "reasons": "T1",
+    "rows": 20,
+    "first": "2016-04-30",
+    "last": "2018-01-31"
+   },
+   {
+    "cik": 40704,
+    "name": "GENERAL MILLS INC",
+    "reasons": "T1",
+    "rows": 19,
+    "first": "2021-06-30",
+    "last": "2022-12-31"
+   },
+   {
+    "cik": 40533,
+    "name": "GENERAL DYNAMICS CORP",
+    "reasons": "T1",
+    "rows": 7,
+    "first": "2018-07-31",
+    "last": "2019-01-31"
+   },
+   {
+    "cik": 80424,
+    "name": "PROCTER & GAMBLE Co",
+    "reasons": "T1",
+    "rows": 7,
+    "first": "2015-01-31",
+    "last": "2015-07-31"
+   },
+   {
+    "cik": 1163165,
+    "name": "CONOCOPHILLIPS",
+    "reasons": "T1",
+    "rows": 6,
+    "first": "2020-05-31",
+    "last": "2021-07-31"
+   },
+   {
+    "cik": 33213,
+    "name": "EQT Corp",
+    "reasons": "T1",
+    "rows": 4,
+    "first": "2022-03-31",
+    "last": "2022-09-30"
+   },
+   {
+    "cik": 40545,
+    "name": "GENERAL ELECTRIC CO",
+    "reasons": "T1",
+    "rows": 2,
+    "first": "2017-05-31",
+    "last": "2017-06-30"
+   },
+   {
+    "cik": 47111,
+    "name": "HERSHEY CO",
+    "reasons": "T1",
+    "rows": 1,
+    "first": "2015-01-31",
+    "last": "2015-01-31"
+   },
+   {
+    "cik": 23217,
+    "name": "CONAGRA BRANDS INC.",
+    "reasons": "T1+COR-T2",
+    "rows": 6,
+    "first": "2015-01-31",
+    "last": "2015-06-30"
+   },
+   {
+    "cik": 40533,
+    "name": "GENERAL DYNAMICS CORP",
+    "reasons": "T1+T2+COR-T2",
+    "rows": 7,
+    "first": "2017-07-31",
+    "last": "2018-01-31"
+   },
+   {
+    "cik": 1060391,
+    "name": "REPUBLIC SERVICES, INC.",
+    "reasons": "T2",
+    "rows": 36,
+    "first": "2015-04-30",
+    "last": "2022-09-30"
+   },
+   {
+    "cik": 8670,
+    "name": "AUTOMATIC DATA PROCESSING INC",
+    "reasons": "T2",
+    "rows": 18,
+    "first": "2018-11-30",
+    "last": "2020-07-31"
+   },
+   {
+    "cik": 319201,
+    "name": "KLA CORP",
+    "reasons": "T2",
+    "rows": 10,
+    "first": "2018-10-31",
+    "last": "2019-07-31"
+   },
+   {
+    "cik": 1018724,
+    "name": "AMAZON COM INC",
+    "reasons": "T2",
+    "rows": 10,
+    "first": "2018-10-31",
+    "last": "2019-09-30"
+   },
+   {
+    "cik": 1283699,
+    "name": "T-Mobile US, Inc.",
+    "reasons": "T2",
+    "rows": 10,
+    "first": "2017-04-30",
+    "last": "2018-01-31"
+   },
+   {
+    "cik": 40545,
+    "name": "GENERAL ELECTRIC CO",
+    "reasons": "T2",
+    "rows": 9,
+    "first": "2015-05-31",
+    "last": "2016-01-31"
+   },
+   {
+    "cik": 45012,
+    "name": "HALLIBURTON CO",
+    "reasons": "T2",
+    "rows": 9,
+    "first": "2016-05-31",
+    "last": "2017-01-31"
+   },
+   {
+    "cik": 103379,
+    "name": "V F CORP",
+    "reasons": "T2",
+    "rows": 9,
+    "first": "2019-08-31",
+    "last": "2020-04-30"
+   },
+   {
+    "cik": 1090872,
+    "name": "AGILENT TECHNOLOGIES, INC.",
+    "reasons": "T2",
+    "rows": 9,
+    "first": "2018-08-31",
+    "last": "2019-07-31"
+   },
+   {
+    "cik": 1601046,
+    "name": "Keysight Technologies, Inc.",
+    "reasons": "T2",
+    "rows": 9,
+    "first": "2019-03-31",
+    "last": "2019-11-30"
+   },
+   {
+    "cik": 315189,
+    "name": "DEERE & CO",
+    "reasons": "T2",
+    "rows": 8,
+    "first": "2015-02-28",
+    "last": "2018-04-30"
+   },
+   {
+    "cik": 1618756,
+    "name": "Restaurant Brands International Inc.",
+    "reasons": "T2",
+    "rows": 8,
+    "first": "2016-04-30",
+    "last": "2019-07-31"
+   },
+   {
+    "cik": 14272,
+    "name": "BRISTOL MYERS SQUIBB CO",
+    "reasons": "T2",
+    "rows": 7,
+    "first": "2019-07-31",
+    "last": "2020-01-31"
+   },
+   {
+    "cik": 3570,
+    "name": "Cheniere Energy, Inc.",
+    "reasons": "T2",
+    "rows": 6,
+    "first": "2017-08-31",
+    "last": "2018-01-31"
+   },
+   {
+    "cik": 202058,
+    "name": "L3HARRIS TECHNOLOGIES, INC. /DE/",
+    "reasons": "T2",
+    "rows": 3,
+    "first": "2017-05-31",
+    "last": "2017-07-31"
+   },
+   {
+    "cik": 788784,
+    "name": "PUBLIC SERVICE ENTERPRISE GROUP INC",
+    "reasons": "T2",
+    "rows": 3,
+    "first": "2019-07-31",
+    "last": "2019-09-30"
+   },
+   {
+    "cik": 797468,
+    "name": "OCCIDENTAL PETROLEUM CORP /DE/",
+    "reasons": "T2",
+    "rows": 3,
+    "first": "2021-05-31",
+    "last": "2021-07-31"
+   },
+   {
+    "cik": 1506307,
+    "name": "KINDER MORGAN, INC.",
+    "reasons": "T2",
+    "rows": 3,
+    "first": "2015-07-31",
+    "last": "2015-09-30"
+   },
+   {
+    "cik": 779152,
+    "name": "JACK HENRY & ASSOCIATES INC",
+    "reasons": "T2",
+    "rows": 2,
+    "first": "2018-06-30",
+    "last": "2018-07-31"
+   },
+   {
+    "cik": 1423902,
+    "name": "Western Midstream Partners, LP",
+    "reasons": "T2",
+    "rows": 2,
+    "first": "2019-05-31",
+    "last": "2019-06-30"
+   },
+   {
+    "cik": 813762,
+    "name": "ICAHN ENTERPRISES L.P.",
+    "reasons": "T2",
+    "rows": 1,
+    "first": "2015-01-31",
+    "last": "2015-01-31"
+   },
+   {
+    "cik": 1666700,
+    "name": "DuPont de Nemours, Inc.",
+    "reasons": "T2+COR-T2",
+    "rows": 15,
+    "first": "2019-08-31",
+    "last": "2022-01-31"
+   },
+   {
+    "cik": 1090872,
+    "name": "AGILENT TECHNOLOGIES, INC.",
+    "reasons": "T2+COR-T2",
+    "rows": 14,
+    "first": "2015-03-31",
+    "last": "2018-07-31"
+   },
+   {
+    "cik": 47217,
+    "name": "HP INC",
+    "reasons": "T2+COR-T2",
+    "rows": 9,
+    "first": "2016-03-31",
+    "last": "2016-11-30"
+   },
+   {
+    "cik": 59478,
+    "name": "ELI LILLY & Co",
+    "reasons": "T2+COR-T2",
+    "rows": 9,
+    "first": "2019-05-31",
+    "last": "2020-01-31"
+   },
+   {
+    "cik": 1442145,
+    "name": "Verisk Analytics, Inc.",
+    "reasons": "T2+COR-T2",
+    "rows": 9,
+    "first": "2016-05-31",
+    "last": "2017-01-31"
+   },
+   {
+    "cik": 1466258,
+    "name": "Trane Technologies plc",
+    "reasons": "T2+COR-T2",
+    "rows": 9,
+    "first": "2020-05-31",
+    "last": "2021-01-31"
+   },
+   {
+    "cik": 1136869,
+    "name": "ZIMMER BIOMET HOLDINGS, INC.",
+    "reasons": "T2+COR-T2",
+    "rows": 8,
+    "first": "2022-05-31",
+    "last": "2022-12-31"
+   },
+   {
+    "cik": 2969,
+    "name": "Air Products & Chemicals, Inc.",
+    "reasons": "T2+COR-T2",
+    "rows": 7,
+    "first": "2017-04-30",
+    "last": "2017-10-31"
+   },
+   {
+    "cik": 732712,
+    "name": "VERIZON COMMUNICATIONS INC",
+    "reasons": "T2+COR-T2",
+    "rows": 7,
+    "first": "2015-07-31",
+    "last": "2016-01-31"
+   },
+   {
+    "cik": 813762,
+    "name": "ICAHN ENTERPRISES L.P.",
+    "reasons": "T2+COR-T2",
+    "rows": 7,
+    "first": "2018-08-31",
+    "last": "2019-02-28"
+   },
+   {
+    "cik": 1467858,
+    "name": "General Motors Co",
+    "reasons": "T2+COR-T2",
+    "rows": 7,
+    "first": "2017-07-31",
+    "last": "2018-01-31"
+   },
+   {
+    "cik": 31462,
+    "name": "ECOLAB INC.",
+    "reasons": "T2+COR-T2",
+    "rows": 6,
+    "first": "2020-08-31",
+    "last": "2021-01-31"
+   },
+   {
+    "cik": 87347,
+    "name": "SLB LIMITED/NV",
+    "reasons": "T2+COR-T2",
+    "rows": 6,
+    "first": "2016-07-31",
+    "last": "2016-12-31"
+   },
+   {
+    "cik": 310158,
+    "name": "Merck & Co., Inc.",
+    "reasons": "T2+COR-T2",
+    "rows": 6,
+    "first": "2021-08-31",
+    "last": "2022-01-31"
+   },
+   {
+    "cik": 891103,
+    "name": "Match Group, Inc.",
+    "reasons": "T2+COR-T2",
+    "rows": 6,
+    "first": "2020-08-31",
+    "last": "2021-01-31"
+   },
+   {
+    "cik": 1130310,
+    "name": "CENTERPOINT ENERGY INC",
+    "reasons": "T2+COR-T2",
+    "rows": 6,
+    "first": "2020-08-31",
+    "last": "2021-01-31"
+   },
+   {
+    "cik": 1133421,
+    "name": "NORTHROP GRUMMAN CORP /DE/",
+    "reasons": "T2+COR-T2",
+    "rows": 6,
+    "first": "2018-04-30",
+    "last": "2018-09-30"
+   },
+   {
+    "cik": 1645590,
+    "name": "Hewlett Packard Enterprise Co",
+    "reasons": "T2+COR-T2",
+    "rows": 6,
+    "first": "2017-06-30",
+    "last": "2017-11-30"
+   },
+   {
+    "cik": 30554,
+    "name": "EIDP, Inc.",
+    "reasons": "T2+COR-T2",
+    "rows": 4,
+    "first": "2015-10-31",
+    "last": "2016-01-31"
+   },
+   {
+    "cik": 40533,
+    "name": "GENERAL DYNAMICS CORP",
+    "reasons": "T2+COR-T2",
+    "rows": 4,
+    "first": "2015-01-31",
+    "last": "2017-06-30"
+   },
+   {
+    "cik": 101829,
+    "name": "RTX Corp",
+    "reasons": "T2+COR-T2",
+    "rows": 4,
+    "first": "2015-10-31",
+    "last": "2016-01-31"
+   },
+   {
+    "cik": 773840,
+    "name": "HONEYWELL INTERNATIONAL INC",
+    "reasons": "T2+COR-T2",
+    "rows": 4,
+    "first": "2018-10-31",
+    "last": "2019-01-31"
+   },
+   {
+    "cik": 16732,
+    "name": "CAMPBELL'S Co",
+    "reasons": "T2+COR-T2",
+    "rows": 3,
+    "first": "2019-06-30",
+    "last": "2019-08-31"
+   },
+   {
+    "cik": 31791,
+    "name": "REVVITY, INC.",
+    "reasons": "T2+COR-T2",
+    "rows": 3,
+    "first": "2018-08-31",
+    "last": "2019-01-31"
+   },
+   {
+    "cik": 1423902,
+    "name": "Western Midstream Partners, LP",
+    "reasons": "T2+COR-T2",
+    "rows": 3,
+    "first": "2019-07-31",
+    "last": "2019-09-30"
+   },
+   {
+    "cik": 1510295,
+    "name": "Marathon Petroleum Corp",
+    "reasons": "T2+COR-T2",
+    "rows": 3,
+    "first": "2020-11-30",
+    "last": "2021-01-31"
+   },
+   {
+    "cik": 1755672,
+    "name": "Corteva, Inc.",
+    "reasons": "T2+COR-T2",
+    "rows": 3,
+    "first": "2020-05-31",
+    "last": "2020-07-31"
+   },
+   {
+    "cik": 40545,
+    "name": "GENERAL ELECTRIC CO",
+    "reasons": "T2+COR-T2",
+    "rows": 2,
+    "first": "2018-05-31",
+    "last": "2018-06-30"
+   }
+  ],
+  "gp_tag_t2_rows": 171,
+  "gp_tag_t2_companies": 28
+ },
+ "identity": {
+  "foreign_form_rows": 339,
+  "foreign_form_companies": [
+   {
+    "cik": 818686,
+    "name": "TEVA PHARMACEUTICAL INDUSTRIES LTD",
+    "rows": 37,
+    "first": "2015-01-31",
+    "last": "2018-01-31",
+    "ticker": "TEVA",
+    "financial": false,
+    "mcap_bn": 51.2,
+    "ta_bn": 54.26,
+    "ratio": 0.9436062304651706,
+    "review": "plausible: NYSE ADS 1:1, market cap 0.9x assets"
+   },
+   {
+    "cik": 849395,
+    "name": "CRH PUBLIC LTD CO",
+    "rows": 22,
+    "first": "2021-03-31",
+    "last": "2022-12-31",
+    "ticker": "CRH",
+    "financial": false,
+    "mcap_bn": 36.4,
+    "ta_bn": 44.94,
+    "ratio": 0.8105499067755597,
+    "review": "plausible: NYSE listing, market cap 0.8x assets"
+   },
+   {
+    "cik": 1159152,
+    "name": "James Hardie Industries plc",
+    "rows": 30,
+    "first": "2015-01-31",
+    "last": "2022-07-31",
+    "ticker": "JHX",
+    "financial": false,
+    "mcap_bn": 14.9,
+    "ta_bn": 4.03,
+    "ratio": 3.661871331345086,
+    "review": "plausible: market cap 3.7x assets (ADS ratio changed over time; not verified)"
+   },
+   {
+    "cik": 1413447,
+    "name": "NXP Semiconductors N.V.",
+    "rows": 57,
+    "first": "2015-01-31",
+    "last": "2019-09-30",
+    "ticker": "NXPI",
+    "financial": false,
+    "mcap_bn": 32.2,
+    "ta_bn": 24.05,
+    "ratio": 1.5272598225463279,
+    "review": "plausible: Nasdaq common shares, market cap 1.5x assets"
+   },
+   {
+    "cik": 1527762,
+    "name": "Chaince Digital Holdings Inc.",
+    "rows": 7,
+    "first": "2021-02-28",
+    "last": "2021-11-30",
+    "ticker": "CD",
+    "financial": true,
+    "mcap_bn": 15.3,
+    "ta_bn": 0.01,
+    "ratio": 1579.0003500201803,
+    "review": "INVALID units: market cap 1,579x assets, ADS price times ordinary shares (financial, never scored)"
+   },
+   {
+    "cik": 1541157,
+    "name": "Akari Therapeutics Plc",
+    "rows": 2,
+    "first": "2017-03-31",
+    "last": "2017-04-30",
+    "ticker": "AKTX",
+    "financial": false,
+    "mcap_bn": 15.3,
+    "ta_bn": 0.05,
+    "ratio": 334.51306826738426,
+    "review": "INVALID units: market cap 334x assets, ADS price times ordinary shares"
+   },
+   {
+    "cik": 1567094,
+    "name": "CNH Industrial N.V.",
+    "rows": 68,
+    "first": "2015-04-30",
+    "last": "2022-10-31",
+    "ticker": "CNH",
+    "financial": false,
+    "mcap_bn": 13.9,
+    "ta_bn": 48.28,
+    "ratio": 0.29540760204368455,
+    "review": "plausible: NYSE common shares, market cap 0.3x assets"
+   },
+   {
+    "cik": 1594805,
+    "name": "SHOPIFY INC.",
+    "rows": 17,
+    "first": "2021-02-28",
+    "last": "2022-06-30",
+    "ticker": "SHOP",
+    "financial": false,
+    "mcap_bn": 153.4,
+    "ta_bn": 7.76,
+    "ratio": 19.766930359360586,
+    "review": "plausible: NYSE class A shares (diluted count), market cap 20x assets"
+   },
+   {
+    "cik": 1611747,
+    "name": "Scinai Immunotherapeutics Ltd.",
+    "rows": 4,
+    "first": "2020-06-30",
+    "last": "2020-09-30",
+    "ticker": "SCNI",
+    "financial": false,
+    "mcap_bn": 16.3,
+    "ta_bn": NaN,
+    "ratio": NaN,
+    "review": "INVALID units: $16bn market cap for a small biotech with no total assets in the data"
+   },
+   {
+    "cik": 1635327,
+    "name": "Flutter Entertainment plc",
+    "rows": 39,
+    "first": "2018-03-31",
+    "last": "2021-05-31",
+    "ticker": "FLUT",
+    "financial": false,
+    "mcap_bn": 16.3,
+    "ta_bn": 11.27,
+    "ratio": 2.1843318280680672,
+    "review": "INVALID identity: CIK filed as The Stars Group (40-F) in 2018-20, priced with Flutter's FLUT"
+   },
+   {
+    "cik": 1650372,
+    "name": "Atlassian Corp",
+    "rows": 51,
+    "first": "2018-08-31",
+    "last": "2022-10-31",
+    "ticker": "TEAM",
+    "financial": false,
+    "mcap_bn": 44.5,
+    "ta_bn": 2.98,
+    "ratio": 14.150263001609778,
+    "review": "plausible: Nasdaq class A shares (diluted count), market cap 14x assets"
+   },
+   {
+    "cik": 1704292,
+    "name": "Zai Lab Ltd",
+    "rows": 2,
+    "first": "2021-01-31",
+    "last": "2021-02-28",
+    "ticker": "ZLAB",
+    "financial": false,
+    "mcap_bn": 10.5,
+    "ta_bn": 0.36,
+    "ratio": 29.609244778192636,
+    "review": "plausible: Nasdaq ADS, market cap 30x assets (ADS ratio not verified)"
+   },
+   {
+    "cik": 1873875,
+    "name": "Incannex Healthcare Inc.",
+    "rows": 3,
+    "first": "2022-10-31",
+    "last": "2022-12-31",
+    "ticker": "IXHL",
+    "financial": false,
+    "mcap_bn": 20.5,
+    "ta_bn": 0.04,
+    "ratio": 540.4113878203825,
+    "review": "INVALID units: market cap 540x assets, ADS price times ordinary shares"
+   }
+  ],
+  "implausible_over_100x": [
+   {
+    "cik": 1084267,
+    "name": "Mobiquity Technologies, Inc.",
+    "rows": 8,
+    "first": "2018-08-31",
+    "last": "2019-03-31",
+    "financial": false,
+    "ratio_min": 1371.3635340987012
+   },
+   {
+    "cik": 1108205,
+    "name": "CURIS INC",
+    "rows": 4,
+    "first": "2021-01-31",
+    "last": "2021-05-31",
+    "financial": false,
+    "ratio_min": 101.37747260787442
+   },
+   {
+    "cik": 1157075,
+    "name": "PharmaCyte Biotech, Inc.",
+    "rows": 1,
+    "first": "2021-07-31",
+    "last": "2021-07-31",
+    "financial": false,
+    "ratio_min": 3467.2589789806425
+   },
+   {
+    "cik": 1374690,
+    "name": "Larimar Therapeutics, Inc.",
+    "rows": 1,
+    "first": "2015-03-31",
+    "last": "2015-03-31",
+    "financial": false,
+    "ratio_min": 108.62371613936155
+   },
+   {
+    "cik": 1517681,
+    "name": "Propanc Biopharma, Inc.",
+    "rows": 22,
+    "first": "2015-05-31",
+    "last": "2021-01-31",
+    "financial": false,
+    "ratio_min": 6671.704095031169
+   },
+   {
+    "cik": 1527762,
+    "name": "Chaince Digital Holdings Inc.",
+    "rows": 7,
+    "first": "2021-02-28",
+    "last": "2021-11-30",
+    "financial": true,
+    "ratio_min": 972.9468491548702
+   },
+   {
+    "cik": 1540684,
+    "name": "Atlas Lithium Corp",
+    "rows": 41,
+    "first": "2015-01-31",
+    "last": "2022-10-31",
+    "financial": false,
+    "ratio_min": 8149.076271163674
+   },
+   {
+    "cik": 1541157,
+    "name": "Akari Therapeutics Plc",
+    "rows": 14,
+    "first": "2015-11-30",
+    "last": "2017-04-30",
+    "financial": false,
+    "ratio_min": 143.6898237665711
+   },
+   {
+    "cik": 1613103,
+    "name": "Medtronic plc",
+    "rows": 4,
+    "first": "2015-02-28",
+    "last": "2015-05-31",
+    "financial": false,
+    "ratio_min": 2306439.5803878517
+   },
+   {
+    "cik": 1650101,
+    "name": "ADDENTAX GROUP CORP.",
+    "rows": 1,
+    "first": "2022-08-31",
+    "last": "2022-08-31",
+    "financial": false,
+    "ratio_min": 13156.047223687963
+   },
+   {
+    "cik": 1651308,
+    "name": "BeOne Medicines Ltd.",
+    "rows": 4,
+    "first": "2017-09-30",
+    "last": "2018-04-30",
+    "financial": false,
+    "ratio_min": 101.30213281340066
+   },
+   {
+    "cik": 1688126,
+    "name": "Crypto Co",
+    "rows": 1,
+    "first": "2017-12-31",
+    "last": "2017-12-31",
+    "financial": false,
+    "ratio_min": 3023.051320411049
+   },
+   {
+    "cik": 1707925,
+    "name": "LINDE PLC",
+    "rows": 4,
+    "first": "2018-11-30",
+    "last": "2019-02-28",
+    "financial": false,
+    "ratio_min": 9629.437274847616
+   },
+   {
+    "cik": 1784970,
+    "name": "Next Technology Holding Inc.",
+    "rows": 6,
+    "first": "2022-07-31",
+    "last": "2022-12-31",
+    "financial": false,
+    "ratio_min": 266.17547729761117
+   },
+   {
+    "cik": 1873875,
+    "name": "Incannex Healthcare Inc.",
+    "rows": 3,
+    "first": "2022-10-31",
+    "last": "2022-12-31",
+    "financial": false,
+    "ratio_min": 382.10905227952725
+   }
+  ],
+  "genuine_max_ratio_seen": 54.016389733149275,
+  "between_25x_and_100x": [
+   {
+    "cik": 1261333,
+    "name": "DOCUSIGN, INC.",
+    "rows": 2,
+    "ratio_max": 25.278898063597428
+   },
+   {
+    "cik": 1713683,
+    "name": "Zscaler, Inc.",
+    "rows": 1,
+    "ratio_max": 25.420380680315755
+   },
+   {
+    "cik": 1511737,
+    "name": "Ubiquiti Inc.",
+    "rows": 2,
+    "ratio_max": 25.720163943434265
+   },
+   {
+    "cik": 1831097,
+    "name": "agilon health, inc.",
+    "rows": 2,
+    "ratio_max": 27.62199882098398
+   },
+   {
+    "cik": 1647639,
+    "name": "Upstart Holdings, Inc.",
+    "rows": 2,
+    "ratio_max": 27.68593172504524
+   },
+   {
+    "cik": 1561550,
+    "name": "Datadog, Inc.",
+    "rows": 4,
+    "ratio_max": 28.84472787859802
+   },
+   {
+    "cik": 1811210,
+    "name": "Lucid Group, Inc.",
+    "rows": 1,
+    "ratio_max": 28.896613763211874
+   },
+   {
+    "cik": 1655210,
+    "name": "BEYOND MEAT, INC.",
+    "rows": 2,
+    "ratio_max": 29.782899626844497
+   },
+   {
+    "cik": 1477720,
+    "name": "Asana, Inc.",
+    "rows": 1,
+    "ratio_max": 30.725362753157167
+   },
+   {
+    "cik": 1704292,
+    "name": "Zai Lab Ltd",
+    "rows": 2,
+    "ratio_max": 30.817333787317576
+   },
+   {
+    "cik": 906709,
+    "name": "NEKTAR THERAPEUTICS",
+    "rows": 3,
+    "ratio_max": 33.603482738832646
+   },
+   {
+    "cik": 1650372,
+    "name": "Atlassian Corp",
+    "rows": 7,
+    "ratio_max": 38.83602101796454
+   },
+   {
+    "cik": 1645113,
+    "name": "NovoCure Ltd",
+    "rows": 4,
+    "ratio_max": 40.86540949912155
+   },
+   {
+    "cik": 1477333,
+    "name": "Cloudflare, Inc.",
+    "rows": 3,
+    "ratio_max": 41.35839940944404
+   },
+   {
+    "cik": 1585521,
+    "name": "Zoom Communications, Inc.",
+    "rows": 12,
+    "ratio_max": 54.016389733149275
+   },
+   {
+    "cik": 1374690,
+    "name": "Larimar Therapeutics, Inc.",
+    "rows": 8,
+    "ratio_max": 85.34132835819919
+   },
+   {
+    "cik": 1108205,
+    "name": "CURIS INC",
+    "rows": 6,
+    "ratio_max": 96.89966904745594
+   },
+   {
+    "cik": 1651308,
+    "name": "BeOne Medicines Ltd.",
+    "rows": 73,
+    "ratio_max": 97.09214175843907
+   }
+  ],
+  "options": {
+   "A_broad_foreign_form": {
+    "rows": 339,
+    "companies": 13,
+    "invalid_found_removed": [
+     1527762,
+     1541157,
+     1611747,
+     1635327,
+     1873875
+    ],
+    "plausible_removed": [
+     818686,
+     849395,
+     1159152,
+     1413447,
+     1567094,
+     1594805,
+     1650372,
+     1704292
+    ],
+    "other_companies_removed": []
+   },
+   "B_cik_1635327_only": {
+    "rows": 39,
+    "companies": 1,
+    "invalid_found_removed": [
+     1635327
+    ],
+    "plausible_removed": [],
+    "other_companies_removed": []
+   },
+   "C_cik_1635327_plus_mcap_over_100x_assets": {
+    "rows": 160,
+    "companies": 16,
+    "invalid_found_removed": [
+     1527762,
+     1541157,
+     1635327,
+     1873875
+    ],
+    "plausible_removed": [],
+    "other_companies_removed": [
+     1084267,
+     1108205,
+     1157075,
+     1374690,
+     1517681,
+     1540684,
+     1613103,
+     1650101,
+     1651308,
+     1688126,
+     1707925,
+     1784970
+    ]
+   }
+  }
+ },
+ "named": {
+  "General Mills": {
+   "cik": 40704,
+   "eligible_rows": 96,
+   "first": "2015-01-31",
+   "last": "2022-12-31",
+   "s2a_paths": {
+    "fallback": 96
+   },
+   "blocked": {
+    "T1": 19
+   },
+   "foreign_form_rows": 0
+  },
+  "Eaton": {
+   "cik": 1551182,
+   "eligible_rows": 96,
+   "first": "2015-01-31",
+   "last": "2022-12-31",
+   "s2a_paths": {
+    "fallback": 96
+   },
+   "blocked": {
+    "T0": 37
+   },
+   "foreign_form_rows": 0
+  },
+  "Procter & Gamble": {
+   "cik": 80424,
+   "eligible_rows": 96,
+   "first": "2015-01-31",
+   "last": "2022-12-31",
+   "s2a_paths": {
+    "fallback": 96
+   },
+   "blocked": {
+    "T1": 7
+   },
+   "foreign_form_rows": 0
+  },
+  "Flutter (CIK of The Stars Group)": {
+   "cik": 1635327,
+   "eligible_rows": 39,
+   "first": "2018-03-31",
+   "last": "2021-05-31",
+   "s2a_paths": {
+    "none": 30,
+    "gross_profit_tag": 9
+   },
+   "blocked": {},
+   "foreign_form_rows": 39
+  }
+ }
+}

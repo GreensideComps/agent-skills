@@ -32,3 +32,94 @@ The owner also set these conditions:
   unregistered or repeated look.
 - **Untouched by this work:** the monthly signal log, the real ISA, the trading configuration and the account
   holdings.
+
+## 2026-10-15 08:17 UTC: merge approval and Phase B scope
+
+| # | Decision |
+|---|---|
+| D7 | **PR #18 merged** (merge commit 9527e6e). The approval covers Phase A governance, integrity checks and research controls **only**. It does not establish that any signal has an edge, and it authorises no confirmation run, demo allocation, or change to the real ISA, holdings or trading configuration. |
+| D8 | **Phase B is authorised for step B1 only:** permitted point-in-time execution-price data and an FX fallback, with integrity checks and a strict cutoff at 2022-12. No signal exploration until the data pipeline is validated and the owner has seen the B1 report. |
+| D9 | **The gates stay:** synthetic backtester validation, Stage 2 reproduction, an owner-reviewed validation report, and registration of each exploration trial before it runs. No confirmation run is authorised. |
+
+## 2026-10-15 18:24 UTC: B3 accepted; B4 report requested
+
+| # | Decision |
+|---|---|
+| D10 | **B3 is accepted as reproduced.** The NFE discrepancy is documented and the negative-price safeguard is retained (details below). |
+| D11 | **Next step: prepare the B4 validation report for review.** It must distinguish reproduction success from validation of the engine for investable research, and list the remaining blockers. Nothing beyond the report is authorised (details below). |
+
+**D10 in full:**
+
+1. **The original Stage 2 reproduction is accepted.** All 15 published results were reproduced by the original code on the frozen exploration-period dataset.
+2. **The new-engine discrepancy is accepted as explained.** It comes from NFE's invalid negative adjusted prices; the largest annual-result difference reported is 0.021 percentage points.
+3. **The safeguard stays and the frozen reproduction stands.**
+   - Negative-price trading is not permitted to force agreement.
+   - No rerun with NFE excluded is to replace the frozen reproduction.
+4. **Next-day execution results stay separate from the reproduction.**
+   - S5a's +0.55% annual net result is exploratory only.
+   - It is not an approved investment signal.
+5. **The stated limitations are preserved:**
+   - survivorship bias;
+   - historical data defects;
+   - the original Stage 2 look-ahead assumptions.
+
+Report: `equity/reports/research/edge/b3_reproduction.md`. Spec: `B3_STAGE2_SPEC.md`.
+
+**D11 in full.** The owner's separate approval is required before any of the following:
+
+- starting B5;
+- registering or running a new signal experiment;
+- running a confirmation test;
+- allocating to the demo strategy;
+- changing the real ISA, holdings or trading configuration.
+
+`backtester_validated` is recorded only by the owner.
+
+## 2026-10-16 10:12 UTC: backtester validated for exploration only; pre-B5 preparation
+
+| # | Decision |
+|---|---|
+| D12 | **`backtester_validated` is recorded, limited strictly to exploratory research under the limitations in `B4_VALIDATION_REPORT.md` §5.** Machine-readable record: `research/edge/status.json`. |
+| D13 | **Survivorship-free prices are not feasible on free data** (`SURVIVORSHIP_FEASIBILITY.md`). The limitation is accepted for exploratory research only, on the conditions in that note's §4. |
+| D14 | **Before B5:** prepare the real-data hand-check plan, frozen and registered H1 and S2a specifications, and exploratory thresholds with the multiple-testing treatment set in advance. Return them for review. **Stop before running H1 or S2a.** |
+
+**D12 scope in full.** The status does **not**:
+
+- establish that any strategy is investable;
+- fully validate the strategy's real-data portfolio settings (that needs the B5 hand-check);
+- prove an edge;
+- authorise confirmation testing;
+- authorise demo allocation.
+
+The holdout restrictions are unchanged. `edge_split.holdout_gate` still needs a batch, a pre-registration commit and
+the owner's approval of that batch; the flag alone opens nothing.
+
+**D14 in full.** The two trials stay exploratory. The holdout restrictions stay. No confirmation test, no demo
+allocation. The real ISA, holdings and trading configuration remain unchanged. Documents:
+`B5_PREREGISTRATION.md`, `B5_HANDCHECK_PLAN.md`, `SURVIVORSHIP_FEASIBILITY.md`.
+
+## 2026-10-16 11:53 UTC: pre-B5 review
+
+| # | Decision |
+|---|---|
+| D15 | **Approved:** the fixed placebo-score hand-check, the preparatory engineering and the synthetic tests. **Not approved:** running H1 or S2a. No H1 or S2a return, NAV or ranking may be computed. B5 execution needs separate approval. No confirmation test, demo allocation or real ISA, holdings or trading-configuration change. |
+
+**D15 requirements before returning for trial approval:**
+
+1. the exact H1 definition, frozen before any result;
+2. the exact DSR calculation, with N reconciled to the registry;
+3. every report states that the −100% stress does not address companies missing from the universe;
+4. TTM checks 1-3 done, and the effect of the open independent-source check stated;
+5. costs reconciled across the main run and the robustness runs;
+6. trial controls confirmed.
+
+Response: `B5_PREREGISTRATION.md` version 2, `research/edge_b5.py`, `equity/reports/research/edge/ttm_checks.md`,
+`equity/reports/research/edge/b5_handcheck.md`.
+
+## 2026-10-16 13:34 UTC: round 3 reviewed; trial run still not authorised
+
+| # | Decision |
+|---|---|
+| D16 | **H1 period alignment approved in principle:** operating cash flow and capex must share one fresh TTM period end, otherwise H1 is unavailable. No alignment. (Already implemented: `edge_b5_inputs.fcf_inputs`, `align=False`.) |
+| D17 | **S2a staleness approved in principle:** gross profit older than 183 days is never used; the revenue fallback only when its inputs pass the frozen validity rules (`B5_PREREGISTRATION_ADDENDUM_2.md` §1, draft). |
+| D18 | **Not yet approved:** the revenue-tag rule (document and freeze without inspecting performance), the blanket 20-F/40-F exclusion (investigate an identity rule, else compare it with the CIK-specific option on input evidence), and the run script (not to be written until the data rules are resolved and the addendum frozen). N = 100, the registered DSR definition and the open check 4 are kept. No E2 label, confirmation batch, holdout access, demo allocation or live-account change. PR #19 not merged. |

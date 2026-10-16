@@ -230,9 +230,33 @@ def test_dsr_floor_applies_with_too_few_comparable_results(tmp_path):
 
 def test_committed_registry_dsr_inputs_reconcile():
     ev = edge_registry.load()
-    assert edge_registry.n_trials(ev) == 96
+    # 96 after PR #18 + B5 version 1 (2, superseded, never run, still counted) + B5 version 2 (2): D14, D15
+    assert edge_registry.n_trials(ev) == 100
+    done = {e["id"] for e in ev if e.get("event") == "result"}
+    b5 = {"B5-H1-FCFPS-ACCEL", "B5-S2A-GP-12M", "B5-H1-FCFPS-ACCEL-V2", "B5-S2A-GP-12M-V2"}
+    assert not b5 & done   # registered, not run (owner: no H1 or S2a run without separate approval)
     assert len(edge_registry.sharpe_list(ev, edge_registry.LEGACY_STAT)) == 15   # Stage 2's top-quintile Sharpes
     assert edge_registry.sharpe_list(ev, "portfolio_excess_vs_vwrp") == []      # none yet: Phase B adds them
+
+
+def test_b5_v2_spec_is_frozen_at_its_registered_hash():
+    """The registry records the sha256 of B5_PREREGISTRATION.md v2; any later edit to the spec fails here."""
+    import hashlib
+    spec = Path(__file__).resolve().parents[2] / "docs" / "edge" / "B5_PREREGISTRATION.md"
+    reg = edge_registry.registered(edge_registry.load())
+    for tid in ("B5-H1-FCFPS-ACCEL-V2", "B5-S2A-GP-12M-V2"):
+        assert reg[tid]["spec_sha256"] == hashlib.sha256(spec.read_bytes()).hexdigest()
+
+
+def test_b5_addendum_1_is_frozen_at_its_registered_hash_and_does_not_change_n():
+    """ADDENDUM_1 is registered (not counted) with its sha256; any later edit fails here, and N stays 100."""
+    import hashlib
+    spec = Path(__file__).resolve().parents[2] / "docs" / "edge" / "B5_PREREGISTRATION_ADDENDUM_1.md"
+    ev = edge_registry.load()
+    a = edge_registry.registered(ev)["B5-V2-ADDENDUM-1"]
+    assert a["spec_sha256"] == hashlib.sha256(spec.read_bytes()).hexdigest()
+    assert a["counts_for_dsr"] is False and set(a["amends"]) == {"B5-H1-FCFPS-ACCEL-V2", "B5-S2A-GP-12M-V2"}
+    assert edge_registry.n_trials(ev) == 100
 
 
 def test_exposures_are_recorded_but_never_counted(tmp_path):
@@ -250,6 +274,9 @@ def test_report_must_open_with_standing_limitations():
     ok = "# Backtest\n\n" + edge_rules.STANDING_LIMITATIONS + "\nResults..."
     assert edge_rules.require_disclosure(ok) == ok
     assert "Survivorship bias" in edge_rules.STANDING_LIMITATIONS
+    # owner, 2026-10-16: every report must say the -100% stress does not reach companies missing from the universe
+    assert "do not address companies missing from the universe" in edge_rules.STANDING_LIMITATIONS
+    assert "not evidence that survivorship bias is bounded" in edge_rules.STANDING_LIMITATIONS
     with pytest.raises(ValueError):
         edge_rules.require_disclosure("# Backtest\n\nResults first.\n\n" + edge_rules.STANDING_LIMITATIONS)
     with pytest.raises(ValueError):
