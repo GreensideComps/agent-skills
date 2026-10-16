@@ -59,6 +59,21 @@ def test_foreign_form_rows_have_no_h1_score():
         assert math.isnan(at(f, b5.h1_score(f), "2015-06-30"))
 
 
+def test_identity_rule_options_a_b_c():
+    """ADDENDUM_2 §3: A drops foreign-form rows, B drops CIK 1635327 only, C drops CIK 1635327 and any row with a
+    market cap above 100 x total assets. Default is A until the owner chooses."""
+    df = pd.DataFrame({"cik": [1635327, 1, 2, 3, 4], "foreign_form": [True, True, False, False, None],
+                       "mcap": [16e9, 15e9, 20e9, 30e9, None], "total_assets": [11e9, 0.05e9, 0.1e9, 0.3e9, 5e9]})
+    assert b5.IDENTITY_RULE == "A"
+    assert b5.identity_ok(df).tolist() == [False, False, True, True, False]
+    assert b5.identity_ok(df, "B").tolist() == [False, True, True, True, True]
+    assert b5.identity_ok(df, "C").tolist() == [False, False, False, True, True]  # 300x and 200x out; exactly 100x kept
+    with pytest.raises(ValueError):
+        b5.identity_ok(df, "D")
+    with pytest.raises(KeyError):
+        b5.identity_ok(df.drop(columns="mcap"), "C")  # fails closed: the input C needs is missing
+
+
 def test_score_matches_a_hand_calculation():
     df = company(fps=lambda y: 1.0 + 0.05 * y * y, assets=2000.0)
     s = b5.h1_score(df)
@@ -146,7 +161,7 @@ def test_s2a_profitability_uses_only_fresh_periods():
                       "gp_end": ["2016-03-31", None, "2015-09-30"], "revenue": [np.nan, 1000.0, np.nan],
                       "cost_of_revenue": [np.nan, 600.0, np.nan], "rev_end": [None, "2016-03-31", None],
                       "cor_end": [None, "2016-03-31", None], "total_assets": [1000.0, 2000.0, 1000.0],
-                      "rev_conflict": [False] * 3, "foreign_form": [False] * 3})
+                      "rev_conflict": [False] * 3, "cor_restated": [False] * 3, "foreign_form": [False] * 3})
     v = b5.s2a_profitability(f)
     assert v.iloc[0] == pytest.approx(0.3) and v.iloc[1] == pytest.approx(0.2) and math.isnan(v.iloc[2])
 

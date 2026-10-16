@@ -115,3 +115,11 @@ allocation. The real ISA, holdings and trading configuration remain unchanged. D
 
 Response: `B5_PREREGISTRATION.md` version 2, `research/edge_b5.py`, `equity/reports/research/edge/ttm_checks.md`,
 `equity/reports/research/edge/b5_handcheck.md`.
+
+## 2026-10-16 13:34 UTC: round 3 reviewed; trial run still not authorised
+
+| # | Decision |
+|---|---|
+| D16 | **H1 period alignment approved in principle:** operating cash flow and capex must share one fresh TTM period end, otherwise H1 is unavailable. No alignment. (Already implemented: `edge_b5_inputs.fcf_inputs`, `align=False`.) |
+| D17 | **S2a staleness approved in principle:** gross profit older than 183 days is never used; the revenue fallback only when its inputs pass the frozen validity rules (`B5_PREREGISTRATION_ADDENDUM_2.md` §1, draft). |
+| D18 | **Not yet approved:** the revenue-tag rule (document and freeze without inspecting performance), the blanket 20-F/40-F exclusion (investigate an identity rule, else compare it with the CIK-specific option on input evidence), and the run script (not to be written until the data rules are resolved and the addendum frozen). N = 100, the registered DSR definition and the open check 4 are kept. No E2 label, confirmation batch, holdout access, demo allocation or live-account change. PR #19 not merged. |

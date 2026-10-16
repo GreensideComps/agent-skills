@@ -19,16 +19,17 @@ from equity import panel  # noqa: E402
 import edge_b5 as b5  # noqa: E402
 import edge_b5_inputs as bi  # noqa: E402
 
-CONCEPTS = {"revenue": ["Revenues", "RevenueFromContractWithCustomerExcludingAssessedTax", "SalesRevenueNet"],
+CONCEPTS = {"revenue": ["Revenues", "RevenueFromContractWithCustomerExcludingAssessedTax",
+                        "RevenueFromContractWithCustomerIncludingAssessedTax", "SalesRevenueNet"],
             "ocf": ["NetCashProvidedByUsedInOperatingActivities"], "capex": ["PaymentsToAcquirePropertyPlantAndEquipment"],
             "gross_profit": ["GrossProfit"], "cost_of_revenue": ["CostOfRevenue"], "total_assets": ["Assets"]}
 
 
-def fact(metric, start, end, val, filed, concept=None, form="10-K"):
+def fact(metric, start, end, val, filed, concept=None, form="10-K", accn=None):
     concept = concept or CONCEPTS[metric][0]
     return {"cik": 1, "metric": metric, "rank": CONCEPTS[metric].index(concept), "taxonomy": "us-gaap",
             "concept": concept, "unit": "USD", "start": start, "end": end, "val": float(val), "filed": filed,
-            "form": form, "fp": "", "accn": ""}
+            "form": form, "fp": "", "accn": accn if accn is not None else f"A-{filed}"}  # one accession per filing date
 
 
 def year_and_ytd(metric, fy_val, ytd_val, prior_ytd_val, concept=None, ytd_filed="2016-08-05"):
@@ -88,7 +89,7 @@ def test_loader_output_feeds_h1_and_a_mismatched_row_has_no_score():
 
 def s2a_row(**kw):
     base = {"month": "2016-08-31", "gross_profit": 300.0, "gp_end": "2016-06-30", "revenue": 1000.0,
-            "cost_of_revenue": 600.0, "rev_end": "2016-06-30", "cor_end": "2016-06-30", "rev_conflict": False,
+            "cost_of_revenue": 600.0, "rev_end": "2016-06-30", "cor_end": "2016-06-30", "rev_conflict": False, "cor_restated": False,
             "foreign_form": False, "total_assets": 1000.0}
     base.update(kw)
     return pd.DataFrame([base])
@@ -179,3 +180,69 @@ def test_company_month_returns_every_input_with_its_own_end():
     assert c["rev_conflict"] is True and c["foreign_form"] is False
     row = pd.DataFrame([{**c, "month": "2016-08-31", "total_assets": 50_000.0}])
     assert math.isnan(b5.s2a_profitability(row).iloc[0])  # GP stale (244 days), fallback conflicts: no score
+
+
+# ---------- ADDENDUM_2 §1-§2: the three revenue tests and the restated-period test ----------
+
+def test_t1_compares_only_concepts_from_the_same_filing():
+    """A larger value of another concept for the same period counts only when the same filing reported it."""
+    rows = [fact("revenue", "2015-01-01", "2015-12-31", 2_000, "2016-02-20", "Revenues"),
+            fact("revenue", "2015-01-01", "2015-12-31", 18_000, "2016-02-20", "SalesRevenueNet")]
+    sel = bi.ttm_input(rows, "2016-03-31")
+    assert bi.revenue_check(rows, "2016-03-31", sel)["reasons"] == ["T1"]
+    other_filing = [rows[0], fact("revenue", "2015-01-01", "2015-12-31", 18_000, "2016-03-01", "SalesRevenueNet",
+                                  accn="AMENDED")]
+    # an annual figure in a different filing is not a concept conflict (and a lone fiscal year cannot mix bases)
+    assert bi.revenue_check(other_filing, "2016-03-31", bi.ttm_input(other_filing, "2016-03-31"))["reasons"] == []
+
+
+def test_t1_ignores_revenue_including_assessed_taxes():
+    rows = [fact("revenue", "2015-01-01", "2015-12-31", 10_000, "2016-02-20", "Revenues"),
+            fact("revenue", "2015-01-01", "2015-12-31", 13_000, "2016-02-20",
+                 "RevenueFromContractWithCustomerIncludingAssessedTax")]  # excise taxes: a legitimate difference
+    assert bi.revenue_check(rows, "2016-03-31", bi.ttm_input(rows, "2016-03-31"))["conflict"] is False
+
+
+def spin_off(fy_recast_prior_year: bool, concept_after="Revenues"):
+    """FY2015 annual report (old basis: 100), then a spin-off: the 2016 10-Q reports H1 2016 = 30 and recasts
+    H1 2015 from 50 to 25. If `fy_recast_prior_year`, the FY2015 report itself already recast FY2014 (the
+    separation happened before it), so FY2015 is on the new basis too."""
+    rows = [fact("revenue", "2015-01-01", "2015-12-31", 100 if not fy_recast_prior_year else 50, "2016-02-20"),
+            fact("revenue", "2014-01-01", "2014-12-31", 95 if not fy_recast_prior_year else 48, "2016-02-20"),
+            fact("revenue", "2014-01-01", "2014-12-31", 95, "2015-02-20", accn="FY14"),
+            fact("revenue", "2015-01-01", "2015-06-30", 50, "2015-08-05", form="10-Q"),
+            fact("revenue", "2016-01-01", "2016-06-30", 30, "2016-08-05", concept_after, "10-Q"),
+            fact("revenue", "2015-01-01", "2015-06-30", 25, "2016-08-05", concept_after, "10-Q")]
+    return rows
+
+
+def test_t2_flags_a_ttm_that_mixes_an_old_basis_year_with_recast_quarters():
+    rows = spin_off(fy_recast_prior_year=False)
+    sel = bi.ttm_input(rows, "2016-08-31")
+    assert sel["val"] == 100 + 30 - 25  # 105: old-basis year plus new-basis change
+    r = bi.restated_check(rows, "2016-08-31", sel)
+    assert r["restated"] and r["worst_ratio"] == pytest.approx(2.0)
+    assert bi.revenue_check(rows, "2016-08-31", sel)["reasons"] == ["T2"]
+    assert not bi.restated_check(rows, "2016-03-31", bi.ttm_input(rows, "2016-03-31"))["restated"]  # before the recast
+
+
+def test_t2_does_not_flag_when_the_year_is_already_on_the_new_basis():
+    rows = spin_off(fy_recast_prior_year=True)
+    sel = bi.ttm_input(rows, "2016-08-31")
+    assert sel["val"] == 50 + 30 - 25 and not bi.restated_check(rows, "2016-08-31", sel)["restated"]
+
+
+def test_t2_sees_a_recast_that_changes_the_concept():
+    rows = spin_off(fy_recast_prior_year=False, concept_after="RevenueFromContractWithCustomerExcludingAssessedTax")
+    assert bi.restated_check(rows, "2016-08-31", bi.ttm_input(rows, "2016-08-31"))["restated"]
+
+
+def test_t0_non_positive_revenue_fails():
+    rows = [fact("revenue", "2015-01-01", "2015-12-31", 0, "2016-02-20")]
+    assert bi.revenue_check(rows, "2016-03-31", bi.ttm_input(rows, "2016-03-31"))["reasons"] == ["T0"]
+
+
+def test_restated_cost_of_revenue_blocks_the_fallback_but_not_the_gross_profit_tag():
+    assert math.isnan(b5.s2a_profitability(s2a_row(gross_profit=np.nan, cor_restated=True)).iloc[0])
+    assert b5.s2a_profitability(s2a_row(cor_restated=True)).iloc[0] == pytest.approx(0.3)
+    assert math.isnan(b5.s2a_profitability(s2a_row(gross_profit=np.nan, cor_restated=None)).iloc[0])

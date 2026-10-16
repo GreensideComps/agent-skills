@@ -87,26 +87,91 @@ def fcf_inputs(ocf_rows: list[dict], capex_rows: list[dict], as_of: str, align: 
     return none
 
 
-def revenue_check(rev_rows: list[dict], as_of: str, sel: dict | None) -> dict:
-    """ADDENDUM_1 §1: is the selected TTM revenue the largest listed concept for each of its periods?
+# Revenue concepts compared by the concept test (fundamentals.CONCEPTS / IFRS_CONCEPTS "revenue", any rank). Left
+# out: RevenueFromContractWithCustomerIncludingAssessedTax, which by definition adds taxes collected for
+# governments (excise, gross-receipts) and so legitimately exceeds the others.
+CONCEPT_TEST_EXCLUDED = {"RevenueFromContractWithCustomerIncludingAssessedTax"}
 
-    For every period the TTM combined, the largest value any listed revenue concept reported for exactly that
-    (start, end), as known on `as_of`, is compared with the selected concept's value. A gap above REV_CONFLICT
-    marks the revenue as conflicting. Reads facts only; never chooses a different concept."""
+
+def _chosen(rows: list[dict], as_of: str) -> dict:
+    return {(r["start"], r["end"]): r for r in panel.known(rows, as_of)}
+
+
+def _ratio(a: float, b: float) -> float:
+    a, b = abs(a), abs(b)
+    return float("inf") if min(a, b) == 0 else max(a, b) / min(a, b)
+
+
+def restated_check(rows: list[dict], as_of: str, sel: dict | None) -> dict:
+    """ADDENDUM_2 §2 (test T2): does a fy + ytd - prior_ytd TTM mix two accounting bases?
+
+    The prior-year year-to-date period is taken from the latest filing, which may have recast it (a disposal,
+    spin-off or restatement), while the fiscal year comes from the older annual report. The TTM is flagged when
+    both hold, using filings on or before `as_of` only:
+
+    1. the prior-year year-to-date value used differs by more than REV_CONFLICT (either direction) from another
+       filing's value for exactly that period, under any listed concept of the metric (a recast often changes the
+       concept, and the best-ranked concept may then be the stale, pre-recast one; CONCEPT_TEST_EXCLUDED left
+       out) - the period was recast; and
+    2. the annual report that supplied the fiscal year did NOT itself recast its prior-year comparative by more
+       than REV_CONFLICT against that year's original value (so the fiscal year is still on the old basis).
+
+    A TTM that is a single fiscal year (`basis` "fy") is never flagged. Returns {restated, worst_ratio}."""
+    none = {"restated": False, "worst_ratio": None}
+    if sel is None or sel["basis"] == "fy":
+        return none
+    best = _chosen(rows, as_of)
+    fy, prev = best.get(sel["periods"][0]), best.get(sel["periods"][2])
+    if fy is None or prev is None:
+        return none
+    known = [r for r in rows if r["filed"] <= as_of and r["start"] and r["concept"] not in CONCEPT_TEST_EXCLUDED]
+    others = [r for r in known if (r["start"], r["end"]) == (prev["start"], prev["end"]) and r["accn"] != prev["accn"]]
+    recast = max((_ratio(r["val"], prev["val"]) for r in others), default=1.0)
+    if recast <= 1 + REV_CONFLICT:
+        return {"restated": False, "worst_ratio": recast}
+    # did the fiscal year's own annual report recast the year before it?
+    same_filing_prior = [r for r in known if r["accn"] == fy["accn"] and r["end"] < fy["end"]
+                         and 350 <= panel._days(r["start"], r["end"]) <= 380]
+    fy_on_new_basis = False
+    for c in same_filing_prior:
+        orig = [r for r in known if (r["start"], r["end"]) == (c["start"], c["end"]) and r["filed"] < c["filed"]]
+        if orig and _ratio(min(orig, key=lambda r: r["filed"])["val"], c["val"]) > 1 + REV_CONFLICT:
+            fy_on_new_basis = True
+    return {"restated": not fy_on_new_basis, "worst_ratio": recast}
+
+
+def revenue_check(rev_rows: list[dict], as_of: str, sel: dict | None) -> dict:
+    """ADDENDUM_2 §1: is the selected TTM revenue usable for S2a's fallback? Three tests, input facts only:
+
+    T0  the value used for any combined period is <= 0;
+    T1  concept conflict: in the SAME filing (accession) that supplied the value used for a period, another listed
+        revenue concept (CONCEPT_TEST_EXCLUDED left out) reports more than (1 + REV_CONFLICT) x that value for
+        exactly the same period, in USD. This finds a partial line item ranked first;
+    T2  restated period (`restated_check`).
+
+    Any test failing sets `conflict`. The rule never picks a different concept; it only refuses an inconsistent
+    one. `reasons` lists the tests that failed."""
     if sel is None:
-        return {"conflict": False, "worst_ratio": None}
-    known = [r for r in rev_rows if r["filed"] <= as_of and r["start"]]
-    worst = 1.0
-    best = {(r["start"], r["end"]): r for r in panel.known(rev_rows, as_of)}
+        return {"conflict": False, "worst_ratio": None, "reasons": []}
+    best = _chosen(rev_rows, as_of)
+    reasons, worst = [], 1.0
     for per in sel["periods"]:
-        chosen = best.get(per)
-        vals = [r["val"] for r in known if (r["start"], r["end"]) == per]
-        if chosen is None or not vals:
+        ch = best.get(per)
+        if ch is None:
             continue
-        if chosen["val"] <= 0:
-            return {"conflict": True, "worst_ratio": float("inf")}
-        worst = max(worst, max(vals) / chosen["val"])
-    return {"conflict": worst > 1 + REV_CONFLICT, "worst_ratio": worst}
+        if ch["val"] <= 0:
+            reasons.append("T0")
+            worst = float("inf")
+            continue
+        same = [r["val"] for r in rev_rows if (r["start"], r["end"]) == per and r["accn"] == ch["accn"]
+                and r["filed"] <= as_of and r["concept"] not in CONCEPT_TEST_EXCLUDED]
+        if same:
+            worst = max(worst, max(same) / ch["val"])
+    if worst > 1 + REV_CONFLICT and "T0" not in reasons:
+        reasons.append("T1")
+    if restated_check(rev_rows, as_of, sel)["restated"]:
+        reasons.append("T2")
+    return {"conflict": bool(reasons), "worst_ratio": worst, "reasons": reasons}
 
 
 FOREIGN_FORMS = {"20-F", "20-F/A", "40-F", "40-F/A"}
@@ -129,7 +194,10 @@ def company_month(fx: dict[str, list[dict]], as_of: str, align: bool = False) ->
         out[m] = t and t["val"]
         out[f"{key}_end"] = t and t["end"]
         out[f"{key}_concepts"] = t and t["concepts"]
+        out[f"{key}_restated"] = restated_check(g(m), as_of, t)["restated"]
         if m == "revenue":
             rc = revenue_check(g("revenue"), as_of, t)
-            out["rev_conflict"], out["rev_ratio"] = rc["conflict"], rc["worst_ratio"]
+            out["rev_conflict"], out["rev_ratio"], out["rev_reasons"] = rc["conflict"], rc["worst_ratio"], rc["reasons"]
+    for m in ("ocf", "capex"):  # reported for ADDENDUM_2 §2's open decision; not applied to H1
+        out[f"{m}_restated"] = restated_check(g(m), as_of, ttm_input(g(m), as_of))["restated"]
     return out
