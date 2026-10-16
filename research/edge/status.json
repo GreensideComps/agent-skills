@@ -4,7 +4,11 @@
     "recorded": "2026-10-16",
     "owner_decision": "D12, owner message 2026-10-16 10:12Z",
     "scope": "exploratory research only, under the limitations in docs/edge/B4_VALIDATION_REPORT.md section 5",
-    "does_not_establish": ["investability", "full validation of real-data portfolio settings", "an edge"],
+    "does_not_establish": [
+      "investability",
+      "full validation of real-data portfolio settings",
+      "an edge"
+    ],
     "authorises_confirmation": false,
     "authorises_demo_allocation": false
   },
@@ -13,5 +17,16 @@
     "recorded": "2026-10-16",
     "owner_decision": "D13",
     "scope": "exploratory research only; confirmation, E3, demo allocation and real money need a new owner decision"
+  },
+  "ttm_check4_independent_source": {
+    "complete": false,
+    "recorded": "2026-10-16",
+    "owner_decision": "owner message 2026-10-16 13:03Z, item 6; B5_PREREGISTRATION_ADDENDUM_1.md section 6",
+    "blocks": [
+      "any E2 label (edge_b5.verdict)",
+      "any confirmation pre-registration (edge_registry.append refuses a batch event)"
+    ],
+    "to_complete": "independent-source verification of each trial's inputs (H1: operating cash flow, capex, total assets; S2a: gross profit, revenue, cost of revenue, total assets), reviewed and recorded by the owner",
+    "note": "passing the exploratory gates is not evidence that survivorship bias is bounded or that an investable edge exists"
   }
 }

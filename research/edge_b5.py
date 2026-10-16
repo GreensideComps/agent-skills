@@ -1,4 +1,5 @@
-"""B5 trial building blocks, frozen in docs/edge/B5_PREREGISTRATION.md (version 2). Nothing here reads data.
+"""B5 trial building blocks, frozen in docs/edge/B5_PREREGISTRATION.md (version 2) as amended by
+docs/edge/B5_PREREGISTRATION_ADDENDUM_1.md. Nothing here reads data.
 
 Owner, 2026-10-16 11:53Z: preparatory engineering and synthetic tests are approved; running H1 or S2a is not.
 This module defines the scores, the tranche combination, the placebo score for the hand-check and the frozen
@@ -8,7 +9,9 @@ approved.
 from __future__ import annotations
 
 import hashlib
+import json
 import math
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -34,6 +37,18 @@ GATES = {  # P1-P11; every one must hold for "E2 candidate"
     "P1_t": 3.0, "P1_s2a_nonoverlap_t": 2.0, "P2_dsr": 0.80, "P3_alpha_t": 2.0,
 }
 LEAD_T = 2.0
+STATUS = Path(__file__).resolve().parent / "edge" / "status.json"
+E2_BLOCKED_LABEL = "gates passed; E2 label withheld (TTM check 4 open)"
+
+
+def check4_complete(path: Path = STATUS) -> bool:
+    """ADDENDUM_1 §6: the independent-source check (TTM check 4) is recorded complete only by the owner. Until then
+    no result may carry the E2 label and no confirmation batch may be registered. A missing or unreadable status
+    counts as open."""
+    try:
+        return json.loads(path.read_text())["ttm_check4_independent_source"]["complete"] is True
+    except (OSError, KeyError, TypeError, ValueError):
+        return False
 
 
 # ---------- shared ----------
@@ -53,6 +68,12 @@ def _days(a: pd.Series, b: pd.Series) -> pd.Series:
     return (pd.to_datetime(b) - pd.to_datetime(a)).dt.days
 
 
+def _domestic(df: pd.DataFrame) -> pd.Series:
+    """ADDENDUM_1 §3: rows whose latest balance sheet came from a 10-K or 10-Q. Fails closed: a missing column
+    raises, and a missing value (no balance sheet known) counts as not domestic."""
+    return df["foreign_form"].map(lambda v: v is False or v == 0).astype(bool)
+
+
 # ---------- H1 ----------
 
 def split_factor(close_raw: pd.Series, adjclose: pd.Series, close_raw_12: pd.Series, adjclose_12: pd.Series
@@ -69,14 +90,15 @@ def h1_velocity(df: pd.DataFrame) -> pd.DataFrame:
     row's values are as known at its own month-end; the t-12 values are the row of t-12, as filed then).
 
     Required columns: cik, month, ocf, capex, fcf_end (common TTM period end of ocf and capex, None if they
-    differ or either is missing), shares_out, shares_diluted, total_assets, close_raw, adjclose."""
+    differ or either is missing: `edge_b5_inputs.fcf_inputs`), shares_out, shares_diluted, total_assets,
+    close_raw, adjclose, foreign_form (ADDENDUM_1 §3; True or missing makes the row unavailable)."""
     d = df.sort_values(["cik", "month"]).reset_index(drop=True).copy()
     d["month"] = pd.to_datetime(d["month"])
     d["p"] = d["month"].dt.to_period("M")
     d["sh"] = mcap_shares(d)
     d["fcf"] = (d["ocf"] - d["capex"]).where(d["ocf"].notna() & d["capex"].notna() & d["fcf_end"].notna())
     fresh = _days(d["fcf_end"], d["month"]).between(0, FRESH_DAYS)
-    d["fcf"] = d["fcf"].where(fresh)
+    d["fcf"] = d["fcf"].where(fresh & _domestic(d))
     for c in ("fcf", "sh", "close_raw", "adjclose", "fcf_end"):
         d[f"{c}_12"] = _lag(d, c, 12)
     d["s"] = split_factor(d["close_raw"], d["adjclose"], d["close_raw_12"], d["adjclose_12"])
@@ -106,13 +128,18 @@ def h1_score(df: pd.DataFrame) -> pd.Series:
 def s2a_profitability(df: pd.DataFrame) -> pd.Series:
     """Stage 2's gross profitability with v2's point-in-time rule: gross profit (or revenue - cost of revenue)
     only when its own TTM period end is at most 183 days before the month-end, divided by total assets (> 0).
-    Required columns: month, gross_profit, gp_end, revenue, cost_of_revenue, rev_end, cor_end, total_assets."""
+    A stale gross profit is never used; the row falls back to revenue - cost of revenue only if those are fresh.
+    ADDENDUM_1 §1: the fallback is unavailable when the revenue concept conflicts (`rev_conflict`, from
+    `edge_b5_inputs.revenue_check`); §3: foreign-form rows are unavailable.
+    Required columns: month, gross_profit, gp_end, revenue, cost_of_revenue, rev_end, cor_end, rev_conflict,
+    foreign_form, total_assets. A missing `rev_conflict` value counts as a conflict (fail closed)."""
     m = pd.to_datetime(df["month"])
     gp_ok = df["gross_profit"].notna() & _days(df["gp_end"], m).between(0, FRESH_DAYS)
+    no_conflict = df["rev_conflict"].map(lambda v: v is False or v == 0).astype(bool)
     alt_ok = (df["revenue"].notna() & df["cost_of_revenue"].notna() & (df["rev_end"] == df["cor_end"])
-              & _days(df["rev_end"], m).between(0, FRESH_DAYS))
+              & _days(df["rev_end"], m).between(0, FRESH_DAYS) & no_conflict)
     gp = df["gross_profit"].where(gp_ok, (df["revenue"] - df["cost_of_revenue"]).where(alt_ok))
-    return (gp / df["total_assets"].where(df["total_assets"] > 0))
+    return (gp / df["total_assets"].where(df["total_assets"] > 0)).where(_domestic(df))
 
 
 def s2a_score(frame: pd.DataFrame) -> pd.Series:
@@ -157,9 +184,13 @@ def newey_west_t(x: pd.Series, lags: int) -> float:
     return float(x.mean() / math.sqrt(s / n)) if s > 0 else float("nan")
 
 
-def verdict(r: dict) -> dict:
+def verdict(r: dict, status: Path = STATUS) -> dict:
     """Frozen P1-P11 decision. `r` holds the primary statistics and every robustness result. Robustness results
-    can only veto: none of them is ever used in place of the primary. Missing inputs fail closed."""
+    can only veto: none of them is ever used in place of the primary. Missing inputs fail closed.
+
+    ADDENDUM_1 §6: while TTM check 4 is open, a result passing every gate is labelled E2_BLOCKED_LABEL, never
+    "E2 candidate". Passing the gates is not evidence that survivorship bias is bounded or that an investable edge
+    exists."""
     def pos(k):
         v = r.get(k)
         return v is not None and math.isfinite(v) and v > 0
@@ -176,9 +207,9 @@ def verdict(r: dict) -> dict:
         "P11": pos("excess_without_top_contributor"),
     }
     if all(checks.values()):
-        label = "E2 candidate"
+        label = "E2 candidate" if check4_complete(status) else E2_BLOCKED_LABEL
     elif math.isfinite(t) and LEAD_T <= t < GATES["P1_t"] and all(v for k, v in checks.items() if k not in ("P1", "P2")):
         label = "lead, not a pass"
     else:
         label = "fail"
-    return {"checks": checks, "label": label}
+    return {"checks": checks, "label": label, "check4_complete": check4_complete(status)}

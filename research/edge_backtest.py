@@ -61,6 +61,9 @@ class Config:
     # "top_n" (the programme's portfolio) or "stage2_top_quintile" (Stage 2's rule: qcut of rank(method="first")
     # into deciles, keep deciles 8-9, rows in input order; B3 reproduction and comparison only)
     selection: str = "top_n"
+    # (cik, decision month-end) pairs that may not be bought new at that decision (held names are kept): the
+    # B1-SENS-DATA-ERRORS robustness rule (gate P8). Empty in every primary run.
+    no_buy: frozenset = frozenset()
 
     def cap(self) -> int | None:
         if self.select_all or self.sector_cap == 0:
@@ -76,6 +79,9 @@ class Result:
     holdings: dict = field(default_factory=dict)  # decision month -> {cik: weight}
     turnover: dict = field(default_factory=dict)  # decision month -> one-way turnover (sum |dw| / 2)
     costs: dict = field(default_factory=dict)  # decision month -> cost as a fraction of NAV
+    # cik -> sum over holding periods of (gain in USD over the period / NAV at the period's start); the period ends
+    # at the next rebalance, an exit or the last valuation. Used to find the largest contributor (gate P11).
+    contrib: dict = field(default_factory=dict)
 
 
 def cost_rate(band: str | None, mult: float = 1.0) -> float:
@@ -240,6 +246,7 @@ def run(panel: pd.DataFrame, exec_rows: pd.DataFrame, fx: pd.Series, cfg: Config
     cash = 1.0
     res = Result(nav_usd=pd.Series(dtype=float), nav_gbp=pd.Series(dtype=float))
     nav0_gbp = None
+    nav_start = 1.0  # NAV after costs at the last rebalance (the base of each period's contributions)
     for m in months:
         d = trade_dates[m]
         # 1. value holdings at d; close any whose price went missing
@@ -249,6 +256,7 @@ def run(panel: pd.DataFrame, exec_rows: pd.DataFrame, fx: pd.Series, cfg: Config
             r, status = edge_rules.holding_return(series, p["entry"], d, cfg.missing_return)
             v = p["value0"] * (1 + r)
             if status == "missing":
+                res.contrib[c] = res.contrib.get(c, 0.0) + (v - p["value0"]) / nav_start
                 cash += v
                 res.log.append({"date": d, "event": "exit", "cik": c, "reason": "missing or invalid price",
                                 "return": r})
@@ -256,12 +264,13 @@ def run(panel: pd.DataFrame, exec_rows: pd.DataFrame, fx: pd.Series, cfg: Config
             else:
                 values[c] = v
         nav = cash + sum(values.values())
+        current = values
         if m in rebal:
             frame = edge_rules.decision_frame(panel, m)
             frame = frame[frame["month"] == m]
             ranked = eligible(frame, cfg)
             ok_d = entry_ok.loc[d] if d in entry_ok.index else pd.Series(dtype=bool)
-            buyable = {c for c in ranked["cik"] if c in ok_d.index and bool(ok_d[c])}
+            buyable = {c for c in ranked["cik"] if c in ok_d.index and bool(ok_d[c]) and (c, m) not in cfg.no_buy}
             if cfg.selection == "stage2_top_quintile" and not cfg.select_all:
                 top = stage2_top_quintile(frame, cfg)
                 chosen = [c for c in top if c in pos or c in buyable]
@@ -288,9 +297,13 @@ def run(panel: pd.DataFrame, exec_rows: pd.DataFrame, fx: pd.Series, cfg: Config
             res.turnover[m] = sum(dw.values()) / 2
             res.costs[m] = cost
             res.holdings[m] = dict(w_t)
+            for c, v in values.items():  # close the period of every name held into this rebalance
+                res.contrib[c] = res.contrib.get(c, 0.0) + (v - pos[c]["value0"]) / nav_start
+            nav_start = nav_after
             pos = {c: {"entry": d, "value0": nav_after * w, "band": band.get(c) or pos.get(c, {}).get("band")}
                    for c, w in w_t.items()}
             cash = nav_after * (1 - sum(w_t.values()))
+            current = {c: p["value0"] for c, p in pos.items()}
             nav = nav_after
             if not w_t:
                 res.log.append({"date": d, "event": "all_cash", "reason": "no eligible names"})
@@ -299,6 +312,8 @@ def run(panel: pd.DataFrame, exec_rows: pd.DataFrame, fx: pd.Series, cfg: Config
         res.nav_usd.loc[d] = nav
         g = nav / rate_on_or_before(fx, d)
         res.nav_gbp.loc[d] = g
+    for c, p in pos.items():  # periods still open at the last valuation
+        res.contrib[c] = res.contrib.get(c, 0.0) + (current[c] - p["value0"]) / nav_start
     if res.nav_gbp.size:
         base = res.nav_gbp.iloc[0]
         res.nav_gbp = res.nav_gbp / base

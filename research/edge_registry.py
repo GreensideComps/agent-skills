@@ -125,9 +125,23 @@ def validate(path: Path = PATH) -> list[str]:
     return problems
 
 
-def append(event: dict, path: Path = PATH) -> dict:
+STATUS = Path(__file__).resolve().parent / "edge" / "status.json"
+
+
+def check4_complete(status: Path = STATUS) -> bool:
+    """B5 ADDENDUM_1 §6: TTM check 4 (independent source) recorded complete by the owner. Missing counts as open."""
+    try:
+        return json.loads(status.read_text())["ttm_check4_independent_source"]["complete"] is True
+    except (OSError, KeyError, TypeError, ValueError):
+        return False
+
+
+def append(event: dict, path: Path = PATH, status: Path = STATUS) -> dict:
     """Append one event, chaining it to the last line. Refuses if the file is already invalid or the result
-    would be invalid; the file is left untouched in that case."""
+    would be invalid; the file is left untouched in that case. Refuses a confirmation batch while TTM check 4 is
+    open (B5 ADDENDUM_1 §6)."""
+    if event.get("event") == "batch" and not check4_complete(status):
+        raise ValueError("confirmation pre-registration refused: TTM check 4 (independent source) is open")
     problems = validate(path) if path.exists() else []
     if problems:
         raise ValueError(f"registry invalid before append: {problems}")

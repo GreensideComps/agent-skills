@@ -248,6 +248,17 @@ def test_b5_v2_spec_is_frozen_at_its_registered_hash():
         assert reg[tid]["spec_sha256"] == hashlib.sha256(spec.read_bytes()).hexdigest()
 
 
+def test_b5_addendum_1_is_frozen_at_its_registered_hash_and_does_not_change_n():
+    """ADDENDUM_1 is registered (not counted) with its sha256; any later edit fails here, and N stays 100."""
+    import hashlib
+    spec = Path(__file__).resolve().parents[2] / "docs" / "edge" / "B5_PREREGISTRATION_ADDENDUM_1.md"
+    ev = edge_registry.load()
+    a = edge_registry.registered(ev)["B5-V2-ADDENDUM-1"]
+    assert a["spec_sha256"] == hashlib.sha256(spec.read_bytes()).hexdigest()
+    assert a["counts_for_dsr"] is False and set(a["amends"]) == {"B5-H1-FCFPS-ACCEL-V2", "B5-S2A-GP-12M-V2"}
+    assert edge_registry.n_trials(ev) == 100
+
+
 def test_exposures_are_recorded_but_never_counted(tmp_path):
     p = tmp_path / "t.jsonl"
     e = {**_reg("X1"), "kind": "exposure", "touched_holdout": True, "counts_for_dsr": False}

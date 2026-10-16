@@ -1,0 +1,547 @@
+{
+ "run": "2026-10-16",
+ "rows": 43511,
+ "nonfinancial_rows": 34624,
+ "companies": 781,
+ "h1": {
+  "both_present": 40217,
+  "mismatched_ends": 1546,
+  "mismatched_nonfinancial": 593,
+  "alignment_would_recover_fresh": 132
+ },
+ "s2a": {
+  "paths_nonfinancial": {
+   "gross_profit_tag": 14687,
+   "fallback": 10084,
+   "none": 9853
+  },
+  "gp_stale_nonfinancial": 2587,
+  "gp_stale_then_fallback": 1855,
+  "gp_stale_then_none": 732,
+  "fallback_conflict_rows": 439,
+  "fallback_conflict_companies": 44,
+  "ratio_distribution": {
+   "(0.0, 1.0]": 9117,
+   "(1.0, 1.05]": 404,
+   "(1.05, 1.1]": 124,
+   "(1.1, 1.25]": 171,
+   "(1.25, 1.5]": 61,
+   "(1.5, 2.0]": 50,
+   "(2.0, inf]": 157
+  },
+  "conflicts": [
+   {
+    "cik": 1551182,
+    "name": "Eaton Corp plc",
+    "rows": 37,
+    "first": "2015-01-31",
+    "last": "2018-01-31",
+    "worst_ratio": Infinity
+   },
+   {
+    "cik": 23217,
+    "name": "CONAGRA BRANDS INC.",
+    "rows": 33,
+    "first": "2015-01-31",
+    "last": "2017-12-31",
+    "worst_ratio": 8.332842105263158
+   },
+   {
+    "cik": 40545,
+    "name": "GENERAL ELECTRIC CO",
+    "rows": 24,
+    "first": "2015-07-31",
+    "last": "2020-09-30",
+    "worst_ratio": 9.651646447140381
+   },
+   {
+    "cik": 46080,
+    "name": "HASBRO, INC.",
+    "rows": 20,
+    "first": "2016-04-30",
+    "last": "2018-01-31",
+    "worst_ratio": 2.3338883200910656
+   },
+   {
+    "cik": 40704,
+    "name": "GENERAL MILLS INC",
+    "rows": 19,
+    "first": "2021-06-30",
+    "last": "2022-12-31",
+    "worst_ratio": 8.898842711896172
+   },
+   {
+    "cik": 1666700,
+    "name": "DuPont de Nemours, Inc.",
+    "rows": 16,
+    "first": "2019-08-31",
+    "last": "2022-12-31",
+    "worst_ratio": 3.9946743495722017
+   },
+   {
+    "cik": 40533,
+    "name": "GENERAL DYNAMICS CORP",
+    "rows": 14,
+    "first": "2017-07-31",
+    "last": "2019-01-31",
+    "worst_ratio": 1.812648848901826
+   },
+   {
+    "cik": 16732,
+    "name": "CAMPBELL'S Co",
+    "rows": 12,
+    "first": "2019-06-30",
+    "last": "2020-08-31",
+    "worst_ratio": 1.2361682670324645
+   },
+   {
+    "cik": 1681459,
+    "name": "TechnipFMC plc",
+    "rows": 11,
+    "first": "2017-05-31",
+    "last": "2018-03-31",
+    "worst_ratio": Infinity
+   },
+   {
+    "cik": 80424,
+    "name": "PROCTER & GAMBLE Co",
+    "rows": 10,
+    "first": "2015-01-31",
+    "last": "2015-12-31",
+    "worst_ratio": 2.8252380952380953
+   },
+   {
+    "cik": 33213,
+    "name": "EQT Corp",
+    "rows": 10,
+    "first": "2022-03-31",
+    "last": "2022-12-31",
+    "worst_ratio": Infinity
+   },
+   {
+    "cik": 1466258,
+    "name": "Trane Technologies plc",
+    "rows": 10,
+    "first": "2015-01-31",
+    "last": "2021-01-31",
+    "worst_ratio": 1.2754217640974426
+   },
+   {
+    "cik": 1467858,
+    "name": "General Motors Co",
+    "rows": 10,
+    "first": "2017-07-31",
+    "last": "2018-06-30",
+    "worst_ratio": 1.1312234548786204
+   },
+   {
+    "cik": 202058,
+    "name": "L3HARRIS TECHNOLOGIES, INC. /DE/",
+    "rows": 10,
+    "first": "2017-05-31",
+    "last": "2018-04-30",
+    "worst_ratio": 1.2475891455483292
+   },
+   {
+    "cik": 1645590,
+    "name": "Hewlett Packard Enterprise Co",
+    "rows": 9,
+    "first": "2017-06-30",
+    "last": "2018-05-31",
+    "worst_ratio": 1.6527093596059113
+   },
+   {
+    "cik": 47217,
+    "name": "HP INC",
+    "rows": 9,
+    "first": "2016-03-31",
+    "last": "2016-11-30",
+    "worst_ratio": 1.9807893461234278
+   },
+   {
+    "cik": 31462,
+    "name": "ECOLAB INC.",
+    "rows": 9,
+    "first": "2020-08-31",
+    "last": "2021-07-31",
+    "worst_ratio": 1.1921625258459418
+   },
+   {
+    "cik": 1442145,
+    "name": "Verisk Analytics, Inc.",
+    "rows": 9,
+    "first": "2016-05-31",
+    "last": "2017-01-31",
+    "worst_ratio": 1.1954342129573008
+   },
+   {
+    "cik": 1510295,
+    "name": "Marathon Petroleum Corp",
+    "rows": 9,
+    "first": "2020-11-30",
+    "last": "2021-10-31",
+    "worst_ratio": 1.1697723771039856
+   },
+   {
+    "cik": 59478,
+    "name": "ELI LILLY & Co",
+    "rows": 9,
+    "first": "2019-05-31",
+    "last": "2020-01-31",
+    "worst_ratio": 1.1483137918530157
+   },
+   {
+    "cik": 891103,
+    "name": "Match Group, Inc.",
+    "rows": 9,
+    "first": "2020-08-31",
+    "last": "2021-07-31",
+    "worst_ratio": 2.3815767329664097
+   },
+   {
+    "cik": 1090872,
+    "name": "AGILENT TECHNOLOGIES, INC.",
+    "rows": 9,
+    "first": "2015-03-31",
+    "last": "2015-11-30",
+    "worst_ratio": 1.7224625623960066
+   },
+   {
+    "cik": 103379,
+    "name": "V F CORP",
+    "rows": 9,
+    "first": "2019-10-31",
+    "last": "2020-09-30",
+    "worst_ratio": 1.2499768039913937
+   },
+   {
+    "cik": 51434,
+    "name": "INTERNATIONAL PAPER CO /NEW/",
+    "rows": 9,
+    "first": "2022-04-30",
+    "last": "2022-12-31",
+    "worst_ratio": 1.1725942539784258
+   },
+   {
+    "cik": 78003,
+    "name": "PFIZER INC",
+    "rows": 9,
+    "first": "2021-05-31",
+    "last": "2022-01-31",
+    "worst_ratio": 1.1946157316889758
+   },
+   {
+    "cik": 310158,
+    "name": "Merck & Co., Inc.",
+    "rows": 9,
+    "first": "2021-08-31",
+    "last": "2022-07-31",
+    "worst_ratio": 1.1674049182831832
+   },
+   {
+    "cik": 1136869,
+    "name": "ZIMMER BIOMET HOLDINGS, INC.",
+    "rows": 8,
+    "first": "2022-05-31",
+    "last": "2022-12-31",
+    "worst_ratio": 1.1536155863619333
+   },
+   {
+    "cik": 8670,
+    "name": "AUTOMATIC DATA PROCESSING INC",
+    "rows": 7,
+    "first": "2015-01-31",
+    "last": "2015-07-31",
+    "worst_ratio": 1.2022015241320914
+   },
+   {
+    "cik": 32604,
+    "name": "EMERSON ELECTRIC CO",
+    "rows": 7,
+    "first": "2017-04-30",
+    "last": "2017-10-31",
+    "worst_ratio": 1.412346418939167
+   },
+   {
+    "cik": 1800,
+    "name": "ABBOTT LABORATORIES",
+    "rows": 7,
+    "first": "2015-01-31",
+    "last": "2015-10-31",
+    "worst_ratio": 1.105856655057024
+   },
+   {
+    "cik": 2969,
+    "name": "Air Products & Chemicals, Inc.",
+    "rows": 7,
+    "first": "2017-04-30",
+    "last": "2017-10-31",
+    "worst_ratio": 1.27044726710086
+   },
+   {
+    "cik": 1521332,
+    "name": "Aptiv PLC",
+    "rows": 7,
+    "first": "2018-07-31",
+    "last": "2019-01-31",
+    "worst_ratio": 1.3704997882253283
+   },
+   {
+    "cik": 813762,
+    "name": "ICAHN ENTERPRISES L.P.",
+    "rows": 7,
+    "first": "2018-08-31",
+    "last": "2019-02-28",
+    "worst_ratio": 1.6270821367030441
+   },
+   {
+    "cik": 101829,
+    "name": "RTX Corp",
+    "rows": 7,
+    "first": "2015-10-31",
+    "last": "2016-09-30",
+    "worst_ratio": 1.1207828518173346
+   },
+   {
+    "cik": 93556,
+    "name": "STANLEY BLACK & DECKER, INC.",
+    "rows": 6,
+    "first": "2022-07-31",
+    "last": "2022-12-31",
+    "worst_ratio": 1.130098275197149
+   },
+   {
+    "cik": 1013871,
+    "name": "NRG ENERGY, INC.",
+    "rows": 6,
+    "first": "2018-05-31",
+    "last": "2019-10-31",
+    "worst_ratio": 1.1805125939019
+   },
+   {
+    "cik": 1163165,
+    "name": "CONOCOPHILLIPS",
+    "rows": 6,
+    "first": "2020-05-31",
+    "last": "2021-07-31",
+    "worst_ratio": 1.279983371440449
+   },
+   {
+    "cik": 1130310,
+    "name": "CENTERPOINT ENERGY INC",
+    "rows": 6,
+    "first": "2020-08-31",
+    "last": "2021-01-31",
+    "worst_ratio": 1.6358881875563571
+   },
+   {
+    "cik": 788784,
+    "name": "PUBLIC SERVICE ENTERPRISE GROUP INC",
+    "rows": 3,
+    "first": "2019-07-31",
+    "last": "2019-09-30",
+    "worst_ratio": 2.3978174603174605
+   },
+   {
+    "cik": 1090012,
+    "name": "DEVON ENERGY CORP/DE",
+    "rows": 3,
+    "first": "2019-05-31",
+    "last": "2019-07-31",
+    "worst_ratio": 1.7333939945404913
+   },
+   {
+    "cik": 1570585,
+    "name": "Liberty Global Ltd.",
+    "rows": 3,
+    "first": "2019-05-31",
+    "last": "2019-07-31",
+    "worst_ratio": 1.3566508895054676
+   },
+   {
+    "cik": 1755672,
+    "name": "Corteva, Inc.",
+    "rows": 3,
+    "first": "2020-05-31",
+    "last": "2020-07-31",
+    "worst_ratio": 1.8515901060070672
+   },
+   {
+    "cik": 109177,
+    "name": "Spectrum Brands Holdings, Inc.",
+    "rows": 1,
+    "first": "2018-07-31",
+    "last": "2018-07-31",
+    "worst_ratio": 1.769287342796205
+   },
+   {
+    "cik": 47111,
+    "name": "HERSHEY CO",
+    "rows": 1,
+    "first": "2015-01-31",
+    "last": "2015-01-31",
+    "worst_ratio": 3.9700438888888887
+   }
+  ]
+ },
+ "foreign_form": {
+  "rows": 339,
+  "companies": [
+   {
+    "cik": 818686,
+    "name": "TEVA PHARMACEUTICAL INDUSTRIES LTD",
+    "rows": 37,
+    "first": "2015-01-31",
+    "last": "2018-01-31",
+    "financial": false
+   },
+   {
+    "cik": 849395,
+    "name": "CRH PUBLIC LTD CO",
+    "rows": 22,
+    "first": "2021-03-31",
+    "last": "2022-12-31",
+    "financial": false
+   },
+   {
+    "cik": 1159152,
+    "name": "James Hardie Industries plc",
+    "rows": 30,
+    "first": "2015-01-31",
+    "last": "2022-07-31",
+    "financial": false
+   },
+   {
+    "cik": 1413447,
+    "name": "NXP Semiconductors N.V.",
+    "rows": 57,
+    "first": "2015-01-31",
+    "last": "2019-09-30",
+    "financial": false
+   },
+   {
+    "cik": 1527762,
+    "name": "Chaince Digital Holdings Inc.",
+    "rows": 7,
+    "first": "2021-02-28",
+    "last": "2021-11-30",
+    "financial": true
+   },
+   {
+    "cik": 1541157,
+    "name": "Akari Therapeutics Plc",
+    "rows": 2,
+    "first": "2017-03-31",
+    "last": "2017-04-30",
+    "financial": false
+   },
+   {
+    "cik": 1567094,
+    "name": "CNH Industrial N.V.",
+    "rows": 68,
+    "first": "2015-04-30",
+    "last": "2022-10-31",
+    "financial": false
+   },
+   {
+    "cik": 1594805,
+    "name": "SHOPIFY INC.",
+    "rows": 17,
+    "first": "2021-02-28",
+    "last": "2022-06-30",
+    "financial": false
+   },
+   {
+    "cik": 1611747,
+    "name": "Scinai Immunotherapeutics Ltd.",
+    "rows": 4,
+    "first": "2020-06-30",
+    "last": "2020-09-30",
+    "financial": false
+   },
+   {
+    "cik": 1635327,
+    "name": "Flutter Entertainment plc",
+    "rows": 39,
+    "first": "2018-03-31",
+    "last": "2021-05-31",
+    "financial": false
+   },
+   {
+    "cik": 1650372,
+    "name": "Atlassian Corp",
+    "rows": 51,
+    "first": "2018-08-31",
+    "last": "2022-10-31",
+    "financial": false
+   },
+   {
+    "cik": 1704292,
+    "name": "Zai Lab Ltd",
+    "rows": 2,
+    "first": "2021-01-31",
+    "last": "2021-02-28",
+    "financial": false
+   },
+   {
+    "cik": 1873875,
+    "name": "Incannex Healthcare Inc.",
+    "rows": 3,
+    "first": "2022-10-31",
+    "last": "2022-12-31",
+    "financial": false
+   }
+  ]
+ },
+ "named": {
+  "General Mills": {
+   "cik": 40704,
+   "eligible_rows": 96,
+   "first": "2015-01-31",
+   "last": "2022-12-31",
+   "s2a_paths": {
+    "fallback": 96
+   },
+   "fallback_conflict_rows": 19,
+   "conflict_months": "2021-06-30 to 2022-12-31",
+   "foreign_form_rows": 0
+  },
+  "Eaton": {
+   "cik": 1551182,
+   "eligible_rows": 96,
+   "first": "2015-01-31",
+   "last": "2022-12-31",
+   "s2a_paths": {
+    "fallback": 96
+   },
+   "fallback_conflict_rows": 37,
+   "conflict_months": "2015-01-31 to 2018-01-31",
+   "foreign_form_rows": 0
+  },
+  "Procter & Gamble": {
+   "cik": 80424,
+   "eligible_rows": 96,
+   "first": "2015-01-31",
+   "last": "2022-12-31",
+   "s2a_paths": {
+    "fallback": 96
+   },
+   "fallback_conflict_rows": 10,
+   "conflict_months": "2015-01-31 to 2015-12-31",
+   "foreign_form_rows": 0
+  },
+  "Flutter (CIK of The Stars Group)": {
+   "cik": 1635327,
+   "eligible_rows": 39,
+   "first": "2018-03-31",
+   "last": "2021-05-31",
+   "s2a_paths": {
+    "none": 30,
+    "gross_profit_tag": 9
+   },
+   "fallback_conflict_rows": 0,
+   "conflict_months": null,
+   "foreign_form_rows": 39
+  }
+ }
+}

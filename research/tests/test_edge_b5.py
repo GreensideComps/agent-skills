@@ -29,7 +29,7 @@ def company(cik=1, fps=lambda yrs: 1.0 + 0.0 * yrs, shares=lambda m: 100.0, asse
         rows.append({"cik": cik, "month": m, "ocf": fcf + 10.0, "capex": 10.0, "fcf_end": str(q_end.date()),
                      "shares_out": sh * split, "shares_diluted": sh * split, "total_assets": assets,
                      "close_raw": price / split, "adjclose": price / 2.0 * (1 + div_drift) ** ((m - MONTHS[0]).days / 365.25),
-                     "financial": financial})
+                     "financial": financial, "foreign_form": False})
     return pd.DataFrame(rows)
 
 
@@ -44,6 +44,19 @@ def test_constant_growth_scores_zero_acceleration_positive_deceleration_negative
     assert at(lin, b5.h1_score(lin)) == pytest.approx(0.0, abs=1e-12)
     assert at(acc, b5.h1_score(acc)) > 0
     assert at(dec, b5.h1_score(dec)) < 0
+
+
+def test_foreign_form_rows_have_no_h1_score():
+    """ADDENDUM_1 §3: a row whose latest balance sheet came from a 20-F/40-F, or whose form is unknown, has no G;
+    so neither it nor a score that needs it 12 months later exists."""
+    acc = company(fps=lambda y: 1.0 + 0.05 * y * y)
+    assert not math.isnan(at(acc, b5.h1_score(acc)))
+    for flag in (True, None):
+        f = acc.copy()
+        f["foreign_form"] = f["foreign_form"].astype(object)
+        f.loc[f["month"] == pd.Timestamp("2015-06-30"), "foreign_form"] = flag
+        assert math.isnan(at(f, b5.h1_score(f)))  # G at t-12 missing
+        assert math.isnan(at(f, b5.h1_score(f), "2015-06-30"))
 
 
 def test_score_matches_a_hand_calculation():
@@ -132,7 +145,8 @@ def test_s2a_profitability_uses_only_fresh_periods():
     f = pd.DataFrame({"month": ["2016-06-30"] * 3, "gross_profit": [300.0, np.nan, 300.0],
                       "gp_end": ["2016-03-31", None, "2015-09-30"], "revenue": [np.nan, 1000.0, np.nan],
                       "cost_of_revenue": [np.nan, 600.0, np.nan], "rev_end": [None, "2016-03-31", None],
-                      "cor_end": [None, "2016-03-31", None], "total_assets": [1000.0, 2000.0, 1000.0]})
+                      "cor_end": [None, "2016-03-31", None], "total_assets": [1000.0, 2000.0, 1000.0],
+                      "rev_conflict": [False] * 3, "foreign_form": [False] * 3})
     v = b5.s2a_profitability(f)
     assert v.iloc[0] == pytest.approx(0.3) and v.iloc[1] == pytest.approx(0.2) and math.isnan(v.iloc[2])
 
@@ -168,15 +182,33 @@ def _good(**kw):
     return r
 
 
-def test_verdict_requires_every_gate_and_robustness_only_vetoes():
-    assert b5.verdict(_good())["label"] == "E2 candidate"
-    assert b5.verdict(_good(excess_miss100=-0.001))["label"] == "fail"  # one robustness check vetoes
-    assert b5.verdict(_good(dsr=0.79))["label"] == "fail"
-    assert b5.verdict(_good(t_nw=2.9, dsr=0.6))["label"] == "lead, not a pass"  # strong robustness cannot rescue
-    assert b5.verdict(_good(t_nw=2.9, excess_pitq=None))["label"] == "fail"  # missing input fails closed
-    assert b5.verdict(_good(trial="S2A"))["label"] == "fail"  # S2a also needs the non-overlapping t
-    assert b5.verdict(_good(trial="S2A", t_nonoverlap=2.1))["label"] == "E2 candidate"
-    assert b5.verdict(_good(excess_thirds=[0.01, -0.01, -0.02]))["label"] == "fail"
+@pytest.fixture
+def check4_done(tmp_path):
+    p = tmp_path / "status.json"
+    p.write_text('{"ttm_check4_independent_source": {"complete": true}}')
+    return p
+
+
+def test_verdict_requires_every_gate_and_robustness_only_vetoes(check4_done):
+    v = lambda r: b5.verdict(r, check4_done)  # noqa: E731  (as if the owner had recorded check 4 complete)
+    assert v(_good())["label"] == "E2 candidate"
+    assert v(_good(excess_miss100=-0.001))["label"] == "fail"  # one robustness check vetoes
+    assert v(_good(dsr=0.79))["label"] == "fail"
+    assert v(_good(t_nw=2.9, dsr=0.6))["label"] == "lead, not a pass"  # strong robustness cannot rescue
+    assert v(_good(t_nw=2.9, excess_pitq=None))["label"] == "fail"  # missing input fails closed
+    assert v(_good(trial="S2A"))["label"] == "fail"  # S2a also needs the non-overlapping t
+    assert v(_good(trial="S2A", t_nonoverlap=2.1))["label"] == "E2 candidate"
+    assert v(_good(excess_thirds=[0.01, -0.01, -0.02]))["label"] == "fail"
+
+
+def test_open_check4_withholds_the_e2_label(tmp_path):
+    """ADDENDUM_1 §6 (owner 13:03Z item 6): with check 4 open, as recorded now, no result can be labelled E2."""
+    assert b5.check4_complete() is False  # the real status file
+    r = b5.verdict(_good())
+    assert all(r["checks"].values()) and r["label"] == b5.E2_BLOCKED_LABEL and "E2 candidate" not in r["label"]
+    missing = tmp_path / "nope.json"
+    assert b5.verdict(_good(), missing)["label"] == b5.E2_BLOCKED_LABEL  # unreadable status counts as open
+    assert b5.verdict(_good(t_nw=2.5))["label"] == "lead, not a pass"  # other labels unchanged
 
 
 def test_positive_return_alone_is_not_a_pass():

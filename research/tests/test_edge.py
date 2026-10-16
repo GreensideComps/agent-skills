@@ -160,6 +160,9 @@ def test_new_research_code_reads_data_only_through_the_guard():
     hc = (root / "edge_b5_handcheck.py").read_text()
     assert "edge_split.with_quality(edge_split.cut_exploration(xsection.load()))" in hc
     assert hc.count("<= CUT]") >= 3  # raw metrics, raw prices and execution rows cut on read
+    ia = (root / "edge_b5_input_audit.py").read_text()
+    assert "u = tc.universe()" in ia and 'r["filed"] <= tc.CUT' in ia  # cut universe; no SEC fact filed after 2022
+    assert "ret_next" not in ia and "adjclose" not in ia  # input audit reads no price or return
 
 
 # --- registry ------------------------------------------------------------------------------------------------
@@ -192,7 +195,27 @@ def test_registry_rejects_bad_events_and_leaves_file_untouched(tmp_path):
         assert p.read_text() == before
 
 
-def test_registry_one_holdout_run_per_batch_and_one_batch_per_trial(tmp_path):
+@pytest.fixture
+def check4_done(tmp_path, monkeypatch):
+    """Batch rules are tested as if the owner had recorded TTM check 4 complete (B5 ADDENDUM_1 §6)."""
+    s = tmp_path / "status.json"
+    s.write_text('{"ttm_check4_independent_source": {"complete": true}}')
+    monkeypatch.setattr(edge_registry, "STATUS", s)
+    monkeypatch.setattr(edge_registry.append, "__defaults__", (edge_registry.PATH, s))
+    return s
+
+
+def test_confirmation_batch_is_refused_while_check4_is_open(tmp_path):
+    p = tmp_path / "t.jsonl"
+    edge_registry.append(_reg("X1"), p)
+    before = p.read_text()
+    assert edge_registry.check4_complete() is False  # the real status file
+    with pytest.raises(ValueError, match="check 4"):
+        edge_registry.append({"event": "batch", "batch": "B1", "trials": ["X1"], "prereg_commit": "abc"}, p)
+    assert p.read_text() == before
+
+
+def test_registry_one_holdout_run_per_batch_and_one_batch_per_trial(tmp_path, check4_done):
     p = tmp_path / "t.jsonl"
     edge_registry.append(_reg("X1"), p)
     edge_registry.append({"event": "batch", "batch": "B1", "trials": ["X1"], "prereg_commit": "abc"}, p)
@@ -204,7 +227,7 @@ def test_registry_one_holdout_run_per_batch_and_one_batch_per_trial(tmp_path):
     assert edge_registry.holdout_runs(edge_registry.load(p)) == {"B1"}
 
 
-def test_registry_allows_one_batch_ever(tmp_path):
+def test_registry_allows_one_batch_ever(tmp_path, check4_done):
     p = tmp_path / "t.jsonl"
     edge_registry.append(_reg("X1"), p)
     edge_registry.append(_reg("X2"), p)
