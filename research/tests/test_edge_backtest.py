@@ -440,3 +440,25 @@ def test_b3_decision_close_returns_month_end_to_month_end():
     res = bt.run(panel, pd.DataFrame(rows), flat_fx(months), cfg(convention=bt.REPRO_CONVENTION))
     assert list(res.nav_usd.index) == months
     assert list(res.nav_usd) == pytest.approx([1.0, 1.05, 1.05 ** 2])
+
+
+def test_b5_unknown_band_at_rebalance_uses_the_holding_band():
+    """Found by the B5 hand-check: a held large-cap whose band is unknown at a rebalance (no price or share count
+    that month) is charged the large-cap rate it was held at, not the small-cap rate."""
+    months = pd.date_range("2015-01-31", periods=3, freq="ME")
+    rows, ex = [], []
+    for i, m in enumerate(months):
+        for c in (1, 2):
+            band = None if (c == 1 and i == 1) else "large"
+            score = (2.0 if c == 1 else 1.0) if i == 0 else (1.0 if c == 1 else 2.0)
+            rows.append({"cik": c, "month": m, "score": score, "band": band, "quality_ok": True, "group": "g",
+                         "close_raw": 50.0})
+            d = m + pd.offsets.BDay(1)
+            ex.append({"cik": c, "ticker": str(c), "month": m, "me_date": m, "me_adjclose": 10.0, "exec_date": d,
+                       "exec_adjclose": 10.0, "exec_close": 10.0, "status": "ok"})
+    fx = pd.Series(1.0, index=pd.date_range("2015-01-01", "2015-04-30"))
+    cfg = bt.Config(n=1, rebalance_every=1, buffer=1.0, sector_cap=0)
+    res = bt.run(pd.DataFrame(rows), pd.DataFrame(ex), fx, cfg)
+    m1 = months[1]
+    assert res.holdings[m1] == {2: 1.0}
+    assert res.costs[m1] == pytest.approx(2 * bt.cost_rate("large"))  # sell 1 (band unknown now) + buy 2

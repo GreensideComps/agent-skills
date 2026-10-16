@@ -1,5 +1,7 @@
 # B1 execution prices: audit requested on 2026-10-15
 
+> **Survivorship (material, unbounded; added 2026-10-16 at the owner's request):** companies that delisted before the 2026 price download are missing from the universe entirely. The -30% and -100% missing-price rules do not address them and are not evidence that survivorship bias is bounded.
+
 Read-only; data to 2022-12-31 only. No signal or strategy return is computed.
 
 ## 1. Overnight moves over 50% (decision close to execution close)

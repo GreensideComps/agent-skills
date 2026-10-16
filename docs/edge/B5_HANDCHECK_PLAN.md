@@ -13,9 +13,9 @@ nothing about how H1 or S2a performed.
 - **Portfolio arithmetic is checked with a placebo score:** `score = −(sha256("B5-HANDCHECK" + cik) as a
   fraction)`, fixed now. It carries no information about returns. The placebo runs both frozen configurations:
   quarterly (H1's rules, 3 tranches) and 12-month (S2a's rules, 12 tranches). Its NAV is shown; it is not a trial.
-- **H1 and S2a scores are checked on their own,** with no return attached: the score value, eligibility and rank
-  at the check dates, and the 20 names that would be bought. Holdings at a date reveal nothing about later returns,
-  and no NAV, excess or return of either trial is computed.
+- **Narrowed by the owner on 2026-10-16 11:53Z: no H1 or S2a score, ranking, return or NAV is computed.** The
+  H1 and S2a score code is checked on synthetic data instead (`research/tests/test_edge_b5.py`), and the scores
+  are reached by the hand-check only through the placebo's identical eligibility, ranking and portfolio path.
 
 ## 2. Fixed check dates (chosen by rule, not by outcome)
 
@@ -51,7 +51,7 @@ date.
 | Area | Recomputed independently |
 |---|---|
 | Eligibility | Market cap = share count × `close_raw`, band, $1, quality flag, financial, freshness, lags present |
-| Scores | H1 steps 1-6 and S2a from the raw XBRL fields. For two companies per date: free cash flow, share count, total assets and gross profit read by hand from the 10-K/10-Q on EDGAR. |
+| Scores | Placebo only (owner, 11:53Z). The market-cap share count of two companies per date (ranks 1 and 20) is re-read from SEC's live XBRL API: the exact fact (concept, period, filing) the dataset used. This tests the download, panel and point-in-time steps; it reads the same filings, so it is not an independent source. |
 | Ranking | Order by score then CIK; S2a percentile within SIC group |
 | Selection | Buffer kept names, sector cap of 4 per group, skips for missing execution prices |
 | Weights | 1/20 at each rebalance; drifted weights between rebalances from execution prices |

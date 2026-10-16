@@ -2,9 +2,12 @@
 
 **Standing limitations (not solved by anything in this report):**
 
-1. **Survivorship bias.** Companies that stopped trading before 2026 have no free prices and are never held, so
-   every result is biased upward by an unknown amount. The missing-price stresses (-30%, -100%) apply only to
-   companies that are in the data; they do not remove this bias.
+1. **Survivorship bias (material, unbounded).** Companies that stopped trading before the 2026 price download have no
+   free prices, so they are missing from the universe entirely, even in the years they traded. The bias is of unknown
+   size and is usually assumed to flatter results. The -30% and -100% missing-price rules apply only to companies
+   that are in the data and later lose a price; **they do not address companies missing from the universe, and are
+   not evidence that survivorship bias is bounded.** Accepted for exploration only (D13).
+   *(Wording updated 2026-10-16 at the owner's request; results unchanged.)*
 2. **Missing prices are indistinguishable.** Delistings, acquisitions and ticker changes all get the same
    conservative mark-down.
 3. **The 2023-2026 holdout is partly seen**, so a holdout pass is weaker than a clean out-of-sample test.

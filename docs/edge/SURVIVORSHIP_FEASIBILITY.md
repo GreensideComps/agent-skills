@@ -11,7 +11,7 @@ note. The prices of paid services are as recorded on 2026-10-14 and have not bee
   large companies that stopped filing are unpriced.
 - Two effects follow for 2015-2022 exploration:
   1. **Missing exits.** A name a strategy held that later delisted would have a final return we cannot see. The
-     engine's −30% (and −100% stress) rule bounds this only for names it holds that lose their price mid-window.
+     engine's −30% (and −100% stress) rule handles this only for names it holds that lose their price mid-window, and neither figure is a proven bound.
   2. **Missing names (larger).** A company that delisted before the download never enters the universe, even in
      the years it traded. No missing-price rule can bound this, because the strategy never sees the name.
 - **Likely direction for large caps (inferred, not measured):** most large-cap delistings are acquisitions, which
@@ -44,7 +44,9 @@ which has not been approved, and even then only after a ticker-to-CIK matching p
 For **exploratory research only**, the programme proceeds on survivor-only prices, with these conditions:
 
 1. Every result states the limitation (`edge_rules.STANDING_LIMITATIONS`, enforced by `require_disclosure`).
-2. Every trial reports the missing-price exits and the −100% stress (P6 in `B5_PREREGISTRATION.md`).
+2. Every trial reports the missing-price exits and the −100% stress (P6 in `B5_PREREGISTRATION.md`). That stress
+   covers only companies in the data that later lose a price. **It does not address companies missing from the
+   universe entirely, and is not evidence that survivorship bias is bounded.** This remains a material limitation.
 3. Large caps decide; mid and small caps stay information only, where the bias is larger.
 4. The acceptance does **not** extend to confirmation testing, an E3 claim, demo allocation or any real-money
    decision. Before any of those, the owner decides again: buy survivorship-free data, or accept the limitation

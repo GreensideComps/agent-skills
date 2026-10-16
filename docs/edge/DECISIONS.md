@@ -97,3 +97,21 @@ the owner's approval of that batch; the flag alone opens nothing.
 **D14 in full.** The two trials stay exploratory. The holdout restrictions stay. No confirmation test, no demo
 allocation. The real ISA, holdings and trading configuration remain unchanged. Documents:
 `B5_PREREGISTRATION.md`, `B5_HANDCHECK_PLAN.md`, `SURVIVORSHIP_FEASIBILITY.md`.
+
+## 2026-10-16 11:53 UTC: pre-B5 review
+
+| # | Decision |
+|---|---|
+| D15 | **Approved:** the fixed placebo-score hand-check, the preparatory engineering and the synthetic tests. **Not approved:** running H1 or S2a. No H1 or S2a return, NAV or ranking may be computed. B5 execution needs separate approval. No confirmation test, demo allocation or real ISA, holdings or trading-configuration change. |
+
+**D15 requirements before returning for trial approval:**
+
+1. the exact H1 definition, frozen before any result;
+2. the exact DSR calculation, with N reconciled to the registry;
+3. every report states that the −100% stress does not address companies missing from the universe;
+4. TTM checks 1-3 done, and the effect of the open independent-source check stated;
+5. costs reconciled across the main run and the robustness runs;
+6. trial controls confirmed.
+
+Response: `B5_PREREGISTRATION.md` version 2, `research/edge_b5.py`, `equity/reports/research/edge/ttm_checks.md`,
+`equity/reports/research/edge/b5_handcheck.md`.

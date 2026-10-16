@@ -1,0 +1,1291 @@
+{
+ "run": "2026-10-16",
+ "universe_rows": 43511,
+ "companies": 781,
+ "check1": {
+  "by_metric_year": [
+   {
+    "metric": "capex",
+    "year": "2015",
+    "rows": 3847,
+    "fy": 0.23264881726020276,
+    "fallback": 0.0
+   },
+   {
+    "metric": "capex",
+    "year": "2016",
+    "rows": 3842,
+    "fy": 0.22592399791775117,
+    "fallback": 0.0
+   },
+   {
+    "metric": "capex",
+    "year": "2017",
+    "rows": 4355,
+    "fy": 0.22525832376578644,
+    "fallback": 0.002296211251435132
+   },
+   {
+    "metric": "capex",
+    "year": "2018",
+    "rows": 4764,
+    "fy": 0.23299748110831234,
+    "fallback": 0.0
+   },
+   {
+    "metric": "capex",
+    "year": "2019",
+    "rows": 4903,
+    "fy": 0.2241484805221293,
+    "fallback": 0.0
+   },
+   {
+    "metric": "capex",
+    "year": "2020",
+    "rows": 5086,
+    "fy": 0.2190326386158081,
+    "fallback": 0.0
+   },
+   {
+    "metric": "capex",
+    "year": "2021",
+    "rows": 6472,
+    "fy": 0.22960444993819532,
+    "fallback": 0.0004635352286773795
+   },
+   {
+    "metric": "capex",
+    "year": "2022",
+    "rows": 6013,
+    "fy": 0.24380508897388992,
+    "fallback": 0.0009978380176284716
+   },
+   {
+    "metric": "cost_of_revenue",
+    "year": "2015",
+    "rows": 2495,
+    "fy": 0.2256513026052104,
+    "fallback": 0.0
+   },
+   {
+    "metric": "cost_of_revenue",
+    "year": "2016",
+    "rows": 2514,
+    "fy": 0.2171837708830549,
+    "fallback": 0.0
+   },
+   {
+    "metric": "cost_of_revenue",
+    "year": "2017",
+    "rows": 2898,
+    "fy": 0.21290545203588682,
+    "fallback": 0.0
+   },
+   {
+    "metric": "cost_of_revenue",
+    "year": "2018",
+    "rows": 3281,
+    "fy": 0.23590368790003047,
+    "fallback": 0.001828710758914965
+   },
+   {
+    "metric": "cost_of_revenue",
+    "year": "2019",
+    "rows": 3536,
+    "fy": 0.23218325791855204,
+    "fallback": 0.0
+   },
+   {
+    "metric": "cost_of_revenue",
+    "year": "2020",
+    "rows": 3637,
+    "fy": 0.2271102557052516,
+    "fallback": 0.0
+   },
+   {
+    "metric": "cost_of_revenue",
+    "year": "2021",
+    "rows": 4624,
+    "fy": 0.23442906574394465,
+    "fallback": 0.0
+   },
+   {
+    "metric": "cost_of_revenue",
+    "year": "2022",
+    "rows": 4153,
+    "fy": 0.2429568986274982,
+    "fallback": 0.0
+   },
+   {
+    "metric": "gross_profit",
+    "year": "2015",
+    "rows": 1473,
+    "fy": 0.3102511880515954,
+    "fallback": 0.0
+   },
+   {
+    "metric": "gross_profit",
+    "year": "2016",
+    "rows": 1524,
+    "fy": 0.30183727034120733,
+    "fallback": 0.0
+   },
+   {
+    "metric": "gross_profit",
+    "year": "2017",
+    "rows": 1779,
+    "fy": 0.2900505902192243,
+    "fallback": 0.0
+   },
+   {
+    "metric": "gross_profit",
+    "year": "2018",
+    "rows": 1993,
+    "fy": 0.32012042147516306,
+    "fallback": 0.0
+   },
+   {
+    "metric": "gross_profit",
+    "year": "2019",
+    "rows": 1954,
+    "fy": 0.29887410440122825,
+    "fallback": 0.0
+   },
+   {
+    "metric": "gross_profit",
+    "year": "2020",
+    "rows": 2149,
+    "fy": 0.2773382968822708,
+    "fallback": 0.0
+   },
+   {
+    "metric": "gross_profit",
+    "year": "2021",
+    "rows": 2955,
+    "fy": 0.2747884940778342,
+    "fallback": 0.0
+   },
+   {
+    "metric": "gross_profit",
+    "year": "2022",
+    "rows": 2531,
+    "fy": 0.2659028052153299,
+    "fallback": 0.0
+   },
+   {
+    "metric": "ocf",
+    "year": "2015",
+    "rows": 4141,
+    "fy": 0.22748128471383725,
+    "fallback": 0.0
+   },
+   {
+    "metric": "ocf",
+    "year": "2016",
+    "rows": 4141,
+    "fy": 0.2183047573049988,
+    "fallback": 0.0
+   },
+   {
+    "metric": "ocf",
+    "year": "2017",
+    "rows": 4683,
+    "fy": 0.2169549434123425,
+    "fallback": 0.002135383301302584
+   },
+   {
+    "metric": "ocf",
+    "year": "2018",
+    "rows": 5140,
+    "fy": 0.22607003891050584,
+    "fallback": 0.0
+   },
+   {
+    "metric": "ocf",
+    "year": "2019",
+    "rows": 5307,
+    "fy": 0.21914452609760693,
+    "fallback": 0.0
+   },
+   {
+    "metric": "ocf",
+    "year": "2020",
+    "rows": 5450,
+    "fy": 0.2071559633027523,
+    "fallback": 0.0
+   },
+   {
+    "metric": "ocf",
+    "year": "2021",
+    "rows": 7071,
+    "fy": 0.2155282138311413,
+    "fallback": 0.0
+   },
+   {
+    "metric": "ocf",
+    "year": "2022",
+    "rows": 6643,
+    "fy": 0.23122083396055998,
+    "fallback": 0.0
+   },
+   {
+    "metric": "revenue",
+    "year": "2015",
+    "rows": 3869,
+    "fy": 0.23416903592659602,
+    "fallback": 0.0
+   },
+   {
+    "metric": "revenue",
+    "year": "2016",
+    "rows": 3870,
+    "fy": 0.22997416020671835,
+    "fallback": 0.0
+   },
+   {
+    "metric": "revenue",
+    "year": "2017",
+    "rows": 4376,
+    "fy": 0.22646252285191956,
+    "fallback": 0.0
+   },
+   {
+    "metric": "revenue",
+    "year": "2018",
+    "rows": 4763,
+    "fy": 0.23178668906151584,
+    "fallback": 0.0012597102666386732
+   },
+   {
+    "metric": "revenue",
+    "year": "2019",
+    "rows": 5193,
+    "fy": 0.2251107259772771,
+    "fallback": 0.0
+   },
+   {
+    "metric": "revenue",
+    "year": "2020",
+    "rows": 5352,
+    "fy": 0.21132286995515695,
+    "fallback": 0.0
+   },
+   {
+    "metric": "revenue",
+    "year": "2021",
+    "rows": 6928,
+    "fy": 0.22012124711316397,
+    "fallback": 0.0
+   },
+   {
+    "metric": "revenue",
+    "year": "2022",
+    "rows": 6455,
+    "fy": 0.23718048024786986,
+    "fallback": 0.0
+   }
+  ],
+  "reproduction": {
+   "revenue": {
+    "both": 40806,
+    "equal": 40806,
+    "only_recomputed": 0,
+    "only_dataset": 12
+   },
+   "ocf": {
+    "both": 42576,
+    "equal": 42576,
+    "only_recomputed": 0,
+    "only_dataset": 5
+   },
+   "capex": {
+    "both": 39282,
+    "equal": 39282,
+    "only_recomputed": 0,
+    "only_dataset": 30
+   },
+   "gross_profit": {
+    "both": 16358,
+    "equal": 16358,
+    "only_recomputed": 0,
+    "only_dataset": 24
+   },
+   "cost_of_revenue": {
+    "both": 27138,
+    "equal": 27138,
+    "only_recomputed": 0,
+    "only_dataset": 28
+   }
+  },
+  "max_fallback_share": {
+   "capex": 0.002296211251435132,
+   "cost_of_revenue": 0.001828710758914965,
+   "gross_profit": 0.0,
+   "ocf": 0.002135383301302584,
+   "revenue": 0.0012597102666386732
+  },
+  "overall_fy_share": {
+   "capex": 0.22959625273662237,
+   "cost_of_revenue": 0.22993588326332082,
+   "gross_profit": 0.28952194644822105,
+   "ocf": 0.22021796317173994,
+   "revenue": 0.22660883203450474
+  },
+  "overall_fallback_share": {
+   "capex": 0.0004836820935797566,
+   "cost_of_revenue": 0.00022109219544550078,
+   "gross_profit": 0.0,
+   "ocf": 0.00023487410747839157,
+   "revenue": 0.00014703720041170417
+  },
+  "pass": true
+ },
+ "check2": {
+  "by_metric": {
+   "revenue": {
+    "filings": 3338,
+    "equal": 3338,
+    "share": 1.0
+   },
+   "ocf": {
+    "filings": 3495,
+    "equal": 3494,
+    "share": 0.9997138769670959
+   },
+   "capex": {
+    "filings": 3213,
+    "equal": 3213,
+    "share": 1.0
+   },
+   "gross_profit": {
+    "filings": 1295,
+    "equal": 1295,
+    "share": 1.0
+   },
+   "cost_of_revenue": {
+    "filings": 2169,
+    "equal": 2169,
+    "share": 1.0
+   }
+  },
+  "mismatches": [
+   {
+    "metric": "ocf",
+    "cik": 1540684,
+    "month": "2022-03-31",
+    "accn": "0001493152-22-007760",
+    "fy_end": "2021-12-31",
+    "10k_value": -1914503.0,
+    "ttm": -1774281.0,
+    "concept": "NetCashProvidedByUsedInOperatingActivities",
+    "reason": "TTM uses a later filing of the same year (0001493152-22-008045, 2022-03-29): a restatement or amendment"
+   }
+  ]
+ },
+ "check3": {
+  "flagged_events": 113,
+  "flagged_companies": 53,
+  "sample": [
+   {
+    "cik": 3570,
+    "name": "Cheniere Energy, Inc.",
+    "month": "2017-04-30",
+    "ttm_end_before": "2016-09-30",
+    "ttm_end": "2016-12-31",
+    "ttm_before": 780013000.0,
+    "ttm_now": 1283167000.0,
+    "change": 0.6450584797945675,
+    "basis_before": "fy+ytd-prior_ytd",
+    "basis_now": "fy",
+    "ttm_acquisitions": null,
+    "last_annual": [
+     {
+      "end": "2014-12-31",
+      "val": 267954000.0,
+      "concept": "Revenues"
+     },
+     {
+      "end": "2015-12-31",
+      "val": 270885000.0,
+      "concept": "Revenues"
+     },
+     {
+      "end": "2016-12-31",
+      "val": 1283167000.0,
+      "concept": "Revenues"
+     }
+    ]
+   },
+   {
+    "cik": 33213,
+    "name": "EQT Corp",
+    "month": "2022-10-31",
+    "ttm_end_before": "2022-06-30",
+    "ttm_end": "2022-09-30",
+    "ttm_before": 4323254000.0,
+    "ttm_now": 7857555000.0,
+    "change": 0.8175094500577573,
+    "basis_before": "fy+ytd-prior_ytd",
+    "basis_now": "fy+ytd-prior_ytd",
+    "ttm_acquisitions": 820475000.0,
+    "last_annual": [
+     {
+      "end": "2019-12-31",
+      "val": 4416484000.0,
+      "concept": "Revenues"
+     },
+     {
+      "end": "2020-12-31",
+      "val": 3058843000.0,
+      "concept": "Revenues"
+     },
+     {
+      "end": "2021-12-31",
+      "val": 3064663000.0,
+      "concept": "Revenues"
+     }
+    ]
+   },
+   {
+    "cik": 40704,
+    "name": "GENERAL MILLS INC",
+    "month": "2021-06-30",
+    "ttm_end_before": "2021-02-28",
+    "ttm_end": "2021-05-30",
+    "ttm_before": 18626400000.0,
+    "ttm_now": 2189200000.0,
+    "change": -0.8824678950307091,
+    "basis_before": "fy+ytd-prior_ytd",
+    "basis_now": "fy",
+    "ttm_acquisitions": 0.0,
+    "last_annual": [
+     {
+      "end": "2019-05-26",
+      "val": 2043900000.0,
+      "concept": "Revenues"
+     },
+     {
+      "end": "2020-05-31",
+      "val": 2045600000.0,
+      "concept": "Revenues"
+     },
+     {
+      "end": "2021-05-30",
+      "val": 2189200000.0,
+      "concept": "Revenues"
+     }
+    ]
+   },
+   {
+    "cik": 80424,
+    "name": "PROCTER & GAMBLE Co",
+    "month": "2015-10-31",
+    "ttm_end_before": "2015-03-31",
+    "ttm_end": "2015-09-30",
+    "ttm_before": 26975000000.0,
+    "ttm_now": 74035000000.0,
+    "change": 1.7445783132530122,
+    "basis_before": "fy+ytd-prior_ytd",
+    "basis_now": "fy+ytd-prior_ytd",
+    "ttm_acquisitions": 137000000.0,
+    "last_annual": [
+     {
+      "end": "2013-06-30",
+      "val": 29200000000.0,
+      "concept": "Revenues"
+     },
+     {
+      "end": "2014-06-30",
+      "val": 29400000000.0,
+      "concept": "Revenues"
+     },
+     {
+      "end": "2015-06-30",
+      "val": 76279000000.0,
+      "concept": "SalesRevenueNet"
+     }
+    ]
+   },
+   {
+    "cik": 100517,
+    "name": "United Airlines Holdings, Inc.",
+    "month": "2021-04-30",
+    "ttm_end_before": "2020-09-30",
+    "ttm_end": "2021-03-31",
+    "ttm_before": 22831000000.0,
+    "ttm_now": 10597000000.0,
+    "change": -0.5358503788708335,
+    "basis_before": "fy+ytd-prior_ytd",
+    "basis_now": "fy+ytd-prior_ytd",
+    "ttm_acquisitions": null,
+    "last_annual": [
+     {
+      "end": "2018-12-31",
+      "val": 41303000000.0,
+      "concept": "RevenueFromContractWithCustomerExcludingAssessedTax"
+     },
+     {
+      "end": "2019-12-31",
+      "val": 43259000000.0,
+      "concept": "RevenueFromContractWithCustomerExcludingAssessedTax"
+     },
+     {
+      "end": "2020-12-31",
+      "val": 15355000000.0,
+      "concept": "RevenueFromContractWithCustomerExcludingAssessedTax"
+     }
+    ]
+   },
+   {
+    "cik": 813762,
+    "name": "ICAHN ENTERPRISES L.P.",
+    "month": "2021-05-31",
+    "ttm_end_before": "2020-12-31",
+    "ttm_end": "2021-03-31",
+    "ttm_before": 6123000000.0,
+    "ttm_now": 9567000000.0,
+    "change": 0.5624693777560019,
+    "basis_before": "fy",
+    "basis_now": "fy+ytd-prior_ytd",
+    "ttm_acquisitions": 27000000.0,
+    "last_annual": [
+     {
+      "end": "2018-12-31",
+      "val": 11777000000.0,
+      "concept": "Revenues"
+     },
+     {
+      "end": "2019-12-31",
+      "val": 8994000000.0,
+      "concept": "Revenues"
+     },
+     {
+      "end": "2020-12-31",
+      "val": 6123000000.0,
+      "concept": "Revenues"
+     }
+    ]
+   },
+   {
+    "cik": 815097,
+    "name": "Carnival Corp Ltd.",
+    "month": "2021-07-31",
+    "ttm_end_before": "2021-02-28",
+    "ttm_end": "2021-05-31",
+    "ttm_before": 832000000.0,
+    "ttm_now": 141000000.0,
+    "change": -0.8305288461538461,
+    "basis_before": "fy+ytd-prior_ytd",
+    "basis_now": "fy+ytd-prior_ytd",
+    "ttm_acquisitions": null,
+    "last_annual": [
+     {
+      "end": "2018-11-30",
+      "val": 18881000000.0,
+      "concept": "Revenues"
+     },
+     {
+      "end": "2019-11-30",
+      "val": 20825000000.0,
+      "concept": "RevenueFromContractWithCustomerExcludingAssessedTax"
+     },
+     {
+      "end": "2020-11-30",
+      "val": 5595000000.0,
+      "concept": "RevenueFromContractWithCustomerExcludingAssessedTax"
+     }
+    ]
+   },
+   {
+    "cik": 815097,
+    "name": "Carnival Corp Ltd.",
+    "month": "2022-03-31",
+    "ttm_end_before": "2021-08-31",
+    "ttm_end": "2022-02-28",
+    "ttm_before": 655000000.0,
+    "ttm_now": 3505000000.0,
+    "change": 4.351145038167939,
+    "basis_before": "fy+ytd-prior_ytd",
+    "basis_now": "fy+ytd-prior_ytd",
+    "ttm_acquisitions": null,
+    "last_annual": [
+     {
+      "end": "2019-11-30",
+      "val": 20825000000.0,
+      "concept": "RevenueFromContractWithCustomerExcludingAssessedTax"
+     },
+     {
+      "end": "2020-11-30",
+      "val": 5595000000.0,
+      "concept": "RevenueFromContractWithCustomerExcludingAssessedTax"
+     },
+     {
+      "end": "2021-11-30",
+      "val": 1908000000.0,
+      "concept": "RevenueFromContractWithCustomerExcludingAssessedTax"
+     }
+    ]
+   },
+   {
+    "cik": 884887,
+    "name": "ROYAL CARIBBEAN CRUISES LTD",
+    "month": "2021-04-30",
+    "ttm_end_before": "2020-09-30",
+    "ttm_end": "2021-03-31",
+    "ttm_before": 4692080000.0,
+    "ttm_now": 218069000.0,
+    "change": -0.9535240234608106,
+    "basis_before": "fy+ytd-prior_ytd",
+    "basis_now": "fy+ytd-prior_ytd",
+    "ttm_acquisitions": 0.0,
+    "last_annual": [
+     {
+      "end": "2018-12-31",
+      "val": 9493849000.0,
+      "concept": "RevenueFromContractWithCustomerExcludingAssessedTax"
+     },
+     {
+      "end": "2019-12-31",
+      "val": 10950661000.0,
+      "concept": "RevenueFromContractWithCustomerExcludingAssessedTax"
+     },
+     {
+      "end": "2020-12-31",
+      "val": 2208805000.0,
+      "concept": "RevenueFromContractWithCustomerExcludingAssessedTax"
+     }
+    ]
+   },
+   {
+    "cik": 884887,
+    "name": "ROYAL CARIBBEAN CRUISES LTD",
+    "month": "2021-10-31",
+    "ttm_end_before": "2021-03-31",
+    "ttm_end": "2021-09-30",
+    "ttm_before": 218069000.0,
+    "ttm_now": 584024000.0,
+    "change": 1.6781614993419516,
+    "basis_before": "fy+ytd-prior_ytd",
+    "basis_now": "fy+ytd-prior_ytd",
+    "ttm_acquisitions": 0.0,
+    "last_annual": [
+     {
+      "end": "2018-12-31",
+      "val": 9493849000.0,
+      "concept": "RevenueFromContractWithCustomerExcludingAssessedTax"
+     },
+     {
+      "end": "2019-12-31",
+      "val": 10950661000.0,
+      "concept": "RevenueFromContractWithCustomerExcludingAssessedTax"
+     },
+     {
+      "end": "2020-12-31",
+      "val": 2208805000.0,
+      "concept": "RevenueFromContractWithCustomerExcludingAssessedTax"
+     }
+    ]
+   },
+   {
+    "cik": 884887,
+    "name": "ROYAL CARIBBEAN CRUISES LTD",
+    "month": "2021-11-30",
+    "ttm_end_before": "2021-06-30",
+    "ttm_end": "2021-09-30",
+    "ttm_before": 93378000.0,
+    "ttm_now": 584024000.0,
+    "change": 5.2544068195934805,
+    "basis_before": "fy+ytd-prior_ytd",
+    "basis_now": "fy+ytd-prior_ytd",
+    "ttm_acquisitions": 0.0,
+    "last_annual": [
+     {
+      "end": "2018-12-31",
+      "val": 9493849000.0,
+      "concept": "RevenueFromContractWithCustomerExcludingAssessedTax"
+     },
+     {
+      "end": "2019-12-31",
+      "val": 10950661000.0,
+      "concept": "RevenueFromContractWithCustomerExcludingAssessedTax"
+     },
+     {
+      "end": "2020-12-31",
+      "val": 2208805000.0,
+      "concept": "RevenueFromContractWithCustomerExcludingAssessedTax"
+     }
+    ]
+   },
+   {
+    "cik": 906709,
+    "name": "NEKTAR THERAPEUTICS",
+    "month": "2018-08-31",
+    "ttm_end_before": "2018-03-31",
+    "ttm_end": "2018-06-30",
+    "ttm_before": 321001000.0,
+    "ttm_now": 1374129000.0,
+    "change": 3.280762365226277,
+    "basis_before": "fy+ytd-prior_ytd",
+    "basis_now": "fy+ytd-prior_ytd",
+    "ttm_acquisitions": null,
+    "last_annual": [
+     {
+      "end": "2015-12-31",
+      "val": 230784000.0,
+      "concept": "Revenues"
+     },
+     {
+      "end": "2016-12-31",
+      "val": 165436000.0,
+      "concept": "Revenues"
+     },
+     {
+      "end": "2017-12-31",
+      "val": 307711000.0,
+      "concept": "Revenues"
+     }
+    ]
+   },
+   {
+    "cik": 1065088,
+    "name": "EBAY INC",
+    "month": "2016-04-30",
+    "ttm_end_before": "2015-09-30",
+    "ttm_end": "2016-03-31",
+    "ttm_before": 17705000000.0,
+    "ttm_now": 8668000000.0,
+    "change": -0.5104207850889579,
+    "basis_before": "fy+ytd-prior_ytd",
+    "basis_now": "fy+ytd-prior_ytd",
+    "ttm_acquisitions": 24000000.0,
+    "last_annual": [
+     {
+      "end": "2013-12-31",
+      "val": 16047000000.0,
+      "concept": "Revenues"
+     },
+     {
+      "end": "2014-12-31",
+      "val": 17902000000.0,
+      "concept": "Revenues"
+     },
+     {
+      "end": "2015-12-31",
+      "val": 8592000000.0,
+      "concept": "SalesRevenueNet"
+     }
+    ]
+   },
+   {
+    "cik": 1090012,
+    "name": "DEVON ENERGY CORP/DE",
+    "month": "2021-08-31",
+    "ttm_end_before": "2021-03-31",
+    "ttm_end": "2021-06-30",
+    "ttm_before": 4503000000.0,
+    "ttm_now": 6814000000.0,
+    "change": 0.5132134132800354,
+    "basis_before": "fy+ytd-prior_ytd",
+    "basis_now": "fy+ytd-prior_ytd",
+    "ttm_acquisitions": null,
+    "last_annual": [
+     {
+      "end": "2018-12-31",
+      "val": 8896000000.0,
+      "concept": "Revenues"
+     },
+     {
+      "end": "2019-12-31",
+      "val": 6220000000.0,
+      "concept": "Revenues"
+     },
+     {
+      "end": "2020-12-31",
+      "val": 4828000000.0,
+      "concept": "Revenues"
+     }
+    ]
+   },
+   {
+    "cik": 1335258,
+    "name": "Live Nation Entertainment, Inc.",
+    "month": "2021-03-31",
+    "ttm_end_before": "2020-09-30",
+    "ttm_end": "2020-12-31",
+    "ttm_before": 4513243000.0,
+    "ttm_now": 1861178000.0,
+    "change": -0.5876184818765575,
+    "basis_before": "fy+ytd-prior_ytd",
+    "basis_now": "fy",
+    "ttm_acquisitions": 41083000.0,
+    "last_annual": [
+     {
+      "end": "2018-12-31",
+      "val": 10787800000.0,
+      "concept": "Revenues"
+     },
+     {
+      "end": "2019-12-31",
+      "val": 11547969000.0,
+      "concept": "Revenues"
+     },
+     {
+      "end": "2020-12-31",
+      "val": 1861178000.0,
+      "concept": "Revenues"
+     }
+    ]
+   },
+   {
+    "cik": 1335258,
+    "name": "Live Nation Entertainment, Inc.",
+    "month": "2021-06-30",
+    "ttm_end_before": "2020-12-31",
+    "ttm_end": "2021-03-31",
+    "ttm_before": 1861178000.0,
+    "ttm_now": 786094000.0,
+    "change": -0.5776363142053044,
+    "basis_before": "fy",
+    "basis_now": "fy+ytd-prior_ytd",
+    "ttm_acquisitions": 14707000.0,
+    "last_annual": [
+     {
+      "end": "2018-12-31",
+      "val": 10787800000.0,
+      "concept": "Revenues"
+     },
+     {
+      "end": "2019-12-31",
+      "val": 11547969000.0,
+      "concept": "Revenues"
+     },
+     {
+      "end": "2020-12-31",
+      "val": 1861178000.0,
+      "concept": "Revenues"
+     }
+    ]
+   },
+   {
+    "cik": 1335258,
+    "name": "Live Nation Entertainment, Inc.",
+    "month": "2021-08-31",
+    "ttm_end_before": "2021-03-31",
+    "ttm_end": "2021-06-30",
+    "ttm_before": 786094000.0,
+    "ttm_now": 1287956000.0,
+    "change": 0.638424921192631,
+    "basis_before": "fy+ytd-prior_ytd",
+    "basis_now": "fy+ytd-prior_ytd",
+    "ttm_acquisitions": 11239000.0,
+    "last_annual": [
+     {
+      "end": "2018-12-31",
+      "val": 10787800000.0,
+      "concept": "Revenues"
+     },
+     {
+      "end": "2019-12-31",
+      "val": 11547969000.0,
+      "concept": "Revenues"
+     },
+     {
+      "end": "2020-12-31",
+      "val": 1861178000.0,
+      "concept": "Revenues"
+     }
+    ]
+   },
+   {
+    "cik": 1370637,
+    "name": "ETSY INC",
+    "month": "2020-10-31",
+    "ttm_end_before": "2020-03-31",
+    "ttm_end": "2020-09-30",
+    "ttm_before": 877095000.0,
+    "ttm_now": 1378268000.0,
+    "change": 0.571401045496782,
+    "basis_before": "fy+ytd-prior_ytd",
+    "basis_now": "fy+ytd-prior_ytd",
+    "ttm_acquisitions": -944000.0,
+    "last_annual": [
+     {
+      "end": "2017-12-31",
+      "val": 441231000.0,
+      "concept": "Revenues"
+     },
+     {
+      "end": "2018-12-31",
+      "val": 603693000.0,
+      "concept": "RevenueFromContractWithCustomerExcludingAssessedTax"
+     },
+     {
+      "end": "2019-12-31",
+      "val": 818379000.0,
+      "concept": "RevenueFromContractWithCustomerExcludingAssessedTax"
+     }
+    ]
+   },
+   {
+    "cik": 1404912,
+    "name": "KKR & Co. Inc.",
+    "month": "2020-05-31",
+    "ttm_end_before": "2019-12-31",
+    "ttm_end": "2020-03-31",
+    "ttm_before": 4220900000.0,
+    "ttm_now": 2031915000.0,
+    "change": -0.5186062214219715,
+    "basis_before": "fy",
+    "basis_now": "fy+ytd-prior_ytd",
+    "ttm_acquisitions": null,
+    "last_annual": [
+     {
+      "end": "2017-12-31",
+      "val": 3557280000.0,
+      "concept": "Revenues"
+     },
+     {
+      "end": "2018-12-31",
+      "val": 2395836000.0,
+      "concept": "Revenues"
+     },
+     {
+      "end": "2019-12-31",
+      "val": 4220900000.0,
+      "concept": "Revenues"
+     }
+    ]
+   },
+   {
+    "cik": 1411579,
+    "name": "AMC ENTERTAINMENT HOLDINGS, INC.",
+    "month": "2021-08-31",
+    "ttm_end_before": "2021-03-31",
+    "ttm_end": "2021-06-30",
+    "ttm_before": 449200000.0,
+    "ttm_now": 875000000.0,
+    "change": 0.947907390917186,
+    "basis_before": "fy+ytd-prior_ytd",
+    "basis_now": "fy+ytd-prior_ytd",
+    "ttm_acquisitions": null,
+    "last_annual": [
+     {
+      "end": "2018-12-31",
+      "val": 5460800000.0,
+      "concept": "Revenues"
+     },
+     {
+      "end": "2019-12-31",
+      "val": 5471000000.0,
+      "concept": "Revenues"
+     },
+     {
+      "end": "2020-12-31",
+      "val": 1242400000.0,
+      "concept": "Revenues"
+     }
+    ]
+   },
+   {
+    "cik": 1477449,
+    "name": "Teladoc Health, Inc.",
+    "month": "2021-05-31",
+    "ttm_end_before": "2020-09-30",
+    "ttm_end": "2021-03-31",
+    "ttm_before": 867130000.0,
+    "ttm_now": 1366838000.0,
+    "change": 0.5762780667258658,
+    "basis_before": "fy+ytd-prior_ytd",
+    "basis_now": "fy+ytd-prior_ytd",
+    "ttm_acquisitions": 614350000.0,
+    "last_annual": [
+     {
+      "end": "2018-12-31",
+      "val": 417907000.0,
+      "concept": "Revenues"
+     },
+     {
+      "end": "2019-12-31",
+      "val": 553307000.0,
+      "concept": "RevenueFromContractWithCustomerIncludingAssessedTax"
+     },
+     {
+      "end": "2020-12-31",
+      "val": 1093962000.0,
+      "concept": "RevenueFromContractWithCustomerIncludingAssessedTax"
+     }
+    ]
+   },
+   {
+    "cik": 1527166,
+    "name": "Carlyle Group Inc.",
+    "month": "2021-02-28",
+    "ttm_end_before": "2020-09-30",
+    "ttm_end": "2020-12-31",
+    "ttm_before": 1880200000.0,
+    "ttm_now": 2934600000.0,
+    "change": 0.5607914051696627,
+    "basis_before": "fy+ytd-prior_ytd",
+    "basis_now": "fy",
+    "ttm_acquisitions": 0.0,
+    "last_annual": [
+     {
+      "end": "2018-12-31",
+      "val": 2427200000.0,
+      "concept": "Revenues"
+     },
+     {
+      "end": "2019-12-31",
+      "val": 3377000000.0,
+      "concept": "Revenues"
+     },
+     {
+      "end": "2020-12-31",
+      "val": 2934600000.0,
+      "concept": "Revenues"
+     }
+    ]
+   },
+   {
+    "cik": 1527166,
+    "name": "Carlyle Group Inc.",
+    "month": "2021-05-31",
+    "ttm_end_before": "2020-12-31",
+    "ttm_end": "2021-03-31",
+    "ttm_before": 2934600000.0,
+    "ttm_now": 6117500000.0,
+    "change": 1.084611190622231,
+    "basis_before": "fy",
+    "basis_now": "fy+ytd-prior_ytd",
+    "ttm_acquisitions": 0.0,
+    "last_annual": [
+     {
+      "end": "2018-12-31",
+      "val": 2427200000.0,
+      "concept": "Revenues"
+     },
+     {
+      "end": "2019-12-31",
+      "val": 3377000000.0,
+      "concept": "Revenues"
+     },
+     {
+      "end": "2020-12-31",
+      "val": 2934600000.0,
+      "concept": "Revenues"
+     }
+    ]
+   },
+   {
+    "cik": 1551182,
+    "name": "Eaton Corp plc",
+    "month": "2017-11-30",
+    "ttm_end_before": "2017-06-30",
+    "ttm_end": "2017-09-30",
+    "ttm_before": 87000000.0,
+    "ttm_now": 311000000.0,
+    "change": 2.574712643678161,
+    "basis_before": "fy+ytd-prior_ytd",
+    "basis_now": "fy+ytd-prior_ytd",
+    "ttm_acquisitions": 0.0,
+    "last_annual": [
+     {
+      "end": "2014-12-31",
+      "val": 0.0,
+      "concept": "Revenues"
+     },
+     {
+      "end": "2015-12-31",
+      "val": 0.0,
+      "concept": "Revenues"
+     },
+     {
+      "end": "2016-12-31",
+      "val": 0.0,
+      "concept": "Revenues"
+     }
+    ]
+   },
+   {
+    "cik": 1585521,
+    "name": "Zoom Communications, Inc.",
+    "month": "2020-09-30",
+    "ttm_end_before": "2020-04-30",
+    "ttm_end": "2020-07-31",
+    "ttm_before": 828837000.0,
+    "ttm_now": 1346531000.0,
+    "change": 0.6246029074474233,
+    "basis_before": "fy+ytd-prior_ytd",
+    "basis_now": "fy+ytd-prior_ytd",
+    "ttm_acquisitions": null,
+    "last_annual": [
+     {
+      "end": "2018-01-31",
+      "val": 151478000.0,
+      "concept": "RevenueFromContractWithCustomerExcludingAssessedTax"
+     },
+     {
+      "end": "2019-01-31",
+      "val": 330517000.0,
+      "concept": "RevenueFromContractWithCustomerExcludingAssessedTax"
+     },
+     {
+      "end": "2020-01-31",
+      "val": 622658000.0,
+      "concept": "RevenueFromContractWithCustomerExcludingAssessedTax"
+     }
+    ]
+   },
+   {
+    "cik": 1590895,
+    "name": "Caesars Entertainment, Inc.",
+    "month": "2021-08-31",
+    "ttm_end_before": "2021-03-31",
+    "ttm_end": "2021-06-30",
+    "ttm_before": 4700000000.0,
+    "ttm_now": 7168000000.0,
+    "change": 0.5251063829787235,
+    "basis_before": "fy+ytd-prior_ytd",
+    "basis_now": "fy+ytd-prior_ytd",
+    "ttm_acquisitions": 8436000000.0,
+    "last_annual": [
+     {
+      "end": "2018-12-31",
+      "val": 2056000000.0,
+      "concept": "RevenueFromContractWithCustomerExcludingAssessedTax"
+     },
+     {
+      "end": "2019-12-31",
+      "val": 2528000000.0,
+      "concept": "RevenueFromContractWithCustomerExcludingAssessedTax"
+     },
+     {
+      "end": "2020-12-31",
+      "val": 3474000000.0,
+      "concept": "RevenueFromContractWithCustomerExcludingAssessedTax"
+     }
+    ]
+   },
+   {
+    "cik": 1635327,
+    "name": "Flutter Entertainment plc",
+    "month": "2019-03-31",
+    "ttm_end_before": "2017-12-31",
+    "ttm_end": "2018-12-31",
+    "ttm_before": 1312315000.0,
+    "ttm_now": 2029238000.0,
+    "change": 0.5463040504756862,
+    "basis_before": "fy",
+    "basis_now": "fy",
+    "ttm_acquisitions": 1865262000.0,
+    "last_annual": [
+     {
+      "end": "2016-12-31",
+      "val": 1155247000.0,
+      "concept": "Revenue"
+     },
+     {
+      "end": "2017-12-31",
+      "val": 1312315000.0,
+      "concept": "Revenue"
+     },
+     {
+      "end": "2018-12-31",
+      "val": 2029238000.0,
+      "concept": "Revenue"
+     }
+    ]
+   },
+   {
+    "cik": 1682852,
+    "name": "Moderna, Inc.",
+    "month": "2020-11-30",
+    "ttm_end_before": "2020-06-30",
+    "ttm_end": "2020-09-30",
+    "ttm_before": 105841000.0,
+    "ttm_now": 246705000.0,
+    "change": 1.3309020133974547,
+    "basis_before": "fy+ytd-prior_ytd",
+    "basis_now": "fy+ytd-prior_ytd",
+    "ttm_acquisitions": null,
+    "last_annual": [
+     {
+      "end": "2017-12-31",
+      "val": 205825000.0,
+      "concept": "Revenues"
+     },
+     {
+      "end": "2018-12-31",
+      "val": 135068000.0,
+      "concept": "Revenues"
+     },
+     {
+      "end": "2019-12-31",
+      "val": 60209000.0,
+      "concept": "Revenues"
+     }
+    ]
+   },
+   {
+    "cik": 1811210,
+    "name": "Lucid Group, Inc.",
+    "month": "2022-08-31",
+    "ttm_end_before": "2022-03-31",
+    "ttm_end": "2022-06-30",
+    "ttm_before": 84473000.0,
+    "ttm_now": 181635000.0,
+    "change": 1.1502136777431842,
+    "basis_before": "fy+ytd-prior_ytd",
+    "basis_now": "fy+ytd-prior_ytd",
+    "ttm_acquisitions": null,
+    "last_annual": [
+     {
+      "end": "2019-12-31",
+      "val": 4590000.0,
+      "concept": "Revenues"
+     },
+     {
+      "end": "2020-12-31",
+      "val": 3976000.0,
+      "concept": "Revenues"
+     },
+     {
+      "end": "2021-12-31",
+      "val": 27111000.0,
+      "concept": "Revenues"
+     }
+    ]
+   },
+   {
+    "cik": 1874178,
+    "name": "Rivian Automotive, Inc. / DE",
+    "month": "2022-11-30",
+    "ttm_end_before": "2022-06-30",
+    "ttm_end": "2022-09-30",
+    "ttm_before": 514000000.0,
+    "ttm_now": 1049000000.0,
+    "change": 1.0408560311284045,
+    "basis_before": "fy+ytd-prior_ytd",
+    "basis_now": "fy+ytd-prior_ytd",
+    "ttm_acquisitions": null,
+    "last_annual": [
+     {
+      "end": "2019-12-31",
+      "val": 0.0,
+      "concept": "RevenueFromContractWithCustomerExcludingAssessedTax"
+     },
+     {
+      "end": "2020-12-31",
+      "val": 0.0,
+      "concept": "RevenueFromContractWithCustomerExcludingAssessedTax"
+     },
+     {
+      "end": "2021-12-31",
+      "val": 55000000.0,
+      "concept": "RevenueFromContractWithCustomerExcludingAssessedTax"
+     }
+    ]
+   }
+  ]
+ }
+}

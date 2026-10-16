@@ -277,15 +277,19 @@ def run(panel: pd.DataFrame, exec_rows: pd.DataFrame, fx: pd.Series, cfg: Config
                     res.log.append({"date": d, "event": "skipped_cap", "cik": c, "reason": why})
             w_t = target_weights(chosen, ranked, cfg)
             w_d = {c: v / nav for c, v in values.items()} if nav > 0 else {}
-            band = dict(zip(frame["cik"], frame["band"]))
+            band = {c: b for c, b in zip(frame["cik"], frame["band"]) if isinstance(b, str)}
             names = set(w_t) | set(w_d)
             dw = {c: abs(w_t.get(c, 0.0) - w_d.get(c, 0.0)) for c in names}
-            cost = sum(dw[c] * cost_rate(band.get(c, pos.get(c, {}).get("band")), cfg.cost_mult) for c in names)
+            # band at this decision; if unknown now (no price or share count this month), the band it was held in;
+            # else the small-cap rate. (B5 hand-check, 2026-10-16: a held name with band None was charged the
+            # small-cap rate on sale, instead of its holding band.)
+            cost = sum(dw[c] * cost_rate(band.get(c) or pos.get(c, {}).get("band"), cfg.cost_mult) for c in names)
             nav_after = nav * (1 - cost)
             res.turnover[m] = sum(dw.values()) / 2
             res.costs[m] = cost
             res.holdings[m] = dict(w_t)
-            pos = {c: {"entry": d, "value0": nav_after * w, "band": band.get(c)} for c, w in w_t.items()}
+            pos = {c: {"entry": d, "value0": nav_after * w, "band": band.get(c) or pos.get(c, {}).get("band")}
+                   for c, w in w_t.items()}
             cash = nav_after * (1 - sum(w_t.values()))
             nav = nav_after
             if not w_t:
@@ -340,7 +344,7 @@ def metrics(nav_gbp: pd.Series, bench: pd.DataFrame | None = None, res: Result |
         j = pd.concat([r.rename("s"), b["return"].rename("b"), b["label"]], axis=1).dropna(subset=["s", "b"])
         ex = j["s"] - j["b"]
         te = float(ex.std() * math.sqrt(12))
-        out.update({"te": te, "ir": float(ex.mean() * 12 / te) if te > 0 else float("nan"),
+        out.update({"excess_months": int(len(ex)), "te": te, "ir": float(ex.mean() * 12 / te) if te > 0 else float("nan"),
                     "sr_excess_monthly": float(ex.mean() / ex.std()) if ex.std() > 0 else float("nan"),
                     "share_months_ahead": float((ex > 0).mean()),
                     "relative_drawdown": max_drawdown((1 + j["s"]).cumprod() / (1 + j["b"]).cumprod()),
@@ -372,11 +376,12 @@ def record(trial_id: str, m: dict, registry, evidence: str) -> dict:
     """Append the trial's result with its statistic, so the DSR pools it only with comparable results."""
     edge_registry.require(trial_id, registry)
     return edge_registry.append({"event": "result", "id": trial_id, "evidence": evidence, "stat": STAT,
-                                 "sr_monthly": m["sr_excess_monthly"], "n_months": m["months"]}, registry)
+                                 "sr_monthly": m["sr_excess_monthly"], "n_months": m["excess_months"]}, registry)
 
 
 def dsr(m: dict, registry) -> dict:
-    return edge_registry.deflated_sharpe(m["sr_excess_monthly"], m["months"], m["excess_skew"], m["excess_kurt"],
+    # T is the number of excess-return observations the Sharpe was computed on (B5 v2, DSR spec)
+    return edge_registry.deflated_sharpe(m["sr_excess_monthly"], m["excess_months"], m["excess_skew"], m["excess_kurt"],
                                          STAT, edge_registry.load(registry))
 
 

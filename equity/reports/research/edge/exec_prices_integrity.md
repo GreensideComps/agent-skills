@@ -1,5 +1,7 @@
 # Execution-price dataset integrity (edge-discovery Phase B, step B1)
 
+> **Survivorship (material, unbounded; added 2026-10-16 at the owner's request):** companies that delisted before the 2026 price download are missing from the universe entirely. The -30% and -100% missing-price rules do not address them and are not evidence that survivorship bias is bounded.
+
 First-trading-day closes for the next-day execution convention, decisions 2009-12 to 2022-11, cut at 2022-12-31 at the download itself. FAIL = do not use; WARN = a limitation to state.
 
 | Check | Status | Detail |
