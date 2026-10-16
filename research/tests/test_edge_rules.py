@@ -230,7 +230,9 @@ def test_dsr_floor_applies_with_too_few_comparable_results(tmp_path):
 
 def test_committed_registry_dsr_inputs_reconcile():
     ev = edge_registry.load()
-    assert edge_registry.n_trials(ev) == 96
+    assert edge_registry.n_trials(ev) == 98   # 96 after PR #18 + the two B5 trials registered 2026-10-16 (D14)
+    done = {e["id"] for e in ev if e.get("event") == "result"}
+    assert not {"B5-H1-FCFPS-ACCEL", "B5-S2A-GP-12M"} & done   # registered, not run (owner: stop before running)
     assert len(edge_registry.sharpe_list(ev, edge_registry.LEGACY_STAT)) == 15   # Stage 2's top-quintile Sharpes
     assert edge_registry.sharpe_list(ev, "portfolio_excess_vs_vwrp") == []      # none yet: Phase B adds them
 

@@ -1,0 +1,17 @@
+{
+  "backtester_validated": {
+    "value": true,
+    "recorded": "2026-10-16",
+    "owner_decision": "D12, owner message 2026-10-16 10:12Z",
+    "scope": "exploratory research only, under the limitations in docs/edge/B4_VALIDATION_REPORT.md section 5",
+    "does_not_establish": ["investability", "full validation of real-data portfolio settings", "an edge"],
+    "authorises_confirmation": false,
+    "authorises_demo_allocation": false
+  },
+  "survivorship_limitation_accepted": {
+    "value": true,
+    "recorded": "2026-10-16",
+    "owner_decision": "D13",
+    "scope": "exploratory research only; confirmation, E3, demo allocation and real money need a new owner decision"
+  }
+}

@@ -74,3 +74,26 @@ Report: `equity/reports/research/edge/b3_reproduction.md`. Spec: `B3_STAGE2_SPEC
 - changing the real ISA, holdings or trading configuration.
 
 `backtester_validated` is recorded only by the owner.
+
+## 2026-10-16 10:12 UTC: backtester validated for exploration only; pre-B5 preparation
+
+| # | Decision |
+|---|---|
+| D12 | **`backtester_validated` is recorded, limited strictly to exploratory research under the limitations in `B4_VALIDATION_REPORT.md` §5.** Machine-readable record: `research/edge/status.json`. |
+| D13 | **Survivorship-free prices are not feasible on free data** (`SURVIVORSHIP_FEASIBILITY.md`). The limitation is accepted for exploratory research only, on the conditions in that note's §4. |
+| D14 | **Before B5:** prepare the real-data hand-check plan, frozen and registered H1 and S2a specifications, and exploratory thresholds with the multiple-testing treatment set in advance. Return them for review. **Stop before running H1 or S2a.** |
+
+**D12 scope in full.** The status does **not**:
+
+- establish that any strategy is investable;
+- fully validate the strategy's real-data portfolio settings (that needs the B5 hand-check);
+- prove an edge;
+- authorise confirmation testing;
+- authorise demo allocation.
+
+The holdout restrictions are unchanged. `edge_split.holdout_gate` still needs a batch, a pre-registration commit and
+the owner's approval of that batch; the flag alone opens nothing.
+
+**D14 in full.** The two trials stay exploratory. The holdout restrictions stay. No confirmation test, no demo
+allocation. The real ISA, holdings and trading configuration remain unchanged. Documents:
+`B5_PREREGISTRATION.md`, `B5_HANDCHECK_PLAN.md`, `SURVIVORSHIP_FEASIBILITY.md`.

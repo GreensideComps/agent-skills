@@ -337,3 +337,13 @@ def test_stage2_deflated_sharpe_matches_a_hand_computation():
     sr0 = np.sqrt(v) * ((1 - g) * N.inv_cdf(1 - 1 / 10) + g * N.inv_cdf(1 - 1 / (10 * np.e)))
     want = N.cdf((0.15 - sr0) * np.sqrt(95) / np.sqrt(1 + 0.5 * 0.15 ** 2))
     assert abs(stage2_diagnostics.stage2.deflated_sharpe(st, srs) - want) < 1e-12
+
+
+def test_backtester_validated_status_is_scoped_to_exploration():
+    """D12: the recorded status is exploration-only and authorises neither confirmation nor demo allocation."""
+    import json
+    s = json.loads((Path(__file__).resolve().parents[1] / "edge" / "status.json").read_text())
+    bv = s["backtester_validated"]
+    assert bv["value"] is True and bv["scope"].startswith("exploratory research only")
+    assert bv["authorises_confirmation"] is False and bv["authorises_demo_allocation"] is False
+    assert s["survivorship_limitation_accepted"]["scope"].startswith("exploratory research only")
