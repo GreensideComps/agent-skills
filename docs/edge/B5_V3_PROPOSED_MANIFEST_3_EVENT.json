@@ -1,0 +1,22 @@
+{
+ "event": "register",
+ "id": "B5-V3-RUN-MANIFEST-3",
+ "kind": "diagnostic",
+ "phase": "exploration",
+ "counts_for_dsr": false,
+ "touched_holdout": false,
+ "horizon_months": 0,
+ "window": {
+  "decisions": [
+   "2015-01",
+   "2022-11"
+  ],
+  "outcomes_to": "2022-12-31"
+ },
+ "hypothesis": "none (input and code manifest for the version-3 run, not a trial)",
+ "universe": "as version 3",
+ "definition": "docs/edge/B5_RUN_MANIFEST_3.json: sha256 of the 10 input files and the 16 repository modules edge_b5_run imports, after run fix 2 (docs/edge/B5_RUN_FIX_2.md, sha256 0c8bbab1d0d7724cc8b3e793dee9aedc22f309ff3498d40fb25acc192bf40341: each run's evaluation starts at the 2015-01 decision's trade date under its own execution convention, a bug fix with no definition change); edge_b5_run.preflight refuses any mismatch. Does not authorise a run or release the run 1 lock.",
+ "supersedes": "B5-V3-RUN-MANIFEST-2",
+ "spec_sha256": "0a9b08acce584b98ed90f494a210b050394e3503fcbc81c4d8e7a031e0dfc05a",
+ "owner_message": "<owner message id approving this registration>"
+}
