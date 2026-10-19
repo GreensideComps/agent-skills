@@ -317,6 +317,11 @@ class Bot:
 
         recon = self.reconcile()
 
+        if self.cfg.mode == "retired":
+            j.event("run_halted", reason="strategy retired (owner decision O10); no orders are planned")
+            j.save_state(state)
+            return {"status": "halted", "reason": "strategy retired"}
+
         kill = self._kill()
         if kill:
             j.event("run_halted", reason=kill)

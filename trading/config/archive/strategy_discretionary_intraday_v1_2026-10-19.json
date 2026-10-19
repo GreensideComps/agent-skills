@@ -1,0 +1,81 @@
+{
+  "name": "discretionary_intraday_v1",
+  "mode": "discretionary",
+  "decision_limits": {
+    "universe": [
+      "LQQ3l_EQ",
+      "EQQQl_EQ",
+      "VUAGl_EQ",
+      "SGLNl_EQ",
+      "3LGO1l_EQ"
+    ],
+    "max_decisions_per_day": 8,
+    "daily_loss_stop": 0.1,
+    "note": "Owner override 2026-10-14: Claude trades the whole demo account intraday, 3x ETPs allowed. Long-only, no borrowing, no inverse products. The trend rule (signal) is kept only as the paper shadow B_live_rules_at_close."
+  },
+  "targets": {
+    "LQQ3l_EQ": 1.0
+  },
+  "yahoo_symbols": {
+    "EQQQl_EQ": "EQQQ.L",
+    "SGLNl_EQ": "SGLN.L",
+    "3LGO1l_EQ": "3LGO.L",
+    "VWRPl_EQ": "VWRP.L",
+    "IWMOl_EQ": "IWMO.L",
+    "VUAGl_EQ": "VUAG.L",
+    "VXUSl_EQ": "VXUS.L",
+    "VAGSl_EQ": "VAGS.L",
+    "IWFM_EQ": "IWFM.L",
+    "LQQ3l_EQ": "LQQ3.L"
+  },
+  "cash_buffer_pct": 0.015,
+  "drift_band_abs": 0.05,
+  "deploy_cash_threshold_pct": 0.015,
+  "annual_rebalance_month": 1,
+  "annual_rebalance_min_drift": 0.01,
+  "min_trade_gbp": 1.0,
+  "fx_fee": 0.0015,
+  "default_qty_decimals": 4,
+  "open_buffer_minutes": 15,
+  "close_buffer_minutes": 15,
+  "max_price_divergence": 0.05,
+  "max_orders_per_run": 10,
+  "shadow_portfolios": {
+    "A_benchmark_vwrp": {
+      "type": "static",
+      "targets": {
+        "VWRPl_EQ": 1.0
+      }
+    },
+    "D_prev_champion_50_50": {
+      "type": "static",
+      "targets": {
+        "VWRPl_EQ": 0.5,
+        "IWMOl_EQ": 0.5
+      }
+    },
+    "E_lqq3_buy_and_hold": {
+      "type": "static",
+      "targets": {
+        "LQQ3l_EQ": 1.0
+      }
+    },
+    "C_gem12": {
+      "type": "gem12",
+      "us": "VUAGl_EQ",
+      "intl": "VXUSl_EQ",
+      "bond": "VAGSl_EQ"
+    }
+  },
+  "signal": {
+    "type": "sma_trend",
+    "symbol": "QQQ",
+    "window": 100,
+    "max_age_days": 5,
+    "on_targets": {
+      "LQQ3l_EQ": 1.0
+    },
+    "off_targets": {},
+    "evidence": "research/h03_leveraged_trend.py, research/experiments/E009.json"
+  }
+}

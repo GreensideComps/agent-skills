@@ -1,5 +1,9 @@
 # System status: factual audit (updated 2026-10-14)
 
+> **2026-10-19: strategy retired (owner decision O10).** `config/strategy.json` is now mode `retired` with no targets;
+> runs snapshot and reconcile read-only, then halt without planning an order. The previous `discretionary_intraday_v1`
+> config is archived in `config/archive/`. Everything below is history.
+
 > **Current strategy (2026-10-14): `discretionary_intraday_v1`** (`config/strategy.json`, mode `discretionary`).
 > Owner override: Claude trades the whole Practice account intraday within the limits in `decision_limits`
 > (universe LQQ3, EQQQ, VUAG, SGLN, 3LGO; at most 8 decisions a day; 10% daily loss stop; long-only, no borrowing,
