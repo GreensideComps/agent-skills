@@ -219,6 +219,10 @@ def test_both_trials_run_every_gate_end_to_end_and_finish_records_all_twelve_res
         assert set(out[t]["verdict"]["checks"]) == set(run.GATES)
         assert out[t]["verdict"]["label"] != "E2 candidate"  # check 4 open in the test status
     assert report.read_text().count("survivorship") >= 1
+    text = report.read_text()  # D29: the P7 window disclosure and each trial's own counts (94 and 93 here)
+    assert run.P7_WINDOW_DISCLOSURE in text
+    for t in run.TRIALS.values():
+        assert f"- {t}: primary 94 monthly returns; P7 93 monthly returns." in text
 
 
 # ---------- tranche combination edge cases (edge_b5.combine_tranches, unchanged) ----------

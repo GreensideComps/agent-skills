@@ -136,10 +136,19 @@ def test_refused_without_the_owners_recorded_authorisation(env, auth):
     assert not env["lock"].exists()  # nothing started
 
 
-def test_the_real_status_authorises_only_the_owners_09_05z_message():
-    """D26 (owner, 2026-10-19 09:05Z): the run is authorised with that message id and no other."""
+ARCHIVED_LOCK = REPO / "docs" / "edge" / "incidents" / "B5_RUN_1_LOCK.json"
+ARCHIVED_LOCK_SHA256 = "c06eeaa3a6020adc896c9a18a39694bd5cf80f79fcb1d5eee594caea146f6e05"  # as committed in 4215a98
+D29_OWNER_MESSAGE = "cmsg_01U4KMvkBYNknqm4HRVie8uv5MUSAy3Neyqof1pvHhyPuc"  # archival and reset, 2026-10-19 13:02Z
+
+
+def test_the_real_status_authorises_no_run_and_keeps_run_1_as_spent_history():
+    """D29: the authorisation is reset; D26 (run 1, 09:05Z) and its D27 outcome are kept as history, marked spent."""
     s = json.loads(b5.STATUS.read_text())["b5_trial_run"]
-    assert s["authorised"] is True and s["owner_message"] == "cmsg_01U4KMvkBYNknqm4HRVie8uvUzn9qQCoyy3U7K3j4iY3kK"
+    assert s["authorised"] is False and "owner_message" not in s and D29_OWNER_MESSAGE in s["owner_decision"]
+    [h] = s["history"]
+    assert h["run"] == 1 and h["owner_message"] == RUN_1_OWNER_MESSAGE and h["spent"] is True
+    assert h["outcome"].startswith("D27") and h["lock"] == "docs/edge/incidents/B5_RUN_1_LOCK.json"
+    assert h["lock_sha256"] == ARCHIVED_LOCK_SHA256 and RUN_1_OWNER_MESSAGE in edge_registry.B5_SPENT_AUTHORISATIONS
 
 
 @pytest.mark.parametrize("target", ["B5_PREREGISTRATION.md", "B5_PREREGISTRATION_ADDENDUM_1.md",
@@ -360,22 +369,20 @@ def test_the_gate_ids_are_exactly_the_run_scripts_trials_and_robustness_runs():
     assert run.LOCK == edge_registry.B5_LOCK
 
 
-def test_in_the_real_repo_run_1s_lock_is_kept_and_no_new_run_can_start():
-    """After run 1 (D26) stopped with an error (D27): the authorisation and the lock stay as they were, no B5 id has
-    a result, and both preflight and the gate on the real files refuse before reading anything, because D26 is spent
-    (MANIFEST-3 is also unregistered, and the lock would refuse a start anyway)."""
-    auth = json.loads(edge_registry.STATUS.read_text())["b5_trial_run"]
-    assert auth["authorised"] is True and auth["owner_message"] == RUN_1_OWNER_MESSAGE
-    lock = json.loads(edge_registry.B5_LOCK.read_text())
-    assert lock == {"owner_message": RUN_1_OWNER_MESSAGE, "manifest": MANIFEST_2_SHA256}
+def test_in_the_real_repo_run_1s_lock_is_archived_unchanged_and_no_new_run_can_start():
+    """D29: run 1's lock is archived byte-identical as an incident artefact, no lock is in place, no B5 id has a
+    result, and both preflight and the gate on the real files refuse before reading any data (nothing is authorised;
+    MANIFEST-3 is unregistered too)."""
+    assert sha(ARCHIVED_LOCK) == ARCHIVED_LOCK_SHA256
+    assert json.loads(ARCHIVED_LOCK.read_text()) == {"owner_message": RUN_1_OWNER_MESSAGE, "manifest": MANIFEST_2_SHA256}
+    assert not edge_registry.B5_LOCK.exists()
     ev = edge_registry.load()
     assert not {e["id"] for e in ev if e.get("event") == "result"} & (edge_registry.B5_RUN_IDS | edge_registry.B5_RETIRED_IDS)
-    before = edge_registry.B5_LOCK.read_bytes()
-    with pytest.raises(PermissionError, match="spent"):  # D26 was used by run 1 and can authorise nothing else
+    with pytest.raises(PermissionError, match="not authorised"):
         run.preflight()
-    with pytest.raises(PermissionError, match="spent"):
+    with pytest.raises(PermissionError, match="not authorised"):
         edge_registry.b5_run_open(verify_files=True)
-    assert edge_registry.B5_LOCK.read_bytes() == before
+    assert not edge_registry.B5_LOCK.exists()  # preflight refused before taking a lock
 
 
 @pytest.mark.parametrize("rid", sorted(edge_registry.B5_RUN_IDS))
@@ -493,6 +500,10 @@ def test_report_always_carries_the_standing_and_known_limitations():
     txt = run.report(pre_, {}, {})
     assert edge_rules.STANDING_LIMITATIONS in txt and run.KNOWN_INPUT_LIMITATIONS in txt
     assert "not proof of a deployable edge" in txt
+    assert run.P7_WINDOW_DISCLOSURE in txt  # D29: P7's shorter window is always stated
+    for s in ("94 valuation dates and 93 monthly returns", "95 valuation dates and 94 monthly", "not directly comparable",
+              "on its own dates"):
+        assert s in run.P7_WINDOW_DISCLOSURE, s
 
 
 def test_the_real_manifest_matches_the_files_it_names():
@@ -755,8 +766,8 @@ def test_in_the_real_registry_version_3_and_its_manifests_are_registered_and_not
     assert m2["id"] == "B5-V3-RUN-MANIFEST-2" and m2["counts_for_dsr"] is False and m2["supersedes"] == m["id"]
     assert m2["spec_sha256"] == MANIFEST_2_SHA256 == sha(REPO / "docs" / "edge" / "B5_RUN_MANIFEST_2.json")
     assert m2["owner_message"] == MANIFEST_2_OWNER_MESSAGE and run.MANIFEST_ID not in reg
-    assert json.loads(edge_registry.STATUS.read_text())["b5_trial_run"]["owner_message"] == \
-        "cmsg_01U4KMvkBYNknqm4HRVie8uvUzn9qQCoyy3U7K3j4iY3kK"  # D26 authorisation
+    assert json.loads(edge_registry.STATUS.read_text())["b5_trial_run"]["history"][0]["owner_message"] == \
+        "cmsg_01U4KMvkBYNknqm4HRVie8uvUzn9qQCoyy3U7K3j4iY3kK"  # D26 authorisation, spent by run 1 (D29 history)
 
 
 def test_reports_carry_the_addendum_3_and_other_later_information_disclosures():

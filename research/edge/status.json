@@ -30,10 +30,23 @@
     "note": "passing the exploratory gates is not evidence that survivorship bias is bounded or that an investable edge exists"
   },
   "b5_trial_run": {
-    "authorised": true,
-    "owner_message": "cmsg_01U4KMvkBYNknqm4HRVie8uvUzn9qQCoyy3U7K3j4iY3kK",
+    "authorised": false,
     "recorded": "2026-10-19",
-    "owner_decision": "D26, owner message 2026-10-19 09:05Z: Step 3, authorise the B5 V3 exploratory run under B5-V3-RUN-MANIFEST-2 at N = 102",
-    "note": "one run only (one-run lock); exploratory; no confirmation, holdout, demo allocation or account change; E2 label withheld while TTM check 4 is open"
+    "owner_decision": "D29, owner message cmsg_01U4KMvkBYNknqm4HRVie8uv5MUSAy3Neyqof1pvHhyPuc (2026-10-19 13:02Z): run 1's lock archived and its authorisation reset",
+    "note": "no B5 run is authorised; a new run needs MANIFEST-3 registered and a new owner authorisation naming the manifest id and sha256 (edge_registry.b5_authorisation)",
+    "history": [
+      {
+        "run": 1,
+        "authorised": true,
+        "owner_message": "cmsg_01U4KMvkBYNknqm4HRVie8uvUzn9qQCoyy3U7K3j4iY3kK",
+        "recorded": "2026-10-19",
+        "owner_decision": "D26, owner message 2026-10-19 09:05Z: Step 3, authorise the B5 V3 exploratory run under B5-V3-RUN-MANIFEST-2 at N = 102",
+        "note": "one run only (one-run lock); exploratory; no confirmation, holdout, demo allocation or account change; E2 label withheld while TTM check 4 is open",
+        "outcome": "D27: stopped with an error in the robustness-variant loop; no results, gate outcomes or verdicts produced or observed; registry unchanged",
+        "spent": true,
+        "lock": "docs/edge/incidents/B5_RUN_1_LOCK.json",
+        "lock_sha256": "c06eeaa3a6020adc896c9a18a39694bd5cf80f79fcb1d5eee594caea146f6e05"
+      }
+    ]
   }
 }

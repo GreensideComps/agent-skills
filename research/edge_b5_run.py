@@ -91,6 +91,27 @@ KNOWN_INPUT_LIMITATIONS = """**Known input-rule limitations (ADDENDUM_2 §1, §3
 """
 
 
+P7_WINDOW_DISCLOSURE = """**P7 evaluation window (owner decision D29, option A; `docs/edge/B5_EXECUTION_HARDENING.md` §3):**
+
+- P7 (next-month-close execution) has **94 valuation dates and 93 monthly returns** (2015-02-28 to 2022-11-30). The
+  primary and the next-day-close variants (P4, P5, P6, P8, P9, P11) have **95 valuation dates and 94 monthly
+  returns** (2015-02-02 to 2022-12-01).
+- Under P7 the 2015-01 decision first trades at the 2015-02 month-end, and the 2022-11 decision cannot trade because
+  the registered execution file (decisions to 2022-11) holds no 2022-12 month-end close.
+- P7 is assessed against the benchmark on its own dates. Its result is **not directly comparable** with variants
+  measured over a different window. The registered data, definition and gate are unchanged.
+"""
+
+
+def window_counts(runs: dict) -> list[str]:
+    """Report lines with each trial's own counts of monthly returns: the primary's excess series and P7's."""
+    out = []
+    for r in runs.values():
+        n_p, n_7 = len(r["excess"].dropna()), len(r["variants"]["P7"].dropna())
+        out.append(f"- {r['id']}: primary {n_p} monthly returns; P7 {n_7} monthly returns.")
+    return out
+
+
 def rob_id(trial: str, gate: str) -> str:
     return f"B5-{trial}-V3-{ROB_IDS[gate]}"
 
@@ -393,7 +414,8 @@ def report(pre: dict, runs: dict, final: dict) -> str:
          "deployable edge, authorises no confirmation test, holdout access or demo allocation, and changes nothing "
          "in any account.**", "",
          f"Authorised by owner message {pre['owner_message']}; manifest sha256 {pre['manifest_sha256']}; "
-         f"N = {pre['n_trials']}; TTM check 4 complete: {pre['check4_complete']}.", "", KNOWN_INPUT_LIMITATIONS, ""]
+         f"N = {pre['n_trials']}; TTM check 4 complete: {pre['check4_complete']}.", "", KNOWN_INPUT_LIMITATIONS, "",
+         P7_WINDOW_DISCLOSURE] + window_counts(runs) + [""]
     for trial, r in runs.items():
         f = final[trial]
         L += [f"## {r['id']}", "", f"Verdict: **{f['verdict']['label']}**", "",

@@ -16,3 +16,13 @@ Run 1 is the B5 V3 exploratory run authorised under D26 (owner message cmsg_01U4
   - the lock is kept.
 - **Results:** none were printed, written or recorded, so no result has been seen.
 - **Next steps:** none taken. Per D26, there is no lock removal, no rerun and no code change without the owner's decision.
+
+## Archival (D29, owner message cmsg_01U4KMvkBYNknqm4HRVie8uv5MUSAy3Neyqof1pvHhyPuc, 2026-10-19 13:02Z)
+
+- **Lock:** moved unchanged from `research/edge/b5_run.lock` to `docs/edge/incidents/B5_RUN_1_LOCK.json` with
+  `git mv`. Its sha256 is still c06eeaa3a6020adc896c9a18a39694bd5cf80f79fcb1d5eee594caea146f6e05, as committed in
+  4215a98.
+- **Authorisation:** `research/edge/status.json` `b5_trial_run` is now `authorised = false`. Run 1's D26
+  authorisation and this incident's D27 outcome are kept under `history`.
+- **D26:** stays permanently spent in code (`edge_registry.B5_SPENT_AUTHORISATIONS`).
+- **Kept as they were:** the registry, this record and the traceback (`B5_RUN_1_FAILURE.txt`). Nothing was deleted.
