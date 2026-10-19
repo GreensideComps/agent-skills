@@ -136,6 +136,32 @@ def check4_complete(status: Path = STATUS) -> bool:
         return False
 
 
+# The two B5 trials and their registered robustness runs (edge_b5_run.TRIALS and rob_id; a test keeps the lists
+# equal). Owner review 2026-10-19 item 4: no code path may run or record one of these unless the run is open.
+B5_RUN_IDS = frozenset(["B5-H1-FCFPS-ACCEL-V2", "B5-S2A-GP-12M-V2"] + [
+    f"B5-{t}-V2-ROB-{g}" for t in ("H1", "S2A") for g in ("2XCOST", "MISS100", "NEXTMONTH", "DATAERR", "PITQ")])
+B5_LOCK = Path(__file__).resolve().parent / "edge" / "b5_run.lock"
+
+
+def b5_run_open() -> str:
+    """The owner message id of the open B5 run, else PermissionError. Open means the real status.json records the
+    owner's authorisation (`b5_trial_run.authorised` is True with a cmsg_ id) AND the one-run lock, which only
+    `edge_b5_run.preflight` creates after every other control has passed, exists and names that same message. It
+    reads the module paths STATUS and B5_LOCK, never arguments, so no caller can point it at a copied registry,
+    status file or lock."""
+    try:
+        auth = json.loads(STATUS.read_text())["b5_trial_run"]
+        lock = json.loads(B5_LOCK.read_text())
+        msg = auth["owner_message"]
+        ok = auth["authorised"] is True and str(msg).startswith("cmsg_") and lock["owner_message"] == msg
+    except (OSError, KeyError, TypeError, ValueError):
+        ok = False
+    if not ok:
+        raise PermissionError("B5 run not open: needs the owner's authorisation in status.json and the one-run lock "
+                              "taken by edge_b5_run.preflight")
+    return msg
+
+
 def append(event: dict, path: Path = PATH, status: Path = STATUS) -> dict:
     """Append one event, chaining it to the last line. Refuses if the file is already invalid or the result
     would be invalid; the file is left untouched in that case. Refuses a confirmation batch while TTM check 4 is
@@ -162,7 +188,10 @@ def append(event: dict, path: Path = PATH, status: Path = STATUS) -> dict:
 
 def require(trial_id: str, path: Path = PATH) -> dict:
     """The registration of `trial_id`, or an error if it is not registered or already has a result. Research
-    code calls this before computing anything, so an unregistered or repeated look cannot run."""
+    code calls this before computing anything, so an unregistered or repeated look cannot run. A B5 trial or
+    robustness id also needs the B5 run to be open (`b5_run_open`), whichever script asks."""
+    if trial_id in B5_RUN_IDS:
+        b5_run_open()
     events = load(path)
     reg = registered(events).get(trial_id)
     if reg is None:

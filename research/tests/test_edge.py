@@ -140,7 +140,8 @@ def test_new_research_code_reads_data_only_through_the_guard():
     (cut_exploration / exploration_view), so a holdout outcome cannot be read by a path the guard does not see."""
     allowed = {"xsection.py", "stage2.py", "stage1_coverage.py", "signal_log.py", "edge_integrity.py",
                "stage2_diagnostics.py", "edge_exec_prices.py", "edge_exec_audit.py", "edge_b3_reproduce.py",
-               "edge_ttm_checks.py", "edge_b5_handcheck.py", "edge_b5_run.py"}
+               "edge_ttm_checks.py", "edge_b5_handcheck.py", "edge_b5_run.py", "edge_b5_share_pit_audit.py",
+               "edge_b5_manifest.py"}
     root = Path(__file__).resolve().parent.parent
     offenders = [f.name for f in root.glob("*.py") if f.name not in allowed
                  and any(k in f.read_text() for k in ("xsection.load(", "prices_monthly", "monthly_metrics"))]
@@ -154,6 +155,10 @@ def test_new_research_code_reads_data_only_through_the_guard():
     b3 = (root / "edge_b3_reproduce.py").read_text()
     assert "x = x[pd.to_datetime(x[\"month\"]) <= CUT]" in b3 and "xsection.load(tmp)" in b3
     assert "edge_split.cut_exploration(pd.read_csv(xsection.DATA / \"prices_monthly.csv.gz\"" in audit
+    pit = (root / "edge_b5_share_pit_audit.py").read_text()
+    assert "edge_split.cut_exploration(xsection.load())" in pit and 'r["filed"] <= tc.CUT' in pit
+    man = (root / "edge_b5_manifest.py").read_text()
+    assert "read_csv" not in man and "import xsection" not in man and "gzip" not in man  # hashes, never parses
     ttm = (root / "edge_ttm_checks.py").read_text()
     assert "edge_split.with_quality(edge_split.cut_exploration(xsection.load()))" in ttm
     assert 'r["filed"] <= CUT' in ttm  # SEC facts filed after 2022 are never read into the checks

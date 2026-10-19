@@ -1,0 +1,25 @@
+{
+ "rows": 4878,
+ "companies": 816,
+ "by_stratum": {
+  "random": 3000,
+  "ratio>25": 1878
+ },
+ "rebuilt": 4878,
+ "shares_out": {
+  "match": 4878,
+  "mismatch": 0,
+  "later_filing_would_differ": 756
+ },
+ "shares_diluted": {
+  "match": 4878,
+  "mismatch": 0,
+  "later_filing_would_differ": 2523
+ },
+ "total_assets": {
+  "match": 4878,
+  "mismatch": 0,
+  "later_filing_would_differ": 3022
+ },
+ "mismatch_examples": []
+}

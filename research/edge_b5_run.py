@@ -14,6 +14,11 @@ executed. It refuses to read any data until every control below passes:
   (`research/edge/b5_run.lock`) does not exist. The lock is created before any data is read and never removed by
   code: a failed or interrupted run can only be repeated by a recorded owner decision.
 
+The same authorisation and lock are re-checked where data and results are touched, so calling a function directly
+does not skip them (owner review 2026-10-19, item 4): `load_inputs` and `finish` call `edge_registry.b5_run_open`,
+and `edge_registry.require`, which every `bt.run_trial` and `bt.record` calls, refuses either trial id or any of
+their robustness ids unless the run is open. `b5_run_open` reads the real status.json and lock only.
+
 Both trials run in this one invocation, each exactly once, with every gate from one fixed list (`GATES`); there is
 no flag to skip a gate, choose a trial or change a setting. All results are computed first; then both primary
 results are appended to the registry; only then is the shared DSR computed for each, so the DSR always sees both.
@@ -41,7 +46,7 @@ import edge_rules
 ROOT = Path(__file__).resolve().parent
 REPO = ROOT.parent
 MANIFEST = REPO / "docs" / "edge" / "B5_RUN_MANIFEST.json"
-LOCK = ROOT / "edge" / "b5_run.lock"
+LOCK = edge_registry.B5_LOCK  # research/edge/b5_run.lock
 OUT = REPO / "equity" / "reports" / "research" / "edge"
 CUT = pd.Timestamp("2022-12-31")
 
@@ -143,8 +148,21 @@ def read_factors(path: Path) -> pd.DataFrame:
     return df
 
 
-def load_inputs() -> dict:  # pragma: no cover - reads the research data; exercised only by an authorised run
+FUND_COLS = ["ocf", "capex", "fcf_end", "gross_profit", "gp_end", "gp_restated", "revenue", "rev_end", "rev_conflict",
+             "cost_of_revenue", "cor_end", "cor_restated", "ocf_restated", "capex_restated", "foreign_form"]
+
+
+def attach_fundamentals(df: pd.DataFrame, fx_rows: dict) -> pd.DataFrame:
+    """The SEC inputs and flags of every company-month, each as known at that row's own month-end:
+    `edge_b5_inputs.company_month(rows, month)` with no `align` and no `retro_as_of`, so only facts filed on or
+    before the month-end are read and the retrospective T2 diagnostic is never computed here."""
     import edge_b5_inputs as bi
+    recs = [bi.company_month(fx_rows.get(c, {}), m) for c, m in zip(df["cik"], df["month"].dt.strftime("%Y-%m-%d"))]
+    return pd.concat([df, pd.DataFrame(recs, index=df.index)[FUND_COLS]], axis=1)
+
+
+def load_inputs() -> dict:  # pragma: no cover - reads the research data; exercised only by an authorised run
+    edge_registry.b5_run_open()
     import edge_split
     import stage2
     import xsection
@@ -164,10 +182,7 @@ def load_inputs() -> dict:  # pragma: no cover - reads the research data; exerci
     for r in epanel.read(xsection.DATA / "sec_facts_panel.csv.gz", ciks):
         if r["metric"] in metrics and r["unit"] == "USD" and r["filed"] <= str(CUT.date()):
             fx_rows.setdefault(r["cik"], {}).setdefault(r["metric"], []).append(r)
-    recs = [bi.company_month(fx_rows.get(c, {}), m) for c, m in zip(df["cik"], df["month"].dt.strftime("%Y-%m-%d"))]
-    keep = ["ocf", "capex", "fcf_end", "gross_profit", "gp_end", "gp_restated", "revenue", "rev_end", "rev_conflict",
-            "cost_of_revenue", "cor_end", "cor_restated", "ocf_restated", "capex_restated", "foreign_form"]
-    df = pd.concat([df, pd.DataFrame(recs, index=df.index)[keep]], axis=1)
+    df = attach_fundamentals(df, fx_rows)
     edge_dir = Path(__import__("edge_exec_prices").OUT_DIR)
     ex = pd.read_csv(edge_dir / "exec_prices_to_2022.csv.gz")
     ex = ex[pd.to_datetime(ex["month"]) <= CUT]
@@ -250,6 +265,7 @@ def nonoverlap_t(excess: pd.Series) -> float:
 
 def run_one(trial: str, panels: dict, data: dict, registry: Path) -> dict:
     """Every run and statistic for one trial. Appends nothing."""
+    edge_registry.b5_run_open()
     tid = TRIALS[trial]
     k, starts = SCHEDULE[trial]
     cfg = config(k)
@@ -281,14 +297,23 @@ def run_one(trial: str, panels: dict, data: dict, registry: Path) -> dict:
 
 
 def finish(runs: dict, registry: Path, status: Path, evidence: str) -> dict:
-    """Append both primary results (and the robustness results), THEN compute the shared DSR and the verdicts."""
+    """Append both primary results (and the robustness results), THEN compute the shared DSR and the verdicts.
+    Everything is checked before the first append, so a partial run records nothing."""
+    edge_registry.b5_run_open()
     if set(runs) != set(TRIALS):
         raise RuntimeError("both trials must be computed before anything is recorded")
+    for trial, r in runs.items():
+        if r["id"] != TRIALS[trial] or set(r["variants"]) != set(VARIANT_GATES) \
+                or set(r["variant_metrics"]) != set(ROB_IDS):
+            raise RuntimeError(f"{trial}: incomplete robustness runs; nothing recorded")
     for trial, r in runs.items():
         bt.record(r["id"], r["metrics"], registry, evidence)
     for trial, r in runs.items():
         for gate in ROB_IDS:
             bt.record(rob_id(trial, gate), r["variant_metrics"][gate], registry, evidence)
+    recorded = {e["id"] for e in edge_registry.load(registry) if e.get("event") == "result"}
+    if not set(TRIALS.values()) <= recorded:
+        raise RuntimeError("both primary results must be recorded before the shared DSR")
     out = {}
     for trial, r in runs.items():
         d = bt.dsr(r["metrics"], registry)
@@ -322,8 +347,10 @@ def report(pre: dict, runs: dict, final: dict) -> str:
     return bt.report("B5 exploratory trials", {}, "\n".join(L))
 
 
-def main(registry: Path = edge_registry.PATH, status: Path = b5.STATUS) -> int:  # pragma: no cover
-    pre = preflight(registry, status)
+def main() -> int:  # pragma: no cover
+    """The only entry point: real registry, status, manifest and lock, no parameters."""
+    registry, status = edge_registry.PATH, b5.STATUS
+    pre = preflight()
     data = load_inputs()
     panels = score_panels(data["panel"])
     runs = {t: run_one(t, panels, data, registry) for t in TRIALS}

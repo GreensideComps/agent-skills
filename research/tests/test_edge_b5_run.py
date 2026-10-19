@@ -59,6 +59,16 @@ def pre(e):
     return run.preflight(e["registry"], e["status"], e["manifest"], e["repo"], e["lock"])
 
 
+@pytest.fixture
+def opened(env, monkeypatch):
+    """env with the run open: the gate's fixed paths pointed at env's authorised status and a lock preflight took.
+    Only a test can repoint them; production code has no parameter for it."""
+    pre(env)
+    monkeypatch.setattr(edge_registry, "STATUS", env["status"])
+    monkeypatch.setattr(edge_registry, "B5_LOCK", env["lock"])
+    return env
+
+
 def test_preflight_passes_once_and_the_lock_refuses_a_second_start(env):
     out = pre(env)
     assert out["owner_message"] == "cmsg_TEST" and out["n_trials"] == 100 and out["check4_complete"] is False
@@ -156,7 +166,7 @@ def synthetic_run(trial, seed):
             "top_contributor": 1, "t_nw": 1.0, "t_nonoverlap": 1.0 if trial == "S2A" else None}
 
 
-def test_finish_records_both_results_before_any_dsr(env, monkeypatch):
+def test_finish_records_both_results_before_any_dsr(opened, monkeypatch):
     seen = []
     real = bt.dsr
 
@@ -166,6 +176,7 @@ def test_finish_records_both_results_before_any_dsr(env, monkeypatch):
         return real(m, registry)
 
     monkeypatch.setattr(bt, "dsr", spy)
+    env = opened
     runs = {t: synthetic_run(t, i) for i, t in enumerate(run.TRIALS)}
     out = run.finish(runs, env["registry"], env["status"], "test")
     assert seen == [True, True]
@@ -180,21 +191,110 @@ def test_finish_records_both_results_before_any_dsr(env, monkeypatch):
         run.finish(runs, env["registry"], env["status"], "test")
 
 
-def test_finish_refuses_one_trial_alone(env):
+def test_finish_refuses_one_trial_alone(opened):
+    env = opened
     with pytest.raises(RuntimeError, match="both trials"):
         run.finish({"H1": synthetic_run("H1", 0)}, env["registry"], env["status"], "test")
     assert not any(e.get("event") == "result" and e["id"].startswith("B5-H1-FCFPS")
                    for e in edge_registry.load(env["registry"]))
 
 
-def test_a_missing_robustness_input_fails_its_gate_closed(env):
+def results(registry):
+    return [e["id"] for e in edge_registry.load(registry) if e.get("event") == "result"
+            and e["id"] in edge_registry.B5_RUN_IDS]
+
+
+@pytest.mark.parametrize("drop", [("variants", "P8"), ("variants", "P11"), ("variant_metrics", "P4"),
+                                  ("variant_metrics", "P9")])
+def test_a_partial_run_records_nothing(opened, drop):
+    """Owner review 2026-10-19 item 4: a missing robustness run is refused before the first append."""
     runs = {t: synthetic_run(t, i) for i, t in enumerate(run.TRIALS)}
-    del runs["H1"]["variants"]["P8"]
-    out = run.finish(runs, env["registry"], env["status"], "test")
-    assert out["H1"]["verdict"]["checks"]["P8"] is False and out["H1"]["verdict"]["label"] == "fail"
+    del runs["S2A"][drop[0]][drop[1]]
+    with pytest.raises(RuntimeError, match="incomplete"):
+        run.finish(runs, opened["registry"], opened["status"], "test")
+    assert results(opened["registry"]) == []
 
 
-def test_run_one_refuses_when_a_variant_run_is_missing(monkeypatch):
+def test_a_missing_robustness_input_still_fails_its_gate_closed_in_the_verdict():
+    r = synthetic_run("H1", 0)
+    del r["variants"]["P8"]
+    vi = run.st.verdict_inputs(r["excess"], r["variants"], None, 1.0, 0.99, r["alpha"], "H1")
+    v = b5.verdict(vi)
+    assert v["checks"]["P8"] is False and v["label"] == "fail"
+
+
+# ---------- the gate: no alternate invocation or direct call runs or records a B5 trial ----------
+
+def test_the_gate_ids_are_exactly_the_run_scripts_trials_and_robustness_runs():
+    assert edge_registry.B5_RUN_IDS == set(run.TRIALS.values()) | {run.rob_id(t, g) for t in run.TRIALS
+                                                                    for g in run.ROB_IDS}
+    assert run.LOCK == edge_registry.B5_LOCK
+
+
+def test_in_the_real_repo_the_run_is_closed():
+    with pytest.raises(PermissionError):
+        edge_registry.b5_run_open()
+    assert not edge_registry.B5_LOCK.exists()
+
+
+@pytest.mark.parametrize("rid", sorted(edge_registry.B5_RUN_IDS))
+def test_no_b5_trial_or_robustness_id_can_run_or_be_recorded_while_closed(env, rid):
+    with pytest.raises(PermissionError):
+        edge_registry.require(rid, env["registry"])
+    with pytest.raises(PermissionError):
+        bt.run_trial(rid, env["registry"], pd.DataFrame(), None, None, None)
+    with pytest.raises(PermissionError):
+        bt.record(rid, {"sr_excess_monthly": 0.1, "excess_months": 94}, env["registry"], "x")
+    assert results(env["registry"]) == []
+
+
+def test_other_registered_ids_are_not_gated(env):
+    edge_registry.append({"event": "register", "id": "B5-OTHER", "kind": "diagnostic", "phase": "exploration",
+                          "hypothesis": "x", "definition": "x", "universe": "x", "horizon_months": 0, "window": {},
+                          "counts_for_dsr": False, "touched_holdout": False}, env["registry"])
+    assert edge_registry.require("B5-OTHER", env["registry"])["id"] == "B5-OTHER"
+
+
+def test_a_copied_registry_and_status_cannot_open_the_run(env):
+    """An alternate invocation that points preflight at copies passes preflight there, but the gate reads only the
+    real status.json and lock, so nothing can be run, scored from loaded data, or recorded."""
+    pre(env)
+    assert env["lock"].exists()
+    runs = {t: synthetic_run(t, i) for i, t in enumerate(run.TRIALS)}
+    for call in (lambda: run.load_inputs(), lambda: run.finish(runs, env["registry"], env["status"], "x"),
+                 lambda: run.run_one("H1", {}, {}, env["registry"]),
+                 lambda: bt.run_trial(run.TRIALS["H1"], env["registry"], pd.DataFrame(), None, None, None)):
+        with pytest.raises(PermissionError):
+            call()
+    assert results(env["registry"]) == []
+
+
+@pytest.mark.parametrize("case", ["no_lock", "no_auth", "other_message", "not_true"])
+def test_the_gate_needs_the_authorisation_and_a_lock_naming_the_same_message(env, monkeypatch, case):
+    lock = env["lock"]
+    status = json.loads(env["status"].read_text())
+    if case != "no_lock":
+        lock.write_text(json.dumps({"owner_message": "cmsg_OTHER" if case == "other_message" else "cmsg_TEST"}))
+    if case == "no_auth":
+        status.pop("b5_trial_run")
+    if case == "not_true":
+        status["b5_trial_run"]["authorised"] = "true"
+    env["status"].write_text(json.dumps(status))
+    monkeypatch.setattr(edge_registry, "STATUS", env["status"])
+    monkeypatch.setattr(edge_registry, "B5_LOCK", lock)
+    with pytest.raises(PermissionError):
+        edge_registry.b5_run_open()
+    lock.write_text(json.dumps({"owner_message": "cmsg_TEST"}))
+    if case in ("no_lock", "other_message"):
+        assert edge_registry.b5_run_open() == "cmsg_TEST"
+
+
+def test_main_has_no_parameters_so_it_always_uses_the_real_files():
+    import inspect
+    assert inspect.signature(run.main).parameters == {}
+
+
+def test_run_one_refuses_when_a_variant_run_is_missing(opened, monkeypatch):
     idx = pd.date_range("2015-02-02", periods=30, freq="MS")
     nav = pd.Series(np.linspace(1, 1.3, 30), index=idx)
     fake = {"results": [bt.Result(nav_usd=nav, nav_gbp=nav, contrib={1: 0.1})], "nav_gbp": nav, "nav_usd": nav}
@@ -258,3 +358,19 @@ def test_the_real_manifest_matches_the_files_it_names():
             p = Path(path) if Path(path).is_absolute() else REPO / path
             if p.exists():  # the shared research data is absent on some machines
                 assert sha(p) == h, path
+
+
+def test_the_manifest_covers_exactly_the_repository_code_the_run_imports():
+    """Owner review 2026-10-19 item 3: every repository module the run path imports (including the loader's lazy
+    imports) is hashed in the manifest, and nothing else; a new import fails this test until the manifest is rebuilt."""
+    import subprocess
+    code = ("import os, sys; sys.path.insert(0, '../equity'); import edge_b5_run, edge_b5_inputs, edge_split, stage2, "
+            "xsection, edge_exec_prices; from equity import panel; r = os.path.abspath('..'); "
+            "print('\\n'.join(sorted(os.path.relpath(m.__file__, r) for m in list(sys.modules.values()) "
+            "if getattr(m, '__file__', None) and os.path.abspath(m.__file__).startswith(r + os.sep))))")
+    out = subprocess.run([sys.executable, "-c", code], cwd=run.ROOT, capture_output=True, text=True, check=True)
+    imported = set(out.stdout.split())
+    import edge_b5_manifest as em
+    m = json.loads(run.MANIFEST.read_text())
+    assert set(m["code"]) == set(em.CODE) == imported
+    assert list(m["inputs"]) == em.INPUTS and len(em.INPUTS) == 10
