@@ -1,0 +1,57 @@
+{
+ "branch": "office-queue-test-20261019144950",
+ "started": "2026-10-19T14:49:50Z",
+ "workers": 6,
+ "results": {
+  "S1_concurrent_create": {
+   "pass": true,
+   "created_events": 20,
+   "push_rejections": 79,
+   "seconds": 53.9
+  },
+  "S2_concurrent_claim": {
+   "pass": true,
+   "claims": 20,
+   "double_claims": 0,
+   "completed": 20,
+   "push_rejections": 131,
+   "ambiguous_pushes_resolved": 0,
+   "seconds": 97.0
+  },
+  "S3_crash_and_lease_expiry": {
+   "pass": true,
+   "victim_exit": -9,
+   "claim_during_live_lease": false
+  },
+  "S4_stale_result_refused": {
+   "pass": true
+  },
+  "S5_retry_and_quarantine": {
+   "pass": true,
+   "attempts": [
+    1,
+    2,
+    3
+   ]
+  },
+  "S6_interrupted_pushes": {
+   "pass": true,
+   "kills": 8,
+   "noise_events_landed": 8,
+   "audit_problems": []
+  },
+  "S7_remote_unreachable": {
+   "pass": true
+  },
+  "final_audit": {
+   "pass": true,
+   "events": 80
+  }
+ },
+ "cleanup": {
+  "deleted": false,
+  "ls_remote": "8b521b42fdb6622c23f2845fb5a2a55420101f41\trefs/heads/office-queue-test-20261019144950"
+ },
+ "finished": "2026-10-19T14:54:11Z",
+ "all_pass": false
+}
