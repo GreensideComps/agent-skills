@@ -6,6 +6,7 @@ import hashlib
 import json
 import math
 import shutil
+import subprocess
 import sys
 from pathlib import Path
 
@@ -142,6 +143,9 @@ ARCHIVED_LOCK = REPO / "docs" / "edge" / "incidents" / "B5_RUN_1_LOCK.json"
 ARCHIVED_LOCK_SHA256 = "c06eeaa3a6020adc896c9a18a39694bd5cf80f79fcb1d5eee594caea146f6e05"  # as committed in 4215a98
 D29_OWNER_MESSAGE = "cmsg_01U4KMvkBYNknqm4HRVie8uv5MUSAy3Neyqof1pvHhyPuc"  # archival and reset, 2026-10-19 13:02Z
 RUN_2_OWNER_MESSAGE = "cmsg_01U4KMvkBYNknqm4HRVie8uvNzjD1qcmHEXGwqYmiFikfZ"  # D31, run 2 authorised, 2026-10-19 13:25Z
+PRE_RUN_2_SPENT = frozenset({RUN_1_OWNER_MESSAGE})  # the code's spent set when run 2 ran
+RUN_2_RESULTS_COMMIT = "a4a07d7"  # run 2's results commit; edge_registry.py there is the MANIFEST-3 file
+MANIFEST_3_EDGE_REGISTRY_SHA256 = "e56f49aa862eaaf8048494272e1de1e3d363a0490282562b080f63dae5405c5c"
 D32_OWNER_MESSAGE = "cmsg_01U4KMvkBYNknqm4HRVie8uvWW5mGZ7bsqjsGzRn39VcN1"  # run 2 closeout, 2026-10-19 13:55Z
 RUN_2_LOCK = REPO / "docs" / "edge" / "incidents" / "B5_RUN_2_LOCK.json"
 RUN_2_LOCK_SHA256 = "2041f109b37519e6a5b53a033b2ed82172cb1b5cd4bac6cec4e95a2834a60a61"  # as committed in e5d1dc1
@@ -173,9 +177,32 @@ def pre_run_2(tmp_path, monkeypatch):
     s["b5_trial_run"] = {k: h[k] for k in ("authorised", "owner_message", "manifest_id", "manifest_sha256")}
     status = tmp_path / "status.json"
     status.write_text(json.dumps(s))
-    e = {"registry": reg, "status": status, "manifest": run.MANIFEST, "repo": REPO, "lock": tmp_path / "b5.lock"}
+    e = {"registry": reg, "status": status, "manifest": run.MANIFEST, "repo": manifest_3_repo(tmp_path),
+         "lock": tmp_path / "b5.lock"}
     point_gate(monkeypatch, e)
+    # O4 (D31 spent in code) came after run 2. Before run 2 only D26 was spent in code, so the copy restores that
+    # set too; the real B5_SPENT_AUTHORISATIONS and the real edge_registry.py are untouched.
+    monkeypatch.setattr(edge_registry, "B5_SPENT_AUTHORISATIONS", PRE_RUN_2_SPENT)
     return e
+
+
+def manifest_3_repo(tmp_path):
+    """A view of the repository as MANIFEST-3 hashed it: every entry links to the real one, except
+    research/edge_registry.py, which is the exact bytes committed when run 2 ran (git, verified against the manifest
+    hash). O4 changed the real file afterwards, so MANIFEST-3 no longer matches the real repository."""
+    root = tmp_path / "repo"
+    (root / "research").mkdir(parents=True)
+    for c in REPO.iterdir():
+        if c.name != "research":
+            (root / c.name).symlink_to(c)
+    for c in (REPO / "research").iterdir():
+        if c.name != "edge_registry.py":
+            (root / "research" / c.name).symlink_to(c)
+    old = subprocess.run(["git", "-C", str(REPO), "show", f"{RUN_2_RESULTS_COMMIT}:research/edge_registry.py"],
+                         capture_output=True, check=True).stdout
+    assert hashlib.sha256(old).hexdigest() == MANIFEST_3_EDGE_REGISTRY_SHA256
+    (root / "research" / "edge_registry.py").write_bytes(old)
+    return root
 
 
 def test_the_real_status_authorises_no_run_and_keeps_runs_1_and_2_as_spent_history():
@@ -453,7 +480,8 @@ def test_in_the_real_repo_both_run_locks_are_archived_unchanged_and_no_further_r
 
 def test_re_authorising_spent_d31_cannot_start_a_second_run(tmp_path, monkeypatch):
     """A status that re-authorises D31 for the same manifest, on a copy of the real post-run registry: preflight
-    refuses because run 2's results exist, takes no lock, and the gate stays shut."""
+    refuses at the authorisation (D31 is spent in code, O4), takes no lock, and the gate stays shut. With the code's
+    pre-O4 spent set restored, preflight still refuses, at a later control, because run 2's results exist."""
     reg = tmp_path / "trials.jsonl"
     shutil.copy(edge_registry.PATH, reg)
     s = json.loads(b5.STATUS.read_text())
@@ -462,11 +490,15 @@ def test_re_authorising_spent_d31_cannot_start_a_second_run(tmp_path, monkeypatc
     status = tmp_path / "status.json"
     status.write_text(json.dumps(s))
     e = {"registry": reg, "status": status, "manifest": run.MANIFEST, "repo": REPO, "lock": tmp_path / "b5.lock"}
-    with pytest.raises(ValueError, match="already run"):
+    with pytest.raises(PermissionError, match="spent"):
         pre(e)
+    with monkeypatch.context() as m:
+        m.setattr(edge_registry, "B5_SPENT_AUTHORISATIONS", PRE_RUN_2_SPENT)
+        with pytest.raises(ValueError, match="already run"):
+            pre(dict(e, repo=manifest_3_repo(tmp_path)))
     assert not e["lock"].exists() and reg.read_bytes() == edge_registry.PATH.read_bytes()
     point_gate(monkeypatch, e)
-    with pytest.raises(PermissionError, match="not open"):
+    with pytest.raises(PermissionError, match="spent"):
         edge_registry.b5_run_open(verify_files=True)
 
 
@@ -617,12 +649,51 @@ def test_report_always_carries_the_standing_and_known_limitations():
 
 
 def test_the_real_manifest_matches_the_files_it_names():
+    """Every file MANIFEST-3 names still has its recorded hash, except research/edge_registry.py: O4 added D31 to
+    the spent set after run 2 spent MANIFEST-3. That file's run-2 bytes are checked from git instead, and the real
+    file is checked to differ, so MANIFEST-3 can never pass the gate's file check again."""
     m = json.loads(run.MANIFEST.read_text())
     for group in ("inputs", "code"):
         for path, h in m[group].items():
             p = Path(path) if Path(path).is_absolute() else REPO / path
-            if p.exists():  # the shared research data is absent on some machines
+            if path == "research/edge_registry.py":
+                assert h == MANIFEST_3_EDGE_REGISTRY_SHA256 and sha(p) != h
+            elif p.exists():  # the shared research data is absent on some machines
                 assert sha(p) == h, path
+    old = subprocess.run(["git", "-C", str(REPO), "show", f"{RUN_2_RESULTS_COMMIT}:research/edge_registry.py"],
+                         capture_output=True, check=True).stdout
+    assert hashlib.sha256(old).hexdigest() == MANIFEST_3_EDGE_REGISTRY_SHA256
+
+
+def test_every_spent_authorisation_in_the_history_is_spent_in_code_and_refused(tmp_path):
+    """O4: each status.json history entry marked spent is in B5_SPENT_AUTHORISATIONS, and re-authorising it (for
+    the manifest it named) is refused at the authorisation, before any lock, registry or file is read."""
+    hist = json.loads(b5.STATUS.read_text())["b5_trial_run"]["history"]
+    spent = [h for h in hist if h.get("spent") is True]
+    assert {h["owner_message"] for h in spent} == {RUN_1_OWNER_MESSAGE, RUN_2_OWNER_MESSAGE}
+    assert {h["owner_message"] for h in spent} <= edge_registry.B5_SPENT_AUTHORISATIONS
+    status = tmp_path / "status.json"
+    for h in spent:
+        auth = {"authorised": True, "owner_message": h["owner_message"], "manifest_id": run.MANIFEST_ID,
+                "manifest_sha256": h.get("manifest_sha256", MANIFEST_3_SHA256)}
+        status.write_text(json.dumps({"b5_trial_run": auth}))
+        with pytest.raises(PermissionError, match="spent"):
+            edge_registry.b5_authorisation(status)
+
+
+def test_the_real_gate_refuses_manifest_3_on_its_files_even_with_a_fresh_authorisation(tmp_path, monkeypatch):
+    """Belt and braces: an unspent authorisation for MANIFEST-3 with a matching lock still cannot open the real
+    gate, because research/edge_registry.py no longer matches MANIFEST-3."""
+    status = tmp_path / "status.json"
+    status.write_text(json.dumps({"b5_trial_run": {"authorised": True, "owner_message": "cmsg_FRESH",
+                                                   "manifest_id": run.MANIFEST_ID, "manifest_sha256": MANIFEST_3_SHA256}}))
+    lock = tmp_path / "b5.lock"
+    lock.write_text(json.dumps({"owner_message": "cmsg_FRESH", "manifest": MANIFEST_3_SHA256}))
+    monkeypatch.setattr(edge_registry, "STATUS", status)
+    monkeypatch.setattr(edge_registry, "B5_LOCK", lock)
+    assert edge_registry.b5_run_open(verify_files=False) == "cmsg_FRESH"  # every other control passes
+    with pytest.raises(PermissionError, match="edge_registry.py does not match"):
+        edge_registry.b5_run_open(verify_files=True)
 
 
 def test_the_manifest_covers_exactly_the_repository_code_the_run_imports():

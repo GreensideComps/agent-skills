@@ -154,8 +154,11 @@ B5_REPO = Path(__file__).resolve().parent.parent
 B5_MANIFEST_ID = "B5-V3-RUN-MANIFEST-3"
 B5_MANIFEST = B5_REPO / "docs" / "edge" / "B5_RUN_MANIFEST_3.json"
 # Owner authorisations already used by a run that took the one-run lock. None can open another run, whatever
-# status.json says (D27: run 1, authorised by D26 at 09:05Z, stopped with an error; its lock is kept).
-B5_SPENT_AUTHORISATIONS = frozenset({"cmsg_01U4KMvkBYNknqm4HRVie8uvUzn9qQCoyy3U7K3j4iY3kK"})
+# status.json says (D27: run 1, authorised by D26 at 09:05Z, stopped with an error; its lock is kept. D32: run 2,
+# authorised by D31 at 13:25Z, completed once; its lock is archived). Adding D31 here (owner decision O4, 19 Oct)
+# changes this file after MANIFEST-3 was spent, so MANIFEST-3 no longer matches the code and can never run again.
+B5_SPENT_AUTHORISATIONS = frozenset({"cmsg_01U4KMvkBYNknqm4HRVie8uvUzn9qQCoyy3U7K3j4iY3kK",  # D26, run 1
+                                     "cmsg_01U4KMvkBYNknqm4HRVie8uvNzjD1qcmHEXGwqYmiFikfZ"})  # D31, run 2
 
 
 def _sha(p: Path) -> str:
