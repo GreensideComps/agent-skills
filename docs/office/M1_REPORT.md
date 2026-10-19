@@ -41,7 +41,7 @@ or a different mechanism.
 
 **Other suites:**
 - Trading suite on the retirement branch: 146 passed.
-- Research suite on the D31 branch: see the D31 PR.
+- Research suite on the D31 branch: 444 passed (442 before, plus 2 new).
 
 ## 3. Separate reviewed PRs (none merged)
 
@@ -49,7 +49,7 @@ or a different mechanism.
 |---|---|---|
 | #20 retirement (O10) | strategy.json → `retired`, with no targets or signal; the bot halts before planning; the legacy loop is retired with `research/STOP`; old files archived unchanged; 7 new tests | draft, awaiting review |
 | #21 Check 4 procedure (O6) | `docs/edge/CHECK4_PROCEDURE.md`: EDGAR filings as source, seeded sample, blind double extraction, owner review, tolerance stated in advance | draft, docs only |
-| D31 fix (O4) | D31 added to `B5_SPENT_AUTHORISATIONS`; based on PR #19's branch | see the D31 PR; MANIFEST-3 now permanently fails its file check (disclosed and tested) |
+| #22 D31 fix (O4) | D31 added to `B5_SPENT_AUTHORISATIONS`; base is PR #19's branch | draft; MANIFEST-3 now permanently fails its file check (disclosed and tested) |
 
 ## 4. Security and scope review
 
@@ -105,7 +105,7 @@ net position of zero. The prerequisite is at least £20 of free demo cash, added
 
 ## 8. Proposed next actions (M2; each needs your go-ahead)
 
-1. Review and merge PRs #20, #21 and the D31 PR (or ask for changes). Delete the throwaway branch.
+1. Review and merge PRs #20, #21 and #22 (or ask for changes). Delete the throwaway branch.
 2. **M2:** a supervisor and heartbeat on the queue, the daily digest and critical alerts (O12), and a T212 adapter for
    the order state machine, tested only against the fake broker and the demo read endpoints (L1/L2, no orders).
 3. Then decide on starting the 14-day unattended test (the bar is in DECISION_REGISTER §3).
