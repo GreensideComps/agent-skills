@@ -696,6 +696,57 @@ def test_the_real_gate_refuses_manifest_3_on_its_files_even_with_a_fresh_authori
         edge_registry.b5_run_open(verify_files=True)
 
 
+
+CLOSEOUT_COMMIT = "1eb0e96"  # D32 closeout: the last commit before D31 was added to the spent set (D33)
+
+
+def test_reusing_d31_is_refused_at_the_first_control_before_any_lock_or_research_file(tmp_path, monkeypatch):
+    """D33: a status re-authorising D31 for MANIFEST-3 is refused by the authorisation check itself. The registry,
+    manifest, repository and lock paths here do not exist, so any later control would fail differently; preflight
+    and the gate both stop at "spent", and no lock is created."""
+    status = tmp_path / "status.json"
+    status.write_text(json.dumps({"b5_trial_run": {"authorised": True, "owner_message": RUN_2_OWNER_MESSAGE,
+                                                   "manifest_id": run.MANIFEST_ID, "manifest_sha256": MANIFEST_3_SHA256}}))
+    gone = tmp_path / "absent"
+    e = {"registry": gone / "trials.jsonl", "status": status, "manifest": gone / "manifest.json", "repo": gone,
+         "lock": tmp_path / "b5.lock"}
+    with pytest.raises(PermissionError, match="spent"):
+        pre(e)
+    assert not e["lock"].exists() and not gone.exists()
+    point_gate(monkeypatch, e)
+    with pytest.raises(PermissionError, match="spent"):
+        edge_registry.b5_run_open(verify_files=True)
+    assert RUN_2_OWNER_MESSAGE in edge_registry.B5_SPENT_AUTHORISATIONS
+    assert RUN_1_OWNER_MESSAGE in edge_registry.B5_SPENT_AUTHORISATIONS
+
+
+def test_preflight_refuses_manifest_3_on_its_files_even_with_a_fresh_authorisation(tmp_path):
+    """D33: an unspent authorisation naming MANIFEST-3 passes the authorisation check, but preflight then refuses
+    because research/edge_registry.py no longer matches MANIFEST-3, before the results check and before any lock.
+    The manifest is not rewritten and the check is not bypassed."""
+    reg = tmp_path / "trials.jsonl"
+    shutil.copy(edge_registry.PATH, reg)
+    status = tmp_path / "status.json"
+    status.write_text(json.dumps({"b5_trial_run": {"authorised": True, "owner_message": "cmsg_FRESH",
+                                                   "manifest_id": run.MANIFEST_ID, "manifest_sha256": MANIFEST_3_SHA256}}))
+    assert edge_registry.b5_authorisation(status)["owner_message"] == "cmsg_FRESH"
+    e = {"registry": reg, "status": status, "manifest": run.MANIFEST, "repo": REPO, "lock": tmp_path / "b5.lock"}
+    with pytest.raises(ValueError, match="research/edge_registry.py does not match the manifest"):
+        pre(e)
+    assert not e["lock"].exists() and reg.read_bytes() == edge_registry.PATH.read_bytes()
+    assert sha(run.MANIFEST) == MANIFEST_3_SHA256
+
+
+@pytest.mark.parametrize("path", ["research/edge/trials.jsonl", "research/edge/status.json",
+                                  "docs/edge/incidents/B5_RUN_1_LOCK.json", "docs/edge/incidents/B5_RUN_2_LOCK.json",
+                                  "equity/reports/research/edge/b5_trials.md", "docs/edge/B5_RUN_MANIFEST_3.json"])
+def test_historical_evidence_is_byte_identical_to_the_d32_closeout(path):
+    """D33 changes only the spent set and tests: the registry, status history, both archived locks, run 2's report
+    and MANIFEST-3 are byte-identical to the D32 closeout commit."""
+    old = subprocess.run(["git", "-C", str(REPO), "show", f"{CLOSEOUT_COMMIT}:{path}"], capture_output=True,
+                         check=True).stdout
+    assert (REPO / path).read_bytes() == old
+
 def test_the_manifest_covers_exactly_the_repository_code_the_run_imports():
     """Owner review 2026-10-19 item 3: every repository module the run path imports (including the loader's lazy
     imports) is hashed in the manifest, and nothing else; a new import fails this test until the manifest is rebuilt."""
