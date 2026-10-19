@@ -9,14 +9,22 @@ NOT appended.
 
 Nothing already in the registry is edited: the version-1 and version-2 entries stay as written, stay counted, and are
 refused by `edge_registry.require` (B5_RETIRED_IDS).
+
+`register` is all or nothing: the 13 lines are chained, written to a temporary file, checked (valid registry, every
+earlier byte unchanged, exactly these 13 ids added, N up by exactly 2) and only then moved over the registry in one
+rename. Any failure leaves the registry as it was.
 """
 import hashlib
+import json
+import os
+from datetime import date
 from pathlib import Path
 
 import edge_registry
 
 REPO = Path(__file__).resolve().parent.parent
 ADDENDUM = "docs/edge/B5_PREREGISTRATION_ADDENDUM_3.md"
+PROPOSAL = REPO / "docs" / "edge" / "B5_V3_PROPOSED_REGISTRY_EVENTS.json"  # the file the owner reviewed
 WINDOW = {"decisions": ["2015-01", "2022-11"], "outcomes_to": "2022-12-31"}
 UNIVERSE = ("large band (>= $10bn), close_raw >= $1, point-in-time quality rule (ADDENDUM_3), ex financials; each "
             "TTM input's own period end <= 183 days old")
@@ -55,13 +63,49 @@ def events(repo: Path = REPO) -> list[dict]:
     return out
 
 
-def register(owner_message: str, registry: Path = edge_registry.PATH, repo: Path = REPO) -> list[dict]:
-    """Append the events. Refuses without an owner message id or if any id is already registered."""
+def register(owner_message: str, registry: Path = edge_registry.PATH, repo: Path = REPO,
+             proposal: Path = PROPOSAL) -> list[dict]:
+    """Append the 13 events in one atomic step. Refuses without an owner message id, if the events differ from the
+    reviewed proposal file, if the registry is invalid, or if any id is already registered."""
     if not str(owner_message).startswith("cmsg_"):
         raise PermissionError("registering ADDENDUM_3 (version 3) needs the owner's message id")
-    have = edge_registry.registered(edge_registry.load(registry))
-    evs = [{**e, "owner_message": owner_message} for e in events(repo)]
-    clash = [e["id"] for e in evs if e["id"] in have]
+    proposed = events(repo)
+    if proposed != json.loads(proposal.read_text()):
+        raise ValueError(f"events differ from the reviewed proposal {proposal}")
+    problems = edge_registry.validate(registry)
+    if problems:
+        raise ValueError(f"registry invalid before registration: {problems}")
+    old = registry.read_bytes()
+    before = edge_registry.load(registry)
+    have = edge_registry.registered(before)
+    clash = [e["id"] for e in proposed if e["id"] in have]
     if clash:
         raise ValueError(f"already registered: {clash}")
-    return [edge_registry.append(e, registry) for e in evs]
+    lines = [l for l in old.decode().splitlines() if l.strip()]
+    prev = edge_registry.line_hash(lines[-1]) if lines else edge_registry.GENESIS
+    out, new = [], []
+    for e in proposed:
+        full = {"prev": prev, "date": date.today().isoformat(), **e, "owner_message": owner_message}
+        raw = json.dumps(full, sort_keys=True)
+        out.append(full)
+        new.append(raw)
+        prev = edge_registry.line_hash(raw)
+    text = "\n".join(lines + new) + "\n"
+    if not text.encode().startswith(old):
+        raise ValueError("registry is not in canonical form; refusing rather than rewrite any existing byte")
+    tmp = registry.with_suffix(".v3.tmp")
+    tmp.write_text(text)
+    try:
+        after = edge_registry.load(tmp)
+        added = set(edge_registry.registered(after)) - set(have)
+        checks = {"valid": not edge_registry.validate(tmp),
+                  "prefix unchanged": tmp.read_bytes()[:len(old)] == old,
+                  "13 ids added": added == {e["id"] for e in proposed} and len(after) == len(before) + 13,
+                  "N + 2": edge_registry.n_trials(after) == edge_registry.n_trials(before) + 2}
+        if not all(checks.values()):
+            raise ValueError(f"registration rejected, registry unchanged: {checks}")
+        os.replace(tmp, registry)
+    finally:
+        if tmp.exists():
+            tmp.unlink()
+    return out

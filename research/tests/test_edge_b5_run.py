@@ -534,6 +534,47 @@ def test_version_3_registration_adds_exactly_the_two_v3_trials_and_preserves_eve
         edge_b5_addendum3.register("cmsg_X", reg)
 
 
+def test_version_3_registration_is_all_or_nothing(tmp_path, monkeypatch):
+    """Owner approval 07:53Z: the 13-event transition is atomic. A bad 13th line, a proposal mismatch, a partial
+    clash, an invalid registry or a failed rename each leave the registry byte-identical."""
+    import json
+    import os
+    reg = tmp_path / "t.jsonl"
+    shutil.copy(edge_registry.PATH, reg)
+    before = reg.read_bytes()
+    evs = edge_b5_addendum3.events()
+    assert evs == json.loads(edge_b5_addendum3.PROPOSAL.read_text())  # code and reviewed file agree
+    bad = evs[:-1] + [{**evs[-1], "kind": "bogus"}]  # 12 good events, the 13th invalid
+    prop = tmp_path / "bad.json"
+    prop.write_text(json.dumps(bad))
+    monkeypatch.setattr(edge_b5_addendum3, "events", lambda repo=None: bad)
+    with pytest.raises(ValueError, match="rejected"):
+        edge_b5_addendum3.register("cmsg_X", reg, proposal=prop)
+    assert reg.read_bytes() == before
+    monkeypatch.undo()
+    with pytest.raises(ValueError, match="differ from the reviewed proposal"):
+        edge_b5_addendum3.register("cmsg_X", reg, proposal=prop)
+    assert reg.read_bytes() == before
+    one = tmp_path / "one.jsonl"  # only the last id already present: nothing else may be added
+    shutil.copy(edge_registry.PATH, one)
+    edge_registry.append(evs[-1], one)
+    one_before = one.read_bytes()
+    with pytest.raises(ValueError, match="already registered"):
+        edge_b5_addendum3.register("cmsg_X", one)
+    assert one.read_bytes() == one_before
+    broken = tmp_path / "broken.jsonl"
+    broken.write_bytes(before.replace(b'"prev": "', b'"prev": "x', 1))
+    with pytest.raises(ValueError, match="invalid before"):
+        edge_b5_addendum3.register("cmsg_X", broken)
+
+    def fail(*a):
+        raise OSError("disk")
+    monkeypatch.setattr(os, "replace", fail)
+    with pytest.raises(OSError):
+        edge_b5_addendum3.register("cmsg_X", reg)
+    assert reg.read_bytes() == before and not list(tmp_path.glob("*.tmp"))
+
+
 def test_preflight_refuses_at_n_100_before_version_3_is_registered(env, tmp_path):
     """The version-2-only registry (as it is today) cannot start the run: the V3 records are missing."""
     reg = tmp_path / "v2only.jsonl"
