@@ -25,6 +25,8 @@ PRE_V3_SHA256 = "0da0638e43b2cf7799cb46ef340b951a4fcd39ad94044a04ddbebb6cda1f85f
 V3_OWNER_MESSAGE = "cmsg_01U4KMvkBYNknqm4HRVie8uvCZeVB3ELHksWnNk6iBAk3Y"  # owner approval 2026-10-19 07:53Z
 MANIFEST_OWNER_MESSAGE = "cmsg_01U4KMvkBYNknqm4HRVie8uvTgMxeHvcPJiF9NpWGKhNNC"  # owner approval 2026-10-19 08:29Z
 MANIFEST_SHA256 = "0f02eda19ee528a3fb0b62ce9bf35c1864f8e9ad5b9d1581e5ec4a1abb4c7072"  # registered B5-V3-RUN-MANIFEST
+MANIFEST_2_OWNER_MESSAGE = "cmsg_01U4KMvkBYNknqm4HRVie8uv1fMkFLASaWMXhFccwwfuzC"  # owner approval 2026-10-19 08:47Z
+MANIFEST_2_SHA256 = "10190052cd13cb7f1735741069e07feb073d1ea8d4beff57f297859d4f799757"  # registered B5-V3-RUN-MANIFEST-2
 
 
 def pre_v3(dst):
@@ -685,7 +687,7 @@ def test_version_2_ids_are_retired_and_version_3_ids_are_the_only_runnable_b5_id
             edge_registry.require(rid)
 
 
-def test_in_the_real_registry_version_3_and_its_manifest_are_registered_and_nothing_else(tmp_path):
+def test_in_the_real_registry_version_3_and_its_manifests_are_registered_and_nothing_else(tmp_path):
     """Step 1 (owner approval 07:53Z, card 08:22Z): the 13 version-3 events were appended atomically after an
     unchanged history. Step 2 (owner approval 08:29Z): one more line, B5-V3-RUN-MANIFEST at the reviewed manifest
     hash, uncounted. The run is not authorised, no B5 id has a result, and N = 102."""
@@ -694,16 +696,19 @@ def test_in_the_real_registry_version_3_and_its_manifest_are_registered_and_noth
     reg = edge_registry.registered(ev)
     v3 = edge_b5_addendum3.events()
     assert hashlib.sha256(pre_v3(tmp_path / "pre.jsonl").read_bytes()).hexdigest() == PRE_V3_SHA256  # history intact
-    assert [e["id"] for e in ev[-14:-1]] == [e["id"] for e in v3]
-    for got, want in zip(ev[-14:-1], v3):
+    assert [e["id"] for e in ev[-15:-2]] == [e["id"] for e in v3]
+    for got, want in zip(ev[-15:-2], v3):
         assert {k: got[k] for k in want} == want and got["owner_message"] == V3_OWNER_MESSAGE
-    m = ev[-1]
+    m = ev[-2]
     assert m["id"] == "B5-V3-RUN-MANIFEST" and m["counts_for_dsr"] is False and m["owner_message"] == MANIFEST_OWNER_MESSAGE
     assert m["spec_sha256"] == MANIFEST_SHA256 == sha(REPO / "docs" / "edge" / "B5_RUN_MANIFEST.json")  # kept as registered
     assert edge_registry.n_trials(ev) == 102 == run.N_EXPECTED and not edge_registry.validate()
     done = {e["id"] for e in ev if e.get("event") == "result"}
     assert not done & (set(edge_registry.B5_RUN_IDS) | set(edge_registry.B5_RETIRED_IDS))
     assert {"B5-H1-FCFPS-ACCEL-V2", "B5-S2A-GP-12M-V2", "B5-H1-V2-ROB-PITQ", "B5-S2A-V2-ROB-PITQ"} <= set(reg)
+    m2 = ev[-1]  # step 2 repeated after run fix 1 (owner approval 08:47Z)
+    assert m2["id"] == run.MANIFEST_ID and m2["counts_for_dsr"] is False and m2["supersedes"] == m["id"]
+    assert m2["spec_sha256"] == MANIFEST_2_SHA256 == sha(run.MANIFEST) and m2["owner_message"] == MANIFEST_2_OWNER_MESSAGE
     assert json.loads(edge_registry.STATUS.read_text())["b5_trial_run"]["authorised"] is False
     assert not edge_registry.B5_LOCK.exists()
 
@@ -739,14 +744,13 @@ def test_stage_never_touches_the_registry_and_refuses_bad_input(tmp_path):
         edge_registry.stage([ok], broken)
 
 
-def test_the_fixed_run_needs_the_new_manifest_and_the_real_registry_does_not_have_it():
-    """B5_RUN_FIX_1: the run looks up B5-V3-RUN-MANIFEST-2 for B5_RUN_MANIFEST_2.json; the registered
-    B5-V3-RUN-MANIFEST and its file are kept unchanged and never used; until the owner approves registering the new
-    manifest, preflight on the real registry refuses."""
+def test_the_fixed_run_uses_only_the_new_manifest_and_the_old_record_is_kept():
+    """B5_RUN_FIX_1: the run looks up B5-V3-RUN-MANIFEST-2 for B5_RUN_MANIFEST_2.json (registered on the owner's
+    approval 08:47Z); the earlier B5-V3-RUN-MANIFEST record and its file are kept unchanged and never used."""
     assert run.MANIFEST_ID == "B5-V3-RUN-MANIFEST-2" and run.MANIFEST.name == "B5_RUN_MANIFEST_2.json"
     assert "B5-V3-RUN-MANIFEST" not in run.SPECS
     reg = edge_registry.registered(edge_registry.load())
-    assert run.MANIFEST_ID not in reg
+    assert reg[run.MANIFEST_ID]["spec_sha256"] == sha(run.MANIFEST)
     assert reg["B5-V3-RUN-MANIFEST"]["spec_sha256"] == sha(REPO / "docs" / "edge" / "B5_RUN_MANIFEST.json")
 
 
