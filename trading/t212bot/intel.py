@@ -395,6 +395,9 @@ def market_bundle(journal, cfg, book=None) -> dict:
         else:
             out["shadow"] = {"note": data.get("note", "no trades yet")}
         # volatility estimate of current target weights from 1y of daily closes
+        if not cfg.targets:
+            out["risk"] = {"note": "no target weights (strategy retired, O10); no risk estimate"}
+            return out
         import numpy as np
         import pandas as pd
         rets = {}

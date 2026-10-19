@@ -8,6 +8,14 @@ BRANCH="${T212BOT_BRANCH:-claude/trading212-agent-skills-r71zy3}"
 ROOT="$(git rev-parse --show-toplevel)"
 cd "$ROOT"
 
+# O10 (2026-10-19): while this checkout's strategy is retired (or unreadable), refuse before touching git.
+# Otherwise the script would check out $BRANCH, whose strategy.json is not retired, and trade from there.
+MODE="$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["mode"])' trading/config/strategy.json \
+  2>/dev/null)" || MODE=unreadable
+if [ "$MODE" = retired ] || [ "$MODE" = unreadable ]; then
+  echo "OPS: strategy $MODE (owner decision O10) - no sync, no trading run"; exit 5
+fi
+
 git fetch -q origin "$BRANCH" && git checkout -q "$BRANCH" && git pull -q --rebase origin "$BRANCH" || {
   echo "OPS: could not sync $BRANCH"; exit 3; }
 

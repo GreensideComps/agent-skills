@@ -2,15 +2,9 @@
   "name": "discretionary_intraday_v1",
   "mode": "discretionary",
   "decision_limits": {
-    "universe": [
-      "LQQ3l_EQ",
-      "EQQQl_EQ",
-      "VUAGl_EQ",
-      "SGLNl_EQ",
-      "3LGO1l_EQ"
-    ],
+    "universe": ["LQQ3l_EQ", "EQQQl_EQ", "VUAGl_EQ", "SGLNl_EQ", "3LGO1l_EQ"],
     "max_decisions_per_day": 8,
-    "daily_loss_stop": 0.1,
+    "daily_loss_stop": 0.10,
     "note": "Owner override 2026-10-14: Claude trades the whole demo account intraday, 3x ETPs allowed. Long-only, no borrowing, no inverse products. The trend rule (signal) is kept only as the paper shadow B_live_rules_at_close."
   },
   "targets": {
