@@ -13,13 +13,13 @@
   "equity/reports/research/edge/exec_prices_audit_moves.csv": "2d3221010ebb4edc2ed9ae04056ca1ed49f6fd6c7d35dc970486eef9479a6edb"
  },
  "code": {
-  "research/edge_b5_run.py": "32fdae14ee93e93abc447eb3653c65e5a601693ccfa14e331fc2ae01201e4b5e",
+  "research/edge_b5_run.py": "73ba692f2cf77038781fe32392682c3cd1bbdfca4695ccdeb5901317550b8ba6",
   "research/edge_b5.py": "fd3618382dd6faea4828eefd1a20bd8b8f9b6952d3c1b9a93ffcd2ccd7779752",
   "research/edge_b5_inputs.py": "7a37fa077237986e5a684e5018d8835ca759d7230069d7db6d1369d969185cf3",
   "research/edge_b5_stats.py": "3fc03c3dbdfa2176598c513a0fa01ec89d17ead0532b5893031b175b333b1fbc",
   "research/edge_backtest.py": "d61e8026b997cf53f2165647ac8f188f5df88a9b81ffc67daf080c179ec64af3",
   "research/edge_rules.py": "9f6aeb7fe22effdbd93ff0738520c7a88ed2d52e5323451a27e28984e78f41e9",
-  "research/edge_registry.py": "729783c201cb9fada650a1ce403362d1b3e6ed76a7aad230338de66648652c64",
+  "research/edge_registry.py": "e56f49aa862eaaf8048494272e1de1e3d363a0490282562b080f63dae5405c5c",
   "research/edge_split.py": "f0f32dc8f47b8d512c18689bf97feb2c228b3dc26351017596861bee017fa147",
   "research/xsection.py": "a4f265ce6c1308f51b18800c915973240af2f226a13f8c3fb6c06cce76937f16",
   "research/stage2.py": "4491915168676581e9b263cd7e3a92a90fa991d4bd11ba238e9ced11d52436bc",

@@ -148,25 +148,89 @@ B5_RETIRED_IDS = frozenset([f"B5-{t}{v}" for t in ("H1-FCFPS-ACCEL", "S2A-GP-12M
     f"B5-{t}{v}-ROB-{g}" for t in ("H1", "S2A") for v in ("", "-V2")
     for g in ("2XCOST", "MISS100", "NEXTMONTH", "DATAERR", "PITQ")])
 B5_LOCK = Path(__file__).resolve().parent / "edge" / "b5_run.lock"
+B5_REPO = Path(__file__).resolve().parent.parent
+# The manifest a B5 run must be authorised against (edge_b5_run reads these two names; a test keeps them equal).
+# B5_RUN_FIX_2 / execution hardening: proposed, not registered, so no run can open until the owner registers it.
+B5_MANIFEST_ID = "B5-V3-RUN-MANIFEST-3"
+B5_MANIFEST = B5_REPO / "docs" / "edge" / "B5_RUN_MANIFEST_3.json"
+# Owner authorisations already used by a run that took the one-run lock. None can open another run, whatever
+# status.json says (D27: run 1, authorised by D26 at 09:05Z, stopped with an error; its lock is kept).
+B5_SPENT_AUTHORISATIONS = frozenset({"cmsg_01U4KMvkBYNknqm4HRVie8uvUzn9qQCoyy3U7K3j4iY3kK"})
 
 
-def b5_run_open() -> str:
-    """The owner message id of the open B5 run, else PermissionError. Open means the real status.json records the
-    owner's authorisation (`b5_trial_run.authorised` is True with a cmsg_ id) AND the one-run lock, which only
-    `edge_b5_run.preflight` creates after every other control has passed, exists and names that same message. It
-    reads the module paths STATUS and B5_LOCK, never arguments, so no caller can point it at a copied registry,
-    status file or lock."""
+def _sha(p: Path) -> str:
+    return hashlib.sha256(p.read_bytes()).hexdigest()
+
+
+def b5_authorisation(status: Path = STATUS) -> dict:
+    """The owner's B5 run authorisation in `status`, or PermissionError. Valid only when `authorised` is True, the
+    owner message is a cmsg_ id that no earlier run has spent (`B5_SPENT_AUTHORISATIONS`), and it names the current
+    run manifest by id (`B5_MANIFEST_ID`) and by sha256 (`manifest_sha256`), so an approval given for one manifest
+    can never authorise a run of different code or inputs."""
     try:
-        auth = json.loads(STATUS.read_text())["b5_trial_run"]
-        lock = json.loads(B5_LOCK.read_text())
-        msg = auth["owner_message"]
-        ok = auth["authorised"] is True and str(msg).startswith("cmsg_") and lock["owner_message"] == msg
+        auth = json.loads(status.read_text())["b5_trial_run"]
     except (OSError, KeyError, TypeError, ValueError):
-        ok = False
-    if not ok:
-        raise PermissionError("B5 run not open: needs the owner's authorisation in status.json and the one-run lock "
-                              "taken by edge_b5_run.preflight")
-    return msg
+        auth = None
+    if not isinstance(auth, dict) or auth.get("authorised") is not True \
+            or not str(auth.get("owner_message", "")).startswith("cmsg_"):
+        raise PermissionError("B5 run not authorised by the owner (status.json b5_trial_run)")
+    if auth["owner_message"] in B5_SPENT_AUTHORISATIONS:
+        raise PermissionError(f"authorisation {auth['owner_message']} was spent by an earlier run; a new run needs "
+                              "a new owner authorisation")
+    if auth.get("manifest_id") != B5_MANIFEST_ID:
+        raise PermissionError(f"the authorisation names manifest {auth.get('manifest_id')!r}, not {B5_MANIFEST_ID}")
+    h = auth.get("manifest_sha256")
+    if not (isinstance(h, str) and len(h) == 64 and all(c in "0123456789abcdef" for c in h)):
+        raise PermissionError("the authorisation does not name the manifest's sha256")
+    return auth
+
+
+def b5_manifest_ok(manifest_sha256: str, registry: Path, manifest: Path, repo: Path, files: bool) -> None:
+    """PermissionError unless `manifest` has `manifest_sha256`, the registry registers B5_MANIFEST_ID at that sha256,
+    and (with `files`) every input and code file it lists still has its recorded sha256."""
+    try:
+        actual = _sha(manifest)
+        reg = registered(load(registry)).get(B5_MANIFEST_ID)
+        listed = json.loads(manifest.read_text()) if files else {}
+    except (OSError, ValueError) as e:
+        raise PermissionError(f"B5 run manifest unreadable: {e}") from None
+    if actual != manifest_sha256:
+        raise PermissionError("the run manifest file does not match the authorised sha256")
+    if reg is None or reg.get("spec_sha256") != manifest_sha256:
+        raise PermissionError(f"{B5_MANIFEST_ID} is not registered at the authorised sha256")
+    for group in ("inputs", "code"):
+        for path, h in listed.get(group, {}).items() if files else ():
+            p = Path(path) if Path(path).is_absolute() else repo / path
+            try:
+                ok = _sha(p) == h
+            except OSError:
+                ok = False
+            if not ok:
+                raise PermissionError(f"{group} file {path} does not match the run manifest")
+
+
+def b5_run_open(verify_files: bool = False) -> str:
+    """The owner message id of the open B5 run, else PermissionError. Open means all of:
+
+    * the real status.json holds a valid, unspent authorisation for the current manifest (`b5_authorisation`);
+    * the one-run lock, which only `edge_b5_run.preflight` creates after every other control has passed, exists
+      and names that same owner message and manifest sha256;
+    * the manifest file has that sha256 and the real registry registers it (`b5_manifest_ok`); with
+      `verify_files` (the run's entry points: load_inputs, run_one, finish), every listed file is re-hashed too.
+
+    It reads the module paths (STATUS, B5_LOCK, PATH, B5_MANIFEST, B5_REPO), never arguments, so no caller can point
+    it at a copied registry, status file, manifest or lock."""
+    auth = b5_authorisation(STATUS)
+    try:
+        lock = json.loads(B5_LOCK.read_text())
+        same = lock["owner_message"] == auth["owner_message"] and lock["manifest"] == auth["manifest_sha256"]
+    except (OSError, KeyError, TypeError, ValueError):
+        same = False
+    if not same:
+        raise PermissionError("B5 run not open: needs the one-run lock taken by edge_b5_run.preflight for this "
+                              "authorisation and manifest")
+    b5_manifest_ok(auth["manifest_sha256"], PATH, B5_MANIFEST, B5_REPO, verify_files)
+    return auth["owner_message"]
 
 
 def append(event: dict, path: Path = PATH, status: Path = STATUS) -> dict:

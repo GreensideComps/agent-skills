@@ -15,8 +15,8 @@
  },
  "hypothesis": "none (input and code manifest for the version-3 run, not a trial)",
  "universe": "as version 3",
- "definition": "docs/edge/B5_RUN_MANIFEST_3.json: sha256 of the 10 input files and the 16 repository modules edge_b5_run imports, after run fix 2 (docs/edge/B5_RUN_FIX_2.md, sha256 0c8bbab1d0d7724cc8b3e793dee9aedc22f309ff3498d40fb25acc192bf40341: each run's evaluation starts at the 2015-01 decision's trade date under its own execution convention, a bug fix with no definition change); edge_b5_run.preflight refuses any mismatch. Does not authorise a run or release the run 1 lock.",
+ "definition": "docs/edge/B5_RUN_MANIFEST_3.json: sha256 of the 10 input files and the 16 repository modules edge_b5_run imports, after run fix 2 (docs/edge/B5_RUN_FIX_2.md, sha256 2177c679b26220a81046bc54e264b92912de1aebdc891b19b6947a08d7b969d2: each run's evaluation starts at the 2015-01 decision's trade date under its own execution convention, a bug fix with no definition change) and execution hardening (docs/edge/B5_EXECUTION_HARDENING.md, sha256 82b08e673e4d176b9e8ae891f877cc9f9314653bb062e0a48b59d21586ed7cf2: the run gate requires an unspent owner authorisation naming this manifest by id and sha256, a matching lock, and matching file hashes); edge_b5_run.preflight refuses any mismatch. Does not authorise a run or release the run 1 lock.",
  "supersedes": "B5-V3-RUN-MANIFEST-2",
- "spec_sha256": "0a9b08acce584b98ed90f494a210b050394e3503fcbc81c4d8e7a031e0dfc05a",
+ "spec_sha256": "c118123f17778006eba17c4d753da3fb48d2b30b89e65b1a6373e6dd0368ebd8",
  "owner_message": "<owner message id approving this registration>"
 }

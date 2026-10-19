@@ -97,6 +97,8 @@ The fix changes one manifest-listed code file, `research/edge_b5_run.py`.
 - That file and its record are kept unchanged and will never be used again, like `B5-V3-RUN-MANIFEST` before it.
 - The proposed `B5_RUN_MANIFEST_3.json` lists the same 10 inputs and 16 code files. Only the hash of
   `edge_b5_run.py` and the manifest's note differ from MANIFEST-2.
+- Later change (D28): the execution hardening also changes `edge_registry.py`, so MANIFEST-3 was rebuilt; it
+  now differs from MANIFEST-2 in `edge_b5_run.py` and `edge_registry.py`. See `B5_EXECUTION_HARDENING.md`.
 - The proposed registry event is in `B5_V3_PROPOSED_MANIFEST_3_EVENT.json`, with a placeholder owner message.
 
 ## 6. Not done (needs separate owner approval)

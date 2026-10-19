@@ -76,7 +76,8 @@ def make_env(tmp_path):
     edge_registry.append({**base, "id": run.MANIFEST_ID, "definition": "test", "spec_sha256": sha(man)}, reg)
     status = tmp_path / "status.json"
     status.write_text(json.dumps({"ttm_check4_independent_source": {"complete": False},
-                                  "b5_trial_run": {"authorised": True, "owner_message": "cmsg_TEST"}}))
+                                  "b5_trial_run": {"authorised": True, "owner_message": "cmsg_TEST",
+                                                   "manifest_id": run.MANIFEST_ID, "manifest_sha256": sha(man)}}))
     return {"registry": reg, "status": status, "manifest": man, "repo": tmp_path, "lock": tmp_path / "b5.lock"}
 
 
@@ -101,9 +102,17 @@ def opened(env, monkeypatch):
     """env with the run open: the gate's fixed paths pointed at env's authorised status and a lock preflight took.
     Only a test can repoint them; production code has no parameter for it."""
     pre(env)
-    monkeypatch.setattr(edge_registry, "STATUS", env["status"])
-    monkeypatch.setattr(edge_registry, "B5_LOCK", env["lock"])
+    point_gate(monkeypatch, env)
     return env
+
+
+def point_gate(mp, e):
+    """Point every path the gate reads (status, lock, registry, manifest, repository root) at the env copy."""
+    mp.setattr(edge_registry, "STATUS", e["status"])
+    mp.setattr(edge_registry, "B5_LOCK", e["lock"])
+    mp.setattr(edge_registry, "PATH", e["registry"])
+    mp.setattr(edge_registry, "B5_MANIFEST", e["manifest"])
+    mp.setattr(edge_registry, "B5_REPO", e["repo"])
 
 
 def test_preflight_passes_once_and_the_lock_refuses_a_second_start(env):
@@ -349,8 +358,8 @@ def test_the_gate_ids_are_exactly_the_run_scripts_trials_and_robustness_runs():
 
 def test_in_the_real_repo_run_1s_lock_is_kept_and_no_new_run_can_start():
     """After run 1 (D26) stopped with an error (D27): the authorisation and the lock stay as they were, no B5 id has
-    a result, and preflight on the real files refuses before reading anything (MANIFEST-3 is proposed, not
-    registered; the lock would refuse it anyway)."""
+    a result, and both preflight and the gate on the real files refuse before reading anything, because D26 is spent
+    (MANIFEST-3 is also unregistered, and the lock would refuse a start anyway)."""
     auth = json.loads(edge_registry.STATUS.read_text())["b5_trial_run"]
     assert auth["authorised"] is True and auth["owner_message"] == RUN_1_OWNER_MESSAGE
     lock = json.loads(edge_registry.B5_LOCK.read_text())
@@ -358,8 +367,10 @@ def test_in_the_real_repo_run_1s_lock_is_kept_and_no_new_run_can_start():
     ev = edge_registry.load()
     assert not {e["id"] for e in ev if e.get("event") == "result"} & (edge_registry.B5_RUN_IDS | edge_registry.B5_RETIRED_IDS)
     before = edge_registry.B5_LOCK.read_bytes()
-    with pytest.raises((KeyError, ValueError)):
+    with pytest.raises(PermissionError, match="spent"):  # D26 was used by run 1 and can authorise nothing else
         run.preflight()
+    with pytest.raises(PermissionError, match="spent"):
+        edge_registry.b5_run_open(verify_files=True)
     assert edge_registry.B5_LOCK.read_bytes() == before
 
 
@@ -402,18 +413,18 @@ def test_a_copied_registry_and_status_cannot_open_the_run(closed):
 def test_the_gate_needs_the_authorisation_and_a_lock_naming_the_same_message(env, monkeypatch, case):
     lock = env["lock"]
     status = json.loads(env["status"].read_text())
+    good = {"owner_message": "cmsg_TEST", "manifest": sha(env["manifest"])}
     if case != "no_lock":
-        lock.write_text(json.dumps({"owner_message": "cmsg_OTHER" if case == "other_message" else "cmsg_TEST"}))
+        lock.write_text(json.dumps({**good, "owner_message": "cmsg_OTHER" if case == "other_message" else "cmsg_TEST"}))
     if case == "no_auth":
         status.pop("b5_trial_run")
     if case == "not_true":
         status["b5_trial_run"]["authorised"] = "true"
     env["status"].write_text(json.dumps(status))
-    monkeypatch.setattr(edge_registry, "STATUS", env["status"])
-    monkeypatch.setattr(edge_registry, "B5_LOCK", lock)
+    point_gate(monkeypatch, env)
     with pytest.raises(PermissionError):
         edge_registry.b5_run_open()
-    lock.write_text(json.dumps({"owner_message": "cmsg_TEST"}))
+    lock.write_text(json.dumps(good))
     if case in ("no_lock", "other_message"):
         assert edge_registry.b5_run_open() == "cmsg_TEST"
 

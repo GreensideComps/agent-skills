@@ -17,9 +17,12 @@ executed. It refuses to read any data until every control below passes:
   code: a failed or interrupted run can only be repeated by a recorded owner decision.
 
 The same authorisation and lock are re-checked where data and results are touched, so calling a function directly
-does not skip them (owner review 2026-10-19, item 4): `load_inputs` and `finish` call `edge_registry.b5_run_open`,
+does not skip them (owner review 2026-10-19, item 4; hardened after run 1): `load_inputs`, `run_one` and `finish`
+call `edge_registry.b5_run_open(verify_files=True)`,
 and `edge_registry.require`, which every `bt.run_trial` and `bt.record` calls, refuses either trial id or any of
-their robustness ids unless the run is open. `b5_run_open` reads the real status.json and lock only.
+their robustness ids unless the run is open. `b5_run_open` reads the real status.json, lock, registry and manifest
+only, and opens only for an unspent owner authorisation that names the registered manifest by id and sha256, with a
+lock naming the same message and manifest (run 1's D26 authorisation is spent: `edge_registry.B5_SPENT_AUTHORISATIONS`).
 
 Both trials run in this one invocation, each exactly once, with every gate from one fixed list (`GATES`); there is
 no flag to skip a gate, choose a trial or change a setting. All results are computed first. `finish` then stages all
@@ -49,13 +52,13 @@ import edge_rules
 
 ROOT = Path(__file__).resolve().parent
 REPO = ROOT.parent
-MANIFEST = REPO / "docs" / "edge" / "B5_RUN_MANIFEST_3.json"  # earlier manifests stay as registered
+MANIFEST = edge_registry.B5_MANIFEST  # docs/edge/B5_RUN_MANIFEST_3.json; earlier manifests stay as registered
 LOCK = edge_registry.B5_LOCK  # research/edge/b5_run.lock
 OUT = REPO / "equity" / "reports" / "research" / "edge"
 CUT = pd.Timestamp("2022-12-31")
 
 TRIALS = {"H1": "B5-H1-FCFPS-ACCEL-V3", "S2A": "B5-S2A-GP-12M-V3"}
-MANIFEST_ID = "B5-V3-RUN-MANIFEST-3"  # B5_RUN_FIX_2: the manifest of the code with per-convention evaluation start
+MANIFEST_ID = edge_registry.B5_MANIFEST_ID  # B5-V3-RUN-MANIFEST-3 (B5_RUN_FIX_2 and execution hardening)
 A3 = "docs/edge/B5_PREREGISTRATION_ADDENDUM_3.md"
 SPECS = {"B5-H1-FCFPS-ACCEL-V2": "docs/edge/B5_PREREGISTRATION.md", "B5-S2A-GP-12M-V2": "docs/edge/B5_PREREGISTRATION.md",
          "B5-V2-ADDENDUM-1": "docs/edge/B5_PREREGISTRATION_ADDENDUM_1.md",
@@ -101,12 +104,9 @@ def sha(p: Path) -> str:
 def preflight(registry: Path = edge_registry.PATH, status: Path = b5.STATUS, manifest: Path = MANIFEST,
               repo: Path = REPO, lock: Path = LOCK) -> dict:
     """Every control, in order; raises at the first failure. Returns what the report records."""
-    try:
-        auth = json.loads(status.read_text())["b5_trial_run"]
-    except (OSError, KeyError, TypeError, ValueError):
-        auth = {}
-    if auth.get("authorised") is not True or not str(auth.get("owner_message", "")).startswith("cmsg_"):
-        raise PermissionError("trial run not authorised by the owner (status.json b5_trial_run)")
+    auth = edge_registry.b5_authorisation(status)  # unspent, and naming this manifest by id and sha256
+    if auth["manifest_sha256"] != sha(manifest):
+        raise PermissionError("the authorisation names a different manifest sha256 than the run's manifest file")
     problems = edge_registry.validate(registry)
     if problems:
         raise ValueError(f"registry invalid: {problems}")
@@ -181,7 +181,7 @@ def attach_fundamentals(df: pd.DataFrame, fx_rows: dict) -> pd.DataFrame:
 
 
 def load_inputs() -> dict:  # pragma: no cover - reads the research data; exercised only by an authorised run
-    edge_registry.b5_run_open()
+    edge_registry.b5_run_open(verify_files=True)
     import edge_split
     import stage2
     import xsection
@@ -299,7 +299,7 @@ def nonoverlap_t(excess: pd.Series) -> float:
 
 def run_one(trial: str, panels: dict, data: dict, registry: Path) -> dict:
     """Every run and statistic for one trial. Appends nothing."""
-    edge_registry.b5_run_open()
+    edge_registry.b5_run_open(verify_files=True)
     tid = TRIALS[trial]
     k, starts = SCHEDULE[trial]
     cfg = config(k)
@@ -344,7 +344,7 @@ def finish(runs: dict, registry: Path, status: Path, evidence: str, report_path:
     A failure in steps 1-5 leaves the registry byte-identical and removes the staged copy and the pending report (the
     one-run lock stays, so a rerun still needs a recorded owner decision). Only step 6 follows the commit; if it fails,
     the results are recorded and the full report is in the pending file."""
-    edge_registry.b5_run_open()
+    edge_registry.b5_run_open(verify_files=True)
     if set(runs) != set(TRIALS):
         raise RuntimeError("both trials must be computed before anything is recorded")
     for trial, r in runs.items():

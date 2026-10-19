@@ -19,7 +19,7 @@ import edge_b5_run as run  # noqa: E402
 import edge_b5_stats as st  # noqa: E402
 import edge_backtest as bt  # noqa: E402
 import edge_registry  # noqa: E402
-from test_edge_b5_run import env, make_env, opened  # noqa: E402,F401
+from test_edge_b5_run import env, make_env, opened, point_gate  # noqa: E402,F401
 from test_edge_backtest import flat_fx, month_ends, world  # noqa: E402
 
 MONTHS = month_ends("2014-02-28", 106)  # the first S2a tranche start to the last decision, 2022-11-30
@@ -103,8 +103,7 @@ def all_runs(world_data, tmp_path_factory):
     mp = pytest.MonkeyPatch()
     e = make_env(tmp_path_factory.mktemp("fix2"))
     run.preflight(e["registry"], e["status"], e["manifest"], e["repo"], e["lock"])
-    mp.setattr(edge_registry, "STATUS", e["status"])
-    mp.setattr(edge_registry, "B5_LOCK", e["lock"])
+    point_gate(mp, e)
     panels, data = world_data
     try:
         yield {t: variant_runs(e, panels, data, t) for t in run.TRIALS}, data
