@@ -115,7 +115,8 @@ def test_retired_run_keeps_the_read_only_snapshot_and_reconciliation(make_client
         assert bot.run(execute=execute, force=force) == {"status": "halted", "reason": "strategy retired"}
     assert len(journal.snapshots()) == 3 and len(calls) == 3
     assert fake.posts == []
-    assert not any("pending" in c or "orders/market" in c for c in fake.get_calls)  # halts before order planning
+    # halts before order planning: the pending-orders list (planning's first broker read) is never fetched
+    assert not any(c.split("?")[0].rstrip("/").endswith("/equity/orders") for c in fake.get_calls), fake.get_calls
 
 
 def test_order_submission_itself_refuses_under_a_retired_strategy(make_client, cfg, journal, tmp_path):
