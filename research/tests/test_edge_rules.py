@@ -231,9 +231,11 @@ def test_dsr_floor_applies_with_too_few_comparable_results(tmp_path):
 def test_committed_registry_dsr_inputs_reconcile():
     ev = edge_registry.load()
     # 96 after PR #18 + B5 version 1 (2, superseded, never run, still counted) + B5 version 2 (2): D14, D15
-    assert edge_registry.n_trials(ev) == 100
+    # + B5 version 3 (2, owner D21, registered 2026-10-19)
+    assert edge_registry.n_trials(ev) == 102
     done = {e["id"] for e in ev if e.get("event") == "result"}
-    b5 = {"B5-H1-FCFPS-ACCEL", "B5-S2A-GP-12M", "B5-H1-FCFPS-ACCEL-V2", "B5-S2A-GP-12M-V2"}
+    b5 = {"B5-H1-FCFPS-ACCEL", "B5-S2A-GP-12M", "B5-H1-FCFPS-ACCEL-V2", "B5-S2A-GP-12M-V2", "B5-H1-FCFPS-ACCEL-V3",
+          "B5-S2A-GP-12M-V3"}
     assert not b5 & done   # registered, not run (owner: no H1 or S2a run without separate approval)
     assert len(edge_registry.sharpe_list(ev, edge_registry.LEGACY_STAT)) == 15   # Stage 2's top-quintile Sharpes
     assert edge_registry.sharpe_list(ev, "portfolio_excess_vs_vwrp") == []      # none yet: Phase B adds them
@@ -256,7 +258,7 @@ def test_b5_addendum_1_is_frozen_at_its_registered_hash_and_does_not_change_n():
     a = edge_registry.registered(ev)["B5-V2-ADDENDUM-1"]
     assert a["spec_sha256"] == hashlib.sha256(spec.read_bytes()).hexdigest()
     assert a["counts_for_dsr"] is False and set(a["amends"]) == {"B5-H1-FCFPS-ACCEL-V2", "B5-S2A-GP-12M-V2"}
-    assert edge_registry.n_trials(ev) == 100
+    assert edge_registry.n_trials(ev) == 102  # addenda never count; 100 + the two V3 trials
 
 
 def test_b5_addendum_2_is_frozen_at_its_registered_hash_and_does_not_change_n():
@@ -269,7 +271,7 @@ def test_b5_addendum_2_is_frozen_at_its_registered_hash_and_does_not_change_n():
     a = reg["B5-V2-ADDENDUM-2"]
     assert a["spec_sha256"] == hashlib.sha256(spec.read_bytes()).hexdigest()
     assert a["counts_for_dsr"] is False and "B5-V2-ADDENDUM-1" in a["amends"]
-    assert edge_registry.n_trials(ev) == 100 and "B5-V2-RUN-MANIFEST" not in reg
+    assert edge_registry.n_trials(ev) == 102 and "B5-V2-RUN-MANIFEST" not in reg  # 100 + the two V3 trials
 
 
 def test_exposures_are_recorded_but_never_counted(tmp_path):
@@ -296,18 +298,20 @@ def test_report_must_open_with_standing_limitations():
         edge_rules.require_disclosure("# Backtest\n\nNo disclosure.")
 
 
-ADDENDUM_3_SHA256 = "70406d1d6f55eb0bac4d54bf6f07e5f37063d0b1b56a4335752c2193397cd17e"  # the draft the owner reviews (D20, D21); registered only on approval
+ADDENDUM_3_SHA256 = "70406d1d6f55eb0bac4d54bf6f07e5f37063d0b1b56a4335752c2193397cd17e"  # reviewed (D20, D21); registered 2026-10-19 as B5-V3-ADDENDUM-3
 
 
-def test_b5_addendum_3_draft_is_pinned_and_not_yet_registered():
-    """ADDENDUM_3 (owner decisions D20, D21, 2026-10-19) is a review draft: any edit after review fails here, and it
-    is not registered until the owner approves. Version 2 and addenda 1-2 stay registered at their hashes."""
+def test_b5_addendum_3_is_frozen_at_its_registered_hash():
+    """ADDENDUM_3 (owner decisions D20, D21) is registered at its reviewed hash (owner approval 2026-10-19 07:53Z);
+    any later edit fails here. Version 2 and addenda 1-2 stay registered at their hashes."""
     import hashlib
     docs = Path(__file__).resolve().parents[2] / "docs" / "edge"
     assert hashlib.sha256((docs / "B5_PREREGISTRATION_ADDENDUM_3.md").read_bytes()).hexdigest() == ADDENDUM_3_SHA256
     ev = edge_registry.load()
     reg = edge_registry.registered(ev)
-    assert "B5-V3-ADDENDUM-3" not in reg and edge_registry.n_trials(ev) == 100  # 102 only once version 3 is registered
+    a3 = reg["B5-V3-ADDENDUM-3"]  # registered 2026-10-19 (owner approval 07:53Z) at the reviewed hash
+    assert a3["spec_sha256"] == ADDENDUM_3_SHA256 and a3["counts_for_dsr"] is False
+    assert edge_registry.n_trials(ev) == 102 and "B5-V3-RUN-MANIFEST" not in reg
     for rid, f in (("B5-H1-FCFPS-ACCEL-V2", "B5_PREREGISTRATION.md"), ("B5-V2-ADDENDUM-1", "B5_PREREGISTRATION_ADDENDUM_1.md"),
                    ("B5-V2-ADDENDUM-2", "B5_PREREGISTRATION_ADDENDUM_2.md")):
         assert reg[rid]["spec_sha256"] == hashlib.sha256((docs / f).read_bytes()).hexdigest()

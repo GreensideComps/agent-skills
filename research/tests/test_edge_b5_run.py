@@ -21,6 +21,19 @@ import edge_backtest as bt  # noqa: E402
 import edge_registry  # noqa: E402
 import edge_rules  # noqa: E402
 
+PRE_V3_SHA256 = "0da0638e43b2cf7799cb46ef340b951a4fcd39ad94044a04ddbebb6cda1f85fd"  # registry before step 1 (D21)
+V3_OWNER_MESSAGE = "cmsg_01U4KMvkBYNknqm4HRVie8uvCZeVB3ELHksWnNk6iBAk3Y"  # owner approval 2026-10-19 07:53Z
+
+
+def pre_v3(dst):
+    """Write the committed registry as it stood before version 3 was registered (every line before
+    B5-V3-ADDENDUM-3), so registration tests can replay the 13-event step."""
+    lines = edge_registry.PATH.read_text().splitlines(keepends=True)
+    cut = next(i for i, l in enumerate(lines) if '"id": "B5-V3-ADDENDUM-3"' in l)
+    dst.write_text("".join(lines[:cut]))
+    return dst
+
+
 REPO = Path(__file__).resolve().parents[2]
 
 
@@ -42,7 +55,7 @@ def env(tmp_path):
     man.write_text(json.dumps({"inputs": {"in.csv": sha(tmp_path / "in.csv")},
                                "code": {"code.py": sha(tmp_path / "code.py")}}))
     reg = tmp_path / "trials.jsonl"
-    shutil.copy(edge_registry.PATH, reg)
+    pre_v3(reg)
     have = edge_registry.registered(edge_registry.load(reg))
     base = {"event": "register", "kind": "diagnostic", "phase": "exploration", "hypothesis": "none",
             "universe": "as B5 v2", "horizon_months": 0, "window": {}, "counts_for_dsr": False,
@@ -489,7 +502,7 @@ def test_preflight_refuses_when_an_addendum_3_record_is_missing(env, rid):
 
 def test_preflight_refuses_a_robustness_run_that_counts(env, monkeypatch, tmp_path):
     reg = tmp_path / "counted.jsonl"
-    shutil.copy(edge_registry.PATH, reg)
+    pre_v3(reg)
     evs = edge_b5_addendum3.events(env["repo"])
     evs = [{**e, "counts_for_dsr": True} if e["id"] == "B5-H1-V3-ROB-WINQ" else e for e in evs]  # wrongly counted
     for e in evs:
@@ -508,7 +521,7 @@ def test_version_3_registration_adds_exactly_the_two_v3_trials_and_preserves_eve
     """D21: registering version 3 takes N from 100 to 102, counting only the two V3 trials; every existing registry
     line (version 1, version 2, addenda 1-2) stays byte-identical; it needs the owner's message id and runs once."""
     reg = tmp_path / "t.jsonl"
-    shutil.copy(edge_registry.PATH, reg)
+    pre_v3(reg)
     before_lines = reg.read_text().splitlines()
     assert edge_registry.n_trials(edge_registry.load(reg)) == 100
     with pytest.raises(PermissionError):
@@ -540,7 +553,7 @@ def test_version_3_registration_is_all_or_nothing(tmp_path, monkeypatch):
     import json
     import os
     reg = tmp_path / "t.jsonl"
-    shutil.copy(edge_registry.PATH, reg)
+    pre_v3(reg)
     before = reg.read_bytes()
     evs = edge_b5_addendum3.events()
     assert evs == json.loads(edge_b5_addendum3.PROPOSAL.read_text())  # code and reviewed file agree
@@ -556,7 +569,7 @@ def test_version_3_registration_is_all_or_nothing(tmp_path, monkeypatch):
         edge_b5_addendum3.register("cmsg_X", reg, proposal=prop)
     assert reg.read_bytes() == before
     one = tmp_path / "one.jsonl"  # only the last id already present: nothing else may be added
-    shutil.copy(edge_registry.PATH, one)
+    pre_v3(one)
     edge_registry.append(evs[-1], one)
     one_before = one.read_bytes()
     with pytest.raises(ValueError, match="already registered"):
@@ -578,7 +591,7 @@ def test_version_3_registration_is_all_or_nothing(tmp_path, monkeypatch):
 def test_preflight_refuses_at_n_100_before_version_3_is_registered(env, tmp_path):
     """The version-2-only registry (as it is today) cannot start the run: the V3 records are missing."""
     reg = tmp_path / "v2only.jsonl"
-    shutil.copy(edge_registry.PATH, reg)
+    pre_v3(reg)
     with pytest.raises((KeyError, ValueError)):
         run.preflight(reg, env["status"], env["manifest"], env["repo"], env["lock"])
     assert not env["lock"].exists()
@@ -594,11 +607,21 @@ def test_version_2_ids_are_retired_and_version_3_ids_are_the_only_runnable_b5_id
             edge_registry.require(rid)
 
 
-def test_in_the_real_registry_version_3_is_not_registered_yet():
+def test_in_the_real_registry_version_3_is_registered_and_nothing_else(tmp_path):
+    """Step 1 (owner approval 07:53Z, card 08:22Z): the 13 version-3 events were appended atomically after an
+    unchanged history. The manifest is not registered, no B5 id has a result, and N = 102."""
+    import hashlib
     ev = edge_registry.load()
     reg = edge_registry.registered(ev)
-    v3 = {"B5-V3-ADDENDUM-3", "B5-V3-RUN-MANIFEST"} | set(edge_registry.B5_RUN_IDS)
-    assert not v3 & set(reg) and edge_registry.n_trials(ev) == 100
+    v3 = edge_b5_addendum3.events()
+    assert hashlib.sha256(pre_v3(tmp_path / "pre.jsonl").read_bytes()).hexdigest() == PRE_V3_SHA256  # history intact
+    assert [e["id"] for e in ev[-13:]] == [e["id"] for e in v3]
+    for got, want in zip(ev[-13:], v3):
+        assert {k: got[k] for k in want} == want and got["owner_message"] == V3_OWNER_MESSAGE
+    assert edge_registry.n_trials(ev) == 102 == run.N_EXPECTED and not edge_registry.validate()
+    assert "B5-V3-RUN-MANIFEST" not in reg
+    done = {e["id"] for e in ev if e.get("event") == "result"}
+    assert not done & (set(edge_registry.B5_RUN_IDS) | set(edge_registry.B5_RETIRED_IDS))
     assert {"B5-H1-FCFPS-ACCEL-V2", "B5-S2A-GP-12M-V2", "B5-H1-V2-ROB-PITQ", "B5-S2A-V2-ROB-PITQ"} <= set(reg)
 
 
