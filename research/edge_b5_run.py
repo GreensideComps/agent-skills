@@ -8,8 +8,9 @@ executed. It refuses to read any data until every control below passes:
   explicit word, with the message id);
 * the registry validates, N = 102, the version-2 trials are still registered with v2's hash, both version-3 trials
   and addendum 3 are registered with addendum 3's hash, addenda 1 and 2 with theirs, every robustness id is
-  registered and uncounted, and this script's input manifest (`docs/edge/B5_RUN_MANIFEST.json`) is registered as
-  `B5-V3-RUN-MANIFEST` with its hash;
+  registered and uncounted, and this script's input manifest (`docs/edge/B5_RUN_MANIFEST_2.json`) is registered as
+  `B5-V3-RUN-MANIFEST-2` with its hash (`B5-V3-RUN-MANIFEST` / `B5_RUN_MANIFEST.json`, registered 2026-10-19 for the
+  code before the atomic recording fix, is kept unchanged and never used);
 * every input file and every code file named in the manifest has the recorded sha256;
 * neither trial, nor any of their registered robustness runs, nor any retired B5 id, has a result, and the one-run lock
   (`research/edge/b5_run.lock`) does not exist. The lock is created before any data is read and never removed by
@@ -21,8 +22,10 @@ and `edge_registry.require`, which every `bt.run_trial` and `bt.record` calls, r
 their robustness ids unless the run is open. `b5_run_open` reads the real status.json and lock only.
 
 Both trials run in this one invocation, each exactly once, with every gate from one fixed list (`GATES`); there is
-no flag to skip a gate, choose a trial or change a setting. All results are computed first; then both primary
-results are appended to the registry; only then is the shared DSR computed for each, so the DSR always sees both.
+no flag to skip a gate, choose a trial or change a setting. All results are computed first. `finish` then stages all
+twelve results in a copy of the registry, computes the shared DSR from that copy (so it always sees both primary
+results), writes the report, and only then records the results in one atomic rename (owner review 2026-10-19,
+findings A and B; `docs/edge/B5_RUN_FIX_1.md`).
 
 Exact command (only after authorisation):  cd research && python3 edge_b5_run.py
 """
@@ -46,18 +49,19 @@ import edge_rules
 
 ROOT = Path(__file__).resolve().parent
 REPO = ROOT.parent
-MANIFEST = REPO / "docs" / "edge" / "B5_RUN_MANIFEST.json"
+MANIFEST = REPO / "docs" / "edge" / "B5_RUN_MANIFEST_2.json"  # B5_RUN_MANIFEST.json stays as registered
 LOCK = edge_registry.B5_LOCK  # research/edge/b5_run.lock
 OUT = REPO / "equity" / "reports" / "research" / "edge"
 CUT = pd.Timestamp("2022-12-31")
 
 TRIALS = {"H1": "B5-H1-FCFPS-ACCEL-V3", "S2A": "B5-S2A-GP-12M-V3"}
+MANIFEST_ID = "B5-V3-RUN-MANIFEST-2"  # B5_RUN_FIX_1: the manifest of the code with atomic result recording
 A3 = "docs/edge/B5_PREREGISTRATION_ADDENDUM_3.md"
 SPECS = {"B5-H1-FCFPS-ACCEL-V2": "docs/edge/B5_PREREGISTRATION.md", "B5-S2A-GP-12M-V2": "docs/edge/B5_PREREGISTRATION.md",
          "B5-V2-ADDENDUM-1": "docs/edge/B5_PREREGISTRATION_ADDENDUM_1.md",
          "B5-V2-ADDENDUM-2": "docs/edge/B5_PREREGISTRATION_ADDENDUM_2.md",
          "B5-V3-ADDENDUM-3": A3, "B5-H1-FCFPS-ACCEL-V3": A3, "B5-S2A-GP-12M-V3": A3,
-         "B5-V3-RUN-MANIFEST": "docs/edge/B5_RUN_MANIFEST.json"}
+         MANIFEST_ID: "docs/edge/B5_RUN_MANIFEST_2.json"}
 # ADDENDUM_3 §3: P9 is the full-window reverse veto (ROB-WINQ); every version-1 and version-2 id is retired.
 ROB_IDS = {"P4": "ROB-2XCOST", "P6": "ROB-MISS100", "P7": "ROB-NEXTMONTH", "P8": "ROB-DATAERR", "P9": "ROB-WINQ"}
 GATES = ("P1", "P2", "P3", "P4", "P5", "P6", "P7", "P8", "P9", "P10", "P11")
@@ -318,9 +322,20 @@ def run_one(trial: str, panels: dict, data: dict, registry: Path) -> dict:
             "t_nonoverlap": nonoverlap_t(excess) if trial == "S2A" else None}
 
 
-def finish(runs: dict, registry: Path, status: Path, evidence: str) -> dict:
-    """Append both primary results (and the robustness results), THEN compute the shared DSR and the verdicts.
-    Everything is checked before the first append, so a partial run records nothing."""
+def finish(runs: dict, registry: Path, status: Path, evidence: str, report_path: Path, pre: dict) -> dict:
+    """Record every result and write the report as one step (owner review 2026-10-19, findings A and B):
+
+    1. refuse unless both trials and every gate input and robustness metric are present, and each of the twelve ids
+       is open and has no result (`edge_registry.require`);
+    2. stage the twelve result events in a copy of the registry (`edge_registry.stage`); the registry is untouched;
+    3. compute each trial's shared DSR from the staged copy (both primary results, N = 102) and its verdict;
+    4. write the report to `<report>.pending`;
+    5. commit: the staged copy replaces the registry in one rename (`edge_registry.commit`);
+    6. rename the pending report to `report_path`.
+
+    A failure in steps 1-5 leaves the registry byte-identical and removes the staged copy and the pending report (the
+    one-run lock stays, so a rerun still needs a recorded owner decision). Only step 6 follows the commit; if it fails,
+    the results are recorded and the full report is in the pending file."""
     edge_registry.b5_run_open()
     if set(runs) != set(TRIALS):
         raise RuntimeError("both trials must be computed before anything is recorded")
@@ -328,24 +343,39 @@ def finish(runs: dict, registry: Path, status: Path, evidence: str) -> dict:
         if r["id"] != TRIALS[trial] or set(r["variants"]) != set(VARIANT_GATES) \
                 or set(r["variant_metrics"]) != set(ROB_IDS):
             raise RuntimeError(f"{trial}: incomplete robustness runs; nothing recorded")
-    for trial, r in runs.items():
-        bt.record(r["id"], r["metrics"], registry, evidence)
-    for trial, r in runs.items():
-        for gate in ROB_IDS:
-            bt.record(rob_id(trial, gate), r["variant_metrics"][gate], registry, evidence)
-    recorded = {e["id"] for e in edge_registry.load(registry) if e.get("event") == "result"}
-    if not set(TRIALS.values()) <= recorded:
-        raise RuntimeError("both primary results must be recorded before the shared DSR")
-    out = {}
-    for trial, r in runs.items():
-        d = bt.dsr(r["metrics"], registry)
-        if d["n_trials"] != N_EXPECTED or d["n_comparable"] < 2:
-            raise RuntimeError(f"shared DSR must see N={N_EXPECTED} and both results: {d}")
-        vi = st.verdict_inputs(r["excess"], r["variants"], r["t_nonoverlap"], r["t_nw"], d["dsr"], r["alpha"], trial)
-        v = b5.verdict(vi, status)
-        if set(v["checks"]) != set(GATES):
-            raise RuntimeError("a gate is missing from the verdict")
-        out[trial] = {"dsr": d, "verdict_inputs": vi, "verdict": v}
+    events = [bt.result_event(TRIALS[t], runs[t]["metrics"], evidence) for t in TRIALS]
+    events += [bt.result_event(rob_id(t, g), runs[t]["variant_metrics"][g], evidence) for t in TRIALS for g in ROB_IDS]
+    for e in events:
+        edge_registry.require(e["id"], registry)
+    pending = report_path.with_name(report_path.name + ".pending")
+    staged, old = edge_registry.stage(events, registry)
+    committed = False
+    try:
+        recorded = {e["id"] for e in edge_registry.load(staged) if e.get("event") == "result"}
+        if not set(TRIALS.values()) <= recorded:
+            raise RuntimeError("both primary results must be staged before the shared DSR")
+        out = {}
+        for trial in TRIALS:
+            r = runs[trial]
+            d = bt.dsr(r["metrics"], staged)
+            if d["n_trials"] != N_EXPECTED or d["n_comparable"] < 2:
+                raise RuntimeError(f"shared DSR must see N={N_EXPECTED} and both results: {d}")
+            vi = st.verdict_inputs(r["excess"], r["variants"], r["t_nonoverlap"], r["t_nw"], d["dsr"], r["alpha"],
+                                   trial)
+            v = b5.verdict(vi, status)
+            if set(v["checks"]) != set(GATES):
+                raise RuntimeError("a gate is missing from the verdict")
+            out[trial] = {"dsr": d, "verdict_inputs": vi, "verdict": v}
+        report_path.parent.mkdir(parents=True, exist_ok=True)
+        pending.write_text(report(pre, runs, out))
+        edge_registry.commit(staged, old, registry)
+        committed = True
+    finally:
+        if not committed:
+            for f in (staged, pending):
+                if f.exists():
+                    f.unlink()
+    os.replace(pending, report_path)
     return out
 
 
@@ -377,9 +407,7 @@ def main() -> int:  # pragma: no cover
     panels = score_panels(data["panel"])
     runs = {t: run_one(t, panels, data, registry) for t in TRIALS}
     evidence = "equity/reports/research/edge/b5_trials.md"
-    final = finish(runs, registry, status, evidence)
-    OUT.mkdir(parents=True, exist_ok=True)
-    (OUT / "b5_trials.md").write_text(report(pre, runs, final))
+    finish(runs, registry, status, evidence, REPO / evidence, pre)
     print(f"written {evidence}")
     return 0
 

@@ -1,5 +1,5 @@
-"""Writes docs/edge/B5_RUN_MANIFEST.json: the sha256 of every input file and every repository code file the B5 run
-reads or imports (`edge_b5_run`). The manifest is registered as B5-V3-RUN-MANIFEST only on the owner's word; after
+"""Writes docs/edge/B5_RUN_MANIFEST_2.json: the sha256 of every input file and every repository code file the B5 run
+reads or imports (`edge_b5_run`). The manifest is registered as B5-V3-RUN-MANIFEST-2 only on the owner's word; after
 that, any change to a listed file makes `edge_b5_run.preflight` refuse. `tests/test_edge_b5_run.py` checks that CODE
 is exactly the set of repository modules the run path imports, so a new import cannot escape the manifest.
 
@@ -22,7 +22,7 @@ CODE = ["research/edge_b5_run.py", "research/edge_b5.py", "research/edge_b5_inpu
         "research/xsection.py", "research/stage2.py", "research/edge_exec_prices.py", "research/data_sources.py",
         "equity/equity/__init__.py", "equity/equity/panel.py", "equity/equity/fundamentals.py",
         "equity/equity/industry.py"]
-NOTE = ("B5 run manifest: every input and code file the run reads, by sha256. Registered as B5-V3-RUN-MANIFEST only "
+NOTE = ("B5 run manifest: every input and code file the run reads, by sha256. Registered as B5-V3-RUN-MANIFEST-2 only "
         "on the owner's authorisation; edge_b5_run.preflight refuses any mismatch.")
 
 
@@ -37,7 +37,7 @@ def build() -> dict:
 
 
 def main() -> None:
-    out = REPO / "docs" / "edge" / "B5_RUN_MANIFEST.json"
+    out = REPO / "docs" / "edge" / "B5_RUN_MANIFEST_2.json"  # B5_RUN_MANIFEST.json is registered; never rewritten
     out.write_text(json.dumps(build(), indent=1) + "\n")
     print(out, sha(out))
 

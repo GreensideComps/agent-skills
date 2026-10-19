@@ -20,6 +20,7 @@ from __future__ import annotations
 import hashlib
 import json
 import math
+import os
 import statistics
 import sys
 from datetime import date
@@ -190,6 +191,43 @@ def append(event: dict, path: Path = PATH, status: Path = STATUS) -> dict:
         raise ValueError(f"event rejected: {after}")
     tmp.replace(path)
     return e
+
+
+def stage(events: list[dict], path: Path = PATH) -> tuple[Path, bytes]:
+    """Write the registry plus `events` (chained, dated today) to a staged copy beside it and return the copy and the
+    registry's current bytes; the registry itself is not touched. Refuses (and removes the copy) unless the registry
+    is valid before, the copy is valid, every earlier byte is unchanged and exactly these events were added. A
+    confirmation batch is never staged. `commit` makes the copy the registry in one rename."""
+    if any(e.get("event") == "batch" for e in events):
+        raise ValueError("a confirmation batch is appended only through append")
+    problems = validate(path)
+    if problems:
+        raise ValueError(f"registry invalid before staging: {problems}")
+    old = path.read_bytes()
+    lines = [l for l in old.decode().splitlines() if l.strip()]
+    prev = line_hash(lines[-1]) if lines else GENESIS
+    new = []
+    for event in events:
+        raw = json.dumps({"prev": prev, "date": date.today().isoformat(), **event}, sort_keys=True)
+        new.append(raw)
+        prev = line_hash(raw)
+    text = ("\n".join(lines + new) + "\n").encode()
+    staged = path.with_suffix(".staged")
+    staged.write_bytes(text)
+    after = validate(staged)
+    if after or not text.startswith(old) or len(load(staged)) != len(load(path)) + len(events):
+        staged.unlink()
+        raise ValueError(f"staged events rejected, registry unchanged: {after or 'history or count mismatch'}")
+    return staged, old
+
+
+def commit(staged: Path, old: bytes, path: Path = PATH) -> None:
+    """Replace the registry with a `stage`d copy in one rename, refusing if the registry changed since staging."""
+    if path.read_bytes() != old:
+        raise ValueError("registry changed since staging; nothing committed")
+    if validate(staged) or not staged.read_bytes().startswith(old):
+        raise ValueError("staged copy no longer valid; nothing committed")
+    os.replace(staged, path)
 
 
 def require(trial_id: str, path: Path = PATH) -> dict:

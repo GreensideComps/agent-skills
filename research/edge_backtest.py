@@ -387,11 +387,16 @@ def run_trial(trial_id: str, registry, *args, **kwargs) -> Result:
     return run(*args, **kwargs)
 
 
+def result_event(trial_id: str, m: dict, evidence: str) -> dict:
+    """The result event for a trial: its Sharpe with its statistic, so the DSR pools it only with comparable results."""
+    return {"event": "result", "id": trial_id, "evidence": evidence, "stat": STAT,
+            "sr_monthly": m["sr_excess_monthly"], "n_months": m["excess_months"]}
+
+
 def record(trial_id: str, m: dict, registry, evidence: str) -> dict:
-    """Append the trial's result with its statistic, so the DSR pools it only with comparable results."""
+    """Append the trial's result (`result_event`)."""
     edge_registry.require(trial_id, registry)
-    return edge_registry.append({"event": "result", "id": trial_id, "evidence": evidence, "stat": STAT,
-                                 "sr_monthly": m["sr_excess_monthly"], "n_months": m["excess_months"]}, registry)
+    return edge_registry.append(result_event(trial_id, m, evidence), registry)
 
 
 def dsr(m: dict, registry) -> dict:

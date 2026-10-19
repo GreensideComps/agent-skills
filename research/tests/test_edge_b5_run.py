@@ -53,7 +53,7 @@ def env(tmp_path):
         shutil.copy(REPO / "docs" / "edge" / f, docs / f)
     (tmp_path / "in.csv").write_text("a,b\n1,2\n")
     (tmp_path / "code.py").write_text("x = 1\n")
-    man = docs / "B5_RUN_MANIFEST.json"
+    man = docs / "B5_RUN_MANIFEST_2.json"
     man.write_text(json.dumps({"inputs": {"in.csv": sha(tmp_path / "in.csv")},
                                "code": {"code.py": sha(tmp_path / "code.py")}}))
     reg = tmp_path / "trials.jsonl"
@@ -66,7 +66,7 @@ def env(tmp_path):
         edge_registry.append({**base, "id": "B5-V2-ADDENDUM-2", "definition": "test",
                               "spec_sha256": sha(docs / "B5_PREREGISTRATION_ADDENDUM_2.md")}, reg)
     edge_b5_addendum3.register("cmsg_TEST_ADD3", reg, tmp_path)  # the prepared events, as the owner would approve
-    edge_registry.append({**base, "id": "B5-V3-RUN-MANIFEST", "definition": "test", "spec_sha256": sha(man)}, reg)
+    edge_registry.append({**base, "id": run.MANIFEST_ID, "definition": "test", "spec_sha256": sha(man)}, reg)
     status = tmp_path / "status.json"
     status.write_text(json.dumps({"ttm_check4_independent_source": {"complete": False},
                                   "b5_trial_run": {"authorised": True, "owner_message": "cmsg_TEST"}}))
@@ -115,7 +115,7 @@ def test_the_real_status_does_not_authorise_the_run():
 
 @pytest.mark.parametrize("target", ["B5_PREREGISTRATION.md", "B5_PREREGISTRATION_ADDENDUM_1.md",
                                     "B5_PREREGISTRATION_ADDENDUM_2.md", "B5_PREREGISTRATION_ADDENDUM_3.md",
-                                    "B5_RUN_MANIFEST.json"])
+                                    "B5_RUN_MANIFEST_2.json"])
 def test_refused_when_a_spec_or_the_manifest_differs_from_its_registered_hash(env, target):
     p = env["repo"] / "docs" / "edge" / target
     p.write_bytes(p.read_bytes() + b" ")
@@ -134,8 +134,8 @@ def test_refused_when_an_input_or_code_file_differs_from_the_manifest(env, targe
 
 def test_refused_when_the_manifest_is_not_registered(env):
     lines = env["registry"].read_text().splitlines()
-    env["registry"].write_text("\n".join(l for l in lines if "B5-V3-RUN-MANIFEST" not in l) + "\n")
-    with pytest.raises(KeyError, match="B5-V3-RUN-MANIFEST is not registered"):
+    env["registry"].write_text("\n".join(l for l in lines if run.MANIFEST_ID not in l) + "\n")
+    with pytest.raises(KeyError, match=f"{run.MANIFEST_ID} is not registered"):
         pre(env)
 
 
@@ -187,35 +187,110 @@ def synthetic_run(trial, seed):
             "top_contributor": 1, "t_nw": 1.0, "t_nonoverlap": 1.0 if trial == "S2A" else None}
 
 
-def test_finish_records_both_results_before_any_dsr(opened, monkeypatch):
+PRE = {"owner_message": "cmsg_TEST", "manifest_sha256": "x", "n_trials": 102, "check4_complete": False}
+
+
+def fin(env, runs):
+    return run.finish(runs, env["registry"], env["status"], "test", env["repo"] / "r.md", PRE)
+
+
+def b5_results(registry):
+    return [e for e in edge_registry.load(registry) if e.get("event") == "result" and e["id"] in edge_registry.B5_RUN_IDS]
+
+
+def test_finish_computes_the_shared_dsr_from_both_staged_results_before_anything_is_recorded(opened, monkeypatch):
+    env = opened
+    before = env["registry"].read_bytes()
     seen = []
     real = bt.dsr
 
     def spy(m, registry):
-        ev = edge_registry.load(registry)
-        seen.append({e["id"] for e in ev if e.get("event") == "result"} >= set(run.TRIALS.values()))
+        staged = {e["id"] for e in b5_results(registry)}
+        seen.append((Path(registry) != env["registry"], staged >= set(run.TRIALS.values()),
+                     env["registry"].read_bytes() == before, (env["repo"] / "r.md").exists()))
         return real(m, registry)
 
     monkeypatch.setattr(bt, "dsr", spy)
-    env = opened
     runs = {t: synthetic_run(t, i) for i, t in enumerate(run.TRIALS)}
-    out = run.finish(runs, env["registry"], env["status"], "test")
-    assert seen == [True, True]
+    out = fin(env, runs)
+    assert seen == [(True, True, True, False)] * 2  # staged copy, both results, registry untouched, no report yet
     for t in run.TRIALS:
         assert out[t]["dsr"]["n_trials"] == 102 and out[t]["dsr"]["n_comparable"] == 2
         assert set(out[t]["verdict"]["checks"]) == set(run.GATES)
         assert out[t]["verdict"]["label"] != "E2 candidate"  # check 4 open
-    ev = edge_registry.load(env["registry"])
-    results = {e["id"] for e in ev if e.get("event") == "result"}
-    assert {run.rob_id(t, g) for t in run.TRIALS for g in run.ROB_IDS} <= results
+    after = env["registry"].read_bytes()
+    assert after.startswith(before) and after.count(b"\n") == before.count(b"\n") + 12  # one step, history kept
+    assert [e["id"] for e in b5_results(env["registry"])] == list(run.TRIALS.values()) + [
+        run.rob_id(t, g) for t in run.TRIALS for g in run.ROB_IDS]
+    assert not edge_registry.validate(env["registry"])
+    assert (env["repo"] / "r.md").exists() and not list(env["repo"].glob("*.pending"))
+    assert not list(env["registry"].parent.glob("*.staged"))
     with pytest.raises(ValueError):  # a second run of the same trial is refused by the registry
-        run.finish(runs, env["registry"], env["status"], "test")
+        fin(env, runs)
+
+
+def _boom(*a, **k):
+    raise RuntimeError("injected failure")
+
+
+@pytest.mark.parametrize("where", ["verdict", "dsr_nan", "report", "commit_rename", "registry_changed"])
+def test_a_failure_before_the_commit_records_nothing_and_leaves_no_report(opened, monkeypatch, where):
+    """Owner review 2026-10-19, findings A and B: every failure up to the commit leaves the registry byte-identical,
+    no report, no pending report and no staged copy; the lock stays."""
+    import os
+    env = opened
+    runs = {t: synthetic_run(t, i) for i, t in enumerate(run.TRIALS)}
+    if where == "verdict":
+        monkeypatch.setattr(b5, "verdict", _boom)
+    elif where == "dsr_nan":
+        runs["S2A"]["metrics"] = {**runs["S2A"]["metrics"], "sr_excess_monthly": float("nan")}
+    elif where == "report":
+        monkeypatch.setattr(run, "report", _boom)
+    elif where == "commit_rename":
+        monkeypatch.setattr(os, "replace", lambda *a: _boom())
+    elif where == "registry_changed":
+        real = run.report
+
+        def sneak(*a):
+            edge_registry.append({"event": "register", "id": "LATE", "kind": "diagnostic", "phase": "exploration",
+                                  "hypothesis": "x", "definition": "x", "universe": "x", "horizon_months": 0,
+                                  "window": {}, "counts_for_dsr": False, "touched_holdout": False}, env["registry"])
+            return real(*a)
+        monkeypatch.setattr(run, "report", sneak)
+    before = env["registry"].read_bytes()
+    with pytest.raises((RuntimeError, ValueError)):
+        fin(env, runs)
+    after = env["registry"].read_bytes()
+    assert after == before or (where == "registry_changed" and b5_results(env["registry"]) == [])
+    assert b5_results(env["registry"]) == []
+    assert not (env["repo"] / "r.md").exists() and not list(env["repo"].glob("*.pending"))
+    assert not list(env["registry"].parent.glob("*.staged"))
+    assert env["lock"].exists()
+
+
+def test_only_the_final_report_rename_follows_the_commit(opened, monkeypatch):
+    """If the last step fails, the results are recorded once and the full report is in the pending file."""
+    import os
+    env = opened
+    real, calls = os.replace, []
+
+    def second_fails(a, b):
+        calls.append(b)
+        if len(calls) == 2:
+            raise OSError("injected")
+        real(a, b)
+    monkeypatch.setattr(os, "replace", second_fails)
+    with pytest.raises(OSError):
+        fin(env, {t: synthetic_run(t, i) for i, t in enumerate(run.TRIALS)})
+    assert len(b5_results(env["registry"])) == 12 and not edge_registry.validate(env["registry"])
+    pend = env["repo"] / "r.md.pending"
+    assert pend.exists() and edge_rules.STANDING_LIMITATIONS in pend.read_text()
 
 
 def test_finish_refuses_one_trial_alone(opened):
     env = opened
     with pytest.raises(RuntimeError, match="both trials"):
-        run.finish({"H1": synthetic_run("H1", 0)}, env["registry"], env["status"], "test")
+        fin(env, {"H1": synthetic_run("H1", 0)})
     assert not any(e.get("event") == "result" and e["id"].startswith("B5-H1-FCFPS")
                    for e in edge_registry.load(env["registry"]))
 
@@ -232,7 +307,7 @@ def test_a_partial_run_records_nothing(opened, drop):
     runs = {t: synthetic_run(t, i) for i, t in enumerate(run.TRIALS)}
     del runs["S2A"][drop[0]][drop[1]]
     with pytest.raises(RuntimeError, match="incomplete"):
-        run.finish(runs, opened["registry"], opened["status"], "test")
+        fin(opened, runs)
     assert results(opened["registry"]) == []
 
 
@@ -282,7 +357,8 @@ def test_a_copied_registry_and_status_cannot_open_the_run(env):
     pre(env)
     assert env["lock"].exists()
     runs = {t: synthetic_run(t, i) for i, t in enumerate(run.TRIALS)}
-    for call in (lambda: run.load_inputs(), lambda: run.finish(runs, env["registry"], env["status"], "x"),
+    for call in (lambda: run.load_inputs(), lambda: run.finish(runs, env["registry"], env["status"], "x",
+                                                                  env["repo"] / "r.md", PRE),
                  lambda: run.run_one("H1", {}, {}, env["registry"]),
                  lambda: bt.run_trial(run.TRIALS["H1"], env["registry"], pd.DataFrame(), None, None, None)):
         with pytest.raises(PermissionError):
@@ -509,7 +585,7 @@ def test_preflight_refuses_a_robustness_run_that_counts(env, monkeypatch, tmp_pa
     evs = [{**e, "counts_for_dsr": True} if e["id"] == "B5-H1-V3-ROB-WINQ" else e for e in evs]  # wrongly counted
     for e in evs:
         edge_registry.append(e, reg)
-    edge_registry.append({"event": "register", "id": "B5-V3-RUN-MANIFEST", "kind": "diagnostic", "phase": "exploration",
+    edge_registry.append({"event": "register", "id": run.MANIFEST_ID, "kind": "diagnostic", "phase": "exploration",
                           "hypothesis": "none", "definition": "test", "universe": "x", "horizon_months": 0,
                           "window": {}, "counts_for_dsr": False, "touched_holdout": False,
                           "spec_sha256": sha(env["manifest"])}, reg)
@@ -623,7 +699,7 @@ def test_in_the_real_registry_version_3_and_its_manifest_are_registered_and_noth
         assert {k: got[k] for k in want} == want and got["owner_message"] == V3_OWNER_MESSAGE
     m = ev[-1]
     assert m["id"] == "B5-V3-RUN-MANIFEST" and m["counts_for_dsr"] is False and m["owner_message"] == MANIFEST_OWNER_MESSAGE
-    assert m["spec_sha256"] == MANIFEST_SHA256 == sha(run.MANIFEST)
+    assert m["spec_sha256"] == MANIFEST_SHA256 == sha(REPO / "docs" / "edge" / "B5_RUN_MANIFEST.json")  # kept as registered
     assert edge_registry.n_trials(ev) == 102 == run.N_EXPECTED and not edge_registry.validate()
     done = {e["id"] for e in ev if e.get("event") == "result"}
     assert not done & (set(edge_registry.B5_RUN_IDS) | set(edge_registry.B5_RETIRED_IDS))
@@ -635,3 +711,47 @@ def test_in_the_real_registry_version_3_and_its_manifest_are_registered_and_noth
 def test_reports_carry_the_addendum_3_and_other_later_information_disclosures():
     for s in ("AVITA", "CoStar", "10-for-1", "P8", "SIC", "2026 snapshot", "General Dynamics", "Abbott"):
         assert s in run.KNOWN_INPUT_LIMITATIONS, s
+
+
+def test_stage_never_touches_the_registry_and_refuses_bad_input(tmp_path):
+    """edge_registry.stage/commit (B5_RUN_FIX_1): staging leaves the registry byte-identical; an invalid event, a
+    confirmation batch or an invalid registry is refused with no staged copy left; commit refuses a registry that
+    changed after staging."""
+    reg = tmp_path / "t.jsonl"
+    shutil.copy(edge_registry.PATH, reg)
+    before = reg.read_bytes()
+    ok = {"event": "register", "id": "S1", "kind": "diagnostic", "phase": "exploration", "hypothesis": "x",
+          "definition": "x", "universe": "x", "horizon_months": 0, "window": {}, "counts_for_dsr": False,
+          "touched_holdout": False}
+    for bad in ([ok, {**ok, "id": "S2", "kind": "bogus"}], [ok, ok], [{"event": "batch", "batch": "b"}]):
+        with pytest.raises(ValueError):
+            edge_registry.stage(bad, reg)
+        assert reg.read_bytes() == before and not list(tmp_path.glob("*.staged"))
+    staged, old = edge_registry.stage([ok, {**ok, "id": "S2"}], reg)
+    assert reg.read_bytes() == before and staged.read_bytes().startswith(before)
+    edge_registry.append({**ok, "id": "S3"}, reg)  # someone else writes in between
+    with pytest.raises(ValueError, match="changed since staging"):
+        edge_registry.commit(staged, old, reg)
+    staged.unlink()
+    broken = tmp_path / "b.jsonl"
+    broken.write_bytes(before.replace(b'"prev": "', b'"prev": "x', 1))
+    with pytest.raises(ValueError, match="invalid before"):
+        edge_registry.stage([ok], broken)
+
+
+def test_the_fixed_run_needs_the_new_manifest_and_the_real_registry_does_not_have_it():
+    """B5_RUN_FIX_1: the run looks up B5-V3-RUN-MANIFEST-2 for B5_RUN_MANIFEST_2.json; the registered
+    B5-V3-RUN-MANIFEST and its file are kept unchanged and never used; until the owner approves registering the new
+    manifest, preflight on the real registry refuses."""
+    assert run.MANIFEST_ID == "B5-V3-RUN-MANIFEST-2" and run.MANIFEST.name == "B5_RUN_MANIFEST_2.json"
+    assert "B5-V3-RUN-MANIFEST" not in run.SPECS
+    reg = edge_registry.registered(edge_registry.load())
+    assert run.MANIFEST_ID not in reg
+    assert reg["B5-V3-RUN-MANIFEST"]["spec_sha256"] == sha(REPO / "docs" / "edge" / "B5_RUN_MANIFEST.json")
+
+
+def test_the_proposed_manifest_2_event_matches_the_files_it_names():
+    ev = json.loads((REPO / "docs" / "edge" / "B5_V3_PROPOSED_MANIFEST_2_EVENT.json").read_text())
+    assert ev["id"] == run.MANIFEST_ID and ev["counts_for_dsr"] is False and ev["supersedes"] == "B5-V3-RUN-MANIFEST"
+    assert ev["spec_sha256"] == sha(run.MANIFEST)
+    assert sha(REPO / "docs" / "edge" / "B5_RUN_FIX_1.md") in ev["definition"]
