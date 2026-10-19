@@ -51,7 +51,7 @@ def env(tmp_path):
         edge_registry.append({**base, "id": "B5-V2-ADDENDUM-2", "definition": "test",
                               "spec_sha256": sha(docs / "B5_PREREGISTRATION_ADDENDUM_2.md")}, reg)
     edge_b5_addendum3.register("cmsg_TEST_ADD3", reg, tmp_path)  # the prepared events, as the owner would approve
-    edge_registry.append({**base, "id": "B5-V2-RUN-MANIFEST", "definition": "test", "spec_sha256": sha(man)}, reg)
+    edge_registry.append({**base, "id": "B5-V3-RUN-MANIFEST", "definition": "test", "spec_sha256": sha(man)}, reg)
     status = tmp_path / "status.json"
     status.write_text(json.dumps({"ttm_check4_independent_source": {"complete": False},
                                   "b5_trial_run": {"authorised": True, "owner_message": "cmsg_TEST"}}))
@@ -74,7 +74,7 @@ def opened(env, monkeypatch):
 
 def test_preflight_passes_once_and_the_lock_refuses_a_second_start(env):
     out = pre(env)
-    assert out["owner_message"] == "cmsg_TEST" and out["n_trials"] == 100 and out["check4_complete"] is False
+    assert out["owner_message"] == "cmsg_TEST" and out["n_trials"] == 102 and out["check4_complete"] is False
     assert env["lock"].exists()
     with pytest.raises(ValueError, match="lock"):
         pre(env)
@@ -119,21 +119,22 @@ def test_refused_when_an_input_or_code_file_differs_from_the_manifest(env, targe
 
 def test_refused_when_the_manifest_is_not_registered(env):
     lines = env["registry"].read_text().splitlines()
-    env["registry"].write_text("\n".join(l for l in lines if "B5-V2-RUN-MANIFEST" not in l) + "\n")
-    with pytest.raises(KeyError, match="B5-V2-RUN-MANIFEST is not registered"):
+    env["registry"].write_text("\n".join(l for l in lines if "B5-V3-RUN-MANIFEST" not in l) + "\n")
+    with pytest.raises(KeyError, match="B5-V3-RUN-MANIFEST is not registered"):
         pre(env)
 
 
-def test_refused_when_n_is_not_100(env):
+def test_refused_when_n_is_not_102(env):
     edge_registry.append({"event": "register", "id": "EXTRA", "kind": "trial", "phase": "exploration",
                           "hypothesis": "x", "definition": "x", "universe": "x", "horizon_months": 1, "window": {},
                           "counts_for_dsr": True, "touched_holdout": False}, env["registry"])
-    with pytest.raises(ValueError, match="N is 101"):
+    with pytest.raises(ValueError, match="N is 103"):
         pre(env)
 
 
-@pytest.mark.parametrize("rid", ["B5-H1-FCFPS-ACCEL-V2", "B5-S2A-GP-12M-V2", "B5-S2A-V2-ROB-PITQ", "B5-H1-V2-ROB-2XCOST",
-                                 "B5-H1-V2-ROB-WINQ", "B5-S2A-GP-12M"])
+@pytest.mark.parametrize("rid", ["B5-H1-FCFPS-ACCEL-V3", "B5-S2A-GP-12M-V3", "B5-H1-V3-ROB-2XCOST", "B5-S2A-V3-ROB-WINQ",
+                                 "B5-H1-FCFPS-ACCEL-V2", "B5-S2A-GP-12M-V2", "B5-S2A-V2-ROB-PITQ", "B5-H1-V2-ROB-2XCOST",
+                                 "B5-S2A-GP-12M", "B5-H1-ROB-DATAERR"])
 def test_refused_when_any_trial_or_robustness_run_already_has_a_result(env, rid):
     edge_registry.append({"event": "result", "id": rid, "evidence": "x"}, env["registry"])
     with pytest.raises(ValueError, match="already run"):
@@ -186,7 +187,7 @@ def test_finish_records_both_results_before_any_dsr(opened, monkeypatch):
     out = run.finish(runs, env["registry"], env["status"], "test")
     assert seen == [True, True]
     for t in run.TRIALS:
-        assert out[t]["dsr"]["n_trials"] == 100 and out[t]["dsr"]["n_comparable"] == 2
+        assert out[t]["dsr"]["n_trials"] == 102 and out[t]["dsr"]["n_comparable"] == 2
         assert set(out[t]["verdict"]["checks"]) == set(run.GATES)
         assert out[t]["verdict"]["label"] != "E2 candidate"  # check 4 open
     ev = edge_registry.load(env["registry"])
@@ -444,9 +445,9 @@ def test_run_one_runs_p9_under_winq_from_the_full_window_panel_and_everything_el
     by_id = {}
     for rid, name in calls:
         by_id.setdefault(rid, []).append(name)
-    assert by_id["B5-H1-V2-ROB-WINQ"] == ["window"]
+    assert by_id["B5-H1-V3-ROB-WINQ"] == ["window"]
     assert "B5-H1-V2-ROB-PITQ" not in by_id
-    assert all(n == "primary" for rid, ns in by_id.items() if rid != "B5-H1-V2-ROB-WINQ" for n in ns)
+    assert all(n == "primary" for rid, ns in by_id.items() if rid != "B5-H1-V3-ROB-WINQ" for n in ns)
 
 
 def good_inputs(**kw):
@@ -477,7 +478,7 @@ def test_retired_ids_can_never_run_or_be_recorded_even_with_the_run_open(opened)
     assert not edge_registry.B5_RETIRED_IDS & edge_registry.B5_RUN_IDS
 
 
-@pytest.mark.parametrize("rid", ["B5-H1-V2-ROB-WINQ", "B5-S2A-V2-ROB-WINQ", "B5-V2-ADDENDUM-3"])
+@pytest.mark.parametrize("rid", ["B5-H1-V3-ROB-WINQ", "B5-S2A-V3-ROB-WINQ", "B5-V3-ADDENDUM-3"])
 def test_preflight_refuses_when_an_addendum_3_record_is_missing(env, rid):
     lines = env["registry"].read_text().splitlines()
     env["registry"].write_text("\n".join(l for l in lines if f'"id": "{rid}"' not in l) + "\n")
@@ -490,37 +491,74 @@ def test_preflight_refuses_a_robustness_run_that_counts(env, monkeypatch, tmp_pa
     reg = tmp_path / "counted.jsonl"
     shutil.copy(edge_registry.PATH, reg)
     evs = edge_b5_addendum3.events(env["repo"])
-    evs[1] = {**evs[1], "counts_for_dsr": True}  # B5-H1-V2-ROB-WINQ wrongly counted
+    evs = [{**e, "counts_for_dsr": True} if e["id"] == "B5-H1-V3-ROB-WINQ" else e for e in evs]  # wrongly counted
     for e in evs:
         edge_registry.append(e, reg)
-    edge_registry.append({"event": "register", "id": "B5-V2-RUN-MANIFEST", "kind": "diagnostic", "phase": "exploration",
+    edge_registry.append({"event": "register", "id": "B5-V3-RUN-MANIFEST", "kind": "diagnostic", "phase": "exploration",
                           "hypothesis": "none", "definition": "test", "universe": "x", "horizon_months": 0,
                           "window": {}, "counts_for_dsr": False, "touched_holdout": False,
                           "spec_sha256": sha(env["manifest"])}, reg)
-    monkeypatch.setattr(run, "N_EXPECTED", 101)  # isolate the check from the N check
+    monkeypatch.setattr(run, "N_EXPECTED", 103)  # isolate the check from the N check
     with pytest.raises(ValueError, match="must not count"):
         run.preflight(reg, env["status"], env["manifest"], env["repo"], env["lock"])
     assert not env["lock"].exists()
 
 
-def test_addendum_3_registration_adds_no_counted_trial_and_needs_the_owner(tmp_path):
+def test_version_3_registration_adds_exactly_the_two_v3_trials_and_preserves_every_earlier_line(tmp_path):
+    """D21: registering version 3 takes N from 100 to 102, counting only the two V3 trials; every existing registry
+    line (version 1, version 2, addenda 1-2) stays byte-identical; it needs the owner's message id and runs once."""
     reg = tmp_path / "t.jsonl"
     shutil.copy(edge_registry.PATH, reg)
-    before = edge_registry.n_trials(edge_registry.load(reg))
+    before_lines = reg.read_text().splitlines()
+    assert edge_registry.n_trials(edge_registry.load(reg)) == 100
     with pytest.raises(PermissionError):
         edge_b5_addendum3.register("not-a-message", reg)
+    assert reg.read_text().splitlines() == before_lines
     out = edge_b5_addendum3.register("cmsg_X", reg)
-    assert [e["id"] for e in out] == ["B5-V2-ADDENDUM-3", "B5-H1-V2-ROB-WINQ", "B5-S2A-V2-ROB-WINQ"]
-    assert all(e["counts_for_dsr"] is False for e in out)
-    assert edge_registry.n_trials(edge_registry.load(reg)) == before == 100
+    ids = [e["id"] for e in out]
+    assert ids[0] == "B5-V3-ADDENDUM-3" and len(ids) == 13 and len(set(ids)) == 13
+    assert {e["id"] for e in out if e["counts_for_dsr"]} == set(run.TRIALS.values())
+    assert {e["id"] for e in out if not e["counts_for_dsr"]} == {"B5-V3-ADDENDUM-3"} | {
+        run.rob_id(t, g) for t in run.TRIALS for g in run.ROB_IDS}
+    ev = edge_registry.load(reg)
+    assert edge_registry.n_trials(ev) == 102 == run.N_EXPECTED and not edge_registry.validate(reg)
+    after = reg.read_text().splitlines()
+    assert after[:len(before_lines)] == before_lines  # history byte-identical
+    regd = edge_registry.registered(ev)
+    for old in ("B5-H1-FCFPS-ACCEL-V2", "B5-S2A-GP-12M-V2", "B5-H1-FCFPS-ACCEL", "B5-S2A-GP-12M"):
+        assert regd[old]["counts_for_dsr"] is True and old in edge_registry.B5_RETIRED_IDS
+    a3 = sha(REPO / "docs" / "edge" / "B5_PREREGISTRATION_ADDENDUM_3.md")
+    assert all(e["spec_sha256"] == a3 for e in out)
+    assert regd["B5-H1-FCFPS-ACCEL-V3"]["supersedes"] == "B5-H1-FCFPS-ACCEL-V2"
     with pytest.raises(ValueError, match="already registered"):
         edge_b5_addendum3.register("cmsg_X", reg)
 
 
-def test_in_the_real_registry_addendum_3_and_winq_are_not_registered_yet():
-    reg = edge_registry.registered(edge_registry.load())
-    assert not {"B5-V2-ADDENDUM-3", "B5-H1-V2-ROB-WINQ", "B5-S2A-V2-ROB-WINQ", "B5-V2-RUN-MANIFEST"} & set(reg)
-    assert {"B5-H1-V2-ROB-PITQ", "B5-S2A-V2-ROB-PITQ"} <= set(reg)  # history kept, never edited
+def test_preflight_refuses_at_n_100_before_version_3_is_registered(env, tmp_path):
+    """The version-2-only registry (as it is today) cannot start the run: the V3 records are missing."""
+    reg = tmp_path / "v2only.jsonl"
+    shutil.copy(edge_registry.PATH, reg)
+    with pytest.raises((KeyError, ValueError)):
+        run.preflight(reg, env["status"], env["manifest"], env["repo"], env["lock"])
+    assert not env["lock"].exists()
+
+
+def test_version_2_ids_are_retired_and_version_3_ids_are_the_only_runnable_b5_ids():
+    v2 = {"B5-H1-FCFPS-ACCEL-V2", "B5-S2A-GP-12M-V2"} | {f"B5-{t}-V2-ROB-{g}" for t in ("H1", "S2A")
+                                                         for g in ("2XCOST", "MISS100", "NEXTMONTH", "DATAERR", "PITQ")}
+    assert v2 <= edge_registry.B5_RETIRED_IDS
+    assert all("-V3" in i for i in edge_registry.B5_RUN_IDS) and len(edge_registry.B5_RUN_IDS) == 12
+    for rid in v2:
+        with pytest.raises(ValueError, match="retired"):
+            edge_registry.require(rid)
+
+
+def test_in_the_real_registry_version_3_is_not_registered_yet():
+    ev = edge_registry.load()
+    reg = edge_registry.registered(ev)
+    v3 = {"B5-V3-ADDENDUM-3", "B5-V3-RUN-MANIFEST"} | set(edge_registry.B5_RUN_IDS)
+    assert not v3 & set(reg) and edge_registry.n_trials(ev) == 100
+    assert {"B5-H1-FCFPS-ACCEL-V2", "B5-S2A-GP-12M-V2", "B5-H1-V2-ROB-PITQ", "B5-S2A-V2-ROB-PITQ"} <= set(reg)
 
 
 def test_reports_carry_the_addendum_3_and_other_later_information_disclosures():

@@ -136,16 +136,16 @@ def check4_complete(status: Path = STATUS) -> bool:
         return False
 
 
-# The two B5 trials and their robustness runs (edge_b5_run.TRIALS and rob_id; a test keeps the lists equal). Owner
-# review 2026-10-19 item 4: no code path may run or record one of these unless the run is open. ADDENDUM_3 (D20):
-# P9 is now the full-window reverse veto, ROB-WINQ.
-B5_RUN_IDS = frozenset(["B5-H1-FCFPS-ACCEL-V2", "B5-S2A-GP-12M-V2"] + [
-    f"B5-{t}-V2-ROB-{g}" for t in ("H1", "S2A") for g in ("2XCOST", "MISS100", "NEXTMONTH", "DATAERR", "WINQ")])
-# Registered ids that must never run or be recorded: version 1 (superseded by version 2, still counted in N) and
-# version 2's ROB-PITQ (its rule became the primary under ADDENDUM_3, so its run would duplicate the primary).
-B5_RETIRED_IDS = frozenset(["B5-H1-FCFPS-ACCEL", "B5-S2A-GP-12M"] + [
-    f"B5-{t}-ROB-{g}" for t in ("H1", "S2A") for g in ("2XCOST", "MISS100", "NEXTMONTH", "DATAERR", "PITQ")] + [
-    "B5-H1-V2-ROB-PITQ", "B5-S2A-V2-ROB-PITQ"])
+# The two B5 version-3 trials and their robustness runs (edge_b5_run.TRIALS and rob_id; a test keeps the lists
+# equal). Owner review 2026-10-19 item 4: no code path may run or record one of these unless the run is open.
+# ADDENDUM_3 (D20, D21): version 3 = version 2 + addenda 1-3; P9 is the full-window reverse veto, ROB-WINQ.
+B5_RUN_IDS = frozenset(["B5-H1-FCFPS-ACCEL-V3", "B5-S2A-GP-12M-V3"] + [
+    f"B5-{t}-V3-ROB-{g}" for t in ("H1", "S2A") for g in ("2XCOST", "MISS100", "NEXTMONTH", "DATAERR", "WINQ")])
+# Registered ids that must never run or be recorded. Version 1 and version 2 (both superseded, never run; their
+# trial ids stay registered and counted in N) and all of their robustness runs.
+B5_RETIRED_IDS = frozenset([f"B5-{t}{v}" for t in ("H1-FCFPS-ACCEL", "S2A-GP-12M") for v in ("", "-V2")] + [
+    f"B5-{t}{v}-ROB-{g}" for t in ("H1", "S2A") for v in ("", "-V2")
+    for g in ("2XCOST", "MISS100", "NEXTMONTH", "DATAERR", "PITQ")])
 B5_LOCK = Path(__file__).resolve().parent / "edge" / "b5_run.lock"
 
 

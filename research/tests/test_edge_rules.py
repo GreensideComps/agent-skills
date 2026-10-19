@@ -296,18 +296,18 @@ def test_report_must_open_with_standing_limitations():
         edge_rules.require_disclosure("# Backtest\n\nNo disclosure.")
 
 
-ADDENDUM_3_SHA256 = "3fbbe1dc8e2405284c74256477bc38ebcbb5ed254ae0b9c1a5ff714de1541dd5"  # the draft the owner reviews (D20); registered only on approval
+ADDENDUM_3_SHA256 = "70406d1d6f55eb0bac4d54bf6f07e5f37063d0b1b56a4335752c2193397cd17e"  # the draft the owner reviews (D20, D21); registered only on approval
 
 
 def test_b5_addendum_3_draft_is_pinned_and_not_yet_registered():
-    """ADDENDUM_3 (owner decision D20, 2026-10-19 07:33Z) is a review draft: any edit after review fails here, and it
+    """ADDENDUM_3 (owner decisions D20, D21, 2026-10-19) is a review draft: any edit after review fails here, and it
     is not registered until the owner approves. Version 2 and addenda 1-2 stay registered at their hashes."""
     import hashlib
     docs = Path(__file__).resolve().parents[2] / "docs" / "edge"
     assert hashlib.sha256((docs / "B5_PREREGISTRATION_ADDENDUM_3.md").read_bytes()).hexdigest() == ADDENDUM_3_SHA256
     ev = edge_registry.load()
     reg = edge_registry.registered(ev)
-    assert "B5-V2-ADDENDUM-3" not in reg and edge_registry.n_trials(ev) == 100
+    assert "B5-V3-ADDENDUM-3" not in reg and edge_registry.n_trials(ev) == 100  # 102 only once version 3 is registered
     for rid, f in (("B5-H1-FCFPS-ACCEL-V2", "B5_PREREGISTRATION.md"), ("B5-V2-ADDENDUM-1", "B5_PREREGISTRATION_ADDENDUM_1.md"),
                    ("B5-V2-ADDENDUM-2", "B5_PREREGISTRATION_ADDENDUM_2.md")):
         assert reg[rid]["spec_sha256"] == hashlib.sha256((docs / f).read_bytes()).hexdigest()

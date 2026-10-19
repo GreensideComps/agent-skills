@@ -1,14 +1,15 @@
-"""B5 trial run: B5-H1-FCFPS-ACCEL-V2 and B5-S2A-GP-12M-V2, exactly as frozen in docs/edge/B5_PREREGISTRATION.md
-(version 2) as amended by addenda 1, 2 and 3.
+"""B5 trial run: B5-H1-FCFPS-ACCEL-V3 and B5-S2A-GP-12M-V3, version 3 = docs/edge/B5_PREREGISTRATION.md
+(version 2) as amended by addenda 1, 2 and 3 (ADDENDUM_3 creates version 3; owner decisions D20, D21).
 
 NOT YET AUTHORISED. Written 2026-10-16 for the owner's review (owner, 14:17Z, item 5); it has never been
 executed. It refuses to read any data until every control below passes:
 
 * the run is authorised in `research/edge/status.json` (`b5_trial_run.authorised`, recorded only on the owner's
   explicit word, with the message id);
-* the registry validates, N = 100, both trials are registered with v2's hash, addenda 1, 2 and 3 are registered
-  with their files' hashes, every robustness id is registered and uncounted, and this script's input manifest (`docs/edge/B5_RUN_MANIFEST.json`) is registered as
-  `B5-V2-RUN-MANIFEST` with its hash;
+* the registry validates, N = 102, the version-2 trials are still registered with v2's hash, both version-3 trials
+  and addendum 3 are registered with addendum 3's hash, addenda 1 and 2 with theirs, every robustness id is
+  registered and uncounted, and this script's input manifest (`docs/edge/B5_RUN_MANIFEST.json`) is registered as
+  `B5-V3-RUN-MANIFEST` with its hash;
 * every input file and every code file named in the manifest has the recorded sha256;
 * neither trial, nor any of their registered robustness runs, nor any retired B5 id, has a result, and the one-run lock
   (`research/edge/b5_run.lock`) does not exist. The lock is created before any data is read and never removed by
@@ -50,17 +51,18 @@ LOCK = edge_registry.B5_LOCK  # research/edge/b5_run.lock
 OUT = REPO / "equity" / "reports" / "research" / "edge"
 CUT = pd.Timestamp("2022-12-31")
 
-TRIALS = {"H1": "B5-H1-FCFPS-ACCEL-V2", "S2A": "B5-S2A-GP-12M-V2"}
+TRIALS = {"H1": "B5-H1-FCFPS-ACCEL-V3", "S2A": "B5-S2A-GP-12M-V3"}
+A3 = "docs/edge/B5_PREREGISTRATION_ADDENDUM_3.md"
 SPECS = {"B5-H1-FCFPS-ACCEL-V2": "docs/edge/B5_PREREGISTRATION.md", "B5-S2A-GP-12M-V2": "docs/edge/B5_PREREGISTRATION.md",
          "B5-V2-ADDENDUM-1": "docs/edge/B5_PREREGISTRATION_ADDENDUM_1.md",
          "B5-V2-ADDENDUM-2": "docs/edge/B5_PREREGISTRATION_ADDENDUM_2.md",
-         "B5-V2-ADDENDUM-3": "docs/edge/B5_PREREGISTRATION_ADDENDUM_3.md",
-         "B5-V2-RUN-MANIFEST": "docs/edge/B5_RUN_MANIFEST.json"}
-# ADDENDUM_3 §3: P9 is the full-window reverse veto (ROB-WINQ); version 2's ROB-PITQ is retired, never run.
+         "B5-V3-ADDENDUM-3": A3, "B5-H1-FCFPS-ACCEL-V3": A3, "B5-S2A-GP-12M-V3": A3,
+         "B5-V3-RUN-MANIFEST": "docs/edge/B5_RUN_MANIFEST.json"}
+# ADDENDUM_3 §3: P9 is the full-window reverse veto (ROB-WINQ); every version-1 and version-2 id is retired.
 ROB_IDS = {"P4": "ROB-2XCOST", "P6": "ROB-MISS100", "P7": "ROB-NEXTMONTH", "P8": "ROB-DATAERR", "P9": "ROB-WINQ"}
 GATES = ("P1", "P2", "P3", "P4", "P5", "P6", "P7", "P8", "P9", "P10", "P11")
 VARIANT_GATES = ("P4", "P5", "P6", "P7", "P8", "P9", "P11")  # each needs its own run
-N_EXPECTED = 100
+N_EXPECTED = 102  # ADDENDUM_3 §5 (D21): 100 + the two counted version-3 trials
 SCHEDULE = {"H1": (b5.H1_REBALANCE, b5.H1_TRANCHES), "S2A": (b5.S2A_REBALANCE, b5.S2A_TRANCHES)}
 
 
@@ -83,7 +85,7 @@ KNOWN_INPUT_LIMITATIONS = """**Known input-rule limitations (ADDENDUM_2 §1, §3
 
 
 def rob_id(trial: str, gate: str) -> str:
-    return f"B5-{trial}-V2-{ROB_IDS[gate]}"
+    return f"B5-{trial}-V3-{ROB_IDS[gate]}"
 
 
 def sha(p: Path) -> str:

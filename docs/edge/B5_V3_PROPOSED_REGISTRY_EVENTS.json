@@ -1,0 +1,270 @@
+[
+ {
+  "event": "register",
+  "phase": "exploration",
+  "touched_holdout": false,
+  "window": {
+   "decisions": [
+    "2015-01",
+    "2022-11"
+   ],
+   "outcomes_to": "2022-12-31"
+  },
+  "spec_sha256": "70406d1d6f55eb0bac4d54bf6f07e5f37063d0b1b56a4335752c2193397cd17e",
+  "id": "B5-V3-ADDENDUM-3",
+  "kind": "diagnostic",
+  "counts_for_dsr": false,
+  "horizon_months": 0,
+  "hypothesis": "none (specification record for version 3, not a trial)",
+  "universe": "as version 3",
+  "definition": "docs/edge/B5_PREREGISTRATION_ADDENDUM_3.md: version 3 = version 2 + addenda 1-3; point-in-time quality rule primary, full-window rule as P9 reverse veto; new counted trial ids, N = 102 (owner decisions D20, D21).",
+  "amends": [
+   "B5-H1-FCFPS-ACCEL-V2",
+   "B5-S2A-GP-12M-V2",
+   "B5-V2-ADDENDUM-1",
+   "B5-V2-ADDENDUM-2"
+  ]
+ },
+ {
+  "event": "register",
+  "phase": "exploration",
+  "touched_holdout": false,
+  "window": {
+   "decisions": [
+    "2015-01",
+    "2022-11"
+   ],
+   "outcomes_to": "2022-12-31"
+  },
+  "spec_sha256": "70406d1d6f55eb0bac4d54bf6f07e5f37063d0b1b56a4335752c2193397cd17e",
+  "id": "B5-H1-FCFPS-ACCEL-V3",
+  "kind": "trial",
+  "counts_for_dsr": true,
+  "horizon_months": 3,
+  "hypothesis": "H1: investors underreact when per-share free cash flow growth accelerates",
+  "universe": "large band (>= $10bn), close_raw >= $1, point-in-time quality rule (ADDENDUM_3), ex financials; each TTM input's own period end <= 183 days old",
+  "supersedes": "B5-H1-FCFPS-ACCEL-V2",
+  "definition": "B5-H1-FCFPS-ACCEL-V2 as registered (docs/edge/B5_PREREGISTRATION.md v2), amended by addenda 1, 2 and 3: the quality rule for eligibility, the S2a rank population and the P5 universe is edge_split.share_outliers_pit; P9 is the full-window reverse veto; gates P1-P11 and thresholds unchanged; verdict edge_b5.verdict"
+ },
+ {
+  "event": "register",
+  "phase": "exploration",
+  "touched_holdout": false,
+  "window": {
+   "decisions": [
+    "2015-01",
+    "2022-11"
+   ],
+   "outcomes_to": "2022-12-31"
+  },
+  "spec_sha256": "70406d1d6f55eb0bac4d54bf6f07e5f37063d0b1b56a4335752c2193397cd17e",
+  "id": "B5-H1-V3-ROB-2XCOST",
+  "kind": "diagnostic",
+  "counts_for_dsr": false,
+  "horizon_months": 3,
+  "universe": "large band (>= $10bn), close_raw >= $1, point-in-time quality rule (ADDENDUM_3), ex financials; each TTM input's own period end <= 183 days old",
+  "hypothesis": "robustness of B5-H1-FCFPS-ACCEL-V3 (veto only, never a substitute result)",
+  "definition": "B5-H1-FCFPS-ACCEL-V3 exactly as registered, except: 2x costs; gate P4. ADDENDUM_3 \u00a73."
+ },
+ {
+  "event": "register",
+  "phase": "exploration",
+  "touched_holdout": false,
+  "window": {
+   "decisions": [
+    "2015-01",
+    "2022-11"
+   ],
+   "outcomes_to": "2022-12-31"
+  },
+  "spec_sha256": "70406d1d6f55eb0bac4d54bf6f07e5f37063d0b1b56a4335752c2193397cd17e",
+  "id": "B5-H1-V3-ROB-MISS100",
+  "kind": "diagnostic",
+  "counts_for_dsr": false,
+  "horizon_months": 3,
+  "universe": "large band (>= $10bn), close_raw >= $1, point-in-time quality rule (ADDENDUM_3), ex financials; each TTM input's own period end <= 183 days old",
+  "hypothesis": "robustness of B5-H1-FCFPS-ACCEL-V3 (veto only, never a substitute result)",
+  "definition": "B5-H1-FCFPS-ACCEL-V3 exactly as registered, except: missing prices at -100%; gate P6. ADDENDUM_3 \u00a73."
+ },
+ {
+  "event": "register",
+  "phase": "exploration",
+  "touched_holdout": false,
+  "window": {
+   "decisions": [
+    "2015-01",
+    "2022-11"
+   ],
+   "outcomes_to": "2022-12-31"
+  },
+  "spec_sha256": "70406d1d6f55eb0bac4d54bf6f07e5f37063d0b1b56a4335752c2193397cd17e",
+  "id": "B5-H1-V3-ROB-NEXTMONTH",
+  "kind": "diagnostic",
+  "counts_for_dsr": false,
+  "horizon_months": 3,
+  "universe": "large band (>= $10bn), close_raw >= $1, point-in-time quality rule (ADDENDUM_3), ex financials; each TTM input's own period end <= 183 days old",
+  "hypothesis": "robustness of B5-H1-FCFPS-ACCEL-V3 (veto only, never a substitute result)",
+  "definition": "B5-H1-FCFPS-ACCEL-V3 exactly as registered, except: next-month-close execution; gate P7. ADDENDUM_3 \u00a73."
+ },
+ {
+  "event": "register",
+  "phase": "exploration",
+  "touched_holdout": false,
+  "window": {
+   "decisions": [
+    "2015-01",
+    "2022-11"
+   ],
+   "outcomes_to": "2022-12-31"
+  },
+  "spec_sha256": "70406d1d6f55eb0bac4d54bf6f07e5f37063d0b1b56a4335752c2193397cd17e",
+  "id": "B5-H1-V3-ROB-DATAERR",
+  "kind": "diagnostic",
+  "counts_for_dsr": false,
+  "horizon_months": 3,
+  "universe": "large band (>= $10bn), close_raw >= $1, point-in-time quality rule (ADDENDUM_3), ex financials; each TTM input's own period end <= 183 days old",
+  "hypothesis": "robustness of B5-H1-FCFPS-ACCEL-V3 (veto only, never a substitute result)",
+  "definition": "B5-H1-FCFPS-ACCEL-V3 exactly as registered, except: the 12 registered data-error company-months barred from purchase; gate P8. ADDENDUM_3 \u00a73."
+ },
+ {
+  "event": "register",
+  "phase": "exploration",
+  "touched_holdout": false,
+  "window": {
+   "decisions": [
+    "2015-01",
+    "2022-11"
+   ],
+   "outcomes_to": "2022-12-31"
+  },
+  "spec_sha256": "70406d1d6f55eb0bac4d54bf6f07e5f37063d0b1b56a4335752c2193397cd17e",
+  "id": "B5-H1-V3-ROB-WINQ",
+  "kind": "diagnostic",
+  "counts_for_dsr": false,
+  "horizon_months": 3,
+  "universe": "large band (>= $10bn), close_raw >= $1, point-in-time quality rule (ADDENDUM_3), ex financials; each TTM input's own period end <= 183 days old",
+  "hypothesis": "robustness of B5-H1-FCFPS-ACCEL-V3 (veto only, never a substitute result)",
+  "definition": "B5-H1-FCFPS-ACCEL-V3 exactly as registered, except: eligibility and the S2a rank population under the Phase A full-window quality rule (edge_split.share_outliers); gate P9, reverse veto. ADDENDUM_3 \u00a73."
+ },
+ {
+  "event": "register",
+  "phase": "exploration",
+  "touched_holdout": false,
+  "window": {
+   "decisions": [
+    "2015-01",
+    "2022-11"
+   ],
+   "outcomes_to": "2022-12-31"
+  },
+  "spec_sha256": "70406d1d6f55eb0bac4d54bf6f07e5f37063d0b1b56a4335752c2193397cd17e",
+  "id": "B5-S2A-GP-12M-V3",
+  "kind": "trial",
+  "counts_for_dsr": true,
+  "horizon_months": 12,
+  "hypothesis": "S2a: gross profitability predicts returns over 12 months",
+  "universe": "large band (>= $10bn), close_raw >= $1, point-in-time quality rule (ADDENDUM_3), ex financials; each TTM input's own period end <= 183 days old",
+  "supersedes": "B5-S2A-GP-12M-V2",
+  "definition": "B5-S2A-GP-12M-V2 as registered (docs/edge/B5_PREREGISTRATION.md v2), amended by addenda 1, 2 and 3: the quality rule for eligibility, the S2a rank population and the P5 universe is edge_split.share_outliers_pit; P9 is the full-window reverse veto; gates P1-P11 and thresholds unchanged; verdict edge_b5.verdict"
+ },
+ {
+  "event": "register",
+  "phase": "exploration",
+  "touched_holdout": false,
+  "window": {
+   "decisions": [
+    "2015-01",
+    "2022-11"
+   ],
+   "outcomes_to": "2022-12-31"
+  },
+  "spec_sha256": "70406d1d6f55eb0bac4d54bf6f07e5f37063d0b1b56a4335752c2193397cd17e",
+  "id": "B5-S2A-V3-ROB-2XCOST",
+  "kind": "diagnostic",
+  "counts_for_dsr": false,
+  "horizon_months": 12,
+  "universe": "large band (>= $10bn), close_raw >= $1, point-in-time quality rule (ADDENDUM_3), ex financials; each TTM input's own period end <= 183 days old",
+  "hypothesis": "robustness of B5-S2A-GP-12M-V3 (veto only, never a substitute result)",
+  "definition": "B5-S2A-GP-12M-V3 exactly as registered, except: 2x costs; gate P4. ADDENDUM_3 \u00a73."
+ },
+ {
+  "event": "register",
+  "phase": "exploration",
+  "touched_holdout": false,
+  "window": {
+   "decisions": [
+    "2015-01",
+    "2022-11"
+   ],
+   "outcomes_to": "2022-12-31"
+  },
+  "spec_sha256": "70406d1d6f55eb0bac4d54bf6f07e5f37063d0b1b56a4335752c2193397cd17e",
+  "id": "B5-S2A-V3-ROB-MISS100",
+  "kind": "diagnostic",
+  "counts_for_dsr": false,
+  "horizon_months": 12,
+  "universe": "large band (>= $10bn), close_raw >= $1, point-in-time quality rule (ADDENDUM_3), ex financials; each TTM input's own period end <= 183 days old",
+  "hypothesis": "robustness of B5-S2A-GP-12M-V3 (veto only, never a substitute result)",
+  "definition": "B5-S2A-GP-12M-V3 exactly as registered, except: missing prices at -100%; gate P6. ADDENDUM_3 \u00a73."
+ },
+ {
+  "event": "register",
+  "phase": "exploration",
+  "touched_holdout": false,
+  "window": {
+   "decisions": [
+    "2015-01",
+    "2022-11"
+   ],
+   "outcomes_to": "2022-12-31"
+  },
+  "spec_sha256": "70406d1d6f55eb0bac4d54bf6f07e5f37063d0b1b56a4335752c2193397cd17e",
+  "id": "B5-S2A-V3-ROB-NEXTMONTH",
+  "kind": "diagnostic",
+  "counts_for_dsr": false,
+  "horizon_months": 12,
+  "universe": "large band (>= $10bn), close_raw >= $1, point-in-time quality rule (ADDENDUM_3), ex financials; each TTM input's own period end <= 183 days old",
+  "hypothesis": "robustness of B5-S2A-GP-12M-V3 (veto only, never a substitute result)",
+  "definition": "B5-S2A-GP-12M-V3 exactly as registered, except: next-month-close execution; gate P7. ADDENDUM_3 \u00a73."
+ },
+ {
+  "event": "register",
+  "phase": "exploration",
+  "touched_holdout": false,
+  "window": {
+   "decisions": [
+    "2015-01",
+    "2022-11"
+   ],
+   "outcomes_to": "2022-12-31"
+  },
+  "spec_sha256": "70406d1d6f55eb0bac4d54bf6f07e5f37063d0b1b56a4335752c2193397cd17e",
+  "id": "B5-S2A-V3-ROB-DATAERR",
+  "kind": "diagnostic",
+  "counts_for_dsr": false,
+  "horizon_months": 12,
+  "universe": "large band (>= $10bn), close_raw >= $1, point-in-time quality rule (ADDENDUM_3), ex financials; each TTM input's own period end <= 183 days old",
+  "hypothesis": "robustness of B5-S2A-GP-12M-V3 (veto only, never a substitute result)",
+  "definition": "B5-S2A-GP-12M-V3 exactly as registered, except: the 12 registered data-error company-months barred from purchase; gate P8. ADDENDUM_3 \u00a73."
+ },
+ {
+  "event": "register",
+  "phase": "exploration",
+  "touched_holdout": false,
+  "window": {
+   "decisions": [
+    "2015-01",
+    "2022-11"
+   ],
+   "outcomes_to": "2022-12-31"
+  },
+  "spec_sha256": "70406d1d6f55eb0bac4d54bf6f07e5f37063d0b1b56a4335752c2193397cd17e",
+  "id": "B5-S2A-V3-ROB-WINQ",
+  "kind": "diagnostic",
+  "counts_for_dsr": false,
+  "horizon_months": 12,
+  "universe": "large band (>= $10bn), close_raw >= $1, point-in-time quality rule (ADDENDUM_3), ex financials; each TTM input's own period end <= 183 days old",
+  "hypothesis": "robustness of B5-S2A-GP-12M-V3 (veto only, never a substitute result)",
+  "definition": "B5-S2A-GP-12M-V3 exactly as registered, except: eligibility and the S2a rank population under the Phase A full-window quality rule (edge_split.share_outliers); gate P9, reverse veto. ADDENDUM_3 \u00a73."
+ }
+]
