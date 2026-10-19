@@ -141,12 +141,16 @@ def test_refused_without_the_owners_recorded_authorisation(env, auth):
 ARCHIVED_LOCK = REPO / "docs" / "edge" / "incidents" / "B5_RUN_1_LOCK.json"
 ARCHIVED_LOCK_SHA256 = "c06eeaa3a6020adc896c9a18a39694bd5cf80f79fcb1d5eee594caea146f6e05"  # as committed in 4215a98
 D29_OWNER_MESSAGE = "cmsg_01U4KMvkBYNknqm4HRVie8uv5MUSAy3Neyqof1pvHhyPuc"  # archival and reset, 2026-10-19 13:02Z
+RUN_2_OWNER_MESSAGE = "cmsg_01U4KMvkBYNknqm4HRVie8uvNzjD1qcmHEXGwqYmiFikfZ"  # D31, run 2 authorised, 2026-10-19 13:25Z
 
 
-def test_the_real_status_authorises_no_run_and_keeps_run_1_as_spent_history():
-    """D29: the authorisation is reset; D26 (run 1, 09:05Z) and its D27 outcome are kept as history, marked spent."""
+def test_the_real_status_authorises_run_2_on_manifest_3_and_keeps_run_1_as_spent_history():
+    """D31: run 2 is authorised by the owner's 13:25Z message, bound to MANIFEST-3 by id and sha256; D26 (run 1,
+    09:05Z) and its D27 outcome are kept as history, marked spent (D29)."""
     s = json.loads(b5.STATUS.read_text())["b5_trial_run"]
-    assert s["authorised"] is False and "owner_message" not in s and D29_OWNER_MESSAGE in s["owner_decision"]
+    assert s["authorised"] is True and s["owner_message"] == RUN_2_OWNER_MESSAGE and s["owner_decision"].startswith("D31")
+    assert s["manifest_id"] == run.MANIFEST_ID and s["manifest_sha256"] == MANIFEST_3_SHA256
+    assert edge_registry.b5_authorisation()["owner_message"] == RUN_2_OWNER_MESSAGE
     [h] = s["history"]
     assert h["run"] == 1 and h["owner_message"] == RUN_1_OWNER_MESSAGE and h["spent"] is True
     assert h["outcome"].startswith("D27") and h["lock"] == "docs/edge/incidents/B5_RUN_1_LOCK.json"
@@ -371,20 +375,18 @@ def test_the_gate_ids_are_exactly_the_run_scripts_trials_and_robustness_runs():
     assert run.LOCK == edge_registry.B5_LOCK
 
 
-def test_in_the_real_repo_run_1s_lock_is_archived_unchanged_and_no_new_run_can_start():
-    """D29: run 1's lock is archived byte-identical as an incident artefact, no lock is in place, no B5 id has a
-    result, and both preflight and the gate on the real files refuse before reading any data (nothing is authorised;
-    MANIFEST-3 is unregistered too)."""
+def test_in_the_real_repo_run_1s_lock_is_archived_unchanged_and_the_gate_stays_shut_until_preflight():
+    """D29: run 1's lock is archived byte-identical as an incident artefact. D31: run 2 is authorised but no lock is
+    in place and no B5 id has a result, so the gate on the real files refuses before reading any data. This test
+    never calls the real preflight, which would take run 2's lock."""
     assert sha(ARCHIVED_LOCK) == ARCHIVED_LOCK_SHA256
     assert json.loads(ARCHIVED_LOCK.read_text()) == {"owner_message": RUN_1_OWNER_MESSAGE, "manifest": MANIFEST_2_SHA256}
     assert not edge_registry.B5_LOCK.exists()
     ev = edge_registry.load()
     assert not {e["id"] for e in ev if e.get("event") == "result"} & (edge_registry.B5_RUN_IDS | edge_registry.B5_RETIRED_IDS)
-    with pytest.raises(PermissionError, match="not authorised"):
-        run.preflight()
-    with pytest.raises(PermissionError, match="not authorised"):
+    with pytest.raises(PermissionError, match="not open"):
         edge_registry.b5_run_open(verify_files=True)
-    assert not edge_registry.B5_LOCK.exists()  # preflight refused before taking a lock
+    assert not edge_registry.B5_LOCK.exists()
 
 
 @pytest.mark.parametrize("rid", sorted(edge_registry.B5_RUN_IDS))

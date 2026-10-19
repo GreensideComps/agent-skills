@@ -30,10 +30,13 @@
     "note": "passing the exploratory gates is not evidence that survivorship bias is bounded or that an investable edge exists"
   },
   "b5_trial_run": {
-    "authorised": false,
+    "authorised": true,
+    "owner_message": "cmsg_01U4KMvkBYNknqm4HRVie8uvNzjD1qcmHEXGwqYmiFikfZ",
+    "manifest_id": "B5-V3-RUN-MANIFEST-3",
+    "manifest_sha256": "f3f4fd71bae5ddf4932211c1983edac7dcb1d6d152d8d087c73550409a4b9671",
     "recorded": "2026-10-19",
-    "owner_decision": "D29, owner message cmsg_01U4KMvkBYNknqm4HRVie8uv5MUSAy3Neyqof1pvHhyPuc (2026-10-19 13:02Z): run 1's lock archived and its authorisation reset",
-    "note": "no B5 run is authorised; a new run needs MANIFEST-3 registered and a new owner authorisation naming the manifest id and sha256 (edge_registry.b5_authorisation)",
+    "owner_decision": "D31, owner message cmsg_01U4KMvkBYNknqm4HRVie8uvNzjD1qcmHEXGwqYmiFikfZ (2026-10-19 13:25Z): one B5 V3 exploratory run (run 2) using the registered B5-V3-RUN-MANIFEST-3 at N = 102",
+    "note": "one run only (one-run lock); exploratory; if interrupted or failed, no lock removal, no deletion of staged or pending files and no rerun without an owner decision; no PR #19 merge, holdout, confirmation, demo/live-account change or automatic investment decision; E2 label withheld while TTM check 4 is open",
     "history": [
       {
         "run": 1,

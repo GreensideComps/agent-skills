@@ -223,8 +223,8 @@ def test_the_run_and_the_gate_name_the_same_manifest():
     assert run.SPECS[run.MANIFEST_ID] == "docs/edge/" + run.MANIFEST.name
 
 
-def test_in_the_real_repo_the_gate_is_closed_and_refuses_at_the_authorisation():
-    """D29: the real status.json authorises nothing (run 1's D26 is history, and spent in code too); the gate stops
-    at the authorisation, before the lock, the registry or any listed file is read."""
-    with pytest.raises(PermissionError, match="not authorised"):
+def test_in_the_real_repo_the_gate_is_closed_until_preflight_takes_the_lock():
+    """D31: the real status.json authorises run 2 on MANIFEST-3 (run 1's D26 is history, and spent in code too); with
+    no lock the gate stops before the registry or any listed file is read."""
+    with pytest.raises(PermissionError, match="not open"):
         edge_registry.b5_run_open(verify_files=True)
