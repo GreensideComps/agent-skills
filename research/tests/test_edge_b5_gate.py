@@ -223,8 +223,20 @@ def test_the_run_and_the_gate_name_the_same_manifest():
     assert run.SPECS[run.MANIFEST_ID] == "docs/edge/" + run.MANIFEST.name
 
 
-def test_in_the_real_repo_the_gate_is_closed_until_preflight_takes_the_lock():
-    """D31: the real status.json authorises run 2 on MANIFEST-3 (run 1's D26 is history, and spent in code too); with
-    no lock the gate stops before the registry or any listed file is read."""
+def test_in_the_real_repo_the_gate_is_closed_and_refuses_at_the_authorisation():
+    """D32: after run 2 the real status.json authorises nothing (D26 and D31 are spent history; D26 is spent in code
+    too); the gate stops at the authorisation, before the lock, the registry or any listed file is read."""
+    with pytest.raises(PermissionError, match="not authorised"):
+        edge_registry.b5_run_open(verify_files=True)
+
+
+def test_before_run_2_the_gate_was_closed_until_preflight_took_the_lock(armed):
+    """Pre-run lifecycle on the isolated env (authorised, manifest registered, no result): without the lock the gate
+    refuses; with the lock preflight took, it opens."""
+    assert edge_registry.b5_run_open(verify_files=True) == "cmsg_TEST"
+    lock = armed["lock"].read_bytes()
+    armed["lock"].unlink()
     with pytest.raises(PermissionError, match="not open"):
         edge_registry.b5_run_open(verify_files=True)
+    armed["lock"].write_bytes(lock)
+    assert edge_registry.b5_run_open() == "cmsg_TEST"

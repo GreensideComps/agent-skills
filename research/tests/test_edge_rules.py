@@ -228,17 +228,35 @@ def test_dsr_floor_applies_with_too_few_comparable_results(tmp_path):
     assert 0 < out["dsr"] < 1 and math.isfinite(out["sr0"])
 
 
-def test_committed_registry_dsr_inputs_reconcile():
-    ev = edge_registry.load()
+B5_PRIMARY_IDS = {"B5-H1-FCFPS-ACCEL", "B5-S2A-GP-12M", "B5-H1-FCFPS-ACCEL-V2", "B5-S2A-GP-12M-V2",
+                  "B5-H1-FCFPS-ACCEL-V3", "B5-S2A-GP-12M-V3"}
+PRE_RUN_2_LINES = 240  # the registry before B5 run 2 (D31): MANIFEST-3 registered, no B5 result
+
+
+def test_committed_registry_dsr_inputs_reconcile_before_b5_run_2(tmp_path):
+    """Isolated copy of the registry as it stood before run 2 (its first 240 lines)."""
+    pre = tmp_path / "pre.jsonl"
+    pre.write_text("".join(edge_registry.PATH.read_text().splitlines(keepends=True)[:PRE_RUN_2_LINES]))
+    ev = edge_registry.load(pre)
     # 96 after PR #18 + B5 version 1 (2, superseded, never run, still counted) + B5 version 2 (2): D14, D15
     # + B5 version 3 (2, owner D21, registered 2026-10-19)
-    assert edge_registry.n_trials(ev) == 102
+    assert edge_registry.n_trials(ev) == 102 and not edge_registry.validate(pre)
     done = {e["id"] for e in ev if e.get("event") == "result"}
-    b5 = {"B5-H1-FCFPS-ACCEL", "B5-S2A-GP-12M", "B5-H1-FCFPS-ACCEL-V2", "B5-S2A-GP-12M-V2", "B5-H1-FCFPS-ACCEL-V3",
-          "B5-S2A-GP-12M-V3"}
-    assert not b5 & done   # registered, not run (owner: no H1 or S2a run without separate approval)
+    assert not B5_PRIMARY_IDS & done   # registered, not run (owner: no H1 or S2a run without separate approval)
     assert len(edge_registry.sharpe_list(ev, edge_registry.LEGACY_STAT)) == 15   # Stage 2's top-quintile Sharpes
     assert edge_registry.sharpe_list(ev, "portfolio_excess_vs_vwrp") == []      # none yet: Phase B adds them
+
+
+def test_committed_registry_dsr_inputs_reconcile_after_b5_run_2():
+    """Run 2 (D31, closed out D32) recorded the two counted V3 primaries; the robustness runs are uncounted, so the
+    DSR's excess-over-VWRP Sharpe list holds exactly those two, and N and the Stage 2 Sharpes are unchanged."""
+    ev = edge_registry.load()
+    assert edge_registry.n_trials(ev) == 102 and not edge_registry.validate()
+    done = {e["id"] for e in ev if e.get("event") == "result"}
+    assert B5_PRIMARY_IDS & done == {"B5-H1-FCFPS-ACCEL-V3", "B5-S2A-GP-12M-V3"}
+    assert len(edge_registry.sharpe_list(ev, edge_registry.LEGACY_STAT)) == 15
+    assert sorted(edge_registry.sharpe_list(ev, "portfolio_excess_vs_vwrp")) == [0.15617751061474458,
+                                                                              0.19998574529911248]
 
 
 def test_b5_v2_spec_is_frozen_at_its_registered_hash():

@@ -30,13 +30,10 @@
     "note": "passing the exploratory gates is not evidence that survivorship bias is bounded or that an investable edge exists"
   },
   "b5_trial_run": {
-    "authorised": true,
-    "owner_message": "cmsg_01U4KMvkBYNknqm4HRVie8uvNzjD1qcmHEXGwqYmiFikfZ",
-    "manifest_id": "B5-V3-RUN-MANIFEST-3",
-    "manifest_sha256": "f3f4fd71bae5ddf4932211c1983edac7dcb1d6d152d8d087c73550409a4b9671",
+    "authorised": false,
     "recorded": "2026-10-19",
-    "owner_decision": "D31, owner message cmsg_01U4KMvkBYNknqm4HRVie8uvNzjD1qcmHEXGwqYmiFikfZ (2026-10-19 13:25Z): one B5 V3 exploratory run (run 2) using the registered B5-V3-RUN-MANIFEST-3 at N = 102",
-    "note": "one run only (one-run lock); exploratory; if interrupted or failed, no lock removal, no deletion of staged or pending files and no rerun without an owner decision; no PR #19 merge, holdout, confirmation, demo/live-account change or automatic investment decision; E2 label withheld while TTM check 4 is open",
+    "owner_decision": "D32, owner message cmsg_01U4KMvkBYNknqm4HRVie8uvWW5mGZ7bsqjsGzRn39VcN1 (2026-10-19 13:55Z): run 2 closed out; D31 spent, run 2 lock archived",
+    "note": "no B5 run is authorised; D26 and D31 are spent; any further run needs a new owner authorisation and a new research phase approval",
     "history": [
       {
         "run": 1,
@@ -49,6 +46,21 @@
         "spent": true,
         "lock": "docs/edge/incidents/B5_RUN_1_LOCK.json",
         "lock_sha256": "c06eeaa3a6020adc896c9a18a39694bd5cf80f79fcb1d5eee594caea146f6e05"
+      },
+      {
+        "run": 2,
+        "authorised": true,
+        "owner_message": "cmsg_01U4KMvkBYNknqm4HRVie8uvNzjD1qcmHEXGwqYmiFikfZ",
+        "manifest_id": "B5-V3-RUN-MANIFEST-3",
+        "manifest_sha256": "f3f4fd71bae5ddf4932211c1983edac7dcb1d6d152d8d087c73550409a4b9671",
+        "recorded": "2026-10-19",
+        "owner_decision": "D31, owner message cmsg_01U4KMvkBYNknqm4HRVie8uvNzjD1qcmHEXGwqYmiFikfZ (2026-10-19 13:25Z): one B5 V3 exploratory run (run 2) using the registered B5-V3-RUN-MANIFEST-3 at N = 102",
+        "note": "one run only (one-run lock); exploratory; if interrupted or failed, no lock removal, no deletion of staged or pending files and no rerun without an owner decision; no PR #19 merge, holdout, confirmation, demo/live-account change or automatic investment decision; E2 label withheld while TTM check 4 is open",
+        "outcome": "D32: completed once (exit 0); 12 results recorded atomically (commit a4a07d7, registry lines 241-252, sha256 de03d38b18a2d80b5c4d20f647c8ff35f5471157aba71fa99da6b550fb1217e6); report equity/reports/research/edge/b5_trials.md sha256 5dee03ea80bb3df568e624518543cef17cbd41ba53113301b6b53964288579bc; both primary trials (B5-H1-FCFPS-ACCEL-V3, B5-S2A-GP-12M-V3) failed P1-P3, verdict fail; no investment edge established",
+        "spent": true,
+        "lock": "docs/edge/incidents/B5_RUN_2_LOCK.json",
+        "lock_sha256": "2041f109b37519e6a5b53a033b2ed82172cb1b5cd4bac6cec4e95a2834a60a61",
+        "lock_committed": "e5d1dc1"
       }
     ]
   }

@@ -142,19 +142,76 @@ ARCHIVED_LOCK = REPO / "docs" / "edge" / "incidents" / "B5_RUN_1_LOCK.json"
 ARCHIVED_LOCK_SHA256 = "c06eeaa3a6020adc896c9a18a39694bd5cf80f79fcb1d5eee594caea146f6e05"  # as committed in 4215a98
 D29_OWNER_MESSAGE = "cmsg_01U4KMvkBYNknqm4HRVie8uv5MUSAy3Neyqof1pvHhyPuc"  # archival and reset, 2026-10-19 13:02Z
 RUN_2_OWNER_MESSAGE = "cmsg_01U4KMvkBYNknqm4HRVie8uvNzjD1qcmHEXGwqYmiFikfZ"  # D31, run 2 authorised, 2026-10-19 13:25Z
+D32_OWNER_MESSAGE = "cmsg_01U4KMvkBYNknqm4HRVie8uvWW5mGZ7bsqjsGzRn39VcN1"  # run 2 closeout, 2026-10-19 13:55Z
+RUN_2_LOCK = REPO / "docs" / "edge" / "incidents" / "B5_RUN_2_LOCK.json"
+RUN_2_LOCK_SHA256 = "2041f109b37519e6a5b53a033b2ed82172cb1b5cd4bac6cec4e95a2834a60a61"  # as committed in e5d1dc1
+PRE_RUN_2_LINES = 240  # registry before run 2: MANIFEST-3 registered (D30), no B5 result
+PRE_RUN_2_SHA256 = "574d2e0bb98c0c7ba7f9347f8aa5565101c702259834262b49a8d8cafee4d497"
+RUN_2_REGISTRY_SHA256 = "de03d38b18a2d80b5c4d20f647c8ff35f5471157aba71fa99da6b550fb1217e6"  # lines 1-252, commit a4a07d7
+RUN_2_REPORT = REPO / "equity" / "reports" / "research" / "edge" / "b5_trials.md"
+RUN_2_REPORT_SHA256 = "5dee03ea80bb3df568e624518543cef17cbd41ba53113301b6b53964288579bc"
+RUN_2_RESULTS = {  # monthly excess Sharpe and months, as recorded by run 2 (registry lines 241-252)
+    "B5-H1-FCFPS-ACCEL-V3": (0.15617751061474458, 94), "B5-S2A-GP-12M-V3": (0.19998574529911248, 94),
+    "B5-H1-V3-ROB-2XCOST": (0.11350166081519096, 94), "B5-H1-V3-ROB-MISS100": (0.15617751061474458, 94),
+    "B5-H1-V3-ROB-NEXTMONTH": (0.10117348632980143, 93), "B5-H1-V3-ROB-DATAERR": (0.15617751061474458, 94),
+    "B5-H1-V3-ROB-WINQ": (0.15617751061474458, 94), "B5-S2A-V3-ROB-2XCOST": (0.19199438433545227, 94),
+    "B5-S2A-V3-ROB-MISS100": (0.19998574529911248, 94), "B5-S2A-V3-ROB-NEXTMONTH": (0.19863073352096117, 93),
+    "B5-S2A-V3-ROB-DATAERR": (0.19998574529911248, 94), "B5-S2A-V3-ROB-WINQ": (0.20350108467239858, 94),
+}
 
 
-def test_the_real_status_authorises_run_2_on_manifest_3_and_keeps_run_1_as_spent_history():
-    """D31: run 2 is authorised by the owner's 13:25Z message, bound to MANIFEST-3 by id and sha256; D26 (run 1,
-    09:05Z) and its D27 outcome are kept as history, marked spent (D29)."""
+@pytest.fixture
+def pre_run_2(tmp_path, monkeypatch):
+    """Isolated copy of the state just before run 2: the registry's first 240 lines (as committed at 45409e4), a
+    status holding D31's authorisation exactly as the real history records it, and no lock. The gate's fixed paths
+    point at these copies; the real registry, status and lock are never written."""
+    reg = tmp_path / "trials.jsonl"
+    reg.write_text("".join(edge_registry.PATH.read_text().splitlines(keepends=True)[:PRE_RUN_2_LINES]))
+    assert sha(reg) == PRE_RUN_2_SHA256
+    s = json.loads(b5.STATUS.read_text())
+    h = s["b5_trial_run"]["history"][1]
+    s["b5_trial_run"] = {k: h[k] for k in ("authorised", "owner_message", "manifest_id", "manifest_sha256")}
+    status = tmp_path / "status.json"
+    status.write_text(json.dumps(s))
+    e = {"registry": reg, "status": status, "manifest": run.MANIFEST, "repo": REPO, "lock": tmp_path / "b5.lock"}
+    point_gate(monkeypatch, e)
+    return e
+
+
+def test_the_real_status_authorises_no_run_and_keeps_runs_1_and_2_as_spent_history():
+    """D32: run 2 closed out; D31 is spent, as D26 was (D29). Both runs are kept as history with their outcome and
+    archived lock, and nothing is authorised."""
     s = json.loads(b5.STATUS.read_text())["b5_trial_run"]
-    assert s["authorised"] is True and s["owner_message"] == RUN_2_OWNER_MESSAGE and s["owner_decision"].startswith("D31")
-    assert s["manifest_id"] == run.MANIFEST_ID and s["manifest_sha256"] == MANIFEST_3_SHA256
-    assert edge_registry.b5_authorisation()["owner_message"] == RUN_2_OWNER_MESSAGE
-    [h] = s["history"]
-    assert h["run"] == 1 and h["owner_message"] == RUN_1_OWNER_MESSAGE and h["spent"] is True
-    assert h["outcome"].startswith("D27") and h["lock"] == "docs/edge/incidents/B5_RUN_1_LOCK.json"
-    assert h["lock_sha256"] == ARCHIVED_LOCK_SHA256 and RUN_1_OWNER_MESSAGE in edge_registry.B5_SPENT_AUTHORISATIONS
+    assert s["authorised"] is False and "owner_message" not in s and D32_OWNER_MESSAGE in s["owner_decision"]
+    h1, h2 = s["history"]
+    assert h1["run"] == 1 and h1["owner_message"] == RUN_1_OWNER_MESSAGE and h1["spent"] is True
+    assert h1["outcome"].startswith("D27") and h1["lock"] == "docs/edge/incidents/B5_RUN_1_LOCK.json"
+    assert h1["lock_sha256"] == ARCHIVED_LOCK_SHA256 and RUN_1_OWNER_MESSAGE in edge_registry.B5_SPENT_AUTHORISATIONS
+    assert h2["run"] == 2 and h2["owner_message"] == RUN_2_OWNER_MESSAGE and h2["spent"] is True
+    assert h2["owner_decision"].startswith("D31") and h2["outcome"].startswith("D32")
+    assert h2["manifest_id"] == run.MANIFEST_ID and h2["manifest_sha256"] == MANIFEST_3_SHA256
+    assert h2["lock"] == "docs/edge/incidents/B5_RUN_2_LOCK.json" and h2["lock_sha256"] == RUN_2_LOCK_SHA256
+    with pytest.raises(PermissionError, match="not authorised"):
+        edge_registry.b5_authorisation()
+
+
+def test_before_run_2_d31_authorised_manifest_3_and_the_gate_stayed_shut_until_preflight(pre_run_2):
+    """Pre-run lifecycle on the isolated copy: D31's authorisation is valid and bound to MANIFEST-3, no B5 id has a
+    result and no excess-over-VWRP Sharpe is recorded, the gate refuses with no lock, and preflight passes once and
+    takes the lock (on the copy), after which the gate is open. No data is scored."""
+    e = pre_run_2
+    auth = edge_registry.b5_authorisation(e["status"])
+    assert auth["owner_message"] == RUN_2_OWNER_MESSAGE and auth["manifest_sha256"] == MANIFEST_3_SHA256 == sha(run.MANIFEST)
+    ev = edge_registry.load(e["registry"])
+    assert edge_registry.n_trials(ev) == 102 and not edge_registry.validate(e["registry"])
+    assert not {x["id"] for x in ev if x.get("event") == "result"} & (edge_registry.B5_RUN_IDS | edge_registry.B5_RETIRED_IDS)
+    assert edge_registry.sharpe_list(ev, "portfolio_excess_vs_vwrp") == []
+    with pytest.raises(PermissionError, match="not open"):
+        edge_registry.b5_run_open(verify_files=True)
+    pre(e)
+    assert json.loads(e["lock"].read_text()) == {"owner_message": RUN_2_OWNER_MESSAGE, "manifest": MANIFEST_3_SHA256}
+    assert e["lock"].read_bytes() == RUN_2_LOCK.read_bytes()  # the same lock run 2 took
+    assert edge_registry.b5_run_open(verify_files=True) == RUN_2_OWNER_MESSAGE
 
 
 @pytest.mark.parametrize("target", ["B5_PREREGISTRATION.md", "B5_PREREGISTRATION_ADDENDUM_1.md",
@@ -375,18 +432,67 @@ def test_the_gate_ids_are_exactly_the_run_scripts_trials_and_robustness_runs():
     assert run.LOCK == edge_registry.B5_LOCK
 
 
-def test_in_the_real_repo_run_1s_lock_is_archived_unchanged_and_the_gate_stays_shut_until_preflight():
-    """D29: run 1's lock is archived byte-identical as an incident artefact. D31: run 2 is authorised but no lock is
-    in place and no B5 id has a result, so the gate on the real files refuses before reading any data. This test
-    never calls the real preflight, which would take run 2's lock."""
+def test_in_the_real_repo_both_run_locks_are_archived_unchanged_and_no_further_run_can_start():
+    """D29 and D32: run 1's and run 2's locks are archived byte-identical as incident artefacts and no lock is in
+    place. Run 2's 12 results are recorded, so with nothing authorised both preflight and the gate on the real files
+    refuse before reading any data."""
     assert sha(ARCHIVED_LOCK) == ARCHIVED_LOCK_SHA256
     assert json.loads(ARCHIVED_LOCK.read_text()) == {"owner_message": RUN_1_OWNER_MESSAGE, "manifest": MANIFEST_2_SHA256}
+    assert sha(RUN_2_LOCK) == RUN_2_LOCK_SHA256
+    assert json.loads(RUN_2_LOCK.read_text()) == {"owner_message": RUN_2_OWNER_MESSAGE, "manifest": MANIFEST_3_SHA256}
     assert not edge_registry.B5_LOCK.exists()
     ev = edge_registry.load()
-    assert not {e["id"] for e in ev if e.get("event") == "result"} & (edge_registry.B5_RUN_IDS | edge_registry.B5_RETIRED_IDS)
+    done = {e["id"] for e in ev if e.get("event") == "result"}
+    assert done & edge_registry.B5_RUN_IDS == set(RUN_2_RESULTS) and not done & edge_registry.B5_RETIRED_IDS
+    with pytest.raises(PermissionError, match="not authorised"):
+        run.preflight()
+    with pytest.raises(PermissionError, match="not authorised"):
+        edge_registry.b5_run_open(verify_files=True)
+    assert not edge_registry.B5_LOCK.exists()  # preflight refused before taking a lock
+
+
+def test_re_authorising_spent_d31_cannot_start_a_second_run(tmp_path, monkeypatch):
+    """A status that re-authorises D31 for the same manifest, on a copy of the real post-run registry: preflight
+    refuses because run 2's results exist, takes no lock, and the gate stays shut."""
+    reg = tmp_path / "trials.jsonl"
+    shutil.copy(edge_registry.PATH, reg)
+    s = json.loads(b5.STATUS.read_text())
+    h = s["b5_trial_run"]["history"][1]
+    s["b5_trial_run"] = {k: h[k] for k in ("authorised", "owner_message", "manifest_id", "manifest_sha256")}
+    status = tmp_path / "status.json"
+    status.write_text(json.dumps(s))
+    e = {"registry": reg, "status": status, "manifest": run.MANIFEST, "repo": REPO, "lock": tmp_path / "b5.lock"}
+    with pytest.raises(ValueError, match="already run"):
+        pre(e)
+    assert not e["lock"].exists() and reg.read_bytes() == edge_registry.PATH.read_bytes()
+    point_gate(monkeypatch, e)
     with pytest.raises(PermissionError, match="not open"):
         edge_registry.b5_run_open(verify_files=True)
-    assert not edge_registry.B5_LOCK.exists()
+
+
+def test_run_2s_results_and_report_are_recorded_unchanged():
+    """D32: the registry's first 240 lines are byte-identical to the pre-run registry, lines 241-252 are exactly run
+    2's 12 results (one per B5 V3 id, with the recorded statistic, Sharpe and months), and the report is the one
+    committed in a4a07d7, carrying both failed verdicts and every standing disclosure."""
+    lines = edge_registry.PATH.read_text().splitlines(keepends=True)
+    assert hashlib.sha256("".join(lines[:PRE_RUN_2_LINES]).encode()).hexdigest() == PRE_RUN_2_SHA256
+    assert hashlib.sha256("".join(lines[:252]).encode()).hexdigest() == RUN_2_REGISTRY_SHA256
+    assert not edge_registry.validate() and edge_registry.n_trials(edge_registry.load()) == 102
+    got = [json.loads(line) for line in lines[PRE_RUN_2_LINES:252]]
+    assert all(e["event"] == "result" and e["stat"] == "portfolio_excess_vs_vwrp" for e in got)
+    assert {e["id"]: (e["sr_monthly"], e["n_months"]) for e in got} == RUN_2_RESULTS and len(got) == 12
+    assert sha(RUN_2_REPORT) == RUN_2_REPORT_SHA256
+    text = RUN_2_REPORT.read_text()
+    assert text.count("Verdict: **fail**") == 2 and "E2 candidate" not in text
+    assert RUN_2_OWNER_MESSAGE in text and MANIFEST_3_SHA256 in text and "N = 102" in text
+    for s in ("Survivorship bias (material, unbounded)", "TTM check 4 complete: False", "94 valuation dates and 93 monthly",
+              "95 valuation dates and 94 monthly"):
+        assert s in text, s
+    for tid in run.TRIALS.values():
+        assert f"## {tid}\n\nVerdict: **fail**" in text
+        sec = text.split(f"## {tid}")[1].split("\n## ")[0]
+        assert "| P1 | False |" in sec and "| P2 | False |" in sec and "| P3 | False |" in sec
+        assert all(f"| P{i} | True |" in sec for i in range(4, 12))
 
 
 @pytest.mark.parametrize("rid", sorted(edge_registry.B5_RUN_IDS))
@@ -751,9 +857,9 @@ def test_in_the_real_registry_version_3_and_its_manifests_are_registered_and_not
     """Step 1 (owner approval 07:53Z, card 08:22Z): the 13 version-3 events were appended atomically after an
     unchanged history. Step 2 (owner approval 08:29Z): one more line, B5-V3-RUN-MANIFEST at the reviewed manifest
     hash, uncounted. Then MANIFEST-2 (08:47Z, D25) and MANIFEST-3 (13:15Z, D30), each superseding the one before.
-    No run is authorised, no B5 id has a result, and N = 102."""
-    import hashlib
-    ev = edge_registry.load()
+    These assertions read the registry as it stood before run 2 (its first 240 lines); run 2's results are checked
+    in test_run_2s_results_and_report_are_recorded_unchanged. N = 102."""
+    ev = edge_registry.load()[:PRE_RUN_2_LINES]
     reg = edge_registry.registered(ev)
     v3 = edge_b5_addendum3.events()
     assert hashlib.sha256(pre_v3(tmp_path / "pre.jsonl").read_bytes()).hexdigest() == PRE_V3_SHA256  # history intact
