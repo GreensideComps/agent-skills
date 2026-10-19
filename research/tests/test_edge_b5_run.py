@@ -27,6 +27,8 @@ MANIFEST_OWNER_MESSAGE = "cmsg_01U4KMvkBYNknqm4HRVie8uvTgMxeHvcPJiF9NpWGKhNNC"  
 MANIFEST_SHA256 = "0f02eda19ee528a3fb0b62ce9bf35c1864f8e9ad5b9d1581e5ec4a1abb4c7072"  # registered B5-V3-RUN-MANIFEST
 MANIFEST_2_OWNER_MESSAGE = "cmsg_01U4KMvkBYNknqm4HRVie8uv1fMkFLASaWMXhFccwwfuzC"  # owner approval 2026-10-19 08:47Z
 MANIFEST_2_SHA256 = "10190052cd13cb7f1735741069e07feb073d1ea8d4beff57f297859d4f799757"  # registered B5-V3-RUN-MANIFEST-2
+MANIFEST_3_OWNER_MESSAGE = "cmsg_01U4KMvkBYNknqm4HRVie8uvHRo9DuV72QtY2Wr1T66tNP"  # owner approval 2026-10-19 13:15Z (D30)
+MANIFEST_3_SHA256 = "f3f4fd71bae5ddf4932211c1983edac7dcb1d6d152d8d087c73550409a4b9671"  # registered B5-V3-RUN-MANIFEST-3
 RUN_1_OWNER_MESSAGE = "cmsg_01U4KMvkBYNknqm4HRVie8uvUzn9qQCoyy3U7K3j4iY3kK"  # D26 authorisation, 2026-10-19 09:05Z
 
 
@@ -746,26 +748,32 @@ def test_version_2_ids_are_retired_and_version_3_ids_are_the_only_runnable_b5_id
 def test_in_the_real_registry_version_3_and_its_manifests_are_registered_and_nothing_else(tmp_path):
     """Step 1 (owner approval 07:53Z, card 08:22Z): the 13 version-3 events were appended atomically after an
     unchanged history. Step 2 (owner approval 08:29Z): one more line, B5-V3-RUN-MANIFEST at the reviewed manifest
-    hash, uncounted. The run is not authorised, no B5 id has a result, and N = 102."""
+    hash, uncounted. Then MANIFEST-2 (08:47Z, D25) and MANIFEST-3 (13:15Z, D30), each superseding the one before.
+    No run is authorised, no B5 id has a result, and N = 102."""
     import hashlib
     ev = edge_registry.load()
     reg = edge_registry.registered(ev)
     v3 = edge_b5_addendum3.events()
     assert hashlib.sha256(pre_v3(tmp_path / "pre.jsonl").read_bytes()).hexdigest() == PRE_V3_SHA256  # history intact
-    assert [e["id"] for e in ev[-15:-2]] == [e["id"] for e in v3]
-    for got, want in zip(ev[-15:-2], v3):
+    assert [e["id"] for e in ev[-16:-3]] == [e["id"] for e in v3]
+    for got, want in zip(ev[-16:-3], v3):
         assert {k: got[k] for k in want} == want and got["owner_message"] == V3_OWNER_MESSAGE
-    m = ev[-2]
+    m = ev[-3]
     assert m["id"] == "B5-V3-RUN-MANIFEST" and m["counts_for_dsr"] is False and m["owner_message"] == MANIFEST_OWNER_MESSAGE
     assert m["spec_sha256"] == MANIFEST_SHA256 == sha(REPO / "docs" / "edge" / "B5_RUN_MANIFEST.json")  # kept as registered
     assert edge_registry.n_trials(ev) == 102 == run.N_EXPECTED and not edge_registry.validate()
     done = {e["id"] for e in ev if e.get("event") == "result"}
     assert not done & (set(edge_registry.B5_RUN_IDS) | set(edge_registry.B5_RETIRED_IDS))
     assert {"B5-H1-FCFPS-ACCEL-V2", "B5-S2A-GP-12M-V2", "B5-H1-V2-ROB-PITQ", "B5-S2A-V2-ROB-PITQ"} <= set(reg)
-    m2 = ev[-1]  # step 2 repeated after run fix 1 (owner approval 08:47Z); MANIFEST-3 (fix 2) is not registered
+    m2 = ev[-2]  # step 2 repeated after run fix 1 (owner approval 08:47Z)
     assert m2["id"] == "B5-V3-RUN-MANIFEST-2" and m2["counts_for_dsr"] is False and m2["supersedes"] == m["id"]
     assert m2["spec_sha256"] == MANIFEST_2_SHA256 == sha(REPO / "docs" / "edge" / "B5_RUN_MANIFEST_2.json")
-    assert m2["owner_message"] == MANIFEST_2_OWNER_MESSAGE and run.MANIFEST_ID not in reg
+    assert m2["owner_message"] == MANIFEST_2_OWNER_MESSAGE
+    m3 = ev[-1]  # after run fix 2, the hardening and D29 (owner approval 13:15Z, D30)
+    proposed = json.loads((REPO / "docs" / "edge" / "B5_V3_PROPOSED_MANIFEST_3_EVENT.json").read_text())
+    assert m3["id"] == run.MANIFEST_ID and m3["counts_for_dsr"] is False and m3["supersedes"] == m2["id"]
+    assert m3["spec_sha256"] == MANIFEST_3_SHA256 == sha(run.MANIFEST) and m3["owner_message"] == MANIFEST_3_OWNER_MESSAGE
+    assert {k: m3[k] for k in proposed if k != "owner_message"} == {k: v for k, v in proposed.items() if k != "owner_message"}
     assert json.loads(edge_registry.STATUS.read_text())["b5_trial_run"]["history"][0]["owner_message"] == \
         "cmsg_01U4KMvkBYNknqm4HRVie8uvUzn9qQCoyy3U7K3j4iY3kK"  # D26 authorisation, spent by run 1 (D29 history)
 
@@ -802,13 +810,13 @@ def test_stage_never_touches_the_registry_and_refuses_bad_input(tmp_path):
 
 
 def test_the_fixed_run_uses_only_the_new_manifest_and_the_old_records_are_kept():
-    """B5_RUN_FIX_2: the run looks up B5-V3-RUN-MANIFEST-3 for B5_RUN_MANIFEST_3.json, which is proposed and NOT
-    registered, so preflight refuses until the owner approves it; the registered B5-V3-RUN-MANIFEST and
-    B5-V3-RUN-MANIFEST-2 records and their files are kept unchanged and never used."""
+    """B5_RUN_FIX_2: the run looks up B5-V3-RUN-MANIFEST-3 for B5_RUN_MANIFEST_3.json (registered on the owner's
+    approval 13:15Z, D30); the registered B5-V3-RUN-MANIFEST and B5-V3-RUN-MANIFEST-2 records and their files are
+    kept unchanged and never used."""
     assert run.MANIFEST_ID == "B5-V3-RUN-MANIFEST-3" and run.MANIFEST.name == "B5_RUN_MANIFEST_3.json"
     assert not {"B5-V3-RUN-MANIFEST", "B5-V3-RUN-MANIFEST-2"} & set(run.SPECS)
     reg = edge_registry.registered(edge_registry.load())
-    assert run.MANIFEST_ID not in reg
+    assert reg[run.MANIFEST_ID]["spec_sha256"] == sha(run.MANIFEST) == MANIFEST_3_SHA256
     assert reg["B5-V3-RUN-MANIFEST"]["spec_sha256"] == sha(REPO / "docs" / "edge" / "B5_RUN_MANIFEST.json")
     assert reg["B5-V3-RUN-MANIFEST-2"]["spec_sha256"] == sha(REPO / "docs" / "edge" / "B5_RUN_MANIFEST_2.json")
 
@@ -821,7 +829,8 @@ def test_the_proposed_manifest_2_event_matches_the_files_it_names():
 
 
 def test_the_proposed_manifest_3_event_matches_the_files_it_names():
-    """B5_RUN_FIX_2: the proposed (unregistered) event for MANIFEST-3, superseding MANIFEST-2."""
+    """B5_RUN_FIX_2: the proposed event for MANIFEST-3, superseding MANIFEST-2 (the file keeps its placeholder; the
+    registered copy carries the owner's D30 message id)."""
     ev = json.loads((REPO / "docs" / "edge" / "B5_V3_PROPOSED_MANIFEST_3_EVENT.json").read_text())
     assert ev["id"] == run.MANIFEST_ID and ev["counts_for_dsr"] is False and ev["supersedes"] == "B5-V3-RUN-MANIFEST-2"
     assert ev["spec_sha256"] == sha(run.MANIFEST)
