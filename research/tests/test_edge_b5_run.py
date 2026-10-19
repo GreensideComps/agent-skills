@@ -110,9 +110,10 @@ def test_refused_without_the_owners_recorded_authorisation(env, auth):
     assert not env["lock"].exists()  # nothing started
 
 
-def test_the_real_status_does_not_authorise_the_run():
-    s = json.loads(b5.STATUS.read_text())
-    assert s.get("b5_trial_run", {}).get("authorised") is not True
+def test_the_real_status_authorises_only_the_owners_09_05z_message():
+    """D26 (owner, 2026-10-19 09:05Z): the run is authorised with that message id and no other."""
+    s = json.loads(b5.STATUS.read_text())["b5_trial_run"]
+    assert s["authorised"] is True and s["owner_message"] == "cmsg_01U4KMvkBYNknqm4HRVie8uvUzn9qQCoyy3U7K3j4iY3kK"
 
 
 @pytest.mark.parametrize("target", ["B5_PREREGISTRATION.md", "B5_PREREGISTRATION_ADDENDUM_1.md",
@@ -709,8 +710,8 @@ def test_in_the_real_registry_version_3_and_its_manifests_are_registered_and_not
     m2 = ev[-1]  # step 2 repeated after run fix 1 (owner approval 08:47Z)
     assert m2["id"] == run.MANIFEST_ID and m2["counts_for_dsr"] is False and m2["supersedes"] == m["id"]
     assert m2["spec_sha256"] == MANIFEST_2_SHA256 == sha(run.MANIFEST) and m2["owner_message"] == MANIFEST_2_OWNER_MESSAGE
-    assert json.loads(edge_registry.STATUS.read_text())["b5_trial_run"]["authorised"] is False
-    assert not edge_registry.B5_LOCK.exists()
+    assert json.loads(edge_registry.STATUS.read_text())["b5_trial_run"]["owner_message"] == \
+        "cmsg_01U4KMvkBYNknqm4HRVie8uvUzn9qQCoyy3U7K3j4iY3kK"  # D26 authorisation
 
 
 def test_reports_carry_the_addendum_3_and_other_later_information_disclosures():
