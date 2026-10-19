@@ -311,7 +311,7 @@ def test_b5_addendum_3_is_frozen_at_its_registered_hash():
     reg = edge_registry.registered(ev)
     a3 = reg["B5-V3-ADDENDUM-3"]  # registered 2026-10-19 (owner approval 07:53Z) at the reviewed hash
     assert a3["spec_sha256"] == ADDENDUM_3_SHA256 and a3["counts_for_dsr"] is False
-    assert edge_registry.n_trials(ev) == 102 and "B5-V3-RUN-MANIFEST" not in reg
+    assert edge_registry.n_trials(ev) == 102 and reg["B5-V3-RUN-MANIFEST"]["counts_for_dsr"] is False
     for rid, f in (("B5-H1-FCFPS-ACCEL-V2", "B5_PREREGISTRATION.md"), ("B5-V2-ADDENDUM-1", "B5_PREREGISTRATION_ADDENDUM_1.md"),
                    ("B5-V2-ADDENDUM-2", "B5_PREREGISTRATION_ADDENDUM_2.md")):
         assert reg[rid]["spec_sha256"] == hashlib.sha256((docs / f).read_bytes()).hexdigest()

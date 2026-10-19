@@ -23,6 +23,8 @@ import edge_rules  # noqa: E402
 
 PRE_V3_SHA256 = "0da0638e43b2cf7799cb46ef340b951a4fcd39ad94044a04ddbebb6cda1f85fd"  # registry before step 1 (D21)
 V3_OWNER_MESSAGE = "cmsg_01U4KMvkBYNknqm4HRVie8uvCZeVB3ELHksWnNk6iBAk3Y"  # owner approval 2026-10-19 07:53Z
+MANIFEST_OWNER_MESSAGE = "cmsg_01U4KMvkBYNknqm4HRVie8uvTgMxeHvcPJiF9NpWGKhNNC"  # owner approval 2026-10-19 08:29Z
+MANIFEST_SHA256 = "0f02eda19ee528a3fb0b62ce9bf35c1864f8e9ad5b9d1581e5ec4a1abb4c7072"  # registered B5-V3-RUN-MANIFEST
 
 
 def pre_v3(dst):
@@ -607,22 +609,27 @@ def test_version_2_ids_are_retired_and_version_3_ids_are_the_only_runnable_b5_id
             edge_registry.require(rid)
 
 
-def test_in_the_real_registry_version_3_is_registered_and_nothing_else(tmp_path):
+def test_in_the_real_registry_version_3_and_its_manifest_are_registered_and_nothing_else(tmp_path):
     """Step 1 (owner approval 07:53Z, card 08:22Z): the 13 version-3 events were appended atomically after an
-    unchanged history. The manifest is not registered, no B5 id has a result, and N = 102."""
+    unchanged history. Step 2 (owner approval 08:29Z): one more line, B5-V3-RUN-MANIFEST at the reviewed manifest
+    hash, uncounted. The run is not authorised, no B5 id has a result, and N = 102."""
     import hashlib
     ev = edge_registry.load()
     reg = edge_registry.registered(ev)
     v3 = edge_b5_addendum3.events()
     assert hashlib.sha256(pre_v3(tmp_path / "pre.jsonl").read_bytes()).hexdigest() == PRE_V3_SHA256  # history intact
-    assert [e["id"] for e in ev[-13:]] == [e["id"] for e in v3]
-    for got, want in zip(ev[-13:], v3):
+    assert [e["id"] for e in ev[-14:-1]] == [e["id"] for e in v3]
+    for got, want in zip(ev[-14:-1], v3):
         assert {k: got[k] for k in want} == want and got["owner_message"] == V3_OWNER_MESSAGE
+    m = ev[-1]
+    assert m["id"] == "B5-V3-RUN-MANIFEST" and m["counts_for_dsr"] is False and m["owner_message"] == MANIFEST_OWNER_MESSAGE
+    assert m["spec_sha256"] == MANIFEST_SHA256 == sha(run.MANIFEST)
     assert edge_registry.n_trials(ev) == 102 == run.N_EXPECTED and not edge_registry.validate()
-    assert "B5-V3-RUN-MANIFEST" not in reg
     done = {e["id"] for e in ev if e.get("event") == "result"}
     assert not done & (set(edge_registry.B5_RUN_IDS) | set(edge_registry.B5_RETIRED_IDS))
     assert {"B5-H1-FCFPS-ACCEL-V2", "B5-S2A-GP-12M-V2", "B5-H1-V2-ROB-PITQ", "B5-S2A-V2-ROB-PITQ"} <= set(reg)
+    assert json.loads(edge_registry.STATUS.read_text())["b5_trial_run"]["authorised"] is False
+    assert not edge_registry.B5_LOCK.exists()
 
 
 def test_reports_carry_the_addendum_3_and_other_later_information_disclosures():
