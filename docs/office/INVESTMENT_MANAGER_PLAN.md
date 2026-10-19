@@ -1,6 +1,8 @@
 # Autonomous investment manager: architecture assessment and phased plan
 
-Written 2026-10-19 (14:15-15:00 UTC) for the owner's review. This is the first deliverable of the owner's two requests of
+Written 2026-10-19 (14:15-15:00 UTC) for the owner's review.
+
+**Owner decisions 2026-10-19 14:36Z** (`cmsg_01U4KMvkBYNknqm4HRVie8uv5WhbXFRm6KFGKqgHWHri4W`): plan approved in principle; the status, owner, dependencies and acceptance tests of each item (O1-O13) are in `DECISION_REGISTER.md`, which supersedes section 0.2's "options" column. This is the first deliverable of the owner's two requests of
 2026-10-19 (14:12Z "Always-On Autonomous Investment Research Office" and 14:15Z "Always-On Autonomous AI Investment
 Manager"), combined into one plan. The research office is one part of the investment manager.
 
@@ -184,7 +186,7 @@ AMD, VRT, BE, PANW, VST, INTC, CRWD, TEM, AAPL, TSLA, UBER, IBTA (LSE). This is 
 |---|---|---|
 | Weekday portfolio brief `trig_012o3Bc5Ja2PiD7rvx2Fzrmd` | enabled, 06:45 UTC weekdays, fresh session | last run 19 Oct succeeded |
 | Research: monthly signal log `trig_014YqFuWkepFLFUzGchCbRWk` | enabled, 3rd 06:46 London | keep unchanged; next 3 Nov |
-| Equity: daily research pipeline `trig_01PYai2PEsqMTtFSMDCD99BY` | enabled, weekdays 22:27 London | last fired 16 Oct; **no fire and no commit recorded for Fri 17 Oct** (cause not checked); commits show rc=1 (warn) on 14-16 Oct |
+| Equity: daily research pipeline `trig_01PYai2PEsqMTtFSMDCD99BY` | enabled, weekdays 22:27 London | fired and committed every weekday since creation (14, 15, 16 Oct); commits show rc=1 (warn). *Corrected 19 Oct: an earlier version wrongly called 17 Oct (a Saturday) a missed run.* |
 | Weekly stock discovery `trig_015scjHUCMP5NZDTQVcPxJrT` | enabled, Sat 07:50 UTC | |
 | Old brief, both hourly traders, trading ops, ETF research loop, an unrelated prospecting task | disabled | stay disabled |
 
@@ -338,7 +340,7 @@ records the reason, preserves the last known state, opens an investigation task 
 
 | Option | What runs where | Cost | Fit |
 |---|---|---|---|
-| (a) Git-backed log + Claude cloud sessions (recommended start) | state on `office-state` branch; workers are cloud sessions started by a heartbeat task and by fire-next | no new bill; uses the owner's Claude plan usage (plan limits Unknown here, so budgets are enforced in code) | uses only verified infrastructure; latency = heartbeat; reliability must be proven (one missed fire seen on 17 Oct) |
+| (a) Git-backed log + Claude cloud sessions (recommended start) | state on `office-state` branch; workers are cloud sessions started by a heartbeat task and by fire-next | no new bill; uses the owner's Claude plan usage (plan limits Unknown here, so budgets are enforced in code) | uses only verified infrastructure; latency = heartbeat; reliability must be proven (a shared persistent session lost 3 of 6 runs on 14 Oct) |
 | (b) Cloudflare Workers + D1 | queue/state in D1 with real transactions, cron and HTTP event endpoints, dashboard API; heavy Python still in cloud sessions | Workers/D1 free tier is likely enough (plan tier Unknown; check before use) | better transactions and webhooks; needs a credential to start sessions or a GitHub token, which is an owner decision |
 | (c) Small VPS (e.g. a ~£4-6/month instance) | systemd worker, SQLite, Python research, Anthropic API for agent roles | server ~£50-70/year plus API usage, which depends on volume (budget-capped; for scale, tens of judgement tasks a day is plausibly tens of pounds a month; not measured) | truly always-running; new paid services and a new secret store |
 
