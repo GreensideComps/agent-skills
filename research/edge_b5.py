@@ -37,6 +37,11 @@ GATES = {  # P1-P11; every one must hold for "E2 candidate"
     "P1_t": 3.0, "P1_s2a_nonoverlap_t": 2.0, "P2_dsr": 0.80, "P3_alpha_t": 2.0,
 }
 LEAD_T = 2.0
+# ADDENDUM_3 (owner decision D20): eligibility, the S2a rank population and the P5 universe use the point-in-time
+# share-outlier rule (edge_split.share_outliers_pit). The Phase A full-window rule (D5, edge_split.share_outliers) is
+# used only by P9, as a reverse veto: it can fail a trial, never pass one or stand in for the primary.
+PRIMARY_QUALITY = "quality_ok_pit"
+VETO_QUALITY = "quality_ok_window"
 STATUS = Path(__file__).resolve().parent / "edge" / "status.json"
 E2_BLOCKED_LABEL = "gates passed; E2 label withheld (TTM check 4 open)"
 
@@ -235,7 +240,7 @@ def verdict(r: dict, status: Path = STATUS) -> dict:
         "P2": r.get("dsr") is not None and r["dsr"] >= GATES["P2_dsr"],
         "P3": pos("alpha") and r.get("alpha_t") is not None and r["alpha_t"] >= GATES["P3_alpha_t"],
         "P4": pos("excess_2x"), "P5": pos("excess_vs_universe"), "P6": pos("excess_miss100"),
-        "P7": pos("excess_nextmonth"), "P8": pos("excess_dataerr"), "P9": pos("excess_pitq"),
+        "P7": pos("excess_nextmonth"), "P8": pos("excess_dataerr"), "P9": pos("excess_winq"),
         "P10": sum(1 for v in r.get("excess_thirds", []) if v is not None and v > 0) >= 2,
         "P11": pos("excess_without_top_contributor"),
     }

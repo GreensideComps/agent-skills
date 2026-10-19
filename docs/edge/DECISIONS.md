@@ -129,3 +129,9 @@ Response: `B5_PREREGISTRATION.md` version 2, `research/edge_b5.py`, `equity/repo
 | # | Decision |
 |---|---|
 | D19 | **D16 and D17 approved in principle. Identity rule C preferred** over A or B, subject to final specification and tests (`B5_PREREGISTRATION_ADDENDUM_2.md` §3). **T2 may filter the primary trials only where it is known at the decision date**; anything detectable only from later filings stays a retrospective diagnostic; the same principle for revenue, gross profit, OCF and capex (§2: T2 is point in time, so it filters all four). Addendum 2 frozen and registered (`B5-V2-ADDENDUM-2`, not counted, N = 100). The run script is written for review; **its execution, the trial run and the merge are not authorised.** Check 4 stays open; no E2 label, confirmation, holdout access, demo or live-account change. |
+
+## 2026-10-19 07:04 and 07:33 UTC: final audit; point-in-time quality rule
+
+| # | Decision |
+|---|---|
+| D20 | **Option B: the point-in-time share-outlier rule (`edge_split.share_outliers_pit`) becomes the B5 primary quality rule** for portfolio eligibility, the S2a rank population and the P5 universe. The Phase A full-window rule (D5, `edge_split.share_outliers`) becomes the P9 reverse veto only: it can fail a trial, never rescue a failed gate or replace the primary result. **N = 100 is kept provisionally** through a formal addendum, subject to the justification in `B5_PREREGISTRATION_ADDENDUM_3.md` §5. **D5 is not withdrawn**: it still governs Phase A and Stage 2, and its rule is unchanged in code. Version 2's definitions and registry entries are not edited; the addendum amends them. Status 07:33Z: Addendum 3 and code drafted **for review only**. Not authorised: registering Addendum 3, the ROB-WINQ ids or the manifest; the run; the merge. Check 4 stays open. |

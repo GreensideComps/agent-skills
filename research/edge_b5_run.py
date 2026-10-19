@@ -1,16 +1,16 @@
 """B5 trial run: B5-H1-FCFPS-ACCEL-V2 and B5-S2A-GP-12M-V2, exactly as frozen in docs/edge/B5_PREREGISTRATION.md
-(version 2) as amended by addenda 1 and 2.
+(version 2) as amended by addenda 1, 2 and 3.
 
 NOT YET AUTHORISED. Written 2026-10-16 for the owner's review (owner, 14:17Z, item 5); it has never been
 executed. It refuses to read any data until every control below passes:
 
 * the run is authorised in `research/edge/status.json` (`b5_trial_run.authorised`, recorded only on the owner's
   explicit word, with the message id);
-* the registry validates, N = 100, both trials are registered with v2's hash, addenda 1 and 2 are registered with
-  their files' hashes, and this script's input manifest (`docs/edge/B5_RUN_MANIFEST.json`) is registered as
+* the registry validates, N = 100, both trials are registered with v2's hash, addenda 1, 2 and 3 are registered
+  with their files' hashes, every robustness id is registered and uncounted, and this script's input manifest (`docs/edge/B5_RUN_MANIFEST.json`) is registered as
   `B5-V2-RUN-MANIFEST` with its hash;
 * every input file and every code file named in the manifest has the recorded sha256;
-* neither trial, nor any of their registered robustness runs, has a result, and the one-run lock
+* neither trial, nor any of their registered robustness runs, nor any retired B5 id, has a result, and the one-run lock
   (`research/edge/b5_run.lock`) does not exist. The lock is created before any data is read and never removed by
   code: a failed or interrupted run can only be repeated by a recorded owner decision.
 
@@ -54,8 +54,10 @@ TRIALS = {"H1": "B5-H1-FCFPS-ACCEL-V2", "S2A": "B5-S2A-GP-12M-V2"}
 SPECS = {"B5-H1-FCFPS-ACCEL-V2": "docs/edge/B5_PREREGISTRATION.md", "B5-S2A-GP-12M-V2": "docs/edge/B5_PREREGISTRATION.md",
          "B5-V2-ADDENDUM-1": "docs/edge/B5_PREREGISTRATION_ADDENDUM_1.md",
          "B5-V2-ADDENDUM-2": "docs/edge/B5_PREREGISTRATION_ADDENDUM_2.md",
+         "B5-V2-ADDENDUM-3": "docs/edge/B5_PREREGISTRATION_ADDENDUM_3.md",
          "B5-V2-RUN-MANIFEST": "docs/edge/B5_RUN_MANIFEST.json"}
-ROB_IDS = {"P4": "ROB-2XCOST", "P6": "ROB-MISS100", "P7": "ROB-NEXTMONTH", "P8": "ROB-DATAERR", "P9": "ROB-PITQ"}
+# ADDENDUM_3 §3: P9 is the full-window reverse veto (ROB-WINQ); version 2's ROB-PITQ is retired, never run.
+ROB_IDS = {"P4": "ROB-2XCOST", "P6": "ROB-MISS100", "P7": "ROB-NEXTMONTH", "P8": "ROB-DATAERR", "P9": "ROB-WINQ"}
 GATES = ("P1", "P2", "P3", "P4", "P5", "P6", "P7", "P8", "P9", "P10", "P11")
 VARIANT_GATES = ("P4", "P5", "P6", "P7", "P8", "P9", "P11")  # each needs its own run
 N_EXPECTED = 100
@@ -71,6 +73,12 @@ KNOWN_INPUT_LIMITATIONS = """**Known input-rule limitations (ADDENDUM_2 §1, §3
   (Curis 97x, BeOne 97x, Larimar 85x after a CIK reuse); Scinai is unscorable for lack of total assets.
 - T2 uses only filings known at each decision date; restatements filed later are not used (diagnostic only).
 - TTM check 4 (independent source) is open: no result carries the E2 label.
+- Quality rule (ADDENDUM_3): eligibility uses the point-in-time share-outlier rule. Against the Phase A full-window
+  rule it wrongly excludes about 108 universe company-months of 11 genuine companies after mergers or spin-offs
+  (76 rows, 9 companies after rule C; e.g. MPLX, Fox, Linde, Viatris) and admits AVITA Medical's 9 inflated rows
+  (2019-11 to 2020-07). Both rules wrongly exclude CoStar and The Trade Desk after their 2021 10-for-1 splits.
+- P8's 12 data-error company-months were chosen by auditing the whole 2015-2022 price path (later information; a
+  veto only). SIC codes (financial exclusion, S2a groups, sector cap) are a 2026 snapshot, not point in time.
 """
 
 
@@ -108,13 +116,18 @@ def preflight(registry: Path = edge_registry.PATH, status: Path = b5.STATUS, man
     for tid in TRIALS.values():
         if reg[tid].get("counts_for_dsr") is not True:
             raise ValueError(f"{tid} must count for the DSR")
+    for rid in (rob_id(t, g) for t in TRIALS for g in ROB_IDS):
+        if rid not in reg:
+            raise KeyError(f"{rid} is not registered")
+        if reg[rid].get("counts_for_dsr") is not False:
+            raise ValueError(f"{rid} is a robustness run and must not count for the DSR")
     m = json.loads(manifest.read_text())
     for group in ("inputs", "code"):
         for path, h in m[group].items():
             p = Path(path) if Path(path).is_absolute() else repo / path
             if sha(p) != h:
                 raise ValueError(f"{group} file {path} does not match the manifest")
-    ids = list(TRIALS.values()) + [rob_id(t, g) for t in TRIALS for g in ROB_IDS]
+    ids = list(TRIALS.values()) + [rob_id(t, g) for t in TRIALS for g in ROB_IDS] + sorted(edge_registry.B5_RETIRED_IDS)
     done = [e["id"] for e in ev if e.get("event") == "result" and e.get("id") in ids]
     if done:
         raise ValueError(f"already run (results exist): {done}")
@@ -169,8 +182,7 @@ def load_inputs() -> dict:  # pragma: no cover - reads the research data; exerci
     sys.path.insert(0, str(REPO / "equity"))
     from equity import panel as epanel
 
-    df = edge_split.with_quality(edge_split.cut_exploration(xsection.load()))
-    df = st.with_pit_quality(df)
+    df = st.with_quality_columns(edge_split.cut_exploration(xsection.load()))
     comp = pd.read_csv(xsection.DATA / "sec_companies.csv.gz", usecols=["cik", "sic"])
     df = df.merge(comp, on="cik", how="left")
     df["group"] = df["sic"].map(stage2.sic_group)
@@ -200,7 +212,7 @@ def load_inputs() -> dict:  # pragma: no cover - reads the research data; exerci
 
 # ---------- scores ----------
 
-def s2a_scores(df: pd.DataFrame, quality: str = "quality_ok") -> pd.Series:
+def s2a_scores(df: pd.DataFrame, quality: str) -> pd.Series:
     """S2a: gross profitability ranked (percentile) within SIC group among the month's eligible non-financial
     names (eligible as in edge_backtest.eligible, with the given quality column)."""
     gpa = b5.s2a_profitability(df)
@@ -209,14 +221,22 @@ def s2a_scores(df: pd.DataFrame, quality: str = "quality_ok") -> pd.Series:
     return gpa.where(ok).groupby([df["month"], df["group"]]).rank(pct=True)
 
 
+def engine_panel(df: pd.DataFrame, quality: str, score: pd.Series) -> pd.DataFrame:
+    """The engine's panel with `quality_ok` set from the named rule."""
+    return df[["cik", "month", "band", "group", "close_raw"]].assign(quality_ok=df[quality].astype(bool), score=score)
+
+
 def score_panels(df: pd.DataFrame) -> dict:
-    """Engine panels for each trial: the primary, and the P9 panel (point-in-time quality; S2a re-ranked)."""
-    cols = ["cik", "month", "band", "quality_ok", "group", "close_raw"]
-    h1 = df[cols].assign(score=b5.h1_score(df))
-    s2 = df[cols].assign(score=s2a_scores(df))
-    return {"H1": {"primary": h1, "P9": h1.assign(quality_ok=df["quality_ok_pit"])},
-            "S2A": {"primary": s2, "P9": s2.assign(quality_ok=df["quality_ok_pit"],
-                                                   score=s2a_scores(df, "quality_ok_pit"))}}
+    """Engine panels for each trial (ADDENDUM_3): the primary uses the point-in-time quality rule for eligibility and
+    for S2a's rank population; the P9 panel (reverse veto) uses the full-window rule, with S2a re-ranked in that
+    population. The P5 universe and P4, P6-P8, P11 are built from the primary panel. A frame with a bare
+    `quality_ok` column is refused, so the rule is never chosen implicitly."""
+    if "quality_ok" in df:
+        raise ValueError("ambiguous quality column: expected quality_ok_pit and quality_ok_window only")
+    h1 = b5.h1_score(df)
+    p, v = b5.PRIMARY_QUALITY, b5.VETO_QUALITY
+    return {"H1": {"primary": engine_panel(df, p, h1), "P9": engine_panel(df, v, h1)},
+            "S2A": {"primary": engine_panel(df, p, s2a_scores(df, p)), "P9": engine_panel(df, v, s2a_scores(df, v))}}
 
 
 # ---------- one trial: primary, every variant, every statistic ----------

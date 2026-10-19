@@ -168,7 +168,7 @@ def test_new_research_code_reads_data_only_through_the_guard():
     assert "edge_split.with_quality(edge_split.cut_exploration(xsection.load()))" in hc
     assert hc.count("<= CUT]") >= 3  # raw metrics, raw prices and execution rows cut on read
     rs = (root / "edge_b5_run.py").read_text()
-    assert "edge_split.with_quality(edge_split.cut_exploration(xsection.load()))" in rs
+    assert "st.with_quality_columns(edge_split.cut_exploration(xsection.load()))" in rs  # cut before any flag
     assert 'r["filed"] <= str(CUT.date())' in rs and rs.count("<= CUT]") >= 1  # facts and execution rows cut on read
     ia = (root / "edge_b5_input_audit.py").read_text()
     assert "u = tc.universe()" in ia and 'r["filed"] <= tc.CUT' in ia  # cut universe; no SEC fact filed after 2022

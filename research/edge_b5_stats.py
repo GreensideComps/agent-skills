@@ -22,6 +22,8 @@ import dataclasses
 import numpy as np
 import pandas as pd
 
+import edge_b5 as b5
+
 FACTORS = ("Mkt-RF", "SMB", "HML", "RMW", "CMA", "Mom")
 
 
@@ -100,7 +102,9 @@ def robustness_variants(cfg, data_errors: frozenset) -> dict:
 
     P4 2x costs; P5 the equal-weighted eligible universe at zero cost (benchmark, compared with the primary);
     P6 missing prices at -100%; P7 next-month-close execution; P8 the data-error company-months barred from new
-    purchases; P9 the point-in-time quality rule (the panel's `quality_ok` replaced by `quality_ok_pit`)."""
+    purchases; P9 the reverse veto of ADDENDUM_3: the Phase A full-window quality rule (the panel's `quality_ok`,
+    which is the point-in-time rule in the primary, replaced by `quality_ok_window`). `edge_b5_run` builds the P9
+    panel itself (`score_panels`) so that S2a is re-ranked within that rule's population."""
     rep = dataclasses.replace
     keep = lambda p: p  # noqa: E731
     return {
@@ -109,7 +113,7 @@ def robustness_variants(cfg, data_errors: frozenset) -> dict:
         "P6": (rep(cfg, missing_return=-1.0), keep),
         "P7": (rep(cfg, convention="next_month_close"), keep),
         "P8": (rep(cfg, no_buy=frozenset(data_errors)), keep),
-        "P9": (cfg, lambda p: p.assign(quality_ok=p["quality_ok_pit"])),
+        "P9": (cfg, lambda p: p.assign(quality_ok=p[b5.VETO_QUALITY])),
     }
 
 
@@ -121,13 +125,23 @@ def verdict_inputs(primary_excess: pd.Series, variants: dict, nonoverlap_t: floa
     return {"trial": trial, "t_nw": t_nw, "t_nonoverlap": nonoverlap_t, "dsr": dsr,
             "alpha": alpha.get("alpha"), "alpha_t": alpha.get("alpha_t"),
             "excess_2x": ne("P4"), "excess_vs_universe": ne("P5"), "excess_miss100": ne("P6"),
-            "excess_nextmonth": ne("P7"), "excess_dataerr": ne("P8"), "excess_pitq": ne("P9"),
+            "excess_nextmonth": ne("P7"), "excess_dataerr": ne("P8"), "excess_winq": ne("P9"),
             "excess_thirds": thirds(primary_excess), "excess_without_top_contributor": ne("P11")}
 
 
 def with_pit_quality(df: pd.DataFrame) -> pd.DataFrame:
-    """Adds `quality_ok_pit` (P9): the approved flags with the share-count median taken point in time
-    (`edge_split.share_outliers_pit`) instead of over the whole exploration window."""
+    """Adds `quality_ok_pit`, the B5 PRIMARY quality rule from ADDENDUM_3 (D20): the price flag plus the share-count
+    outlier flag with the median taken point in time (`edge_split.share_outliers_pit`). Until ADDENDUM_3 this was
+    the P9 sensitivity rule."""
     import edge_split
     bad = (df["adjclose"] <= 0) | (df["close_raw"] <= 0) | edge_split.share_outliers_pit(df)
     return df.assign(quality_ok_pit=~bad)
+
+
+def with_quality_columns(df: pd.DataFrame) -> pd.DataFrame:
+    """ADDENDUM_3: both quality rules side by side, and NO `quality_ok` column, so no code can pick one implicitly.
+    `quality_ok_pit` (primary) and `quality_ok_window` (the Phase A rule, D5, P9 reverse veto only). `df` must be
+    cut to the exploration period (`edge_split.with_quality` refuses otherwise)."""
+    import edge_split
+    out = edge_split.with_quality(df).rename(columns={"quality_ok": b5.VETO_QUALITY})
+    return with_pit_quality(out)

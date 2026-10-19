@@ -183,7 +183,7 @@ def test_edge_cases(tmp_path):
 
 def test_the_080_gate_is_applied_to_the_computed_dsr():
     base = {"trial": "H1", "t_nw": 3.5, "alpha": 0.01, "alpha_t": 2.5, "excess_2x": 0.1, "excess_vs_universe": 0.1,
-            "excess_miss100": 0.1, "excess_nextmonth": 0.1, "excess_dataerr": 0.1, "excess_pitq": 0.1,
+            "excess_miss100": 0.1, "excess_nextmonth": 0.1, "excess_dataerr": 0.1, "excess_winq": 0.1,
             "excess_thirds": [0.1, 0.1, 0.1], "excess_without_top_contributor": 0.1}
     assert b5.GATES["P2_dsr"] == 0.80
     assert b5.verdict({**base, "dsr": 0.80})["checks"]["P2"]

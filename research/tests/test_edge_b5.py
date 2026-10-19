@@ -226,7 +226,7 @@ def test_placebo_is_fixed_and_uninformative():
 def _good(**kw):
     r = {"trial": "H1", "t_nw": 3.5, "dsr": 0.85, "alpha": 0.02, "alpha_t": 2.5, "excess_2x": 0.01,
          "excess_vs_universe": 0.01, "excess_miss100": 0.01, "excess_nextmonth": 0.01, "excess_dataerr": 0.01,
-         "excess_pitq": 0.01, "excess_thirds": [0.01, -0.01, 0.02], "excess_without_top_contributor": 0.01}
+         "excess_winq": 0.01, "excess_thirds": [0.01, -0.01, 0.02], "excess_without_top_contributor": 0.01}
     r.update(kw)
     return r
 
@@ -244,7 +244,7 @@ def test_verdict_requires_every_gate_and_robustness_only_vetoes(check4_done):
     assert v(_good(excess_miss100=-0.001))["label"] == "fail"  # one robustness check vetoes
     assert v(_good(dsr=0.79))["label"] == "fail"
     assert v(_good(t_nw=2.9, dsr=0.6))["label"] == "lead, not a pass"  # strong robustness cannot rescue
-    assert v(_good(t_nw=2.9, excess_pitq=None))["label"] == "fail"  # missing input fails closed
+    assert v(_good(t_nw=2.9, excess_winq=None))["label"] == "fail"  # missing input fails closed
     assert v(_good(trial="S2A"))["label"] == "fail"  # S2a also needs the non-overlapping t
     assert v(_good(trial="S2A", t_nonoverlap=2.1))["label"] == "E2 candidate"
     assert v(_good(excess_thirds=[0.01, -0.01, -0.02]))["label"] == "fail"

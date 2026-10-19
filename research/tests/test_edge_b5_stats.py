@@ -35,7 +35,7 @@ def test_net_excess_is_the_mean_and_thirds_are_consecutive_blocks():
 
 def test_thirds_feed_p10_two_of_three():
     r = {k: 1.0 for k in ("t_nw", "dsr", "alpha", "alpha_t", "excess_2x", "excess_vs_universe", "excess_miss100",
-                          "excess_nextmonth", "excess_dataerr", "excess_pitq", "excess_without_top_contributor")}
+                          "excess_nextmonth", "excess_dataerr", "excess_winq", "excess_without_top_contributor")}
     r.update(t_nw=3.5, dsr=0.9, alpha_t=2.5)
     x = pd.Series([1.0] * 32 + [-1.0] * 31 + [1.0] * 31, index=pd.date_range("2015-02-28", periods=94, freq="ME"))
     assert b5.verdict({**r, "excess_thirds": st.thirds(x)})["checks"]["P10"]
@@ -138,7 +138,8 @@ def test_each_robustness_variant_changes_exactly_one_thing():
     assert diff(v["P7"][0]) == {"convention"} and v["P7"][0].convention == "next_month_close"
     assert diff(v["P8"][0]) == {"no_buy"} and v["P8"][0].no_buy == errs
     assert diff(v["P9"][0]) == set()
-    p = pd.DataFrame({"quality_ok": [True, True], "quality_ok_pit": [True, False]})
+    # ADDENDUM_3: the primary's quality_ok is the point-in-time rule; P9 swaps in the full-window rule
+    p = pd.DataFrame({"quality_ok": [True, True], "quality_ok_window": [True, False]})
     assert list(v["P9"][1](p)["quality_ok"]) == [True, False]
     for k in ("P4", "P5", "P6", "P7", "P8"):
         assert v[k][1](p) is p
