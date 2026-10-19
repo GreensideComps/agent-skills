@@ -8,9 +8,9 @@ executed. It refuses to read any data until every control below passes:
   explicit word, with the message id);
 * the registry validates, N = 102, the version-2 trials are still registered with v2's hash, both version-3 trials
   and addendum 3 are registered with addendum 3's hash, addenda 1 and 2 with theirs, every robustness id is
-  registered and uncounted, and this script's input manifest (`docs/edge/B5_RUN_MANIFEST_2.json`) is registered as
-  `B5-V3-RUN-MANIFEST-2` with its hash (`B5-V3-RUN-MANIFEST` / `B5_RUN_MANIFEST.json`, registered 2026-10-19 for the
-  code before the atomic recording fix, is kept unchanged and never used);
+  registered and uncounted, and this script's input manifest (`docs/edge/B5_RUN_MANIFEST_3.json`) is registered as
+  `B5-V3-RUN-MANIFEST-3` with its hash (`B5-V3-RUN-MANIFEST` and `B5-V3-RUN-MANIFEST-2`, registered 2026-10-19 for
+  the code before run fixes 1 and 2, are kept unchanged and never used; MANIFEST-3 is proposed, not registered);
 * every input file and every code file named in the manifest has the recorded sha256;
 * neither trial, nor any of their registered robustness runs, nor any retired B5 id, has a result, and the one-run lock
   (`research/edge/b5_run.lock`) does not exist. The lock is created before any data is read and never removed by
@@ -49,19 +49,19 @@ import edge_rules
 
 ROOT = Path(__file__).resolve().parent
 REPO = ROOT.parent
-MANIFEST = REPO / "docs" / "edge" / "B5_RUN_MANIFEST_2.json"  # B5_RUN_MANIFEST.json stays as registered
+MANIFEST = REPO / "docs" / "edge" / "B5_RUN_MANIFEST_3.json"  # earlier manifests stay as registered
 LOCK = edge_registry.B5_LOCK  # research/edge/b5_run.lock
 OUT = REPO / "equity" / "reports" / "research" / "edge"
 CUT = pd.Timestamp("2022-12-31")
 
 TRIALS = {"H1": "B5-H1-FCFPS-ACCEL-V3", "S2A": "B5-S2A-GP-12M-V3"}
-MANIFEST_ID = "B5-V3-RUN-MANIFEST-2"  # B5_RUN_FIX_1: the manifest of the code with atomic result recording
+MANIFEST_ID = "B5-V3-RUN-MANIFEST-3"  # B5_RUN_FIX_2: the manifest of the code with per-convention evaluation start
 A3 = "docs/edge/B5_PREREGISTRATION_ADDENDUM_3.md"
 SPECS = {"B5-H1-FCFPS-ACCEL-V2": "docs/edge/B5_PREREGISTRATION.md", "B5-S2A-GP-12M-V2": "docs/edge/B5_PREREGISTRATION.md",
          "B5-V2-ADDENDUM-1": "docs/edge/B5_PREREGISTRATION_ADDENDUM_1.md",
          "B5-V2-ADDENDUM-2": "docs/edge/B5_PREREGISTRATION_ADDENDUM_2.md",
          "B5-V3-ADDENDUM-3": A3, "B5-H1-FCFPS-ACCEL-V3": A3, "B5-S2A-GP-12M-V3": A3,
-         MANIFEST_ID: "docs/edge/B5_RUN_MANIFEST_2.json"}
+         MANIFEST_ID: "docs/edge/B5_RUN_MANIFEST_3.json"}
 # ADDENDUM_3 §3: P9 is the full-window reverse veto (ROB-WINQ); every version-1 and version-2 id is retired.
 ROB_IDS = {"P4": "ROB-2XCOST", "P6": "ROB-MISS100", "P7": "ROB-NEXTMONTH", "P8": "ROB-DATAERR", "P9": "ROB-WINQ"}
 GATES = ("P1", "P2", "P3", "P4", "P5", "P6", "P7", "P8", "P9", "P10", "P11")
@@ -254,15 +254,23 @@ def config(rebalance: int) -> bt.Config:
                      selection="top_n")
 
 
-def first_exec_date(ex: pd.DataFrame) -> pd.Timestamp:
-    d = ex.loc[pd.to_datetime(ex["month"]) == pd.Timestamp(b5.EVAL_FIRST_DECISION), "exec_date"]
-    return min(pd.Timestamp(x) for x in d.unique())
+def first_exec_date(ex: pd.DataFrame, convention: str = edge_rules.DEFAULT_CONVENTION) -> pd.Timestamp:
+    """The evaluation start: the trade date of the 2015-01-31 decision under the run's own execution convention
+    (B5_PREREGISTRATION §1: "the execution after the 2015-01-31 decision"), taken from the same
+    `edge_backtest.price_table` the backtest trades on. Run 1 used the next-day-close date for every run, so P7
+    (next-month close, whose first trade is the 2015-02 month-end) had no NAV there and stopped the run
+    (B5_RUN_FIX_2)."""
+    dates = bt.price_table(ex, convention)[1]
+    first = pd.Timestamp(b5.EVAL_FIRST_DECISION)
+    if first not in dates.index:
+        raise ValueError(f"no {convention} trade date for the {b5.EVAL_FIRST_DECISION} decision")
+    return pd.Timestamp(dates[first])
 
 
 def run_combined(run_id: str, registry: Path, panel: pd.DataFrame, data: dict, cfg: bt.Config, starts) -> dict:
     res = [bt.run_trial(run_id, registry, panel, data["exec"], data["fx"], cfg, start=s, end=b5.EVAL_LAST_DECISION)
            for s in starts]
-    first = first_exec_date(data["exec"])
+    first = first_exec_date(data["exec"], cfg.convention)
     return {"results": res, "nav_gbp": b5.combine_tranches([r.nav_gbp for r in res], first),
             "nav_usd": b5.combine_tranches([r.nav_usd for r in res], first)}
 

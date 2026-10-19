@@ -27,6 +27,7 @@ MANIFEST_OWNER_MESSAGE = "cmsg_01U4KMvkBYNknqm4HRVie8uvTgMxeHvcPJiF9NpWGKhNNC"  
 MANIFEST_SHA256 = "0f02eda19ee528a3fb0b62ce9bf35c1864f8e9ad5b9d1581e5ec4a1abb4c7072"  # registered B5-V3-RUN-MANIFEST
 MANIFEST_2_OWNER_MESSAGE = "cmsg_01U4KMvkBYNknqm4HRVie8uv1fMkFLASaWMXhFccwwfuzC"  # owner approval 2026-10-19 08:47Z
 MANIFEST_2_SHA256 = "10190052cd13cb7f1735741069e07feb073d1ea8d4beff57f297859d4f799757"  # registered B5-V3-RUN-MANIFEST-2
+RUN_1_OWNER_MESSAGE = "cmsg_01U4KMvkBYNknqm4HRVie8uvUzn9qQCoyy3U7K3j4iY3kK"  # D26 authorisation, 2026-10-19 09:05Z
 
 
 def pre_v3(dst):
@@ -47,6 +48,10 @@ def sha(p: Path) -> str:
 
 @pytest.fixture
 def env(tmp_path):
+    return make_env(tmp_path)
+
+
+def make_env(tmp_path):
     """A copy of the repo's frozen specs and registry, with a manifest and an owner authorisation, in tmp."""
     docs = tmp_path / "docs" / "edge"
     docs.mkdir(parents=True)
@@ -55,7 +60,7 @@ def env(tmp_path):
         shutil.copy(REPO / "docs" / "edge" / f, docs / f)
     (tmp_path / "in.csv").write_text("a,b\n1,2\n")
     (tmp_path / "code.py").write_text("x = 1\n")
-    man = docs / "B5_RUN_MANIFEST_2.json"
+    man = docs / run.MANIFEST.name
     man.write_text(json.dumps({"inputs": {"in.csv": sha(tmp_path / "in.csv")},
                                "code": {"code.py": sha(tmp_path / "code.py")}}))
     reg = tmp_path / "trials.jsonl"
@@ -77,6 +82,18 @@ def env(tmp_path):
 
 def pre(e):
     return run.preflight(e["registry"], e["status"], e["manifest"], e["repo"], e["lock"])
+
+
+@pytest.fixture
+def closed(env, monkeypatch, tmp_path):
+    """The gate's fixed paths pointed at a closed state (no authorisation, no lock), whatever the real repository
+    holds. Since run 1 (D26, B5_RUN_1_INCIDENT.md) the real status.json is authorised and the real lock exists, so
+    tests of the closed gate can no longer use the real files."""
+    shut = tmp_path / "closed_status.json"
+    shut.write_text(json.dumps({"b5_trial_run": {"authorised": False}}))
+    monkeypatch.setattr(edge_registry, "STATUS", shut)
+    monkeypatch.setattr(edge_registry, "B5_LOCK", tmp_path / "no.lock")
+    return env
 
 
 @pytest.fixture
@@ -330,14 +347,25 @@ def test_the_gate_ids_are_exactly_the_run_scripts_trials_and_robustness_runs():
     assert run.LOCK == edge_registry.B5_LOCK
 
 
-def test_in_the_real_repo_the_run_is_closed():
-    with pytest.raises(PermissionError):
-        edge_registry.b5_run_open()
-    assert not edge_registry.B5_LOCK.exists()
+def test_in_the_real_repo_run_1s_lock_is_kept_and_no_new_run_can_start():
+    """After run 1 (D26) stopped with an error (D27): the authorisation and the lock stay as they were, no B5 id has
+    a result, and preflight on the real files refuses before reading anything (MANIFEST-3 is proposed, not
+    registered; the lock would refuse it anyway)."""
+    auth = json.loads(edge_registry.STATUS.read_text())["b5_trial_run"]
+    assert auth["authorised"] is True and auth["owner_message"] == RUN_1_OWNER_MESSAGE
+    lock = json.loads(edge_registry.B5_LOCK.read_text())
+    assert lock == {"owner_message": RUN_1_OWNER_MESSAGE, "manifest": MANIFEST_2_SHA256}
+    ev = edge_registry.load()
+    assert not {e["id"] for e in ev if e.get("event") == "result"} & (edge_registry.B5_RUN_IDS | edge_registry.B5_RETIRED_IDS)
+    before = edge_registry.B5_LOCK.read_bytes()
+    with pytest.raises((KeyError, ValueError)):
+        run.preflight()
+    assert edge_registry.B5_LOCK.read_bytes() == before
 
 
 @pytest.mark.parametrize("rid", sorted(edge_registry.B5_RUN_IDS))
-def test_no_b5_trial_or_robustness_id_can_run_or_be_recorded_while_closed(env, rid):
+def test_no_b5_trial_or_robustness_id_can_run_or_be_recorded_while_closed(closed, rid):
+    env = closed
     with pytest.raises(PermissionError):
         edge_registry.require(rid, env["registry"])
     with pytest.raises(PermissionError):
@@ -354,9 +382,10 @@ def test_other_registered_ids_are_not_gated(env):
     assert edge_registry.require("B5-OTHER", env["registry"])["id"] == "B5-OTHER"
 
 
-def test_a_copied_registry_and_status_cannot_open_the_run(env):
+def test_a_copied_registry_and_status_cannot_open_the_run(closed):
     """An alternate invocation that points preflight at copies passes preflight there, but the gate reads only the
-    real status.json and lock, so nothing can be run, scored from loaded data, or recorded."""
+    real status.json and lock (here held closed), so nothing can be run, scored from loaded data, or recorded."""
+    env = closed
     pre(env)
     assert env["lock"].exists()
     runs = {t: synthetic_run(t, i) for i, t in enumerate(run.TRIALS)}
@@ -707,9 +736,10 @@ def test_in_the_real_registry_version_3_and_its_manifests_are_registered_and_not
     done = {e["id"] for e in ev if e.get("event") == "result"}
     assert not done & (set(edge_registry.B5_RUN_IDS) | set(edge_registry.B5_RETIRED_IDS))
     assert {"B5-H1-FCFPS-ACCEL-V2", "B5-S2A-GP-12M-V2", "B5-H1-V2-ROB-PITQ", "B5-S2A-V2-ROB-PITQ"} <= set(reg)
-    m2 = ev[-1]  # step 2 repeated after run fix 1 (owner approval 08:47Z)
-    assert m2["id"] == run.MANIFEST_ID and m2["counts_for_dsr"] is False and m2["supersedes"] == m["id"]
-    assert m2["spec_sha256"] == MANIFEST_2_SHA256 == sha(run.MANIFEST) and m2["owner_message"] == MANIFEST_2_OWNER_MESSAGE
+    m2 = ev[-1]  # step 2 repeated after run fix 1 (owner approval 08:47Z); MANIFEST-3 (fix 2) is not registered
+    assert m2["id"] == "B5-V3-RUN-MANIFEST-2" and m2["counts_for_dsr"] is False and m2["supersedes"] == m["id"]
+    assert m2["spec_sha256"] == MANIFEST_2_SHA256 == sha(REPO / "docs" / "edge" / "B5_RUN_MANIFEST_2.json")
+    assert m2["owner_message"] == MANIFEST_2_OWNER_MESSAGE and run.MANIFEST_ID not in reg
     assert json.loads(edge_registry.STATUS.read_text())["b5_trial_run"]["owner_message"] == \
         "cmsg_01U4KMvkBYNknqm4HRVie8uvUzn9qQCoyy3U7K3j4iY3kK"  # D26 authorisation
 
@@ -745,18 +775,29 @@ def test_stage_never_touches_the_registry_and_refuses_bad_input(tmp_path):
         edge_registry.stage([ok], broken)
 
 
-def test_the_fixed_run_uses_only_the_new_manifest_and_the_old_record_is_kept():
-    """B5_RUN_FIX_1: the run looks up B5-V3-RUN-MANIFEST-2 for B5_RUN_MANIFEST_2.json (registered on the owner's
-    approval 08:47Z); the earlier B5-V3-RUN-MANIFEST record and its file are kept unchanged and never used."""
-    assert run.MANIFEST_ID == "B5-V3-RUN-MANIFEST-2" and run.MANIFEST.name == "B5_RUN_MANIFEST_2.json"
-    assert "B5-V3-RUN-MANIFEST" not in run.SPECS
+def test_the_fixed_run_uses_only_the_new_manifest_and_the_old_records_are_kept():
+    """B5_RUN_FIX_2: the run looks up B5-V3-RUN-MANIFEST-3 for B5_RUN_MANIFEST_3.json, which is proposed and NOT
+    registered, so preflight refuses until the owner approves it; the registered B5-V3-RUN-MANIFEST and
+    B5-V3-RUN-MANIFEST-2 records and their files are kept unchanged and never used."""
+    assert run.MANIFEST_ID == "B5-V3-RUN-MANIFEST-3" and run.MANIFEST.name == "B5_RUN_MANIFEST_3.json"
+    assert not {"B5-V3-RUN-MANIFEST", "B5-V3-RUN-MANIFEST-2"} & set(run.SPECS)
     reg = edge_registry.registered(edge_registry.load())
-    assert reg[run.MANIFEST_ID]["spec_sha256"] == sha(run.MANIFEST)
+    assert run.MANIFEST_ID not in reg
     assert reg["B5-V3-RUN-MANIFEST"]["spec_sha256"] == sha(REPO / "docs" / "edge" / "B5_RUN_MANIFEST.json")
+    assert reg["B5-V3-RUN-MANIFEST-2"]["spec_sha256"] == sha(REPO / "docs" / "edge" / "B5_RUN_MANIFEST_2.json")
 
 
 def test_the_proposed_manifest_2_event_matches_the_files_it_names():
     ev = json.loads((REPO / "docs" / "edge" / "B5_V3_PROPOSED_MANIFEST_2_EVENT.json").read_text())
-    assert ev["id"] == run.MANIFEST_ID and ev["counts_for_dsr"] is False and ev["supersedes"] == "B5-V3-RUN-MANIFEST"
-    assert ev["spec_sha256"] == sha(run.MANIFEST)
+    assert ev["id"] == "B5-V3-RUN-MANIFEST-2" and ev["counts_for_dsr"] is False and ev["supersedes"] == "B5-V3-RUN-MANIFEST"
+    assert ev["spec_sha256"] == sha(REPO / "docs" / "edge" / "B5_RUN_MANIFEST_2.json")
     assert sha(REPO / "docs" / "edge" / "B5_RUN_FIX_1.md") in ev["definition"]
+
+
+def test_the_proposed_manifest_3_event_matches_the_files_it_names():
+    """B5_RUN_FIX_2: the proposed (unregistered) event for MANIFEST-3, superseding MANIFEST-2."""
+    ev = json.loads((REPO / "docs" / "edge" / "B5_V3_PROPOSED_MANIFEST_3_EVENT.json").read_text())
+    assert ev["id"] == run.MANIFEST_ID and ev["counts_for_dsr"] is False and ev["supersedes"] == "B5-V3-RUN-MANIFEST-2"
+    assert ev["spec_sha256"] == sha(run.MANIFEST)
+    assert sha(REPO / "docs" / "edge" / "B5_RUN_FIX_2.md") in ev["definition"]
+    assert ev["owner_message"].startswith("<")  # a placeholder: nothing is approved
