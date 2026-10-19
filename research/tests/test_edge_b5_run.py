@@ -148,8 +148,12 @@ def test_the_real_status_authorises_only_the_owners_09_05z_message():
 def test_refused_when_a_spec_or_the_manifest_differs_from_its_registered_hash(env, target):
     p = env["repo"] / "docs" / "edge" / target
     p.write_bytes(p.read_bytes() + b" ")
-    with pytest.raises(ValueError, match="registered sha256"):
-        pre(env)
+    if target == run.MANIFEST.name:  # since the hardening, the authorisation names the manifest's sha256 too
+        with pytest.raises(PermissionError, match="different manifest sha256"):
+            pre(env)
+    else:
+        with pytest.raises(ValueError, match="registered sha256"):
+            pre(env)
     assert not env["lock"].exists()
 
 
