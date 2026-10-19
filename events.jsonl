@@ -1,0 +1,1 @@
+{"actor":"w_create1","day":"2026-10-19","deps":[],"depth":0,"inputs":{"i":0},"kind":"task_created","lease_s":1800.0,"max_attempts":3,"parent":null,"prev":"0000000000000000000000000000000000000000000000000000000000000000","priority":50,"seq":0,"task":"t-b40fa2e5603364a08722","ts":"2026-10-19T14:49:54+00:00","type":"job"}
