@@ -72,3 +72,4 @@
 {"actor":"main","kind":"task_quarantined","prev":"ab3cc1958a551a004f6ce316e25c9db9d56532f302d0be7589cd7fdd1ae65a7b","reason":"3 attempts used; last errors ['synthetic failure', 'synthetic failure']","seq":71,"task":"t-5ccdc7df457acf27caed","ts":"2026-10-19T14:53:17+00:00"}
 {"actor":"noisy0","i":0,"kind":"noise","prev":"0d91f0d7bb657d73f2d4c2e4a83251934ee84363f9020104e7fc053b9fb23f0c","seq":72,"ts":"2026-10-19T14:53:21+00:00"}
 {"actor":"noisy0","i":1,"kind":"noise","prev":"efa6e0d10f5a5085c8dc88b4cc01de3fa9edc0ccce716ec4fbb25359b9e52dc7","seq":73,"ts":"2026-10-19T14:53:23+00:00"}
+{"actor":"noisy1","i":0,"kind":"noise","prev":"0499a09138b50c770015370b1816ba13e4e31efac25f5391e7ce5eaa46e95c03","seq":74,"ts":"2026-10-19T14:53:27+00:00"}
