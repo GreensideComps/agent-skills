@@ -135,7 +135,7 @@ def test_the_real_status_authorises_only_the_owners_09_05z_message():
 
 @pytest.mark.parametrize("target", ["B5_PREREGISTRATION.md", "B5_PREREGISTRATION_ADDENDUM_1.md",
                                     "B5_PREREGISTRATION_ADDENDUM_2.md", "B5_PREREGISTRATION_ADDENDUM_3.md",
-                                    "B5_RUN_MANIFEST_2.json"])
+                                    run.MANIFEST.name])
 def test_refused_when_a_spec_or_the_manifest_differs_from_its_registered_hash(env, target):
     p = env["repo"] / "docs" / "edge" / target
     p.write_bytes(p.read_bytes() + b" ")
