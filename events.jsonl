@@ -57,3 +57,4 @@
 {"actor":"w_drain2","attempt":1,"kind":"task_claimed","lease_until":1792423332.694475,"prev":"69749f12d8fee392be00c354eb522a8fd0e3c61e8edef5322fe68194208fa266","recovered_fence":null,"seq":56,"task":"t-f713dcdf5fe58995a372","ts":"2026-10-19T14:52:12+00:00","worker":"w_drain2"}
 {"actor":"w_drain2","fence":56,"kind":"task_completed","output":{"by":"w_drain2"},"prev":"fb7ec36b36d5871cdc40aaf4947278b0f24660df6ec6f26a09b9f6531a8161fe","seq":57,"task":"t-f713dcdf5fe58995a372","ts":"2026-10-19T14:52:15+00:00"}
 {"actor":"w_drain4","fence":40,"kind":"task_completed","output":{"by":"w_drain4"},"prev":"cce0cad48a126b88456246a9c1a7371278228ab957b99763b2f8e4c57e429c15","seq":58,"task":"t-ab33f6c2a7908ea2b2be","ts":"2026-10-19T14:52:17+00:00"}
+{"actor":"w_drain3","fence":27,"kind":"task_completed","output":{"by":"w_drain3"},"prev":"6df401df0af3e27ec280965f3a0269823e8c9e8e0a58fb4e003b3bc316b3d0d6","seq":59,"task":"t-4c5af05d616af36a09b5","ts":"2026-10-19T14:52:22+00:00"}
