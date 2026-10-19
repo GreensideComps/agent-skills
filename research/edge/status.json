@@ -30,9 +30,10 @@
     "note": "passing the exploratory gates is not evidence that survivorship bias is bounded or that an investable edge exists"
   },
   "b5_trial_run": {
-    "authorised": false,
-    "owner_message": null,
-    "recorded": "2026-10-16",
-    "note": "set to true, with the owner's message id, only on the owner's explicit authorisation of the H1/S2a trial run; edge_b5_run.preflight refuses otherwise"
+    "authorised": true,
+    "owner_message": "cmsg_01U4KMvkBYNknqm4HRVie8uvUzn9qQCoyy3U7K3j4iY3kK",
+    "recorded": "2026-10-19",
+    "owner_decision": "D26, owner message 2026-10-19 09:05Z: Step 3, authorise the B5 V3 exploratory run under B5-V3-RUN-MANIFEST-2 at N = 102",
+    "note": "one run only (one-run lock); exploratory; no confirmation, holdout, demo allocation or account change; E2 label withheld while TTM check 4 is open"
   }
 }
