@@ -167,3 +167,16 @@ not authorise anything else.
 
 **Then M2:** one heartbeat scheduled task, created only with your approval, running read-only maintenance tasks
 (health, read-only demo reconciliation, alerts and digest), and the 14-day test in section 3.
+
+## 7. Owner decisions, 20 Oct 2026 (M2 and designs)
+
+Recorded verbatim in substance from the owner's messages. Ids are the project message ids.
+
+| Id | When (UTC) | Decision | Source |
+|---|---|---|---|
+| D37 | 09:27 | Authoritative baseline: the D36 closeout as stated. The next objective is unattended operation, not more Phase A research. | cmsg_01U4KMvkBYNknqm4HRVie8uvMC6FncBvRXB6SmnKrq2QxE |
+| H-3 | 09:22 | Deploy the office with a heartbeat every 3 hours. | decision card cmsg_01U4KMvkBYNknqm4HRVie8uvXZyunyPL8DbjkJ1uh6NbGV |
+| D-T14 | 09:29 | Option A: add VWRP beside SPY. Preserve historical results. VWRP is the primary benchmark for new portfolio reporting, with SPY kept as a secondary comparison. Label the transition clearly; never rewrite historical performance. | cmsg_01U4KMvkBYNknqm4HRVie8uv4jhm7TxpcEjQ5hAcQjmFxe |
+| D-T16 | 09:29 | Approved with changes. The portfolio manager is proposal-only and cannot submit orders or alter holdings. It defaults to 100% VWRP until a strategy passes the research gates. Provisional constraints: at most 20% outside VWRP and at most 5% per company. The 10% sector limit must include look-through exposure to VWRP's holdings and use a documented classification. −15% relative to VWRP is a review/escalation threshold, not an automatic trading trigger or a guaranteed protection. The measurement period, calculation and escalation procedure must be defined before implementation. Calculations are shown, and constraints that cannot be verified are flagged. | same |
+| D-T15 | 09:29 | Allow. The research planner drafts one proposal per week for owner approval. Each proposal states the hypothesis, rationale, data requirements, methodology, costs, risks, prior-trial overlap and a holdout-contamination assessment. Drafting does not authorise registration or execution; existing authorisation gates remain mandatory. | same |
+| M-25 | 09:29 | PR #25: finish the safety review first. If all critical checks pass, merge it and begin the 14-day gate. Verify that PR #26's change is config only before merging it. Research and demo stay separate from live accounts. No live trading or orders are authorised. | same |
