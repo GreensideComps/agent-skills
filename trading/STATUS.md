@@ -4,17 +4,21 @@
 > runs snapshot and reconcile read-only, then halt without planning an order. The previous `discretionary_intraday_v1`
 > config is archived in `config/archive/`. Everything below is history.
 >
-> **Scheduled tasks that ran the old strategy are DISABLED, not deleted** (listed 2026-10-19). They still exist on the
-> account and point at branch `claude/trading212-agent-skills-r71zy3`, which keeps the old config. Re-enabling one would
-> run the old strategy from that branch; this retirement does not reach it. Deleting them is an owner decision.
+> **2026-10-20: the scheduled tasks that ran the old strategy are DELETED** (owner decision O10, card answered
+> 07:31Z). Their ids, schedules, full prompts, branch, enabled state and last-fired dates were recorded first in
+> [`../docs/office/O10_LEGACY_TASKS_RECORD.json`](../docs/office/O10_LEGACY_TASKS_RECORD.json):
 >
-> | Task | Id | Enabled | Branch it uses | Last fired |
-> |---|---|---|---|---|
-> | T212 demo: hourly trader + monitor | `trig_01Qh8CiQcWpUK4Jop7EvdEH4` | no | r71zy3 | 2026-10-14 |
-> | T212 demo: hourly trader + monitor (older copy) | `trig_01HwinHAEB3cteN7zavwCGzQ` | no | r71zy3 | 2026-10-14 |
-> | T212 demo: trading ops | `trig_015u78BVGNK8bFDbg26cwcn8` | no | r71zy3 | 2026-10-14 |
-> | T212 demo: research loop | `trig_019cbvFKHAnfuPE24Bqexu9L` | no | r71zy3 | 2026-10-14 |
-> | Weekday portfolio brief (old, persistent session) | `trig_0188Bhwdq38sQhN9zZAauah7` | no | read-only brief | 2026-10-15 |
+> | Task | Id | Was enabled | Branch it used | Last fired | Now |
+> |---|---|---|---|---|---|
+> | T212 demo: hourly trader + monitor | `trig_01Qh8CiQcWpUK4Jop7EvdEH4` | no | r71zy3 | 2026-10-14 | deleted |
+> | T212 demo: hourly trader + monitor (older copy) | `trig_01HwinHAEB3cteN7zavwCGzQ` | no | r71zy3 | 2026-10-14 | deleted |
+> | T212 demo: trading ops | `trig_015u78BVGNK8bFDbg26cwcn8` | no | r71zy3 | 2026-10-14 | deleted |
+> | T212 demo: research loop | `trig_019cbvFKHAnfuPE24Bqexu9L` | no | r71zy3 | 2026-10-14 | deleted |
+> | Weekday portfolio brief (old, persistent session) | `trig_0188Bhwdq38sQhN9zZAauah7` | no | read-only brief | 2026-10-15 | deleted |
+>
+> The old bot branch `claude/trading212-agent-skills-r71zy3` is kept for audit with its history, and since commit
+> `e07a3e3` it cannot trade: its CLI, `Bot.run`, `decide`, order methods and every non-GET broker request refuse,
+> and its `ops_run.sh` and `monitor_run.sh` exit 5 before syncing (`trading/RETIRED.md` on that branch).
 >
 > On this branch `ops_run.sh` refuses (exit 5) before any git sync while the strategy is retired.
 
