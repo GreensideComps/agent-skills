@@ -6,7 +6,6 @@ import hashlib
 import json
 import math
 import shutil
-import subprocess
 import sys
 from pathlib import Path
 
@@ -144,7 +143,9 @@ ARCHIVED_LOCK_SHA256 = "c06eeaa3a6020adc896c9a18a39694bd5cf80f79fcb1d5eee594caea
 D29_OWNER_MESSAGE = "cmsg_01U4KMvkBYNknqm4HRVie8uv5MUSAy3Neyqof1pvHhyPuc"  # archival and reset, 2026-10-19 13:02Z
 RUN_2_OWNER_MESSAGE = "cmsg_01U4KMvkBYNknqm4HRVie8uvNzjD1qcmHEXGwqYmiFikfZ"  # D31, run 2 authorised, 2026-10-19 13:25Z
 PRE_RUN_2_SPENT = frozenset({RUN_1_OWNER_MESSAGE})  # the code's spent set when run 2 ran
-RUN_2_RESULTS_COMMIT = "a4a07d7"  # run 2's results commit; edge_registry.py there is the MANIFEST-3 file
+# D34: the run-2 bytes of research/edge_registry.py (the file MANIFEST-3 hashed; commits bb9ea44 to 1eb0e96), kept
+# as a committed fixture so no test depends on git history. Its sha256 is the MANIFEST-3 entry for that file.
+RUN_2_EDGE_REGISTRY = Path(__file__).resolve().parent / "fixtures" / "b5_run2_edge_registry.py.orig"
 MANIFEST_3_EDGE_REGISTRY_SHA256 = "e56f49aa862eaaf8048494272e1de1e3d363a0490282562b080f63dae5405c5c"
 D32_OWNER_MESSAGE = "cmsg_01U4KMvkBYNknqm4HRVie8uvWW5mGZ7bsqjsGzRn39VcN1"  # run 2 closeout, 2026-10-19 13:55Z
 RUN_2_LOCK = REPO / "docs" / "edge" / "incidents" / "B5_RUN_2_LOCK.json"
@@ -188,8 +189,8 @@ def pre_run_2(tmp_path, monkeypatch):
 
 def manifest_3_repo(tmp_path):
     """A view of the repository as MANIFEST-3 hashed it: every entry links to the real one, except
-    research/edge_registry.py, which is the exact bytes committed when run 2 ran (git, verified against the manifest
-    hash). O4 changed the real file afterwards, so MANIFEST-3 no longer matches the real repository."""
+    research/edge_registry.py, which is the exact bytes run 2 ran (the committed fixture, verified against the
+    manifest hash). O4 changed the real file afterwards, so MANIFEST-3 no longer matches the real repository."""
     root = tmp_path / "repo"
     (root / "research").mkdir(parents=True)
     for c in REPO.iterdir():
@@ -198,11 +199,17 @@ def manifest_3_repo(tmp_path):
     for c in (REPO / "research").iterdir():
         if c.name != "edge_registry.py":
             (root / "research" / c.name).symlink_to(c)
-    old = subprocess.run(["git", "-C", str(REPO), "show", f"{RUN_2_RESULTS_COMMIT}:research/edge_registry.py"],
-                         capture_output=True, check=True).stdout
-    assert hashlib.sha256(old).hexdigest() == MANIFEST_3_EDGE_REGISTRY_SHA256
+    old = run_2_edge_registry_bytes()
     (root / "research" / "edge_registry.py").write_bytes(old)
     return root
+
+
+def run_2_edge_registry_bytes() -> bytes:
+    """The fixture's bytes, refused unless they hash to MANIFEST-3's recorded entry for research/edge_registry.py."""
+    old = RUN_2_EDGE_REGISTRY.read_bytes()
+    assert hashlib.sha256(old).hexdigest() == MANIFEST_3_EDGE_REGISTRY_SHA256
+    assert json.loads(run.MANIFEST.read_text())["code"]["research/edge_registry.py"] == MANIFEST_3_EDGE_REGISTRY_SHA256
+    return old
 
 
 def test_the_real_status_authorises_no_run_and_keeps_runs_1_and_2_as_spent_history():
@@ -650,8 +657,8 @@ def test_report_always_carries_the_standing_and_known_limitations():
 
 def test_the_real_manifest_matches_the_files_it_names():
     """Every file MANIFEST-3 names still has its recorded hash, except research/edge_registry.py: O4 added D31 to
-    the spent set after run 2 spent MANIFEST-3. That file's run-2 bytes are checked from git instead, and the real
-    file is checked to differ, so MANIFEST-3 can never pass the gate's file check again."""
+    the spent set after run 2 spent MANIFEST-3. That file's run-2 bytes are checked from the committed fixture
+    instead, and the real file is checked to differ, so MANIFEST-3 can never pass the gate's file check again."""
     m = json.loads(run.MANIFEST.read_text())
     for group in ("inputs", "code"):
         for path, h in m[group].items():
@@ -660,9 +667,18 @@ def test_the_real_manifest_matches_the_files_it_names():
                 assert h == MANIFEST_3_EDGE_REGISTRY_SHA256 and sha(p) != h
             elif p.exists():  # the shared research data is absent on some machines
                 assert sha(p) == h, path
-    old = subprocess.run(["git", "-C", str(REPO), "show", f"{RUN_2_RESULTS_COMMIT}:research/edge_registry.py"],
-                         capture_output=True, check=True).stdout
-    assert hashlib.sha256(old).hexdigest() == MANIFEST_3_EDGE_REGISTRY_SHA256
+    run_2_edge_registry_bytes()
+
+
+def test_since_run_2_edge_registry_changed_only_in_the_spent_set():
+    """D33/D34: the only lines of research/edge_registry.py that differ from the run-2 fixture are the spent-set
+    comment and definition, so the production change stays exactly what the owner approved."""
+    import difflib
+    old = run_2_edge_registry_bytes().decode().splitlines()
+    new = Path(edge_registry.__file__).read_text().splitlines()
+    changed = [l for l in difflib.unified_diff(old, new, lineterm="", n=0)
+               if l[:1] in "+-" and not l.startswith(("+++", "---"))]
+    assert changed and all(l[1:].startswith(("#", "B5_SPENT_AUTHORISATIONS = ", " " * 37 + '"cmsg_')) for l in changed), changed
 
 
 def test_every_spent_authorisation_in_the_history_is_spent_in_code_and_refused(tmp_path):
@@ -697,7 +713,20 @@ def test_the_real_gate_refuses_manifest_3_on_its_files_even_with_a_fresh_authori
 
 
 
-CLOSEOUT_COMMIT = "1eb0e96"  # D32 closeout: the last commit before D31 was added to the spent set (D33)
+# D34: sha256 of each protected B5 artefact, each verified independently against the commit that wrote it and a
+# second recorded copy (status.json history, the registry, DECISIONS or the report), so no test needs git history.
+HISTORICAL_SHA256 = {
+    "research/edge/trials.jsonl": RUN_2_REGISTRY_SHA256,  # a4a07d7 (run 2 results); D32 row
+    "research/edge/status.json": "dfee716a559b092f471d8f36611727782465155fb1d672abfa170373e400086e",  # 1eb0e96 (D32)
+    "docs/edge/incidents/B5_RUN_1_LOCK.json": ARCHIVED_LOCK_SHA256,  # 4215a98; status history run 1
+    "docs/edge/incidents/B5_RUN_2_LOCK.json": RUN_2_LOCK_SHA256,  # e5d1dc1; status history run 2
+    "equity/reports/research/edge/b5_trials.md": RUN_2_REPORT_SHA256,  # a4a07d7; status history run 2 outcome
+    "docs/edge/B5_RUN_MANIFEST_3.json": MANIFEST_3_SHA256,  # bb9ea44; registry event B5-V3-RUN-MANIFEST-3 (D30)
+}
+
+
+def pinned_ok(p: Path, h: str) -> bool:
+    return p.is_file() and hashlib.sha256(p.read_bytes()).hexdigest() == h
 
 
 def test_reusing_d31_is_refused_at_the_first_control_before_any_lock_or_research_file(tmp_path, monkeypatch):
@@ -737,15 +766,28 @@ def test_preflight_refuses_manifest_3_on_its_files_even_with_a_fresh_authorisati
     assert sha(run.MANIFEST) == MANIFEST_3_SHA256
 
 
-@pytest.mark.parametrize("path", ["research/edge/trials.jsonl", "research/edge/status.json",
-                                  "docs/edge/incidents/B5_RUN_1_LOCK.json", "docs/edge/incidents/B5_RUN_2_LOCK.json",
-                                  "equity/reports/research/edge/b5_trials.md", "docs/edge/B5_RUN_MANIFEST_3.json"])
-def test_historical_evidence_is_byte_identical_to_the_d32_closeout(path):
-    """D33 changes only the spent set and tests: the registry, status history, both archived locks, run 2's report
-    and MANIFEST-3 are byte-identical to the D32 closeout commit."""
-    old = subprocess.run(["git", "-C", str(REPO), "show", f"{CLOSEOUT_COMMIT}:{path}"], capture_output=True,
-                         check=True).stdout
-    assert (REPO / path).read_bytes() == old
+@pytest.mark.parametrize("path", sorted(HISTORICAL_SHA256))
+def test_historical_evidence_is_byte_identical_to_its_pinned_hash(path):
+    """D33/D34: the registry, status history, both archived locks, run 2's report and MANIFEST-3 keep the exact
+    bytes recorded when they were written (pinned sha256, no git history needed)."""
+    assert pinned_ok(REPO / path, HISTORICAL_SHA256[path])
+
+
+@pytest.mark.parametrize("path", sorted(HISTORICAL_SHA256) + ["fixture"])
+def test_the_pins_detect_an_altered_or_missing_copy(path, tmp_path):
+    """Any one-byte change, truncation or deletion of a pinned artefact (or of the run-2 fixture) fails its pin."""
+    src, h = (RUN_2_EDGE_REGISTRY, MANIFEST_3_EDGE_REGISTRY_SHA256) if path == "fixture" else (REPO / path,
+                                                                                              HISTORICAL_SHA256[path])
+    data = src.read_bytes()
+    c = tmp_path / "copy"
+    c.write_bytes(data)
+    assert pinned_ok(c, h)
+    for bad in (data[:-1] + bytes([data[-1] ^ 1]), data[:-1], data + b"\n"):
+        c.write_bytes(bad)
+        assert not pinned_ok(c, h)
+    c.unlink()
+    assert not pinned_ok(c, h)
+
 
 def test_the_manifest_covers_exactly_the_repository_code_the_run_imports():
     """Owner review 2026-10-19 item 3: every repository module the run path imports (including the loader's lazy
