@@ -12,6 +12,12 @@ Integrity rules:
   and FX costs. No fill uses a price from after the decision.
 * The benchmark (SPY by default) is marked with the same price source and starts with the
   same cash on the same day.
+* paper-1.1 (owner decision D-T14, 20 Oct 2026) adds VWRP as the PRIMARY benchmark, in its own book
+  `benchmark_vwrp`, and keeps SPY as the secondary one. Nothing recorded under paper-1.0 is restated. The VWRP
+  book starts at its first priced mark under paper-1.1: it is funded with the screen book's NAV that day and then
+  bought and held. Its London line is priced in GBP and converted to USD at that day's GBPUSD close. VWRP is
+  accumulating, so its price includes reinvested dividends while the screen book's prices do not; the report
+  states this bias beside the number.
 * Rebalancing is mechanical and monthly: hold the top `max_positions` ranked companies
   with total >= `min_total_score`, equal weight. Between rebalances only marking happens.
 
@@ -43,6 +49,64 @@ def load_config(path: Path = CONFIG_PATH) -> dict:
 def benchmark_security(cfg: dict) -> dict:
     sym = cfg["benchmark"]["symbol"]
     return {"t212_ticker": f"{BENCH_PREFIX}{sym}", "company_id": f"{BENCH_PREFIX}{sym}", "symbol": sym}
+
+
+def primary_securities(cfg: dict) -> list[dict]:
+    """The VWRP line and the GBPUSD rate to price each day (empty under paper-1.0 configs)."""
+    pb = cfg.get("primary_benchmark")
+    if not pb:
+        return []
+    return [{"t212_ticker": f"{BENCH_PREFIX}{x}", "company_id": f"{BENCH_PREFIX}{x}", "symbol": x, "yahoo": x}
+            for x in (pb["symbol"], pb["fx_symbol"])]
+
+
+def primary_price_usd(prices: dict[str, dict], cfg: dict, as_of: str) -> tuple[float | None, dict]:
+    """VWRP's close in USD on `as_of` and how it was worked out, or (None, reason) if it cannot be priced."""
+    pb = cfg["primary_benchmark"]
+    today = date.fromisoformat(as_of)
+    got = {}
+    for key, sym in (("line", pb["symbol"]), ("fx", pb["fx_symbol"])):
+        p = prices.get(f"{BENCH_PREFIX}{sym}")
+        if not p:
+            return None, {"status": "unpriced", "reason": f"no price for {sym}"}
+        if (today - date.fromisoformat(p["date"])).days > cfg["max_price_age_days"]:
+            return None, {"status": "unpriced", "reason": f"{sym} price is stale ({p['date']})"}
+        got[key] = p
+    unit = {"GBP": 1.0, "GBp": 0.01, "GBX": 0.01}.get(got["line"].get("currency"))
+    if unit is None or got["fx"].get("currency") not in (None, "USD"):
+        return None, {"status": "unpriced", "reason": f"unexpected currency {got['line'].get('currency')} / "
+                                                      f"{got['fx'].get('currency')}"}
+    gbp = got["line"]["close"] * unit
+    usd = gbp * got["fx"]["close"]
+    return usd, {"gbp_close": gbp, "gbpusd": got["fx"]["close"], "usd": usd, "line_rid": got["line"]["rid"],
+                 "fx_rid": got["fx"]["rid"], "calc": f"{gbp:.4f} GBP x {got['fx']['close']:.5f} = {usd:.4f} USD"}
+
+
+def _mark_primary(store: Store, prices: dict[str, dict], as_of: str, cfg: dict, port_nav: float) -> dict:
+    pb = cfg["primary_benchmark"]
+    book, cid = pb["book"], f"{BENCH_PREFIX}{pb['symbol']}"
+    usd, how = primary_price_usd(prices, cfg, as_of)
+    st = state(store, book)
+    if st["cash"] is None:
+        if usd is None:
+            return {**how, "status": "not started"}
+        now = utc_now()
+        qty = port_nav / (usd * (1 + _cost(cfg)))  # all cash, as the SPY book does
+        store.paper.append([
+            {"rid": f"paper:{book}:fund", "book": book, "kind": "fund", "amount": port_nav, "as_of": as_of,
+             "ts_utc": now, "seq": 1, "method_version": cfg["method_version"],
+             "reason": "funded with the screen book's NAV on the VWRP book's first priced mark"},
+            {"rid": f"paper:{book}:{as_of}:buy:{content_hash([cid, qty])}", "book": book, "kind": "buy",
+             "company_id": cid, "qty": qty, "decision_price": usd, "fill_price": usd * (1 + _cost(cfg)),
+             "price_rid": how["line_rid"], "fx_rid": how["fx_rid"], "price_date": as_of, "calc": how["calc"],
+             "reason": "primary benchmark buy-and-hold", "as_of": as_of, "ts_utc": now, "seq": 2,
+             "method_version": cfg["method_version"]}])
+        st = state(store, book)
+    start = next(t for t in store.paper.read() if t["book"] == book and t["kind"] == "fund")
+    if usd is None:
+        return {**how, "status": "unpriced", "start": start["as_of"], "start_nav": start["amount"]}
+    nav = st["cash"] + st["positions"].get(cid, 0.0) * usd
+    return {"status": "marked", "nav": nav, "start": start["as_of"], "start_nav": start["amount"], **how}
 
 
 def state(store: Store, book: str) -> dict:
@@ -169,8 +233,10 @@ def rebalance(store: Store, screen_rec: dict, prices: dict[str, dict], cfg: dict
             "recommendations": len(recs)}
 
 
-def mark(store: Store, prices: dict[str, dict], as_of: str) -> dict:
-    """Mark both books at the latest prices; append one NAV record per day."""
+def mark(store: Store, prices: dict[str, dict], as_of: str, cfg: dict | None = None) -> dict:
+    """Mark the books at the latest prices; append one NAV record per day. `excess_return` stays the SPY
+    comparison (unchanged since paper-1.0); `excess_return_vwrp` is the primary one, from the VWRP book's start."""
+    cfg = cfg or load_config()
     out = {}
     for book in ("portfolio", "benchmark"):
         st = state(store, book)
@@ -181,6 +247,14 @@ def mark(store: Store, prices: dict[str, dict], as_of: str) -> dict:
         out[book] = {"nav": value, "cash": st["cash"], "positions": len(st["positions"]), "unpriced": missing}
     rec = {"rid": f"nav:{as_of}", "as_of": as_of, "ts_utc": utc_now(), **out}
     rec["excess_return"] = out["portfolio"]["nav"] / out["benchmark"]["nav"] - 1
+    if cfg.get("primary_benchmark"):
+        v = _mark_primary(store, prices, as_of, cfg, out["portfolio"]["nav"])
+        rec["method_version"] = cfg["method_version"]
+        rec["benchmark_vwrp"] = v
+        if v["status"] == "marked":
+            # The VWRP book was funded with the screen book's NAV on its start day, so this ratio is the screen
+            # book's return since then relative to VWRP's.
+            rec["excess_return_vwrp"] = out["portfolio"]["nav"] / v["nav"] - 1
     store.paper_nav.append(rec)
     return rec
 
@@ -198,12 +272,14 @@ def report(store: Store, cfg: dict | None = None) -> str:
     lines = [f"# Screen-1.0 forward test: paper portfolio ({cfg['method_version']}), {last['as_of']}", "",
              banner(cfg["method_version"], "screen-1.0"), "",
              f"Simulated, no broker. Started {first['as_of']} with {start:,.0f} {cfg['base_currency']} in each book. "
-             f"Costs {_cost(cfg) * 1e4:.0f} bps per trade. Dividends excluded from both books.", "",
+             f"Costs {_cost(cfg) * 1e4:.0f} bps per trade. Dividends excluded from the screen book and SPY.", "",
              "| Book | NAV | Return since start |", "|---|---|---|",
              f"| Screen-1.0 forward test | {last['portfolio']['nav']:,.2f} | {last['portfolio']['nav'] / start - 1:+.2%} |",
-             f"| Benchmark ({cfg['benchmark']['symbol']}) | {last['benchmark']['nav']:,.2f} | "
+             f"| {'Secondary benchmark' if cfg.get('primary_benchmark') else 'Benchmark'} "
+             f"({cfg['benchmark']['symbol']}) | {last['benchmark']['nav']:,.2f} | "
              f"{last['benchmark']['nav'] / start - 1:+.2%} |",
-             f"| **Excess** | | **{last['excess_return']:+.2%}** |", "",
+             f"| **Excess vs {cfg['benchmark']['symbol']}** | | **{last['excess_return']:+.2%}** |", "",
+             *_primary_lines(navs, cfg),
              f"{len(navs)} daily marks. This says nothing about skill yet: with ~{cfg['max_positions']} positions and "
              "monthly decisions, years of data are needed before the excess return is distinguishable from luck.", "",
              f"## Current holdings (last rebalance {st['last_rebalance']})", "",
@@ -213,3 +289,26 @@ def report(store: Store, cfg: dict | None = None) -> str:
         lines.append(f"| {r['entity_name']} | {r['rank']} | {r['total']:.0f} | {r['decision_price']:,.2f} | "
                      f"{'' if ig is None else f'{ig:+.0%}'} |")
     return "\n".join(lines) + "\n"
+
+
+def _primary_lines(navs: list[dict], cfg: dict) -> list[str]:
+    """The VWRP comparison, labelled with when it started and the dividend bias it carries."""
+    pb = cfg.get("primary_benchmark")
+    if not pb:
+        return []
+    v = navs[-1].get("benchmark_vwrp")
+    head = [f"## Primary benchmark: VWRP ({pb['symbol']}, from {cfg['method_version']})", ""]
+    if not v or v.get("status") == "not started":
+        return head + [f"Not started yet: {(v or {}).get('reason', 'no mark under ' + cfg['method_version'] + ' yet')}."
+                       " Results before the VWRP book starts are compared with SPY only.", ""]
+    if v["status"] != "marked":
+        return head + [f"Started {v['start']}; not priced today ({v['reason']}).", ""]
+    return head + [
+        f"Started {v['start']} with {v['start_nav']:,.2f} {cfg['base_currency']} (the screen book's NAV that day). "
+        "Everything before that date is compared with SPY only and is not restated.", "",
+        "| Book | NAV | Return since VWRP start |", "|---|---|---|",
+        f"| VWRP (total return, accumulating) | {v['nav']:,.2f} | {v['nav'] / v['start_nav'] - 1:+.2%} |",
+        f"| **Excess vs VWRP** | | **{navs[-1]['excess_return_vwrp']:+.2%}** |", "",
+        f"Priced as {v['calc']}. The screen book is price-only (dividends excluded) while VWRP's price includes "
+        "reinvested dividends, so this comparison is biased against the screen book by roughly its dividend yield "
+        "(about 1-1.5% a year, an estimate).", ""]

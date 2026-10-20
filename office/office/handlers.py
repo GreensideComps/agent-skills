@@ -133,11 +133,17 @@ def h_test_suites(ctx: Context, inputs: dict) -> dict:
                 res[name] = {"exit": r.returncode, **_counts(tail), "summary": tail[-200:]}
                 if r.returncode:
                     failed.append(name)
+                    err = "\n".join((r.stderr or "").strip().splitlines()[-3:])
+                    if err:  # e.g. "No module named pytest": without it an empty summary hides the cause
+                        res[name]["stderr"] = redact(err, ctx.env)[-300:]
             except subprocess.TimeoutExpired:
                 res[name] = {"status": "timeout"}
                 failed.append(name)
     out = {"commit": sha, "suites": res}
-    if failed:
+    if failed and all("No module named pytest" in res[n].get("stderr", "") for n in failed):
+        out["alert"] = {"level": "critical", "code": "test_runner_missing",
+                        "text": f"pytest is not installed in the worker session; no suite ran on {sha[:10]}"}
+    elif failed:
         out["alert"] = {"level": "critical", "code": "tests_failing",
                         "text": f"tests failing on {ctx.branch} {sha[:10]}: {', '.join(failed)}"}
     return out

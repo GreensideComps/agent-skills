@@ -1,0 +1,4 @@
+{
+  "note": "Strategies allowed to hold weight outside VWRP (PM_SPEC.md §1). Each entry needs {id, owner_decision: 'cmsg_...', trials: [trial ids that passed], holdings: [{ticker, weight, sic}]}. Empty: no strategy has passed the research gates, so every proposal is 100% VWRP.",
+  "strategies": []
+}

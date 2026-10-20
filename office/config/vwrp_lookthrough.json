@@ -1,0 +1,8 @@
+{
+  "note": "VWRP look-through (PM_SPEC.md §3). Copy sector weights (provider ICB names, fractions of the fund) and the largest holdings from Vanguard's published fund data, with the page and its as-of date. Empty until someone enters it from the source; never estimated.",
+  "fund": "VWRP",
+  "as_of": null,
+  "source": null,
+  "sector_weights": {},
+  "top_holdings": {}
+}

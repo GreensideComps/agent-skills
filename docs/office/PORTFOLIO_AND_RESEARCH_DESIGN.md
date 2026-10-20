@@ -1,7 +1,9 @@
-# Design: VWRP paper book, portfolio manager, research planner (proposal, nothing built)
+# Design: VWRP paper book, portfolio manager, research planner
 
-Status: **proposal for owner review.** No code, config or ledger was changed for any of these. Every item marked
-**Decision** is the owner's to make. The order below follows the task ledger (T14, T16, T15).
+Status: **decided 20 Oct 2026** (D-T14 A, D-T16 approved with changes, D-T15 allow; DECISION_REGISTER.md §7).
+Built on a draft PR: paper-1.1 (T14), pm-1.0 per `PM_SPEC.md` (T20), the research planner (T15). The text below is
+the proposal as it was put to the owner; where the owner changed it (the −15% rule is a review threshold, not a stop;
+the sector limit uses look-through), `PM_SPEC.md` governs.
 
 ## 1. VWRP benchmark for the paper book (T14)
 
