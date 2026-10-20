@@ -16,7 +16,7 @@ unless the row says it was demonstrated.
 | T08 | 7 Portfolio | Read-only demo snapshot through `ReadOnlyClient` with the kill file set | in review | `h_demo_snapshot`; fake-run tests; one real read in the e2e run |
 | T09 | 9 Gate | G1 criteria fixed before any run, and the gate evaluator | in review | `RELIABILITY_GATE.md`, `gate.py`, synthetic 15-day tests |
 | T10 | 6 Alerts | Remove the deleted T212 routines from the equity schedule (false WARN) | in review | `equity/config/schedule.json`; equity 118 pass |
-| T11 | 3 Deploy | Create `claude/office-state`, the heartbeat and digest tasks; start G1 | blocked | Owner approval (uses plan usage; scheduled tasks) and the M2 PR merged |
+| T11 | 3 Deploy | Create `claude/office-state`, the heartbeat and digest tasks; start G1 | blocked | Approved 20 Oct 09:22Z (3-hour heartbeat). Branch created, empty log `8428e34`. Tasks and G1 wait for PR #25 on master |
 | T12 | 6 Alerts | Test owner alert delivery by email | blocked | Owner approval (external send) |
 | T13 | 3 Ops | Fix or explain the equity pipeline rc=1 on 19 Oct | ready | Last run of trig_01PYai2PEsqMTtFSMDCD99BY |
 | T14 | 7 Benchmark | Paper book benchmark VWRP, not SPY | ready | `equity/equity/paper.py`; changes a reported metric, so it needs a note to the owner before merge |
