@@ -16,6 +16,22 @@ Last updated: 2026-10-20 by the "Research office" thread. Labels: **[V]** verifi
 - **CI:** none. There is no `.github/` directory, so nothing runs tests automatically on a push [V].
 - **Live ISA:** not connected. Only demo credentials are in the environment (`T212_ENV=demo`) [V].
 
+## Owner baseline D37 (20 Oct 09:27Z, cmsg_01U4KMvkBYNknqm4HRVie8uvMC6FncBvRXB6SmnKrq2QxE)
+
+D37 restates the D36 closeout as the authoritative starting state. Every reported fact matches the checks above [V]:
+- merge `11512d4`, tree `f12ba23c`;
+- research 460, equity 118, trading 139 (local runs, not CI);
+- both B5 strategies failed; `authorised=false`; no live lock.
+
+Known unresolved issues named in D37, carried here until each is closed:
+- F1 strict id validation (deferred, D34);
+- ungated data-reading paths;
+- authorisation provenance that rests on review;
+- material, unbounded survivorship bias;
+- Check 4 open;
+- a partly seen holdout;
+- no CI.
+
 ## Capability audit (A–G)
 
 Categories: **IV** implemented and verified · **IU** implemented, not verified in operation · **P** partial ·

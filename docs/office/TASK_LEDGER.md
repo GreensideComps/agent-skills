@@ -18,8 +18,8 @@ unless the row says it was demonstrated.
 | T10 | 6 Alerts | Remove the deleted T212 routines from the equity schedule (false WARN) | in review | `equity/config/schedule.json`; equity 118 pass |
 | T11 | 3 Deploy | Create `claude/office-state`, the heartbeat and digest tasks; start G1 | blocked | Approved 20 Oct 09:22Z (3-hour heartbeat). Branch created, empty log `8428e34`. Tasks and G1 wait for PR #25 on master |
 | T12 | 6 Alerts | Test owner alert delivery by email | blocked | Owner approval (external send) |
-| T13 | 3 Ops | Fix or explain the equity pipeline rc=1 on 19 Oct | ready | Last run of trig_01PYai2PEsqMTtFSMDCD99BY |
-| T14 | 7 Benchmark | Paper book benchmark VWRP, not SPY | ready | `equity/equity/paper.py`; changes a reported metric, so it needs a note to the owner before merge |
+| T13 | 3 Ops | Fix or explain the equity pipeline rc=1 on 19 Oct | in review | Cause: reliability still expected the deleted T212 routines; PR #26 |
+| T14 | 7 Benchmark | Paper book benchmark VWRP, not SPY | blocked | Owner decision D-T14 (PORTFOLIO_AND_RESEARCH_DESIGN.md §1); method change needs approval per paper config |
 | T15 | 4 Research | Research director: proposes the next question as a draft manifest for owner approval (never runs it) | later | After G1 starts; must respect D-series governance |
 | T16 | 8 Paper | Office paper book with persisted intent, a simulated broker and reconciliation (uses `orders.py`) | later | After T14; needs its own gate |
 | T17 | 5 Provenance | Record library versions with each research run | later | Gap found in Pack B |
