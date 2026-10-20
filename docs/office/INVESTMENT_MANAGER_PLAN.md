@@ -266,12 +266,12 @@ AMD, VRT, BE, PANW, VST, INTC, CRWD, TEM, AAPL, TSLA, UBER, IBTA (LSE). This is 
   +-------------------------+   +--------------------------+   +------------------------+
 ```
 
-- **Record store.** `office/events.jsonl` on a dedicated branch `office-state` (keeps master history clean and avoids
+- **Record store.** `office/events.jsonl` on a dedicated branch `claude/office-state` (keeps master history clean and avoids
   conflicts with the equity pipeline's pushes to master). Each event: `{seq, prev, ts, actor, task_id, kind, payload,
   code_commit, data_shas}`. A derived SQLite file is rebuilt from the log on each worker start (cheap; SQLite 3.45 is
   available) and is never the source of truth. The existing trial registry stays where it is and is referenced by
   id and line hash.
-- **Transactions.** A state change is one commit appending events, pushed to `office-state`. A rejected push means
+- **Transactions.** A state change is one commit appending events, pushed to `claude/office-state`. A rejected push means
   another worker changed state first: refetch, rebuild, re-check the claim, retry (bounded). This gives
   compare-and-swap semantics without a database service.
 - **Queue and Director** (`office/queue.py`, `office/director.py`): deterministic code. Task fields: id, type, role,
@@ -340,7 +340,7 @@ records the reason, preserves the last known state, opens an investigation task 
 
 | Option | What runs where | Cost | Fit |
 |---|---|---|---|
-| (a) Git-backed log + Claude cloud sessions (recommended start) | state on `office-state` branch; workers are cloud sessions started by a heartbeat task and by fire-next | no new bill; uses the owner's Claude plan usage (plan limits Unknown here, so budgets are enforced in code) | uses only verified infrastructure; latency = heartbeat; reliability must be proven (a shared persistent session lost 3 of 6 runs on 14 Oct) |
+| (a) Git-backed log + Claude cloud sessions (recommended start) | state on `claude/office-state` branch; workers are cloud sessions started by a heartbeat task and by fire-next | no new bill; uses the owner's Claude plan usage (plan limits Unknown here, so budgets are enforced in code) | uses only verified infrastructure; latency = heartbeat; reliability must be proven (a shared persistent session lost 3 of 6 runs on 14 Oct) |
 | (b) Cloudflare Workers + D1 | queue/state in D1 with real transactions, cron and HTTP event endpoints, dashboard API; heavy Python still in cloud sessions | Workers/D1 free tier is likely enough (plan tier Unknown; check before use) | better transactions and webhooks; needs a credential to start sessions or a GitHub token, which is an owner decision |
 | (c) Small VPS (e.g. a ~£4-6/month instance) | systemd worker, SQLite, Python research, Anthropic API for agent roles | server ~£50-70/year plus API usage, which depends on volume (budget-capped; for scale, tens of judgement tasks a day is plausibly tens of pounds a month; not measured) | truly always-running; new paid services and a new secret store |
 
@@ -487,7 +487,7 @@ success) and stops for review before the next phase.
   `office/health.py`, `office/tests/*`; heartbeat scheduled task prompt in `office/WORKER.md`.
 - Tests: chain tampering, lease expiry, duplicate claim under concurrent CAS, idempotency, retries and quarantine,
   cycle rejection, growth limits, budget exhaustion, rebuild after crash.
-- Deployment: `office-state` branch; one heartbeat scheduled task (created only on the owner's approval), first only
+- Deployment: `claude/office-state` branch; one heartbeat scheduled task (created only on the owner's approval), first only
   running read-only maintenance tasks (daily read-only demo reconciliation, health). Verify whether fresh sessions see
   `/mnt/project-files`.
 - Risks: scheduled-task reliability, git push contention with other threads, plan usage limits.
@@ -540,6 +540,6 @@ success) and stops for review before the next phase.
   effective N, keep exploratory labels, one confirmation batch ever.
 - Agent drift into gate or config edits. Mitigation: gates and mandates in code at fixed paths, owner-only changes
   via reviewed PRs, auditor checks every event.
-- Contention with the equity pipeline and the monitor threads on git. Mitigation: separate `office-state` branch.
+- Contention with the equity pipeline and the monitor threads on git. Mitigation: separate `claude/office-state` branch.
 - Usage limits of the owner's Claude plan (Unknown). Mitigation: budgets enforced in code and visible on the dashboard.
 - Demo results being read as evidence for the ISA. Mitigation: separate mandates, readiness review, and labels.

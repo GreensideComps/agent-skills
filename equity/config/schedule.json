@@ -1,45 +1,6 @@
 {
- "note": "What is expected to run, and what counts as evidence that it ran. Evidence is a commit on a branch (Claude routines) or an ok finish in equity/data/jobs/ (equity jobs); a schedule existing proves nothing. Cron fields: minute hour day-of-month month day-of-week (0=Sunday), read in `tz`. Copied from the routines' triggers on 2026-10-14; update this file when a routine's schedule changes.",
+ "note": "What is expected to run, and what counts as evidence that it ran. Evidence is a commit on a branch (Claude routines) or an ok finish in equity/data/jobs/ (equity jobs); a schedule existing proves nothing. Cron fields: minute hour day-of-month month day-of-week (0=Sunday), read in `tz`. Copied from the routines' triggers on 2026-10-14; update this file when a routine's schedule changes. The three T212 demo routines (hourly trader, trading ops, research loop) were deleted on 2026-10-20 (decision O10) and removed from this file the same day.",
  "expectations": [
-  {
-   "name": "T212 demo: hourly trader + monitor",
-   "trigger_id": "trig_01Qh8CiQcWpUK4Jop7EvdEH4",
-   "cron": "57 7-20 * * 1-5",
-   "tz": "Europe/London",
-   "active_from": "2026-10-14T07:46:35Z",
-   "grace_minutes": 45,
-   "evidence": {
-    "type": "commit",
-    "branch": "claude/trading212-agent-skills-r71zy3",
-    "prefix": "monitor:"
-   }
-  },
-  {
-   "name": "T212 demo: trading ops",
-   "trigger_id": "trig_015u78BVGNK8bFDbg26cwcn8",
-   "cron": "20 8 * * 1-5",
-   "tz": "Europe/London",
-   "active_from": "2026-10-13T19:27:04Z",
-   "grace_minutes": 120,
-   "evidence": {
-    "type": "commit",
-    "branch": "claude/trading212-agent-skills-r71zy3",
-    "prefix": "ops: trading run"
-   }
-  },
-  {
-   "name": "T212 demo: research loop",
-   "trigger_id": "trig_019cbvFKHAnfuPE24Bqexu9L",
-   "cron": "13 1,13 * * *",
-   "tz": "Europe/London",
-   "active_from": "2026-10-13T12:51:41Z",
-   "grace_minutes": 240,
-   "evidence": {
-    "type": "commit",
-    "branch": "claude/trading212-agent-skills-r71zy3",
-    "prefix": "research:"
-   }
-  },
   {
    "name": "Equity daily pipeline: screen",
    "cron": "27 22 * * 1-5",

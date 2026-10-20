@@ -14,6 +14,7 @@ import os
 import random
 import subprocess
 import time
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Callable
 
@@ -33,8 +34,9 @@ class Contention(Exception):
 
 class GitStore:
     def __init__(self, workdir: str | Path, branch: str, remote_url: str | None = None, actor: str = "worker",
-                 timeout: float = 60.0):
+                 timeout: float = 60.0, clock: Callable[[], float] | None = None):
         self.dir, self.branch, self.actor, self.timeout = Path(workdir), branch, actor, timeout
+        self.clock = clock  # event timestamps; None = the real clock (tests pass a fake one)
         if not (self.dir / ".git").exists():
             if remote_url is None:
                 raise ValueError("a new workdir needs remote_url")
@@ -107,7 +109,9 @@ class GitStore:
         False if another writer got there first. Raises StoreUnavailable if the outcome cannot be determined."""
         if self.read() != base:
             raise RuntimeError("workdir changed since sync")
-        (self.dir / LOG).write_text(ev.extend(base, new, self.actor))
+        now = None if self.clock is None else datetime.fromtimestamp(self.clock(), timezone.utc).isoformat(
+            timespec="seconds")
+        (self.dir / LOG).write_text(ev.extend(base, new, self.actor, now))
         self._git("add", LOG)
         self._git("commit", "-q", "-m", message[:200])
         mine = self._git("rev-parse", "HEAD").stdout.strip()
