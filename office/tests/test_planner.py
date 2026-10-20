@@ -57,3 +57,16 @@ def test_planner_never_touches_registry_or_runs(tmp_path):
     mods = {n.module or "" for n in ast.walk(tree) if isinstance(n, ast.ImportFrom)} | \
            {a.name for n in ast.walk(tree) if isinstance(n, ast.Import) for a in n.names}
     assert not {m for m in mods if "edge" in m or "subprocess" in m or "research" in m}
+
+
+def test_review_findings_windows_and_week_limit(tmp_path):
+    for w in ({"confirmation": ["2026-12", "2023-02"]}, {"exploration": ["2026-10", "2026-13"]},
+              {"Confirmation": ["2024-01", "2024-06"]}, {"holdout": ["2010-01", "2011-01"]}, ["2010-01", "2011-01"]):
+        with pytest.raises(planner.PlannerError):
+            planner.draft(dict(CAND, windows=w), EVENTS, DAY, tmp_path / "a")
+    assert not (tmp_path / "a").exists()                      # nothing written on refusal
+    planner.draft(CAND, EVENTS, DAY, tmp_path / "main")
+    with pytest.raises(planner.PlannerError, match="already exists"):
+        planner.draft(CAND, EVENTS, DAY, tmp_path / "other", also_check=(tmp_path / "main",))
+    with pytest.raises(planner.PlannerError, match="must be text"):
+        planner.draft(dict(CAND, hypothesis=["x"]), EVENTS, DAY + dt.timedelta(days=7), tmp_path / "x")

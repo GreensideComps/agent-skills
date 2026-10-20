@@ -71,7 +71,12 @@ def primary_price_usd(prices: dict[str, dict], cfg: dict, as_of: str) -> tuple[f
             return None, {"status": "unpriced", "reason": f"no price for {sym}"}
         if (today - date.fromisoformat(p["date"])).days > cfg["max_price_age_days"]:
             return None, {"status": "unpriced", "reason": f"{sym} price is stale ({p['date']})"}
+        if p["date"] > as_of:
+            return None, {"status": "unpriced", "reason": f"{sym} price is dated {p['date']}, after {as_of}"}
         got[key] = p
+    if abs((date.fromisoformat(got["line"]["date"]) - date.fromisoformat(got["fx"]["date"])).days) > 1:
+        return None, {"status": "unpriced", "reason": f"VWRP ({got['line']['date']}) and GBPUSD "
+                                                      f"({got['fx']['date']}) closes are more than a day apart"}
     unit = {"GBP": 1.0, "GBp": 0.01, "GBX": 0.01}.get(got["line"].get("currency"))
     if unit is None or got["fx"].get("currency") not in (None, "USD"):
         return None, {"status": "unpriced", "reason": f"unexpected currency {got['line'].get('currency')} / "
@@ -82,7 +87,8 @@ def primary_price_usd(prices: dict[str, dict], cfg: dict, as_of: str) -> tuple[f
                  "fx_rid": got["fx"]["rid"], "calc": f"{gbp:.4f} GBP x {got['fx']['close']:.5f} = {usd:.4f} USD"}
 
 
-def _mark_primary(store: Store, prices: dict[str, dict], as_of: str, cfg: dict, port_nav: float) -> dict:
+def _mark_primary(store: Store, prices: dict[str, dict], as_of: str, cfg: dict, port_nav: float,
+                  port_unpriced: list | None = None) -> dict:
     pb = cfg["primary_benchmark"]
     book, cid = pb["book"], f"{BENCH_PREFIX}{pb['symbol']}"
     usd, how = primary_price_usd(prices, cfg, as_of)
@@ -90,6 +96,12 @@ def _mark_primary(store: Store, prices: dict[str, dict], as_of: str, cfg: dict, 
     if st["cash"] is None:
         if usd is None:
             return {**how, "status": "not started"}
+        # Funding uses the screen book's NAV, so it must be complete, and the day's NAV record must not exist yet
+        # (a second mark on one day would otherwise fund the book under a record that says "not started").
+        if port_unpriced:
+            return {"status": "not started", "reason": f"screen book has unpriced positions {port_unpriced}"}
+        if any(n["rid"] == f"nav:{as_of}" for n in store.paper_nav.read()):
+            return {"status": "not started", "reason": f"{as_of} is already marked; starts at the next mark"}
         now = utc_now()
         qty = port_nav / (usd * (1 + _cost(cfg)))  # all cash, as the SPY book does
         store.paper.append([
@@ -248,10 +260,10 @@ def mark(store: Store, prices: dict[str, dict], as_of: str, cfg: dict | None = N
     rec = {"rid": f"nav:{as_of}", "as_of": as_of, "ts_utc": utc_now(), **out}
     rec["excess_return"] = out["portfolio"]["nav"] / out["benchmark"]["nav"] - 1
     if cfg.get("primary_benchmark"):
-        v = _mark_primary(store, prices, as_of, cfg, out["portfolio"]["nav"])
+        v = _mark_primary(store, prices, as_of, cfg, out["portfolio"]["nav"], out["portfolio"]["unpriced"])
         rec["method_version"] = cfg["method_version"]
         rec["benchmark_vwrp"] = v
-        if v["status"] == "marked":
+        if v["status"] == "marked" and not out["portfolio"]["unpriced"]:
             # The VWRP book was funded with the screen book's NAV on its start day, so this ratio is the screen
             # book's return since then relative to VWRP's.
             rec["excess_return_vwrp"] = out["portfolio"]["nav"] / v["nav"] - 1

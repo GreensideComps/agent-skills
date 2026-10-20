@@ -53,12 +53,21 @@ def _months_overlap(a: tuple[str, str], b: tuple[str, str]) -> bool:
     return a[0] <= b[1] and b[0] <= a[1]
 
 
+WINDOW_NAMES = ("exploration", "confirmation")
+
+
 def contamination(windows: dict) -> list[str]:
-    """Plain statements of which proposed windows touch seen data; a confirmation window inside it is refused."""
+    """Plain statements of which proposed windows touch seen data; a confirmation window inside it is refused.
+    Only the names in WINDOW_NAMES are accepted, so a confirmation window cannot hide under another name."""
+    if not isinstance(windows, dict):
+        raise PlannerError("windows must be an object {exploration|confirmation: [YYYY-MM, YYYY-MM]}")
     out = []
     for name, w in windows.items():
-        if not (isinstance(w, (list, tuple)) and len(w) == 2 and all(re.fullmatch(r"\d{4}-\d{2}", x) for x in w)):
-            raise PlannerError(f"window {name!r} must be [YYYY-MM, YYYY-MM]")
+        if name not in WINDOW_NAMES:
+            raise PlannerError(f"window name {name!r} is not one of {WINDOW_NAMES}")
+        if not (isinstance(w, (list, tuple)) and len(w) == 2 and
+                all(isinstance(x, str) and re.fullmatch(r"\d{4}-(0[1-9]|1[0-2])", x) for x in w)) or w[0] > w[1]:
+            raise PlannerError(f"window {name!r} must be [YYYY-MM, YYYY-MM] with valid months, start <= end")
         w = tuple(w)
         if _months_overlap(w, SEEN):
             if name == "confirmation":
@@ -78,18 +87,24 @@ def week_of(day: dt.date) -> str:
     return f"{y}-W{w:02d}"
 
 
-def draft(candidate: dict, events: list[dict], today: dt.date, out_dir: Path) -> Path:
-    """Write one proposal draft; refuse if incomplete or if this ISO week already has one."""
+def draft(candidate: dict, events: list[dict], today: dt.date, out_dir: Path,
+          also_check: tuple[Path, ...] = ()) -> Path:
+    """Write one proposal draft; refuse if incomplete or if this ISO week already has one in `out_dir` or any of
+    `also_check` (the CLI passes the repository's own proposals folder, so another --out-dir cannot add a second)."""
     missing = [k for k in REQUIRED if not candidate.get(k)]
     if missing:
         raise PlannerError(f"candidate is missing {missing}")
+    text = [k for k in REQUIRED if k not in ("costs", "windows") and not isinstance(candidate[k], str)]
+    if text:
+        raise PlannerError(f"fields {text} must be text")
     wk = week_of(today)
+    for d in (out_dir, *also_check):
+        if Path(d).is_dir() and list(Path(d).glob(f"{wk}-*.md")):
+            raise PlannerError(f"a proposal for {wk} already exists in {d} (one per week, D-T15)")
+    cont = contamination(candidate["windows"])     # refuse before writing anything
     out_dir.mkdir(parents=True, exist_ok=True)
-    if list(out_dir.glob(f"{wk}-*.md")):
-        raise PlannerError(f"a proposal for {wk} already exists (one per week, D-T15)")
     n_dsr = len({e["id"] for e in events if e.get("event") == "register" and e.get("counts_for_dsr")})
     ov = overlap(candidate, events)
-    cont = contamination(candidate["windows"])
     costs = candidate["costs"]
     slug = re.sub(r"[^a-z0-9]+", "-", candidate["title"].lower()).strip("-")[:50]
     path = out_dir / f"{wk}-{slug}.md"

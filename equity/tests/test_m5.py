@@ -127,3 +127,19 @@ def test_paper_10_records_are_not_restated(store):
     paper.mark(store, _vw(_px("2026-10-16", A=11.0), "2026-10-16"), "2026-10-16", CFG)
     after = store.paper.read()
     assert after[:len(before)] == before and all(t["method_version"] == "paper-1.0" for t in before)
+
+
+def test_vwrp_review_findings_unpriced_future_and_same_day(store):
+    paper.rebalance(store, _screen("2026-10-14", [("A", 80.0), ("B", 70.0)]), _px("2026-10-14", A=10.0, B=20.0), CFG)
+    m = paper.mark(store, _vw(_px("2026-10-15", A=11.0), "2026-10-15"), "2026-10-15", CFG)   # B unpriced
+    assert m["benchmark_vwrp"]["status"] == "not started" and "unpriced" in m["benchmark_vwrp"]["reason"]
+    m = paper.mark(store, _vw(_px("2026-10-15", A=11.0, B=22.0), "2026-10-15"), "2026-10-15", CFG)  # same day again
+    assert m["benchmark_vwrp"]["status"] == "not started" and "already marked" in m["benchmark_vwrp"]["reason"]
+    assert not [t for t in store.paper.read() if t["book"] == "benchmark_vwrp"]
+    future = _vw(_px("2026-10-16", A=11.0, B=22.0), "2026-10-17")
+    assert "after" in paper.primary_price_usd(future, CFG, "2026-10-16")[1]["reason"]
+    skew = _vw({}, "2026-10-16")
+    skew["BENCH:GBPUSD=X"]["date"] = "2026-10-13"
+    assert "apart" in paper.primary_price_usd(skew, CFG, "2026-10-16")[1]["reason"]
+    m = paper.mark(store, _vw(_px("2026-10-16", A=11.0, B=22.0), "2026-10-16"), "2026-10-16", CFG)
+    assert m["benchmark_vwrp"]["status"] == "marked" and m["excess_return_vwrp"] == pytest.approx(COST)

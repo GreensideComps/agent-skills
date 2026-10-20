@@ -61,10 +61,13 @@ def main(argv: list[str] | None = None) -> int:
         import datetime as dt
         from . import planner
         reg = REPO / "research" / "edge" / "trials.jsonl"
-        events = [json.loads(x) for x in reg.read_text().splitlines() if x.strip()]
         try:
+            if not reg.exists():
+                raise planner.PlannerError(f"trial registry {reg} is missing; prior-trial overlap cannot be computed")
+            events = [json.loads(x) for x in reg.read_text().splitlines() if x.strip()]
             print(planner.draft(json.loads(Path(a.candidate).read_text()), events,
-                                dt.datetime.now(dt.timezone.utc).date(), Path(a.out_dir)))
+                                dt.datetime.now(dt.timezone.utc).date(), Path(a.out_dir),
+                                also_check=(REPO / "docs" / "edge" / "proposals",)))
         except planner.PlannerError as e:
             print("REFUSED:", e)
             return 2

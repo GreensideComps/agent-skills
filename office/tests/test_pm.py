@@ -55,7 +55,7 @@ def test_shipped_repo_config_gives_default():
 def test_strategy_needs_owner_decision_and_passing_trials():
     h = [{"ticker": "X", "weight": 0.02, "sic": 2834}]
     for cfg, why in ((strat(h, owner="yes"), "owner decision"), (strat(h, trials=()), "cites no trial"),
-                     (strat(h, trials=("T-FAIL",)), "verdict is fail"), (strat(h, trials=("NOPE",)), "not in"),
+                     (strat(h, trials=("T-FAIL",)), "not exactly one pass"), (strat(h, trials=("NOPE",)), "not in"),
                      (strat(h, trials=("D-1",)), "diagnostic")):
         r = run(cfg)
         assert r["verdict"] == "default" and why in r["refused_strategies"][0]["reason"]
@@ -122,3 +122,48 @@ def test_pm_imports_no_broker_code():
     mods = {n.module or "" for n in ast.walk(ast.parse(src)) if isinstance(n, ast.ImportFrom)} | \
            {a.name for n in ast.walk(ast.parse(src)) if isinstance(n, ast.Import) for a in n.names}
     assert not {m for m in mods if "t212" in m or "trading" in m or "orders" in m or "requests" in m}
+
+
+def test_review_findings_negative_duplicate_and_rerun():
+    shorts = [{"ticker": f"X{i}", "weight": -0.05, "sic": sic} for i, sic in enumerate((7372, 6022, 3711, 1311, 2834))]
+    r = run(strat(shorts))
+    assert r["verdict"] == "rejected" and "weights_valid" in r["failed"]
+    r = run(strat([{"ticker": "MSFT", "weight": 0.05, "sic": 7372}, {"ticker": "ORCL", "weight": -0.05, "sic": 7372}]))
+    assert r["verdict"] == "rejected"
+    two = {"strategies": [strat([{"ticker": "AAPL", "weight": 0.04, "sic": 3571}])["strategies"][0],
+                          dict(strat([{"ticker": "aapl ", "weight": 0.04, "sic": 3571}])["strategies"][0], id="S2")]}
+    r = run(two)
+    assert "per_company:AAPL" in r["failed"] and r["verdict"] == "rejected"
+    rerun = REG + [{"event": "result", "id": "T-FAIL", "verdict": "pass"}]
+    r = pm.propose(eligible_cfg=strat([{"ticker": "X", "weight": 0.02, "sic": 2834}], trials=("T-FAIL",)),
+                   trial_events=rerun, look_cfg=LOOK, today=TODAY)
+    assert r["verdict"] == "default" and "not exactly one pass" in r["refused_strategies"][0]["reason"]
+
+
+def test_review_findings_trailing_by_date_and_accepted_without_history():
+    gap = [(f"2025-{m:02d}-28", 100.0, 100.0) for m in range(1, 13) if m != 2] + [("2026-01-31", 100.0, 100.0),
+                                                                                ("2026-02-28", 100.0, 100.0)]
+    r = pm.review(gap)
+    assert r["status"] == "unverified" and "2025-02" in r["reason"]
+    assert pm.review([("2026-01-31", 0.0, 100.0), ("2026-02-28", 1.0, 100.0)])["status"] == "unverified"
+    young = pm.review([("2026-01-31", 100.0, 100.0), ("2026-03-31", 80.0, 100.0)])
+    assert young["status"] == "review_threshold breached" and "since inception" in young["trailing_12m"]["note"]
+    acc = run(strat([{"ticker": "X", "weight": 0.05, "sic": 2834}]))
+    assert acc["verdict"] == "accepted" and acc["review"]["status"] == "unverified"
+
+
+def test_review_findings_lookthrough_bounds_and_other_bucket():
+    bad = dict(LOOK, sector_weights=dict(LOOK["sector_weights"], Technology=0.36, Energy=-0.06))
+    assert not pm.lookthrough(bad, TODAY)[0]["verified"]
+    other = dict(LOOK, sector_weights=dict(LOOK["sector_weights"], Industrials=0.13995, Other=0.00005))
+    look, flags = pm.lookthrough(other, TODAY)
+    assert look["verified"] and look["evidence"]["unclassified"] == 0.00005
+    assert not pm.lookthrough(dict(LOOK, top_holdings={"AAPL": None}), TODAY)[0]["verified"]
+
+
+def test_shipped_vanguard_data_passes_default():
+    r = pm.from_repo(Path(__file__).resolve().parents[2], dt.date(2026, 10, 20))
+    rows = [c for c in r["constraints"] if c["constraint"].startswith("sector_active:")]
+    assert len(rows) == 11 and all(c["status"] == "pass" for c in rows) and not r["unverified"]
+    assert rows[0]["evidence"]["as_of"] == "2026-08-31" and "vanguard.co.uk" in rows[0]["evidence"]["source"]
+    assert pm.from_repo(Path(__file__).resolve().parents[2], dt.date(2026, 12, 20))["unverified"]  # 111 days old

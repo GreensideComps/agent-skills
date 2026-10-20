@@ -86,7 +86,7 @@ Nothing runs as a supervised, self-recovering system yet.
 ## Highest-priority blockers
 
 1. **G1 is running** (started 20 Oct 11:56Z, earliest pass 3 Nov). The crash drill is still to do.
-2. **Owner review of the pm-1.0 / paper-1.1 / planner draft PR** before merge; the sector-limit reading needs confirming.
+2. **Owner review of draft PR #27** (pm-1.0, paper-1.1, planner) before merge. Sector rule confirmed 20 Oct 12:19Z.
 3. **Pack B decisions** (weekday brief, decile rule, unscored option, M1 branch) block only their own steps.
 
 ## Risks

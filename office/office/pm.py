@@ -24,6 +24,7 @@ MAX_PER_COMPANY = 0.05
 MAX_SECTOR_ACTIVE = 0.10
 REVIEW_RELATIVE = -0.15
 LOOKTHROUGH_MAX_AGE_DAYS = 95
+UNCLASSIFIED_MAX = 0.005   # provider "Other" sectors up to 0.5 points are reported, not blocking
 EPS = 1e-9
 
 
@@ -38,11 +39,12 @@ def trial_verdicts(events: list[dict]) -> dict[str, dict]:
         tid = e.get("id")
         if not tid:
             continue
-        rec = out.setdefault(tid, {"kind": None, "verdict": None})
+        rec = out.setdefault(tid, {"kind": None, "verdict": None, "verdicts": []})
         if e.get("event") == "register":
             rec["kind"] = e.get("kind")
         elif e.get("event") == "result" and e.get("verdict") is not None:
             rec["verdict"] = e["verdict"]
+            rec["verdicts"].append(e["verdict"])
     return out
 
 
@@ -63,8 +65,9 @@ def eligible(cfg: dict, verdicts: dict[str, dict]) -> tuple[list[dict], list[dic
                     why = f"trial {t} is not in the registry"
                 elif v["kind"] != "trial":
                     why = f"{t} is registered as {v['kind']}, not a trial"
-                elif v["verdict"] != "pass":
-                    why = f"trial {t} verdict is {v['verdict']}, not pass"
+                elif v["verdicts"] != ["pass"]:
+                    # Exactly one result, and it passed: a trial re-run after a failure until it passes is refused.
+                    why = f"trial {t} results are {v['verdicts'] or 'none'}, not exactly one pass"
                 if why:
                     break
         (refused if why else ok).append({"id": sid, "reason": why} if why else s)
@@ -92,27 +95,78 @@ def lookthrough(cfg: dict | None, today: dt.date) -> tuple[dict, list[str]]:
     except (KeyError, TypeError, ValueError):
         flags.append("unverified: VWRP look-through has no valid as-of date")
     mapped: dict[str, float] = {}
+    unclassified, total = 0.0, 0.0
     for name, w in cfg["sector_weights"].items():
+        try:
+            w = float(w)
+        except (TypeError, ValueError):
+            flags.append(f"unverified: VWRP weight for {name!r} is not a number")
+            continue
+        if not 0.0 <= w <= 1.0:
+            flags.append(f"unverified: VWRP weight for {name!r} is {w}, outside 0..1")
+            continue
+        total += w
         sec = sectors.from_icb(name)
         if sec is None:
-            flags.append(f"unverified: provider sector {name!r} has no mapping")
+            unclassified += w      # e.g. the provider's own "Other" bucket
             continue
-        mapped[sec] = mapped.get(sec, 0.0) + float(w)
-    total = sum(float(w) for w in cfg["sector_weights"].values())
+        mapped[sec] = mapped.get(sec, 0.0) + w
+    if unclassified > UNCLASSIFIED_MAX:
+        flags.append(f"unverified: {unclassified:.4%} of VWRP is in provider sectors with no mapping "
+                     f"(limit {UNCLASSIFIED_MAX:.1%})")
     if abs(total - 1.0) > 0.02:
         flags.append(f"unverified: VWRP sector weights sum to {total:.4f}, not 1 +/- 0.02")
     verified = not flags
     flags.append("classification mismatch: VWRP sectors are FTSE/ICB, satellites are SIC-mapped (sectors.py)")
-    return {"sectors": mapped, "companies": {k: float(v) for k, v in cfg.get("top_holdings", {}).items()},
+    companies = {}
+    for k, v in cfg.get("top_holdings", {}).items():
+        try:
+            if 0.0 <= float(v) <= 1.0:
+                companies[_norm(k)] = float(v)
+                continue
+        except (TypeError, ValueError):
+            pass
+        flags.append(f"unverified: VWRP holding weight for {k!r} is not a number in 0..1")
+        verified = False
+    return {"sectors": mapped, "companies": companies,
             "verified": verified, "evidence": {"source": cfg.get("source"), "as_of": cfg.get("as_of"),
-                                               "age_days": age, "sector_weight_sum": round(total, 6)}}, flags
+                                               "age_days": age, "sector_weight_sum": round(total, 6),
+                                               "unclassified": round(unclassified, 6)}}, flags
+
+
+def _norm(ticker) -> str:
+    return str(ticker).strip().upper()
+
+
+def holdings(strategies: list[dict]) -> tuple[list[dict], list[str]]:
+    """Satellite holdings added up per company (normalised ticker), and every reason the weights are invalid.
+    Weights must be finite numbers in (0, 1]; a negative weight would be a short and is never accepted."""
+    agg: dict[str, dict] = {}
+    bad = []
+    for s in strategies:
+        for h in s.get("holdings", []):
+            t = _norm(h.get("ticker", ""))
+            try:
+                w = float(h.get("weight"))
+            except (TypeError, ValueError):
+                bad.append(f"{t or '?'}: weight {h.get('weight')!r} is not a number")
+                continue
+            if not t or not (0.0 < w <= 1.0):       # also refuses NaN and infinities
+                bad.append(f"{t or '?'}: weight {w} is not in (0, 1]")
+                continue
+            a = agg.setdefault(t, {"ticker": t, "weight": 0.0, "sic": h.get("sic"), "sources": []})
+            a["weight"] += w
+            a["sources"].append(f"{s['id']} {w:.4f}")
+            if a["sic"] != h.get("sic"):
+                bad.append(f"{t}: strategies give different SIC codes ({a['sic']}, {h.get('sic')})")
+    return list(agg.values()), bad
 
 
 def _status(ok: bool, verified: bool = True) -> str:
     return "fail" if not ok else ("pass" if verified else "unverified")
 
 
-def check(sats: list[dict], look: dict) -> list[dict]:
+def check(sats: list[dict], look: dict, bad: list[str] | None = None) -> list[dict]:
     """Every constraint for a candidate book: core VWRP plus satellites [{ticker, weight, sic}] (§2).
 
     Each record: constraint, limit, value, calc (the arithmetic), evidence, enforced, status (pass / fail /
@@ -121,13 +175,17 @@ def check(sats: list[dict], look: dict) -> list[dict]:
     out_w = sum(float(h["weight"]) for h in sats)
     core = 1.0 - out_w
     ev = look["evidence"]
-    res = [{"constraint": "outside_core", "limit": MAX_OUTSIDE_CORE, "value": out_w, "enforced": True,
+    res = [{"constraint": "weights_valid", "limit": "each in (0, 1], core in [0, 1]", "value": bad or [],
+            "enforced": True, "calc": "; ".join(bad) if bad else "all satellite weights in (0, 1]",
+            "evidence": "proposal weights", "status": _status(not bad and 0.0 <= core <= 1.0)}]
+    res += [{"constraint": "outside_core", "limit": MAX_OUTSIDE_CORE, "value": out_w, "enforced": True,
             "calc": " + ".join(f"{h['ticker']} {float(h['weight']):.4f}" for h in sats) + f" = {out_w:.4f}" if sats
             else "no satellites = 0", "evidence": "proposal weights", "status": _status(out_w <= MAX_OUTSIDE_CORE + EPS)}]
     for h in sats:
         w = float(h["weight"])
         res.append({"constraint": f"per_company:{h['ticker']}", "limit": MAX_PER_COMPANY, "value": w,
-                    "enforced": True, "calc": f"direct {w:.4f}", "evidence": "proposal weights",
+                    "enforced": True, "calc": f"direct {' + '.join(h.get('sources') or [f'{w:.4f}'])} = {w:.4f}",
+                    "evidence": "proposal weights, added up per company",
                     "status": _status(w <= MAX_PER_COMPANY + EPS)})
         lt = look["companies"].get(h["ticker"])
         tot = w + core * (lt or 0.0)
@@ -168,7 +226,9 @@ def review(series: list[tuple[str, float, float]] | None) -> dict:
     if not series:
         return {"status": "not applicable", "reason": "no satellite sleeve"}
     if len(series) < 2:
-        return {"status": "not enough data", "reason": "fewer than two month-end marks"}
+        return {"status": "unverified", "reason": "fewer than two month-end marks"}
+    if any(not (v1 > 0 and v2 > 0) for _, v1, v2 in series):
+        return {"status": "unverified", "reason": "a sleeve or VWRP value is not positive"}
 
     def window(a, b):
         rs, rv = b[1] / a[1] - 1, b[2] / a[2] - 1
@@ -176,7 +236,16 @@ def review(series: list[tuple[str, float, float]] | None) -> dict:
         return {"from": a[0], "to": b[0], "sleeve": rs, "vwrp": rv, "relative": rel,
                 "calc": f"(1 + {rs:+.4f}) / (1 + {rv:+.4f}) - 1 = {rel:+.4f}"}
     last = series[-1]
-    trailing = window(series[max(0, len(series) - 13)], last)
+    d_last = dt.date.fromisoformat(last[0])
+    y, m = (d_last.year - 1, d_last.month)
+    # The trailing window starts at the month-end 12 months before the last one, chosen by date, not row count.
+    start = [r for r in series if (dt.date.fromisoformat(r[0]).year, dt.date.fromisoformat(r[0]).month) == (y, m)]
+    if start:
+        trailing = window(start[-1], last)
+    elif dt.date.fromisoformat(series[0][0]) > dt.date(y, m, 1):
+        trailing = dict(window(series[0], last), note="sleeve younger than 12 months: since inception")
+    else:
+        return {"status": "unverified", "reason": f"no month-end mark for {y}-{m:02d}, the trailing-12m start"}
     inception = window(series[0], last)
     breach = [n for n, w in (("trailing_12m", trailing), ("since_inception", inception))
               if w["relative"] <= REVIEW_RELATIVE + EPS]
@@ -192,8 +261,10 @@ def propose(*, eligible_cfg: dict, trial_events: list[dict], look_cfg: dict | No
     """One proposal record (§5). Pure: reads only its arguments."""
     ok, refused = eligible(eligible_cfg, trial_verdicts(trial_events))
     look, flags = lookthrough(look_cfg, today)
-    sats = [h for s in ok for h in s.get("holdings", [])]
-    checks = check(sats, look)
+    sats, bad = holdings(ok)
+    checks = check(sats, look, bad)
+    if bad and not sats:
+        sats = [{"ticker": "?", "weight": 0.0}]   # an all-invalid candidate is still a rejected candidate
     failed = [c["constraint"] for c in checks if c["enforced"] and c["status"] == "fail"]
     unverified = [c["constraint"] for c in checks if c["enforced"] and c["status"] == "unverified"]
     flags += [f"look-through company weight above {MAX_PER_COMPANY:.0%}: {c['constraint'].split(':', 1)[1]}"
@@ -201,9 +272,9 @@ def propose(*, eligible_cfg: dict, trial_events: list[dict], look_cfg: dict | No
     flags += [f"unknown sector: {h['ticker']} has no usable SIC code" for h in sats
               if sectors.from_sic(h.get("sic")) is None]
     if sats and not failed and not unverified:
-        targets = [{"ticker": h["ticker"], "weight": float(h["weight"]), "reason": f"eligible strategy "
-                    f"{s['id']} (owner {s['owner_decision']}, trials {s['trials']})"}
-                   for s in ok for h in s.get("holdings", [])]
+        owners = {s["id"]: f"owner {s['owner_decision']}, trials {s['trials']}" for s in ok}
+        targets = [{"ticker": h["ticker"], "weight": h["weight"], "reason": "eligible strategies: " + "; ".join(
+                    f"{src} ({owners[src.rsplit(' ', 1)[0]]})" for src in h["sources"])} for h in sats]
         core = 1.0 - sum(t["weight"] for t in targets)
         targets.insert(0, {"ticker": CORE, "weight": core, "reason": "core: the remainder"})
         verdict = "accepted"
@@ -221,7 +292,8 @@ def propose(*, eligible_cfg: dict, trial_events: list[dict], look_cfg: dict | No
     return {"version": VERSION, "as_of": today.isoformat(), "verdict": verdict, "targets": targets,
             "no_trade": tw == cur, "constraints": checks, "failed": failed, "unverified": unverified,
             "refused_strategies": refused,
-            "flags": flags, "review": review(series if sats else None), "evidence": evidence or {},
+            "flags": flags, "review": (review(series) if series else {"status": "unverified", "reason":
+                      "no sleeve history supplied"}) if verdict == "accepted" else review(None), "evidence": evidence or {},
             "orders": "none: pm-1.0 is proposal-only"}
 
 
