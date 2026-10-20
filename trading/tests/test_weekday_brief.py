@@ -153,8 +153,7 @@ def test_a_mistaken_trading_command_in_the_clone_sends_no_order(child, tmp_path,
     clone = tmp_path / "agent-skills" / "trading"
     shutil.copytree(TRADING, clone, ignore=shutil.ignore_patterns("tests", "__pycache__", "reports"))
     (clone / "KILL").touch()
-    before = {p: p.read_bytes() for p in (TRADING / "config").iterdir()} | {
-        p: p.read_bytes() for p in (TRADING / "journal").glob("*.*")}
+    before = {p: p.read_bytes() for d in ("config", "journal") for p in (TRADING / d).rglob("*") if p.is_file()}
     r, calls = child(["-m", "t212bot", *argv], cwd=clone)
     assert [c for c in calls if not c.startswith("GET ")] == [], calls
     assert "placed:" not in r.stdout, r.stdout
@@ -163,7 +162,7 @@ def test_a_mistaken_trading_command_in_the_clone_sends_no_order(child, tmp_path,
 
 
 def test_the_kill_file_halts_a_trading_run_under_masters_strategy_before_any_order(tmp_path):
-    """Isolates the kill switch from the other pre-trade checks: master's committed strategy (100% LQQ3), a fake
+    """Isolates the kill switch from the other pre-trade checks: the old strategy (100% LQQ3), a fake
     account with cash to spend and every check otherwise passable. With the kill file the run halts with no POST;
     without it the same run would place the order."""
     from datetime import datetime, timezone
@@ -179,21 +178,26 @@ def test_the_kill_file_halts_a_trading_run_under_masters_strategy_before_any_ord
         def quote(self, s): return Quote(s, 4.0, "GBP", now, "test")
         def gbpusd(self): return Quote("GBPUSD=X", 1.33, "USD", now, "test")
 
+    # Master's committed strategy is the old one until PR #20 merges; after that it is archived byte for byte. Either
+    # way the kill switch is tested against the old 100% LQQ3 config, the one a mistaken run could reactivate.
+    from t212bot.config import CONFIG_PATH
+    archived = CONFIG_PATH.parent / "archive" / "strategy_discretionary_intraday_v1_2026-10-19.json"
+    old = load_strategy(archived if load_strategy().mode == "retired" else CONFIG_PATH)
+    assert old.name == "discretionary_intraday_v1" and old.targets == {"LQQ3l_EQ": 1.0}
+
     def bot(kill_file):
         fake = FakeT212(cash=100.0)
         fake.ccy["LQQ3l_EQ"], fake.fill_px["LQQ3l_EQ"] = "GBX", 4.0
         c = T212Client(Credentials("k", "s"), transport=fake, sleep=lambda s: None)
-        b = Bot(c, load_strategy(), Journal(tmp_path / ("j_" + kill_file.name)), quotes=Quotes(), now=lambda: now,
+        b = Bot(c, old, Journal(tmp_path / ("j_" + kill_file.name)), quotes=Quotes(), now=lambda: now,
                 sleep=lambda s: None, instruments=INSTRUMENTS + [lqq3], exchanges=exchanges_for(now), env={},
                 kill_file=kill_file)
         return b, fake
-    assert load_strategy().targets == {"LQQ3l_EQ": 1.0}  # master's file is not retired until PR #20 merges
     kill = tmp_path / "KILL"
     kill.touch()
     b, fake = bot(kill)
     res = b.run(execute=True, force=True)
     assert res["status"] == "halted" and "kill file present" in res["reason"] and fake.posts == []
-    b, fake = bot(tmp_path / "NO_KILL")
     disc = tmp_path / "discretionary_targets.json"
     disc.write_text(json.dumps({"targets": {"LQQ3l_EQ": 1.0}, "reason": "test"}))
     for k, posts in ((kill, 0), (tmp_path / "NO_KILL", 1)):  # control: without the kill file the same run orders
