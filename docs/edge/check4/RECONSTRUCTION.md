@@ -71,12 +71,51 @@ prices were already checked; the two are equivalent.
 - **Missing inputs are left out, never filled.** Company-months that pass every other eligibility rule but have no
   score (an input unavailable at the decision date): H1 8,924 against 25,176 scored; S2a 10,422 against 23,678
   scored. They are outside the frame, so Check 4 sampled from the frame cannot measure coverage misses among them.
-  This is a material gap for the coverage-miss rule (procedure §8.5).
-- **Decile definition** is this script's: decile = 10 − floor((rank − 1) × 10 / n), with rank in the engine's order.
-  The procedure did not fix one. The owner may prefer another before any draw.
+  This is a material gap for the coverage-miss rule (procedure §8.5). Classified in `MISSING_SCORES.md`.
+- **Decile definition** is a proposal, not a recorded rule: see "Decile rule (proposed)" below.
 - **Not reproduced:** the P9 veto panel, robustness variants and every valuation step. Only primary selections are
   needed for Check 4.
 - Survivorship bias in the universe is untouched and stays material and unbounded.
+
+## Decile rule (proposed; owner approval needed before any draw)
+
+**Not a historical fact.** The frozen B5 engine selects the top 20 by rank (`selection="top_n"`) and never computes
+deciles. The Check 4 procedure (PR #21 §4) stratifies by "score decile" without defining it. The rule below is this
+reconstruction's proposal. It was fixed on 20 Oct before any Check 4 sample or extraction and will not change after
+seeing extraction results.
+
+**Formula.** For one trial and decision month, take the engine's own ranked list (`edge_backtest.eligible`: the
+eligible rows with a score, sorted by score descending, then CIK ascending, rank 1..n). Then
+
+    decile = 10 - floor((rank - 1) * 10 / n)        10 = highest scores, 1 = lowest
+
+**Why it fits the frozen selection.** It uses exactly the population and order that chose the holdings, so decile
+10 contains the names the engine looked at first and every held name's decile reflects the engine's own view of it.
+It needs no new parameter, is a closed form (no interpolation) and gives decile sizes that differ by at most one.
+
+**Ties.** Two names can never share a rank: the engine breaks score ties by CIK, so a tied name's decile is set by
+its CIK, as its selection was. H1 has no tied scores. S2a has many (it ranks within-group percentiles, so the top of
+each SIC group scores 1.0): 3,419 tied groups covering 9,227 frame rows; 157 of those groups (421 rows) straddle a
+decile boundary, so for those rows the CIK tie-break decides the decile. That mirrors how the engine itself
+treated them.
+
+**Missing scores.** Excluded: they are not in the engine's ranked list, so they have no rank or decile and n counts
+scored rows only (see `MISSING_SCORES.md`).
+
+**Consistency.** The same function, population and order are used for both trials and every decision month; n is
+that month's count (H1 170-397, median 250; S2a 161-358, median 242). Tests check every committed frame row.
+
+**Deterministic example (n = 23):** ranks 1-3 → 10; 4-5 → 9; 6-7 → 8; 8-10 → 7; 11-12 → 6; 13-14 → 5; 15-17 → 4;
+18-19 → 3; 20-21 → 2; 22-23 → 1.
+
+**Alternative the owner could choose instead:** Stage 2's precedent in the frozen code
+(`edge_backtest.stage2_top_quintile`: `pd.qcut(score.rank(method="first"), 10)`, ties broken by input order). It
+places boundaries by quantile interpolation, so it differs from the proposal on 420 H1 and 466 S2a frame rows;
+top-decile membership differs for 7 H1 and 13 S2a rows and bottom-decile membership for 83 and 89. Its tie-break
+depends on row order, which B5 does not fix, so it is less reproducible here.
+
+Tests: `research/check4/test_decile.py` (11): the example above, sizes, monotonicity, the tie order, and every
+committed frame row of both trials.
 
 ## Next step (needs the owner's review)
 
