@@ -1,0 +1,4 @@
+# Test runner for the office's daily test_suites task. Fresh worker sessions do not have it (diagnosed
+# 20 Oct 2026); the heartbeat installs this file before running the worker. numpy, pandas and requests come
+# with the base image.
+pytest==9.1.1
