@@ -34,9 +34,11 @@ class Contention(Exception):
 
 class GitStore:
     def __init__(self, workdir: str | Path, branch: str, remote_url: str | None = None, actor: str = "worker",
-                 timeout: float = 60.0, clock: Callable[[], float] | None = None):
+                 timeout: float = 60.0, clock: Callable[[], float] | None = None,
+                 root: str | None = None):
         self.dir, self.branch, self.actor, self.timeout = Path(workdir), branch, actor, timeout
         self.clock = clock  # event timestamps; None = the real clock (tests pass a fake one)
+        self.root = root  # the branch's first commit, pinned in code: a rebuilt (force-pushed) history has another
         if not (self.dir / ".git").exists():
             if remote_url is None:
                 raise ValueError("a new workdir needs remote_url")
@@ -89,8 +91,11 @@ class GitStore:
         """Walk every commit of the branch (oldest first) and check each one only appended to the log. The chain
         alone cannot detect an edit to the newest line or a rewrite of the whole file; this check can."""
         self.sync()
-        shas = self._git("rev-list", "--reverse", f"origin/{self.branch}").stdout.split()
+        shas = self._git("rev-list", "--reverse", "--first-parent", f"origin/{self.branch}").stdout.split()
         problems, prev = [], ""
+        if self.root is not None and (not shas or shas[0] != self.root):
+            problems.append(f"root commit {shas[0][:10] if shas else 'none'} is not the pinned {self.root[:10]}: "
+                            f"the branch history was replaced")
         for sha in shas:
             r = self._git("show", f"{sha}:{LOG}", check=False)
             text = r.stdout if r.returncode == 0 else ""

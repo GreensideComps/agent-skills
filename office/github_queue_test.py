@@ -78,10 +78,11 @@ def w_append_forever(work, branch, url, name):
         i += 1
 
 
-def run(branch: str, workers: int, work: Path, url: str) -> dict:
+def run(branch: str, workers: int, work: Path, url: str, created: list) -> dict:
     rep: dict = {"branch": branch, "workers": workers, "results": {}}
     R = rep["results"]
     GitStore.create_branch(work / "seed", url, branch)
+    created.append(branch)
     main = store(work, "main", branch, url)
     ctx = mp.get_context("fork")
 
@@ -195,16 +196,20 @@ def main() -> int:
     ap.add_argument("--workers", type=int, default=6)
     ap.add_argument("--report")
     a = ap.parse_args()
+    if not a.branch.startswith("office-queue-test-"):
+        raise SystemExit("--branch must start with office-queue-test- (this script deletes the branch afterwards)")
     url = remote_url()
     work = Path(tempfile.mkdtemp(prefix="office-gh-"))
     signal.signal(signal.SIGTERM, lambda *x: sys.exit(3))
     rep: dict = {"branch": a.branch, "started": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())}
+    created = []
     try:
-        rep.update(run(a.branch, a.workers, work, url))
+        rep.update(run(a.branch, a.workers, work, url, created))
     except BaseException as e:  # noqa: BLE001 - report whatever failed, then clean up
         rep["error"] = f"{type(e).__name__}: {e}"[:1000]
     finally:
-        rep["cleanup"] = delete_branch(a.branch, url, work)
+        rep["cleanup"] = delete_branch(a.branch, url, work) if created else {"deleted": False,
+                                                                            "reason": "not created by this run"}
         rep["finished"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
     rep["all_pass"] = "error" not in rep and all(v.get("pass") for v in rep.get("results", {}).values()) \
         and rep["cleanup"]["deleted"]

@@ -19,6 +19,8 @@ from .handlers import Context
 from .store import GitStore
 
 REPO = Path(__file__).resolve().parents[2]
+# The first commit of claude/office-state (created 2026-10-20, empty log). A history rebuilt from scratch has another.
+ROOTS = {"claude/office-state": "8428e34ae414ee50f1ddaf95827c2d5c7f99720d"}
 
 
 def origin() -> str:
@@ -53,7 +55,8 @@ def main(argv: list[str] | None = None) -> int:
 
     remote = a.state_remote or origin()
     workdir = Path(a.workdir or tempfile.mkdtemp(prefix="office-state-"))
-    store = GitStore(workdir, a.branch, remote, actor="worker" if a.cmd == "worker" else "cli")
+    store = GitStore(workdir, a.branch, remote, actor="worker" if a.cmd == "worker" else "cli",
+                     root=ROOTS.get(a.branch) if a.state_remote is None else None)
     hb = a.heartbeat_h * 3600
 
     if a.cmd == "worker":

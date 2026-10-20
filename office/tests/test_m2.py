@@ -175,6 +175,9 @@ def test_test_suites_strip_credentials_and_alert_on_failure(store, clock):
     def res(cmd, kw):
         name = kw["cwd"].rsplit("/", 1)[-1]
         assert not any(k.startswith(handlers.SECRET_PREFIXES) for k in kw["env"])
+        assert set(kw["env"]) <= set(handlers.BASE_ENV) | {"HOME", "HTTPS_PROXY", "HTTP_PROXY", "https_proxy",
+                                                            "http_proxy", "NO_PROXY", "no_proxy", "GIT_TERMINAL_PROMPT"}
+        assert kw["env"]["NO_PROXY"] == "" and kw["env"]["HOME"] != "/root"
         assert kw["env"]["HTTPS_PROXY"] == "http://127.0.0.1:9" and kw["env"]["PATH"] == "/usr/bin"
         if name == "equity":
             return SimpleNamespace(returncode=1, stdout="....\n2 failed, 116 passed in 3.1s\n", stderr="")
@@ -205,7 +208,8 @@ def test_demo_snapshot_skips_without_demo_credentials_and_reads_only_totals(stor
     out = handlers.h_demo_snapshot(ctx_for(s, clock, env=SECRET_ENV, run=FakeRun(res)), {})
     assert out == {"commit": "f" * 40, "total_value": 1229.58, "cash": 0, "positions": 22, "pending_orders": 0,
                    "unrealised_pl": -68.4}
-    assert seen["kill"] and not seen["env"] & {"RESEND_API_KEY", "REPORT_EMAIL_TO"}
+    assert seen["kill"] and not seen["env"] & {"RESEND_API_KEY", "REPORT_EMAIL_TO", "GH_TOKEN"}
+    assert seen["env"] <= set(handlers.BASE_ENV + handlers.NET_ENV + handlers.DEMO_ENV) | {"HOME"}
     assert "ReadOnlyClient" in seen["cmd"][-1] and "order" not in seen["cmd"][-1].replace("pending_orders", "")
 
 
@@ -309,3 +313,33 @@ def test_gate_is_running_before_fourteen_days_and_fails_on_each_breach():
     assert gate.evaluate(ev, now, [])["verdict"] == "fail"  # no crash drill recovered
     assert gate.evaluate(drill(ev), now, ["commit abc changed earlier log lines"])["verdict"] == "fail"
     assert gate.evaluate([], now, [])["verdict"] == "not started"
+
+
+def test_failure_text_is_redacted_before_it_reaches_the_log(store, clock):
+    s = store()
+    env = {"T212_API_KEY": "sekrit-demo-key-123", "PATH": "/usr/bin"}
+    hs = ok_handlers([])
+
+    def leak(ctx, inputs):
+        raise RuntimeError("fatal: https://user:tok3n@github.com/x.git said no; key sekrit-demo-key-123")
+    hs["health"] = leak
+    worker.run(s, ctx_for(s, clock, env=env), worker="w", code="x", clock=clock, handlers=hs, max_tasks=1)
+    text = s.sync()
+    assert "tok3n" not in text and "sekrit-demo-key-123" not in text and "***@github.com" in text
+
+
+def test_history_audit_detects_a_replaced_root_commit(remote, tmp_path, clock):
+    first = GitStore(tmp_path / "a", BRANCH, remote, clock=clock)
+    first.sync()
+    root = first._git("rev-list", "--max-parents=0", f"origin/{BRANCH}").stdout.strip()
+    assert GitStore(tmp_path / "b", BRANCH, remote, clock=clock, root=root).audit_history() == []
+    other = GitStore(tmp_path / "c", BRANCH, remote, clock=clock, root="0" * 40)
+    assert "branch history was replaced" in other.audit_history()[0]
+
+
+def test_github_queue_script_refuses_any_branch_but_a_throwaway_one():
+    import sys as _s
+    r = subprocess.run([_s.executable, "github_queue_test.py", "--branch", "claude/office-state"],
+                       cwd=str(__import__("pathlib").Path(__file__).resolve().parents[1]), capture_output=True,
+                       text=True, env={"PATH": "/usr/bin:/bin", "HTTPS_PROXY": "http://127.0.0.1:9"}, timeout=60)
+    assert r.returncode != 0 and "office-queue-test-" in r.stderr

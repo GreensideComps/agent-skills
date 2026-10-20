@@ -20,7 +20,7 @@ from typing import Callable
 from . import director, health
 from . import queue as q
 from .events import parse
-from .handlers import HANDLERS, Context
+from .handlers import HANDLERS, Context, redact
 
 
 def _stop_reason(store, stop_file: Path | None, env: dict) -> str | None:
@@ -66,7 +66,7 @@ def run(store, ctx: Context, *, worker: str, code: str, clock: Callable[[], floa
         try:
             out = handlers[lease.type](ctx, lease.inputs)
         except Exception as e:  # noqa: BLE001 - every failure is recorded and retried by the queue
-            ok = q.fail(store, lease, f"{type(e).__name__}: {e}", clock=clock)
+            ok = q.fail(store, lease, redact(f"{type(e).__name__}: {e}", ctx.env), clock=clock)
             stats["failed" if ok else "lost"] += 1
         else:
             ok = q.complete(store, lease, out, clock=clock)

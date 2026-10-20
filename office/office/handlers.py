@@ -18,6 +18,7 @@ import os
 import re
 import subprocess
 import tempfile
+import time
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Callable
@@ -47,18 +48,43 @@ class Context:
     heartbeat_s: float = 3600.0
 
 
-def clean_env(env: dict) -> dict:
-    out = {k: v for k, v in env.items() if not k.startswith(SECRET_PREFIXES)}
-    out.update(HTTPS_PROXY="http://127.0.0.1:9", HTTP_PROXY="http://127.0.0.1:9", https_proxy="http://127.0.0.1:9",
-               http_proxy="http://127.0.0.1:9")
+BASE_ENV = ("PATH", "LANG", "LC_ALL", "TZ")
+NET_ENV = ("HTTPS_PROXY", "https_proxy", "HTTP_PROXY", "http_proxy", "NO_PROXY", "no_proxy", "SSL_CERT_FILE",
+           "REQUESTS_CA_BUNDLE", "CURL_CA_BUNDLE")
+DEMO_ENV = ("T212_ENV", "T212_API_KEY", "T212_API_SECRET")
+SUITE_BUDGET_S = 2700.0  # all suites together; the task lease is 3600 s and the clone has 600 s of it
+
+
+def clean_env(env: dict, home: str) -> dict:
+    """Allowlisted environment for test runs: no credentials, a scratch HOME, every proxy pointed at a dead port."""
+    out = {k: env[k] for k in BASE_ENV if k in env}
+    dead = "http://127.0.0.1:9"
+    out.update(HOME=home, HTTPS_PROXY=dead, HTTP_PROXY=dead, https_proxy=dead, http_proxy=dead, NO_PROXY="",
+               no_proxy="", GIT_TERMINAL_PROMPT="0")
     return out
+
+
+def demo_env(env: dict, home: str) -> dict:
+    """Allowlisted environment for the demo read: the demo key, the proxy and CA settings, nothing else."""
+    out = {k: env[k] for k in BASE_ENV + NET_ENV + DEMO_ENV if k in env}
+    out["HOME"] = home
+    return out
+
+
+def redact(text: str, env: dict) -> str:
+    """Remove URL credentials and the value of any secret variable before text reaches the log."""
+    text = re.sub(r"(https?://)[^/@\s]+@", r"\1***@", text)
+    for k, v in env.items():
+        if k.startswith(SECRET_PREFIXES) and v and len(v) >= 6:
+            text = text.replace(v, "***")
+    return text
 
 
 def clone(ctx: Context, dest: Path) -> str:
     r = ctx.run(["git", "clone", "-q", "--depth", "1", "--branch", ctx.branch, ctx.repo_url, str(dest)],
                 capture_output=True, text=True, timeout=600)
     if r.returncode:
-        raise RuntimeError(f"clone failed: {r.stderr.strip()[-300:]}")
+        raise RuntimeError(redact(f"clone failed: {r.stderr.strip()[-300:]}", ctx.env))
     return ctx.run(["git", "-C", str(dest), "rev-parse", "HEAD"], capture_output=True, text=True,
                    timeout=60).stdout.strip()
 
@@ -87,14 +113,22 @@ def h_test_suites(ctx: Context, inputs: dict) -> dict:
         repo = Path(tmp) / "repo"
         sha = clone(ctx, repo)
         res, failed = {}, []
+        home = Path(tmp) / "home"
+        home.mkdir()
+        deadline = time.monotonic() + SUITE_BUDGET_S
         for name, sub, args in SUITES:
             d = repo / sub
             if not d.is_dir():
                 res[name] = {"status": "absent"}
                 continue
+            left = deadline - time.monotonic()
+            if left < 60:
+                res[name] = {"status": "timeout"}
+                failed.append(name)
+                continue
             try:
                 r = ctx.run(["python3", "-m", "pytest", "-q", "-p", "no:cacheprovider", *args], cwd=str(d),
-                            env=clean_env(ctx.env), capture_output=True, text=True, timeout=1800)
+                            env=clean_env(ctx.env, str(home)), capture_output=True, text=True, timeout=left)
                 tail = (r.stdout.strip().splitlines() or [""])[-1]
                 res[name] = {"exit": r.returncode, **_counts(tail), "summary": tail[-200:]}
                 if r.returncode:
@@ -116,11 +150,13 @@ def h_demo_snapshot(ctx: Context, inputs: dict) -> dict:
         repo = Path(tmp) / "repo"
         sha = clone(ctx, repo)
         (repo / "trading" / "KILL").touch()  # the bot's kill switch, in this clone only
-        env = {k: v for k, v in ctx.env.items() if not k.startswith(("REPORT_EMAIL", "RESEND", "SMTP"))}
-        r = ctx.run(["python3", "-c", READ_CMD], cwd=str(repo / "trading"), env=env, capture_output=True, text=True,
-                    timeout=300)
+        home = Path(tmp) / "home"
+        home.mkdir()
+        r = ctx.run(["python3", "-c", READ_CMD], cwd=str(repo / "trading"), env=demo_env(ctx.env, str(home)),
+                    capture_output=True, text=True, timeout=300)
     if r.returncode:
-        raise RuntimeError(f"read failed: {r.stderr.strip().splitlines()[-1][:300] if r.stderr.strip() else r.returncode}")
+        last = r.stderr.strip().splitlines()[-1][:300] if r.stderr.strip() else str(r.returncode)
+        raise RuntimeError(redact(f"read failed: {last}", ctx.env))
     d = json.loads(r.stdout)
     s, pos, pend = d["summary"], d["positions"] or [], d["pending_orders"] or []
     out = {"commit": sha, "total_value": s.get("totalValue"), "cash": (s.get("cash") or {}).get("availableToTrade"),
