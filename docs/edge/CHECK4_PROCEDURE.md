@@ -55,12 +55,26 @@ label, and `edge_registry.append` refuses a confirmation batch. Neither B5 trial
 
 There are 40 company-decisions per trial (80 in total), which gives about 150 to 300 compared facts per trial.
 
-The pass rule uses the observed rate (under 2%), but a pass is weak evidence:
-- with 250 facts and 0 errors, the one-sided 95% upper bound on the true error rate is about 1.2%;
-- with 4 errors (1.6%), the upper bound is about 3.6%.
+The pass rule uses the observed rate (under 2%), but a pass is weak evidence.
 
-The report states the exact one-sided Clopper-Pearson 95% upper bound next to every rate. It does not claim that the
-population error rate is below 2%.
+**The interval is descriptive, not a confidence statement about the population** (owner, 2026-10-20). The facts are
+not independent draws: the 3 to 10 facts of one company-decision share a filing, a filer's tagging habits and often
+the same concept mapping, so an error in one tends to come with errors in the others. The Clopper-Pearson bound
+treats every fact as an independent trial, so it understates the uncertainty. With 40 company-decisions per trial,
+the effective sample size is nearer 40 than 250. For illustration only, on the independence assumption:
+- with 250 facts and 0 errors, the one-sided 95% Clopper-Pearson upper bound is about 1.2%;
+- with 4 errors (1.6%), it is about 3.6%.
+
+The report therefore:
+- states the observed fact-level rate and, next to it, the exact one-sided Clopper-Pearson 95% upper bound,
+  labelled "descriptive: assumes independent facts, which they are not";
+- states the company-decision-level count as well (company-decisions with at least one value error, out of 40),
+  with its own Clopper-Pearson bound; with 0 of 40 that bound is about 7.2%, which shows how little 40 units can rule
+  out;
+- never calls either bound a confidence level for the population error rate, and never claims that the population
+  error rate is below 2%.
+
+None of this changes the sample, the strata or the decision rules in §4 and §8, which stay as fixed in advance.
 
 ## 4. Selection and stratification (reproducible from seed `20261019`)
 
@@ -176,7 +190,7 @@ The report tabulates errors by field, company, year and class.
 
 For each trial's inputs, Check 4 **passes** only if every condition holds:
 
-1. Value errors are under 2% of the denominator in §2. The report also gives the 95% upper bound.
+1. Value errors are under 2% of the denominator in §2. The report also gives the descriptive bounds in §3.
 2. No error changes a top-20 holding.
 3. There are no point-in-time errors and no TTM arithmetic defects. Either one fails the check outright, at any rate.
 4. There is no systematic pattern. A pattern is any of these:
@@ -228,6 +242,13 @@ may be taken, but they are diagnostic only and never count toward a pass.
    This re-executes part of a registered trial's code on scoring inputs, so it needs explicit approval. If it is
    not approved, the fallback is to stratify by score decile only and report the holding effect as the change in
    rank, a weaker test.
+
+   **Approved by the owner on 2026-10-20** (message `cmsg_01U4KMvkBYNknqm4HRVie8uvWBGcbQVLRwVrW8HKHTK5JK`), solely to
+   build the frame and test the holding effect, with the frozen run-2 code, inputs and configuration; no returns or
+   statistics; no change to any run-2 report, registry entry, verdict, authorisation history, lock archive, gate or
+   B5 status; every holding labelled reconstructed; missing inputs and uncertainty reported; stop if the selection
+   cannot be reproduced reliably. Source extraction does not start until the owner has reviewed the
+   reconstruction.
 2. **Accept** the stratification (3 held, 1 top, 1 bottom per year) and the size of 40 per trial, or set a larger
    size.
 3. **Accept** "same filer, different artefact" as the independent source, given O7 (no paid data).
