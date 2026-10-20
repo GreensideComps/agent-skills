@@ -126,3 +126,50 @@ def test_scripts_exit_before_any_git_python_or_pip_call(script, tmp_path):
 def test_old_strategy_kept_byte_for_byte_for_audit():
     sha = hashlib.sha256((TRADING / "config" / "strategy.json").read_bytes()).hexdigest()
     assert sha == "a08ad34df6de53ec22d2083e480cd8886986cac6a3f3f57e49a26c37ab68ba02"
+
+
+# ---------- the harness itself (incident 2026-10-20: a guard-removal check sent one real email) ----------
+
+def test_harness_has_no_credentials_and_no_network():
+    """Runs under the module's autouse fixture, which is set up before any test body here touches the code."""
+    import socket
+    import urllib.request
+    assert not [k for k in os.environ if k.startswith(("T212", "REPORT_EMAIL", "RESEND", "SMTP"))]
+    for call in (lambda: urllib.request.urlopen("https://api.resend.com/emails"),
+                 lambda: socket.create_connection(("demo.trading212.com", 443)),
+                 lambda: socket.socket().connect(("api.resend.com", 443))):
+        with pytest.raises(AssertionError, match="network access attempted"):
+            call()
+
+
+def test_with_the_guard_switched_off_the_harness_still_cannot_email_or_reach_the_broker(monkeypatch):
+    """The incident's two side effects, attempted on purpose with the retirement off and a fully configured
+    (fake) email setup: both are stopped by the harness and nothing is delivered."""
+    import urllib.request
+    from t212bot import emailer
+    from t212bot.client import T212Client, urllib_transport
+    from t212bot.config import Credentials
+    monkeypatch.setattr(retired, "BRANCH_RETIRED", False)
+    assert emailer.load_config().provider == "outbox"  # the stripped environment has no email provider
+    attempts = []
+
+    def record_then_block(req, *a, **k):
+        attempts.append(req.full_url if hasattr(req, "full_url") else str(req))
+        raise AssertionError("network access attempted in a retirement test")
+    monkeypatch.setattr(urllib.request, "urlopen", record_then_block)
+
+    cfg = emailer.EmailConfig(provider="resend", to="nobody@example.invalid", sender="x@example.invalid",
+                              resend_key="test-not-a-key")
+    with pytest.raises(emailer.TransientEmailError):
+        emailer.send_resend(emailer.Email("s", "t", "<p>h</p>", cfg.to, cfg.sender), cfg, "k")
+    c = T212Client(Credentials("k", "s"), transport=urllib_transport, sleep=lambda s: None)
+    with pytest.raises(AssertionError, match="network access attempted"):
+        c.account_summary()
+    # one email attempt, then the client's own GET retries; every one was blocked before leaving the process
+    assert attempts[0] == "https://api.resend.com/emails"
+    assert set(attempts[1:]) == {"https://demo.trading212.com/api/v0/equity/account/summary"}
+    n = len(attempts)
+    from t212bot.client import AmbiguousOrderError
+    with pytest.raises(AmbiguousOrderError, match="transport error AssertionError"):
+        c.place_market_order("VWRPl_EQ", 1.0)  # guard off: only the harness stops it
+    assert len(attempts) == n + 1 and all(u.endswith("/equity/orders/market") for u in attempts[n:])
