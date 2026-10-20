@@ -14,6 +14,37 @@ from t212bot.executor import Bot
 from test_monitor import RO, Quotes, loader
 
 REPO = Path(__file__).resolve().parents[2]
+SECRET_PREFIXES = ("T212", "REPORT_EMAIL", "RESEND", "SMTP")
+
+
+@pytest.fixture(autouse=True)
+def _no_network_no_secrets(monkeypatch):
+    """Incident 2026-10-20: a guard-removal check on the bot branch sent one real email. Here too, a regressed
+    guard must not reach the broker, Yahoo or the email provider: strip credentials and block outbound connections."""
+    import os
+    import socket
+    import urllib.request
+    for k in list(os.environ):
+        if k.startswith(SECRET_PREFIXES):
+            monkeypatch.delenv(k)
+
+    def blocked(*a, **k):
+        raise AssertionError("network access attempted in a retirement test")
+    monkeypatch.setattr(urllib.request, "urlopen", blocked)
+    monkeypatch.setattr(urllib.request.OpenerDirector, "open", blocked)
+    monkeypatch.setattr(socket, "create_connection", blocked)
+    monkeypatch.setattr(socket.socket, "connect", blocked)
+
+
+def test_the_harness_has_no_credentials_and_no_network():
+    import os
+    import socket
+    import urllib.request
+    assert not [k for k in os.environ if k.startswith(SECRET_PREFIXES)]
+    for call in (lambda: urllib.request.urlopen("https://api.resend.com/emails"),
+                 lambda: socket.create_connection(("demo.trading212.com", 443))):
+        with pytest.raises(AssertionError, match="network access attempted"):
+            call()
 
 
 def retired(cfg):
@@ -167,7 +198,7 @@ def test_ops_run_refuses_before_any_sync_or_trade_when_retired(tmp_path, unreada
     if not unreadable:
         (root / "trading" / "config" / "strategy.json").write_bytes(CONFIG_PATH.read_bytes())
     bindir, log = _fake_git(tmp_path, root)
-    env = {k: v for k, v in os.environ.items() if not k.startswith("T212")}
+    env = {k: v for k, v in os.environ.items() if not k.startswith(SECRET_PREFIXES)}
     env["PATH"] = f"{bindir}:{os.environ['PATH']}"
     r = subprocess.run(["bash", str(REPO / "trading" / "ops_run.sh")], env=env, capture_output=True, text=True,
                        timeout=60)
