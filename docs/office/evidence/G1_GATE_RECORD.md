@@ -52,8 +52,9 @@ due 23 Oct).
 
 ## Open alert: `tests_failing` (critical)
 
-- It comes from the 11:58:53Z test_suites output on `b0e494b`: all four suites exited 1 with no pytest summary. That
-  session had no pytest installed (this was diagnosed from its stderr in a reproduction; `b0e494b` did not record stderr).
+- It comes from the 11:58:53Z test_suites output on `b0e494b`: all four suites exited 1 with no pytest summary. Cause
+  **inferred, not observed**: `b0e494b` does not record stderr. pytest is not in the base image: in this session's
+  container it was installed by hand on 19 Oct 14:15Z. The 21 Oct run will confirm or refute this.
 - The 12:58Z run did not re-run the tests (one test task per UTC day). It only re-reported the same output, which
   health carries for 36 hours, until about 21 Oct 23:59Z.
 - The tests themselves pass on `b0e494b` in a session with pytest: trading 139, equity 118, research 460, office 43.
