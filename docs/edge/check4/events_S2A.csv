@@ -1,0 +1,7 @@
+trial,tranche_start,decision_month,date,event,cik,reason,source
+B5-S2A-GP-12M-V3,2014-06-30,2017-06-30,2017-07-03,skipped_cap,1097149,sector cap (instruments_medtech),reconstructed
+B5-S2A-GP-12M-V3,2014-08-31,2016-08-31,2016-09-01,skipped_cap,1116132,sector cap (other_manufacturing),reconstructed
+B5-S2A-GP-12M-V3,2014-08-31,2018-08-31,2018-09-04,skipped_cap,1530721,sector cap (other_manufacturing),reconstructed
+B5-S2A-GP-12M-V3,2014-10-31,2016-10-31,2016-11-01,skipped_cap,1116132,sector cap (other_manufacturing),reconstructed
+B5-S2A-GP-12M-V3,2014-11-30,2014-11-30,2014-12-01,skipped_cap,865752,sector cap (other_manufacturing),reconstructed
+B5-S2A-GP-12M-V3,2014-12-31,2014-12-31,2015-01-02,skipped_cap,865752,sector cap (other_manufacturing),reconstructed
