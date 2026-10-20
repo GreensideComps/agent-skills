@@ -1,5 +1,7 @@
 # Share-count exclusion: exploration-period median vs point-in-time median (PR #18 review)
 
+> **Survivorship (material, unbounded; added 2026-10-16 at the owner's request):** companies that delisted before the 2026 price download are missing from the universe entirely. The -30% and -100% missing-price rules do not address them and are not evidence that survivorship bias is bounded.
+
 Large caps, 1-month IC, decisions 2015-01 to 2022-11, Stage 2's scoring, data cut at 2022-12. Registered before running as `QX-PIT-<trial>`; the programme's trial count is now 96.
 
 | Eligible large-cap company-months | Count |

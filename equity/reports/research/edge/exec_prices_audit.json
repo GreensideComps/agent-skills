@@ -1,0 +1,23 @@
+{
+ "bench_dates": {
+  "VWRP": {
+   "first_price": "2019-07-25",
+   "first_month_end_close": "2019-07-31",
+   "first_full_monthly_return": "2019-08",
+   "first_price_on_or_after_first_execution_date": "2019-08-01"
+  },
+  "VWRL": {
+   "first_price": "2012-05-22",
+   "first_month_end_close": "2012-05-31",
+   "first_full_monthly_return": "2012-06",
+   "first_price_on_or_after_first_execution_date": "2012-06-01"
+  }
+ },
+ "move_classes": {
+  "penny": 585,
+  "split_like": 298,
+  "reversal": 236,
+  "plausible": 199,
+  "extreme": 23
+ }
+}

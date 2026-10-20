@@ -139,13 +139,40 @@ def test_new_research_code_reads_data_only_through_the_guard():
     """Only these modules may read the research dataset directly. Anything new must go through edge_split
     (cut_exploration / exploration_view), so a holdout outcome cannot be read by a path the guard does not see."""
     allowed = {"xsection.py", "stage2.py", "stage1_coverage.py", "signal_log.py", "edge_integrity.py",
-               "stage2_diagnostics.py"}
+               "stage2_diagnostics.py", "edge_exec_prices.py", "edge_exec_audit.py", "edge_b3_reproduce.py",
+               "edge_ttm_checks.py", "edge_b5_handcheck.py", "edge_b5_run.py", "edge_b5_share_pit_audit.py",
+               "edge_b5_manifest.py", "edge_b5_quality_flag_audit.py"}
     root = Path(__file__).resolve().parent.parent
     offenders = [f.name for f in root.glob("*.py") if f.name not in allowed
                  and any(k in f.read_text() for k in ("xsection.load(", "prices_monthly", "monthly_metrics"))]
     assert offenders == []
     diag = (root / "stage2_diagnostics.py").read_text()
     assert "edge_split.cut_exploration(xsection.load())" in diag
+    b1 = (root / "edge_exec_prices.py").read_text()
+    assert "monthly = edge_split.cut_exploration(monthly)" in b1  # cut straight after reading
+    audit = (root / "edge_exec_audit.py").read_text()
+    assert "edge_split.cut_exploration(xsection.load())" in audit
+    b3 = (root / "edge_b3_reproduce.py").read_text()
+    assert "x = x[pd.to_datetime(x[\"month\"]) <= CUT]" in b3 and "xsection.load(tmp)" in b3
+    assert "edge_split.cut_exploration(pd.read_csv(xsection.DATA / \"prices_monthly.csv.gz\"" in audit
+    pit = (root / "edge_b5_share_pit_audit.py").read_text()
+    assert "edge_split.cut_exploration(xsection.load())" in pit and 'r["filed"] <= tc.CUT' in pit
+    qf = (root / "edge_b5_quality_flag_audit.py").read_text()
+    assert "edge_split.cut_exploration(xsection.load())" in qf and "ret_next" not in qf
+    man = (root / "edge_b5_manifest.py").read_text()
+    assert "read_csv" not in man and "import xsection" not in man and "gzip" not in man  # hashes, never parses
+    ttm = (root / "edge_ttm_checks.py").read_text()
+    assert "edge_split.with_quality(edge_split.cut_exploration(xsection.load()))" in ttm
+    assert 'r["filed"] <= CUT' in ttm  # SEC facts filed after 2022 are never read into the checks
+    hc = (root / "edge_b5_handcheck.py").read_text()
+    assert "edge_split.with_quality(edge_split.cut_exploration(xsection.load()))" in hc
+    assert hc.count("<= CUT]") >= 3  # raw metrics, raw prices and execution rows cut on read
+    rs = (root / "edge_b5_run.py").read_text()
+    assert "st.with_quality_columns(edge_split.cut_exploration(xsection.load()))" in rs  # cut before any flag
+    assert 'r["filed"] <= str(CUT.date())' in rs and rs.count("<= CUT]") >= 1  # facts and execution rows cut on read
+    ia = (root / "edge_b5_input_audit.py").read_text()
+    assert "u = tc.universe()" in ia and 'r["filed"] <= tc.CUT' in ia  # cut universe; no SEC fact filed after 2022
+    assert "ret_next" not in ia and "adjclose" not in ia  # input audit reads no price or return
 
 
 # --- registry ------------------------------------------------------------------------------------------------
@@ -178,7 +205,27 @@ def test_registry_rejects_bad_events_and_leaves_file_untouched(tmp_path):
         assert p.read_text() == before
 
 
-def test_registry_one_holdout_run_per_batch_and_one_batch_per_trial(tmp_path):
+@pytest.fixture
+def check4_done(tmp_path, monkeypatch):
+    """Batch rules are tested as if the owner had recorded TTM check 4 complete (B5 ADDENDUM_1 §6)."""
+    s = tmp_path / "status.json"
+    s.write_text('{"ttm_check4_independent_source": {"complete": true}}')
+    monkeypatch.setattr(edge_registry, "STATUS", s)
+    monkeypatch.setattr(edge_registry.append, "__defaults__", (edge_registry.PATH, s))
+    return s
+
+
+def test_confirmation_batch_is_refused_while_check4_is_open(tmp_path):
+    p = tmp_path / "t.jsonl"
+    edge_registry.append(_reg("X1"), p)
+    before = p.read_text()
+    assert edge_registry.check4_complete() is False  # the real status file
+    with pytest.raises(ValueError, match="check 4"):
+        edge_registry.append({"event": "batch", "batch": "B1", "trials": ["X1"], "prereg_commit": "abc"}, p)
+    assert p.read_text() == before
+
+
+def test_registry_one_holdout_run_per_batch_and_one_batch_per_trial(tmp_path, check4_done):
     p = tmp_path / "t.jsonl"
     edge_registry.append(_reg("X1"), p)
     edge_registry.append({"event": "batch", "batch": "B1", "trials": ["X1"], "prereg_commit": "abc"}, p)
@@ -190,7 +237,7 @@ def test_registry_one_holdout_run_per_batch_and_one_batch_per_trial(tmp_path):
     assert edge_registry.holdout_runs(edge_registry.load(p)) == {"B1"}
 
 
-def test_registry_allows_one_batch_ever(tmp_path):
+def test_registry_allows_one_batch_ever(tmp_path, check4_done):
     p = tmp_path / "t.jsonl"
     edge_registry.append(_reg("X1"), p)
     edge_registry.append(_reg("X2"), p)
@@ -330,3 +377,13 @@ def test_stage2_deflated_sharpe_matches_a_hand_computation():
     sr0 = np.sqrt(v) * ((1 - g) * N.inv_cdf(1 - 1 / 10) + g * N.inv_cdf(1 - 1 / (10 * np.e)))
     want = N.cdf((0.15 - sr0) * np.sqrt(95) / np.sqrt(1 + 0.5 * 0.15 ** 2))
     assert abs(stage2_diagnostics.stage2.deflated_sharpe(st, srs) - want) < 1e-12
+
+
+def test_backtester_validated_status_is_scoped_to_exploration():
+    """D12: the recorded status is exploration-only and authorises neither confirmation nor demo allocation."""
+    import json
+    s = json.loads((Path(__file__).resolve().parents[1] / "edge" / "status.json").read_text())
+    bv = s["backtester_validated"]
+    assert bv["value"] is True and bv["scope"].startswith("exploratory research only")
+    assert bv["authorises_confirmation"] is False and bv["authorises_demo_allocation"] is False
+    assert s["survivorship_limitation_accepted"]["scope"].startswith("exploratory research only")
