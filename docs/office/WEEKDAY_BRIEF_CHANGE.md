@@ -1,5 +1,11 @@
 # O10: point the weekday brief at master (20 Oct 2026)
 
+**Status: prepared and tested, NOT applied.** `update_trigger` refused the prompt change on 20 Oct (~08:15Z): this
+task starts a new thread at each run, and such a task can only be changed by deleting and recreating it. The owner's
+instruction rules out recreating scheduled tasks, so the task still holds the "before" prompt and the decision is
+the owner's (recreate it with the new prompt, or leave it). `get_trigger` after the refusal shows it unchanged
+(`updated_at` 2026-10-15T08:16:46Z).
+
 Owner approval: message `cmsg_01U4KMvkBYNknqm4HRVie8uvU3uARM8qp1vWB8L62R9Sqa` (07:53Z), item 2. Only the prompt of
 scheduled task `trig_012o3Bc5Ja2PiD7rvx2Fzrmd` ("Weekday portfolio brief") changes. Its schedule (`45 6 * * 1-5` UTC),
 enabled state, fresh session per run, notifications and model are unchanged. No other scheduled task is touched.
