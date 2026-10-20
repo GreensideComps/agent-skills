@@ -1,3 +1,6 @@
 # Append-only research ledgers: concurrent appends from scheduled sessions merge by union.
 equity/data/*.jsonl merge=union
 equity/data/**/*.jsonl merge=union
+
+# Byte-exact historical evidence used by tests (B5 run 2 code, pinned by sha256): never convert line endings.
+research/tests/fixtures/* -text

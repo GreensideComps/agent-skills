@@ -32,3 +32,120 @@ The owner also set these conditions:
   unregistered or repeated look.
 - **Untouched by this work:** the monthly signal log, the real ISA, the trading configuration and the account
   holdings.
+
+## 2026-10-15 08:17 UTC: merge approval and Phase B scope
+
+| # | Decision |
+|---|---|
+| D7 | **PR #18 merged** (merge commit 9527e6e). The approval covers Phase A governance, integrity checks and research controls **only**. It does not establish that any signal has an edge, and it authorises no confirmation run, demo allocation, or change to the real ISA, holdings or trading configuration. |
+| D8 | **Phase B is authorised for step B1 only:** permitted point-in-time execution-price data and an FX fallback, with integrity checks and a strict cutoff at 2022-12. No signal exploration until the data pipeline is validated and the owner has seen the B1 report. |
+| D9 | **The gates stay:** synthetic backtester validation, Stage 2 reproduction, an owner-reviewed validation report, and registration of each exploration trial before it runs. No confirmation run is authorised. |
+
+## 2026-10-15 18:24 UTC: B3 accepted; B4 report requested
+
+| # | Decision |
+|---|---|
+| D10 | **B3 is accepted as reproduced.** The NFE discrepancy is documented and the negative-price safeguard is retained (details below). |
+| D11 | **Next step: prepare the B4 validation report for review.** It must distinguish reproduction success from validation of the engine for investable research, and list the remaining blockers. Nothing beyond the report is authorised (details below). |
+
+**D10 in full:**
+
+1. **The original Stage 2 reproduction is accepted.** All 15 published results were reproduced by the original code on the frozen exploration-period dataset.
+2. **The new-engine discrepancy is accepted as explained.** It comes from NFE's invalid negative adjusted prices; the largest annual-result difference reported is 0.021 percentage points.
+3. **The safeguard stays and the frozen reproduction stands.**
+   - Negative-price trading is not permitted to force agreement.
+   - No rerun with NFE excluded is to replace the frozen reproduction.
+4. **Next-day execution results stay separate from the reproduction.**
+   - S5a's +0.55% annual net result is exploratory only.
+   - It is not an approved investment signal.
+5. **The stated limitations are preserved:**
+   - survivorship bias;
+   - historical data defects;
+   - the original Stage 2 look-ahead assumptions.
+
+Report: `equity/reports/research/edge/b3_reproduction.md`. Spec: `B3_STAGE2_SPEC.md`.
+
+**D11 in full.** The owner's separate approval is required before any of the following:
+
+- starting B5;
+- registering or running a new signal experiment;
+- running a confirmation test;
+- allocating to the demo strategy;
+- changing the real ISA, holdings or trading configuration.
+
+`backtester_validated` is recorded only by the owner.
+
+## 2026-10-16 10:12 UTC: backtester validated for exploration only; pre-B5 preparation
+
+| # | Decision |
+|---|---|
+| D12 | **`backtester_validated` is recorded, limited strictly to exploratory research under the limitations in `B4_VALIDATION_REPORT.md` §5.** Machine-readable record: `research/edge/status.json`. |
+| D13 | **Survivorship-free prices are not feasible on free data** (`SURVIVORSHIP_FEASIBILITY.md`). The limitation is accepted for exploratory research only, on the conditions in that note's §4. |
+| D14 | **Before B5:** prepare the real-data hand-check plan, frozen and registered H1 and S2a specifications, and exploratory thresholds with the multiple-testing treatment set in advance. Return them for review. **Stop before running H1 or S2a.** |
+
+**D12 scope in full.** The status does **not**:
+
+- establish that any strategy is investable;
+- fully validate the strategy's real-data portfolio settings (that needs the B5 hand-check);
+- prove an edge;
+- authorise confirmation testing;
+- authorise demo allocation.
+
+The holdout restrictions are unchanged. `edge_split.holdout_gate` still needs a batch, a pre-registration commit and
+the owner's approval of that batch; the flag alone opens nothing.
+
+**D14 in full.** The two trials stay exploratory. The holdout restrictions stay. No confirmation test, no demo
+allocation. The real ISA, holdings and trading configuration remain unchanged. Documents:
+`B5_PREREGISTRATION.md`, `B5_HANDCHECK_PLAN.md`, `SURVIVORSHIP_FEASIBILITY.md`.
+
+## 2026-10-16 11:53 UTC: pre-B5 review
+
+| # | Decision |
+|---|---|
+| D15 | **Approved:** the fixed placebo-score hand-check, the preparatory engineering and the synthetic tests. **Not approved:** running H1 or S2a. No H1 or S2a return, NAV or ranking may be computed. B5 execution needs separate approval. No confirmation test, demo allocation or real ISA, holdings or trading-configuration change. |
+
+**D15 requirements before returning for trial approval:**
+
+1. the exact H1 definition, frozen before any result;
+2. the exact DSR calculation, with N reconciled to the registry;
+3. every report states that the −100% stress does not address companies missing from the universe;
+4. TTM checks 1-3 done, and the effect of the open independent-source check stated;
+5. costs reconciled across the main run and the robustness runs;
+6. trial controls confirmed.
+
+Response: `B5_PREREGISTRATION.md` version 2, `research/edge_b5.py`, `equity/reports/research/edge/ttm_checks.md`,
+`equity/reports/research/edge/b5_handcheck.md`.
+
+## 2026-10-16 13:34 UTC: round 3 reviewed; trial run still not authorised
+
+| # | Decision |
+|---|---|
+| D16 | **H1 period alignment approved in principle:** operating cash flow and capex must share one fresh TTM period end, otherwise H1 is unavailable. No alignment. (Already implemented: `edge_b5_inputs.fcf_inputs`, `align=False`.) |
+| D17 | **S2a staleness approved in principle:** gross profit older than 183 days is never used; the revenue fallback only when its inputs pass the frozen validity rules (`B5_PREREGISTRATION_ADDENDUM_2.md` §1, draft). |
+| D18 | **Not yet approved:** the revenue-tag rule (document and freeze without inspecting performance), the blanket 20-F/40-F exclusion (investigate an identity rule, else compare it with the CIK-specific option on input evidence), and the run script (not to be written until the data rules are resolved and the addendum frozen). N = 100, the registered DSR definition and the open check 4 are kept. No E2 label, confirmation batch, holdout access, demo allocation or live-account change. PR #19 not merged. |
+
+## 2026-10-16 14:17 UTC: round 4 reviewed; addendum 2 to be frozen
+
+| # | Decision |
+|---|---|
+| D19 | **D16 and D17 approved in principle. Identity rule C preferred** over A or B, subject to final specification and tests (`B5_PREREGISTRATION_ADDENDUM_2.md` §3). **T2 may filter the primary trials only where it is known at the decision date**; anything detectable only from later filings stays a retrospective diagnostic; the same principle for revenue, gross profit, OCF and capex (§2: T2 is point in time, so it filters all four). Addendum 2 frozen and registered (`B5-V2-ADDENDUM-2`, not counted, N = 100). The run script is written for review; **its execution, the trial run and the merge are not authorised.** Check 4 stays open; no E2 label, confirmation, holdout access, demo or live-account change. |
+
+## 2026-10-19 07:04 and 07:33 UTC: final audit; point-in-time quality rule
+
+| # | Decision |
+|---|---|
+| D20 | **Option B: the point-in-time share-outlier rule (`edge_split.share_outliers_pit`) becomes the B5 primary quality rule** for portfolio eligibility, the S2a rank population and the P5 universe. The Phase A full-window rule (D5, `edge_split.share_outliers`) becomes the P9 reverse veto only: it can fail a trial, never rescue a failed gate or replace the primary result. **N = 100 is kept provisionally** through a formal addendum, subject to the justification in `B5_PREREGISTRATION_ADDENDUM_3.md` §5. **D5 is not withdrawn**: it still governs Phase A and Stage 2, and its rule is unchanged in code. Version 2's definitions and registry entries are not edited; the addendum amends them. Status 07:33Z: Addendum 3 and code drafted **for review only**. Not authorised: registering Addendum 3, the ROB-WINQ ids or the manifest; the run; the merge. Check 4 stays open. |
+| D21 | **(07:44 UTC) Addendum 3's direction approved in principle; the N = 100 route is not.** Version 2 §7 allows only bug fixes before a run and forbids definition changes, and Addendum 3 changes primary eligibility, so the stricter route applies: **new counted version-3 trial ids** (`B5-H1-FCFPS-ACCEL-V3`, `B5-S2A-GP-12M-V3`) and **N = 102**, under the existing counting rules. Version-2 (and version-1) records stay registered and unchanged, counted, and can never run. D20's provisional N = 100 is superseded by this decision; D20 itself is not rewritten. Prepared for review only: no registration of Addendum 3, the version-3 ids, ROB-WINQ or the manifest; no run, merge, holdout access, confirmation, demo or live-account change. |
+| D22 | **(07:53 UTC, confirmed on the decision card 08:22 UTC) Version-3 registration, step 1 only.** Approved on condition that the 13-event transition is atomic and preserves every existing entry. The reviewed code appended one event at a time, so registration was made all or nothing first (commit 53c323b, event list unchanged), dry-run on a copy, then run once on the real registry: 13 events appended (`B5-V3-ADDENDUM-3` uncounted; `B5-H1-FCFPS-ACCEL-V3` and `B5-S2A-GP-12M-V3` counted; 10 uncounted `-V3-ROB-*` ids), 224 earlier lines byte-identical (pre-registration sha256 0da0638e…85fd), N 100 → 102, registry valid. The run manifest is not registered; the run is not authorised. Each of those needs a separate approval. |
+| D23 | **(08:29 UTC) Version-3 step 2 only: run manifest registered.** Before writing, every check passed: the manifest sha256 equals the approved 0f02eda1…7072; it lists the intended 10 inputs and 16 repository modules, and each of the 26 hashes was recomputed against the current files and matched; a fresh rebuild is identical; every spec in `edge_b5_run.SPECS` is registered at its file's hash; the 13 V3 ids are registered (trials counted, robustness uncounted); N = 102; no B5 result; registry valid. A dry run on a copy, and one-line refusal tests, came first. Appended exactly one uncounted `B5-V3-RUN-MANIFEST` event; the 237 earlier lines are byte-identical and N stays 102. The run is **not** authorised: `status.json` `b5_trial_run.authorised` stays false, no one-run lock exists, and `edge_b5_run.preflight` refuses at its first check. Authorisation and execution each need a separate approval. |
+| D24 | **(08:40 UTC) Fix result recording before deciding on run authorisation.** The pre-authorisation review (08:35Z request) found that `edge_b5_run.finish` recorded the 12 results with separate writes and computed the DSR, verdicts and report after recording (findings A and B). Bug fix under v2 §7, no definition change: `docs/edge/B5_RUN_FIX_1.md`. Because three manifest-listed code files change, the run now needs a new manifest, `docs/edge/B5_RUN_MANIFEST_2.json`, registered as `B5-V3-RUN-MANIFEST-2` (proposed event in `docs/edge/B5_V3_PROPOSED_MANIFEST_2_EVENT.json`); the registered `B5-V3-RUN-MANIFEST` and its file are kept unchanged and never used. Nothing registered; run not authorised. |
+| D25 | **(08:47 UTC) Register the replacement manifest only.** All checks passed before writing: `B5_RUN_MANIFEST_2.json` rebuilt from the repository is byte-identical at sha256 10190052…9757; all 26 file hashes recomputed (the 3 changed code files match the proposal, the other 23 match the previously reviewed manifest); the old manifest file is unchanged at 0f02eda1…7072. Appended exactly one uncounted `B5-V3-RUN-MANIFEST-2` event (supersedes `B5-V3-RUN-MANIFEST`, cites `B5_RUN_FIX_1.md` sha256 60201625…5e96); the 238 earlier lines, including the old manifest event, are byte-identical; N stays 102. The run is not authorised: status.json unchanged, no lock, preflight refuses at authorisation. |
+| D26 | **(09:05 UTC) Step 3: run authorised.** `status.json` `b5_trial_run.authorised = true` with the owner's 09:05Z message id, for the B5 V3 exploratory run under `B5-V3-RUN-MANIFEST-2` at N = 102. Committed and pushed before execution. If execution is interrupted, the lock, staged and pending files stay and no rerun happens without a new owner decision. No merge, holdout, confirmation, account change or automatic investment action; survivorship bias material and unbounded; check 4 open; E2 label withheld; all gates reported including failures. |
+| D27 | **(11:51 UTC) Run 1 recorded as a failed execution attempt; Fix 2 to be prepared as a proposal only.** Run 1 (under D26): preflight passed, the one-run lock was created (committed 4215a98), and the run stopped with `ValueError: every tranche must have a NAV on the evaluation start date` in the robustness-variant loop (`docs/edge/B5_RUN_1_INCIDENT.md`, traceback `B5_RUN_1_FAILURE.txt`). **No performance results, gate outcomes or verdicts were produced or observed**: nothing was printed, written or recorded. The registry is unchanged (239 lines, sha256 b027de18…, N = 102, no B5 result), with no staged or pending file and no report. The registry, the authorisation history in `status.json` and the lock are preserved; no rerun. Fix 2 is to be implemented and tested on synthetic data only, with a proposed MANIFEST-3 for review. Not authorised: registering MANIFEST-3, releasing the lock, a new authorisation, reading scoring data for a new run, executing trials, merging PR #19, holdout, confirmation, or any demo/live-account change. |
+| D28 | **(12:15 UTC) Execution-control hardening and a P7 evaluation-window review approved as work only.** The owner found the Fix 2 package encouraging and approved: hardening every execution entry point (`load_inputs`, `run_one`, `finish`) so that none succeeds without a valid owner authorisation and a matching run lock tied to the exact registered manifest; making sure run 1's D26 authorisation can never authorise another run; keeping the run 1 lock as an incident artefact, with an archival and reset procedure proposed but not executed; and reviewing P7's shorter window and the options for it, with no option selected silently and no definition changed. Delivered for review in `docs/edge/B5_EXECUTION_HARDENING.md`. Not authorised: registering MANIFEST-3, releasing or archiving the lock, writing a new authorisation, reading scoring data, executing trials, merging PR #19, holdout access, confirmation testing, or any demo/live-account change. |
+| D29 | **(13:02 UTC, owner message cmsg_01U4KMvkBYNknqm4HRVie8uv5MUSAy3Neyqof1pvHhyPuc) P7 Option A; run 1's lock archived and its authorisation reset.** (A) P7 keeps the registered data, definition and gate unchanged. The final report must state prominently that P7 has 94 valuation dates and 93 monthly returns, against 95 and 94 for the primary and the next-day-close variants, that P7 is assessed against the benchmark on its own dates, and that its result is not directly comparable with variants measured over different windows. No new price data, no gate change, no performance metrics. The disclosure is added to `edge_b5_run.report` (`P7_WINDOW_DISCLOSURE`, with the run's own counts per trial). (B) The archival and reset procedure in `B5_EXECUTION_HARDENING.md` §2 is approved and carried out: the lock is moved unchanged to `docs/edge/incidents/B5_RUN_1_LOCK.json` (sha256 c06eeaa3…, verified), the incident record names the new path, and `status.json` `b5_trial_run` is set to `authorised = false` with run 1's D26 authorisation and D27 outcome kept as history. D26 stays permanently in `edge_registry.B5_SPENT_AUTHORISATIONS`. No incident artefact is deleted or overwritten. Not authorised: registering MANIFEST-3, a new run authorisation, preflight lock creation, scoring-data access, executing trials, merging PR #19, holdout access, confirmation testing, or any demo/live-account change. |
+| D30 | **(13:15 UTC, owner message cmsg_01U4KMvkBYNknqm4HRVie8uvHRo9DuV72QtY2Wr1T66tNP) D29 accepted as completed; register MANIFEST-3 only.** Every check passed before writing. A fresh rebuild of `B5_RUN_MANIFEST_3.json` from the current files is byte-identical at the approved sha256 f3f4fd71bae5ddf4932211c1983edac7dcb1d6d152d8d087c73550409a4b9671. All 10 input and 16 code hashes were recomputed and match, including `edge_b5_run.py` 61e2bb62… (P7 disclosure) and `edge_registry.py` e56f49aa… (execution hardening). Only those two files differ from MANIFEST-2. The event (`B5_V3_PROPOSED_MANIFEST_3_EVENT.json`, with this message id) cites that sha256, `B5_RUN_FIX_2.md` 2177c679…, `B5_EXECUTION_HARDENING.md` 82b08e67… and D29; it supersedes `B5-V3-RUN-MANIFEST-2`, is uncounted, and changes no trial definition, gate, threshold or result; N stays 102. A dry run on a copy came first. Appended exactly one `B5-V3-RUN-MANIFEST-3` event; the 239 earlier lines are byte-identical. Not authorised: a new run authorisation, a run lock, scoring-data access, executing trials, merging PR #19, holdout access, confirmation testing, or any demo/live-account change. |
+| D31 | **(13:25 UTC, owner message cmsg_01U4KMvkBYNknqm4HRVie8uvNzjD1qcmHEXGwqYmiFikfZ) One B5 V3 exploratory run (run 2) authorised with the registered `B5-V3-RUN-MANIFEST-3` (sha256 f3f4fd71bae5ddf4932211c1983edac7dcb1d6d152d8d087c73550409a4b9671) at N = 102.** `status.json` `b5_trial_run` now names this message, `manifest_id` B5-V3-RUN-MANIFEST-3 and that sha256; run 1's D26 authorisation stays in the history and in `edge_registry.B5_SPENT_AUTHORISATIONS`, and its lock stays archived. Before any scoring data is read: commit and push, verify the committed state, then run the existing preflight; any failure, hash difference, unexpected registry change or binding mismatch stops the run. If preflight passes, the run executes once with atomic result recording; registry and report are committed and pushed. If interrupted or failed: no lock removal, no deletion of staged or pending files, no rerun without an owner decision. Report H1 and S2a, every primary gate, every robustness outcome, statistical tests, missing results and vetoes, with the registered DSR at N = 102, the P7 window disclosure (94/93 vs 95/94), survivorship bias material and unbounded, Check 4 open and the E2 label withheld; no selective reporting and no change to any definition or threshold. Not authorised: merging PR #19, holdout access, confirmation testing, demo/live-account changes, automatic investment or portfolio decisions, or another research phase. |
+| D32 | **(13:55 UTC, owner message cmsg_01U4KMvkBYNknqm4HRVie8uvWW5mGZ7bsqjsGzRn39VcN1) Run 2 (D31) closed out: governance and test maintenance only.** Run 2 completed once under D31 (`cmsg_01U4KMvkBYNknqm4HRVie8uvNzjD1qcmHEXGwqYmiFikfZ`) with the registered `B5-V3-RUN-MANIFEST-3` (sha256 f3f4fd71bae5ddf4932211c1983edac7dcb1d6d152d8d087c73550409a4b9671) at N = 102. Commits: 4491452 (authorisation), e5d1dc1 (lock), a4a07d7 (results and report). The 12 results are registry lines 241-252 (registry sha256 de03d38b…, valid, N = 102); the first 240 lines are unchanged (sha256 574d2e0b…). The report is `equity/reports/research/edge/b5_trials.md` (sha256 5dee03ea…). **Both primary trials, B5-H1-FCFPS-ACCEL-V3 and B5-S2A-GP-12M-V3, failed P1, P2 and P3 (verdict fail), and neither established an investment edge.** P4-P11 passed for both; there were no missing results. No figure, gate, threshold, definition or interpretation was changed. Survivorship bias remains material and unbounded; TTM check 4 is open; the E2 label is withheld; the P7 window disclosure (94 dates / 93 returns vs 95 / 94) stands. D31 is recorded as spent in `status.json` `b5_trial_run.history` (run 2), and `authorised` is false. The run 2 lock was copied byte-for-byte to `docs/edge/incidents/B5_RUN_2_LOCK.json` (original and archive sha256 2041f109b37519e6a5b53a033b2ed82172cb1b5cd4bac6cec4e95a2834a60a61, identical); only then was `research/edge/b5_run.lock` removed. No staged or pending artefacts existed. Reuse of D31 is refused: `authorised` is false, and a status re-authorising D31 is refused by preflight because results exist. D31 was not added to `edge_registry.B5_SPENT_AUTHORISATIONS`, because that would change a manifest-listed research code file; that needs a separate owner decision. The four real-state tests that asserted the pre-run state were moved to an isolated pre-run fixture, and post-run tests were added. Not authorised: another run, a new research phase, strategy changes, gate changes, merging PR #19, holdout access, confirmation testing, or any demo/live, portfolio or investment action. |
+| D33 | **(15:25 UTC, owner message cmsg_01U4KMvkBYNknqm4HRVie8uv5WJPUM11HFcL4hfyc7ucpt) D31 added to the spent set in code; MANIFEST-3 permanently refused.** Separate change on the B5 branch after the D32 closeout (1eb0e96). It carries the office thread's O4 commit (draft PR #22, cherry-picked unchanged) and adds hardening tests. `edge_registry.B5_SPENT_AUTHORISATIONS` now holds D26 and D31. Reusing D31 is refused at the first control (`b5_authorisation`, "spent"), before any lock, registry, manifest or research file is read. The second control is kept and tested separately: with the pre-change spent set, preflight still refuses because run 2's results exist. Because `edge_registry.py` changed after run 2, MANIFEST-3 (sha256 f3f4fd71…) no longer matches the code. Preflight and the gate refuse it even with a fresh, unspent authorisation. The manifest is not rewritten and the check is not bypassed; the pre-run tests check the run-2 bytes of `edge_registry.py` from git (e56f49aa…). The registry, `status.json` history, both archived locks, run 2's report and MANIFEST-3 are byte-identical to 1eb0e96 (tested). Not authorised: a new manifest, a new run or authorisation, any result change, a gate or strategy change, merging PR #19, holdout access, confirmation testing, or demo/live trading. |
+| D34 | **(2026-10-20 08:18 UTC, owner message cmsg_01U4KMvkBYNknqm4HRVie8uvHSj7NvGuGANxzEG8iJzdNG) Follow-up scope after the D33 final review.** (1) F1, strict `owner_message` format validation: not in this PR; it is deferred to a separate hardening proposal, and the whitespace-variant limitation stays documented (the exact-match spent check lets a D31 copy with trailing whitespace past the first control; the lock, MANIFEST-3 file check and existing results still stop it). (2) The git-history-dependent tests are replaced by a committed fixture plus pinned sha256 values. The fixture is `research/tests/fixtures/b5_run2_edge_registry.py.orig`, holding the run-2 bytes of `edge_registry.py` (sha256 e56f49aa…, equal to the MANIFEST-3 entry). The six protected artefacts are pinned by sha256, and no test skips or weakens. (3) PR #22 is to be closed as superseded once it is confirmed to have no unique changes; it is not to be rebased. (4) PR #19's description is to be updated to its actual scope. (5) Merging PR #19 is not yet authorised. Each external PR action waits for the owner's approval. No production authorisation logic, status, manifest, lock, result, registration or trading change. |

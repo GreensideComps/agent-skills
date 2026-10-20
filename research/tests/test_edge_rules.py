@@ -228,11 +228,68 @@ def test_dsr_floor_applies_with_too_few_comparable_results(tmp_path):
     assert 0 < out["dsr"] < 1 and math.isfinite(out["sr0"])
 
 
-def test_committed_registry_dsr_inputs_reconcile():
-    ev = edge_registry.load()
-    assert edge_registry.n_trials(ev) == 96
+B5_PRIMARY_IDS = {"B5-H1-FCFPS-ACCEL", "B5-S2A-GP-12M", "B5-H1-FCFPS-ACCEL-V2", "B5-S2A-GP-12M-V2",
+                  "B5-H1-FCFPS-ACCEL-V3", "B5-S2A-GP-12M-V3"}
+PRE_RUN_2_LINES = 240  # the registry before B5 run 2 (D31): MANIFEST-3 registered, no B5 result
+
+
+def test_committed_registry_dsr_inputs_reconcile_before_b5_run_2(tmp_path):
+    """Isolated copy of the registry as it stood before run 2 (its first 240 lines)."""
+    pre = tmp_path / "pre.jsonl"
+    pre.write_text("".join(edge_registry.PATH.read_text().splitlines(keepends=True)[:PRE_RUN_2_LINES]))
+    ev = edge_registry.load(pre)
+    # 96 after PR #18 + B5 version 1 (2, superseded, never run, still counted) + B5 version 2 (2): D14, D15
+    # + B5 version 3 (2, owner D21, registered 2026-10-19)
+    assert edge_registry.n_trials(ev) == 102 and not edge_registry.validate(pre)
+    done = {e["id"] for e in ev if e.get("event") == "result"}
+    assert not B5_PRIMARY_IDS & done   # registered, not run (owner: no H1 or S2a run without separate approval)
     assert len(edge_registry.sharpe_list(ev, edge_registry.LEGACY_STAT)) == 15   # Stage 2's top-quintile Sharpes
     assert edge_registry.sharpe_list(ev, "portfolio_excess_vs_vwrp") == []      # none yet: Phase B adds them
+
+
+def test_committed_registry_dsr_inputs_reconcile_after_b5_run_2():
+    """Run 2 (D31, closed out D32) recorded the two counted V3 primaries; the robustness runs are uncounted, so the
+    DSR's excess-over-VWRP Sharpe list holds exactly those two, and N and the Stage 2 Sharpes are unchanged."""
+    ev = edge_registry.load()
+    assert edge_registry.n_trials(ev) == 102 and not edge_registry.validate()
+    done = {e["id"] for e in ev if e.get("event") == "result"}
+    assert B5_PRIMARY_IDS & done == {"B5-H1-FCFPS-ACCEL-V3", "B5-S2A-GP-12M-V3"}
+    assert len(edge_registry.sharpe_list(ev, edge_registry.LEGACY_STAT)) == 15
+    assert sorted(edge_registry.sharpe_list(ev, "portfolio_excess_vs_vwrp")) == [0.15617751061474458,
+                                                                              0.19998574529911248]
+
+
+def test_b5_v2_spec_is_frozen_at_its_registered_hash():
+    """The registry records the sha256 of B5_PREREGISTRATION.md v2; any later edit to the spec fails here."""
+    import hashlib
+    spec = Path(__file__).resolve().parents[2] / "docs" / "edge" / "B5_PREREGISTRATION.md"
+    reg = edge_registry.registered(edge_registry.load())
+    for tid in ("B5-H1-FCFPS-ACCEL-V2", "B5-S2A-GP-12M-V2"):
+        assert reg[tid]["spec_sha256"] == hashlib.sha256(spec.read_bytes()).hexdigest()
+
+
+def test_b5_addendum_1_is_frozen_at_its_registered_hash_and_does_not_change_n():
+    """ADDENDUM_1 is registered (not counted) with its sha256; any later edit fails here, and N stays 100."""
+    import hashlib
+    spec = Path(__file__).resolve().parents[2] / "docs" / "edge" / "B5_PREREGISTRATION_ADDENDUM_1.md"
+    ev = edge_registry.load()
+    a = edge_registry.registered(ev)["B5-V2-ADDENDUM-1"]
+    assert a["spec_sha256"] == hashlib.sha256(spec.read_bytes()).hexdigest()
+    assert a["counts_for_dsr"] is False and set(a["amends"]) == {"B5-H1-FCFPS-ACCEL-V2", "B5-S2A-GP-12M-V2"}
+    assert edge_registry.n_trials(ev) == 102  # addenda never count; 100 + the two V3 trials
+
+
+def test_b5_addendum_2_is_frozen_at_its_registered_hash_and_does_not_change_n():
+    """ADDENDUM_2 (owner reviews 2026-10-16 13:34Z, 14:17Z) is registered (not counted) with its sha256; any later
+    edit fails here, and N stays 100. The run manifest is not registered until the owner authorises the run."""
+    import hashlib
+    spec = Path(__file__).resolve().parents[2] / "docs" / "edge" / "B5_PREREGISTRATION_ADDENDUM_2.md"
+    ev = edge_registry.load()
+    reg = edge_registry.registered(ev)
+    a = reg["B5-V2-ADDENDUM-2"]
+    assert a["spec_sha256"] == hashlib.sha256(spec.read_bytes()).hexdigest()
+    assert a["counts_for_dsr"] is False and "B5-V2-ADDENDUM-1" in a["amends"]
+    assert edge_registry.n_trials(ev) == 102 and "B5-V2-RUN-MANIFEST" not in reg  # 100 + the two V3 trials
 
 
 def test_exposures_are_recorded_but_never_counted(tmp_path):
@@ -250,7 +307,29 @@ def test_report_must_open_with_standing_limitations():
     ok = "# Backtest\n\n" + edge_rules.STANDING_LIMITATIONS + "\nResults..."
     assert edge_rules.require_disclosure(ok) == ok
     assert "Survivorship bias" in edge_rules.STANDING_LIMITATIONS
+    # owner, 2026-10-16: every report must say the -100% stress does not reach companies missing from the universe
+    assert "do not address companies missing from the universe" in edge_rules.STANDING_LIMITATIONS
+    assert "not evidence that survivorship bias is bounded" in edge_rules.STANDING_LIMITATIONS
     with pytest.raises(ValueError):
         edge_rules.require_disclosure("# Backtest\n\nResults first.\n\n" + edge_rules.STANDING_LIMITATIONS)
     with pytest.raises(ValueError):
         edge_rules.require_disclosure("# Backtest\n\nNo disclosure.")
+
+
+ADDENDUM_3_SHA256 = "70406d1d6f55eb0bac4d54bf6f07e5f37063d0b1b56a4335752c2193397cd17e"  # reviewed (D20, D21); registered 2026-10-19 as B5-V3-ADDENDUM-3
+
+
+def test_b5_addendum_3_is_frozen_at_its_registered_hash():
+    """ADDENDUM_3 (owner decisions D20, D21) is registered at its reviewed hash (owner approval 2026-10-19 07:53Z);
+    any later edit fails here. Version 2 and addenda 1-2 stay registered at their hashes."""
+    import hashlib
+    docs = Path(__file__).resolve().parents[2] / "docs" / "edge"
+    assert hashlib.sha256((docs / "B5_PREREGISTRATION_ADDENDUM_3.md").read_bytes()).hexdigest() == ADDENDUM_3_SHA256
+    ev = edge_registry.load()
+    reg = edge_registry.registered(ev)
+    a3 = reg["B5-V3-ADDENDUM-3"]  # registered 2026-10-19 (owner approval 07:53Z) at the reviewed hash
+    assert a3["spec_sha256"] == ADDENDUM_3_SHA256 and a3["counts_for_dsr"] is False
+    assert edge_registry.n_trials(ev) == 102 and reg["B5-V3-RUN-MANIFEST"]["counts_for_dsr"] is False
+    for rid, f in (("B5-H1-FCFPS-ACCEL-V2", "B5_PREREGISTRATION.md"), ("B5-V2-ADDENDUM-1", "B5_PREREGISTRATION_ADDENDUM_1.md"),
+                   ("B5-V2-ADDENDUM-2", "B5_PREREGISTRATION_ADDENDUM_2.md")):
+        assert reg[rid]["spec_sha256"] == hashlib.sha256((docs / f).read_bytes()).hexdigest()

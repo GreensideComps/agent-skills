@@ -1,5 +1,7 @@
 # Stage 2 diagnostics (Phase A, exploration data only)
 
+> **Survivorship (material, unbounded; added 2026-10-16 at the owner's request):** companies that delisted before the 2026 price download are missing from the universe entirely. The -30% and -100% missing-price rules do not address them and are not evidence that survivorship bias is bounded.
+
 Decisions from 2015-01; outcomes end by 2022-12 at every horizon (last decision: 1 month 2022-11, 3 months 2022-09, 6 months 2022-06, 12 months 2021-12). The dataset was cut at 2022-12 before any score was built. Information only: Stage 2 verdicts are unchanged. Survivor bias as in the Stage 1 report.
 
 Programme trial count after registering these looks: 66 (`research/edge/trials.jsonl`); 96 after the later quality and point-in-time sensitivity looks.

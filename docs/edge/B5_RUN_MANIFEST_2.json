@@ -1,0 +1,33 @@
+{
+ "note": "B5 run manifest: every input and code file the run reads, by sha256. Registered as B5-V3-RUN-MANIFEST-2 only on the owner's authorisation; edge_b5_run.preflight refuses any mismatch.",
+ "inputs": {
+  "/mnt/project-files/research-data/monthly_metrics.csv.gz": "ae5429b661bd060d040109138d35cb4ea22356d4a549056c8616c3a2a7e87561",
+  "/mnt/project-files/research-data/prices_monthly.csv.gz": "505115711f7ef59c8df417671f8afecf77dd2240e13a2a3bdff453721b3d801a",
+  "/mnt/project-files/research-data/sec_companies.csv.gz": "acf5e3f746c355aa2c0aa2b76c0c3f55413daf5e927524672537d0389d214a90",
+  "/mnt/project-files/research-data/sec_facts_panel.csv.gz": "2a56736fdea7825485233697705b63c0c0d4fbb6c47fcd905b8bfe6183765453",
+  "/mnt/project-files/research-data/edge/exec_prices_to_2022.csv.gz": "dd6608f62ae2676fd4fd5b3b256105d5f52eb720ba3a10a2965cf504e17d47dc",
+  "/mnt/project-files/research-data/edge/gbpusd_daily_to_2022.csv.gz": "fd9f8e7dc921465732460a507225778ea9d14437dfd5026f4b37f3dd54310d65",
+  "/mnt/project-files/research-data/edge/benchmarks_daily_gbp_to_2022.csv.gz": "0ec17f8631a17cc6f7cc3ca7e1f8054437371e2012739926d4ccfffa0b1f6fc6",
+  "research/edge/factors/F-F_Research_Data_5_Factors_2x3_to_2022.csv": "0b49e5f01fd42ef82413bfcd1a6fcf0da9c454f30406d608c2b9bf361aa7007c",
+  "research/edge/factors/F-F_Momentum_Factor_to_2022.csv": "2ea2bc33229be0ee9ec1b61ab07650abb4b5f14715d2eac2d79bb633fb7d8a5c",
+  "equity/reports/research/edge/exec_prices_audit_moves.csv": "2d3221010ebb4edc2ed9ae04056ca1ed49f6fd6c7d35dc970486eef9479a6edb"
+ },
+ "code": {
+  "research/edge_b5_run.py": "68e7eb90bc9528cf61e7db5c5b1f0a81d79da23c09971e8f05a346afe6825d3a",
+  "research/edge_b5.py": "fd3618382dd6faea4828eefd1a20bd8b8f9b6952d3c1b9a93ffcd2ccd7779752",
+  "research/edge_b5_inputs.py": "7a37fa077237986e5a684e5018d8835ca759d7230069d7db6d1369d969185cf3",
+  "research/edge_b5_stats.py": "3fc03c3dbdfa2176598c513a0fa01ec89d17ead0532b5893031b175b333b1fbc",
+  "research/edge_backtest.py": "d61e8026b997cf53f2165647ac8f188f5df88a9b81ffc67daf080c179ec64af3",
+  "research/edge_rules.py": "9f6aeb7fe22effdbd93ff0738520c7a88ed2d52e5323451a27e28984e78f41e9",
+  "research/edge_registry.py": "729783c201cb9fada650a1ce403362d1b3e6ed76a7aad230338de66648652c64",
+  "research/edge_split.py": "f0f32dc8f47b8d512c18689bf97feb2c228b3dc26351017596861bee017fa147",
+  "research/xsection.py": "a4f265ce6c1308f51b18800c915973240af2f226a13f8c3fb6c06cce76937f16",
+  "research/stage2.py": "4491915168676581e9b263cd7e3a92a90fa991d4bd11ba238e9ced11d52436bc",
+  "research/edge_exec_prices.py": "14a4f1d8b655e8be28c09882227cd1ecefede23921b09949dc536f30f8982802",
+  "research/data_sources.py": "dcdbdf26db3d07ec847fab238400056391b937e3f0250ccc9e3c8176e9b5b8e4",
+  "equity/equity/__init__.py": "aa8bf8bca2a55423e3b73a212c9894a5a776cad8ed7f612af65edeeef6823bf0",
+  "equity/equity/panel.py": "5586a431ff03b1aa4aecee75eaa7cc84672ae4e03d1d018760de70de356a5d9a",
+  "equity/equity/fundamentals.py": "d8c4bab78dc0b12de3e506fd12fc2df77e6d21a938052f9a0b3bb0a28cdb9aef",
+  "equity/equity/industry.py": "f8122eba16de5f751c606ab4bba5cf787f15772bd811eeaa7bcb1acc30d5a8f0"
+ }
+}
