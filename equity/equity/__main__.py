@@ -300,9 +300,10 @@ def cmd_prices(store: Store, a) -> int:
     ids = {s["company_id"] for s in store.fundamentals.read()}
     if a.symbol:
         ids &= {resolve(store, symbol=x)["company_id"] for x in a.symbol if resolve(store, symbol=x)}
-    from .paper import benchmark_security, load_config  # noqa: PLC0415
+    from .paper import benchmark_security, load_config, primary_securities  # noqa: PLC0415
     with job(store, "update_prices", {"companies": len(ids)}, redact=_secrets()) as j:
-        res = update_prices(store, _primary_priced(store, ids) + [benchmark_security(load_config())])
+        res = update_prices(store, _primary_priced(store, ids) + [benchmark_security(load_config())] +
+                            primary_securities(load_config()))
         j["outputs"] = {k: (len(v) if isinstance(v, list) else v) for k, v in res.items()}
     print(json.dumps(res, indent=1))
     return 1 if res["failed"] and not res["written"] else 0

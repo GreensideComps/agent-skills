@@ -5,10 +5,12 @@ Last updated: 2026-10-20 by the "Research office" thread. Labels: **[V]** verifi
 
 ## Verified state
 
-- **master:**
-  - `11512d40369f009f023c40dcaa905dd533033c46`, tree `f12ba23c8d2c3229ab167366ad9e272d04da05f2`, parents `93b66f4`
-    and `b2ea086` [V].
-  - Offline tests on a clean master checkout: trading 139, equity 118, research 460 (717 in all), all pass [V].
+- **master:** `b0e494b` after PR #26 (`50d3a76`) and PR #25 merged on 20 Oct [V]. Offline tests on that head:
+  trading 139, equity 118, research 460, office 43, all pass [V]. (D37 baseline before them: `11512d4`, 717 tests.)
+- **Office deployed (20 Oct):** G1 started 11:56Z on `claude/office-state` [V]. The first scheduled heartbeat (11:57Z)
+  ran the worker from a fresh session and pushed its events: 4 tasks done, worker finished [V]. Its test task failed
+  because scheduled sessions have no pytest; the heartbeat prompt now installs it (T21), unproven until 21 Oct [V].
+  The demo snapshot read 22 positions, total 1,221.56, no pending orders [V].
 - **Research state:**
   - Registry 102 trials; `b5_trial_run` authorised = false [V].
   - No lock file in `research/edge` [V].
@@ -44,7 +46,7 @@ Categories: **IV** implemented and verified · **IU** implemented, not verified 
 | A | Scheduler and worker that run with nobody prompting | IU | M2 `worker.py`, run by a heartbeat scheduled task. The prompt is written (`office/WORKER.md`); the task is not created (owner decision). |
 | A | Stalled-job and silent-worker detection, alerts | IU | `health.py` [T]: worker silent for more than 2 heartbeats, runs that never finished, quarantined or blocked tasks, task-raised alerts. |
 | A | Existing scheduled tasks | P | 4 active (weekday brief, monthly signal log, equity daily pipeline, weekly discovery) [V: list_triggers]. Equity pipeline last run 19 Oct exited rc=1 [V]. Brief still clones the bot branch [V]. |
-| B | Next research question chosen without prompting | M | No research director exists. Research runs only on an owner-approved manifest by design (D-series). |
+| B | Next research question chosen without prompting | P | Planner on a draft PR drafts one proposal a week for the owner (T15) [T]; the candidate still needs a session to write it. |
 | B | Hypothesis registered before testing | IV | `edge_registry` and manifest gate; run 2 executed only against registered MANIFEST-3 [V: registry, tests]. |
 | B | Permissions and resource limits enforced in code | IV | `edge_b5_run.py` refuses without an unspent owner authorisation, matching lock and file hashes [T] (research 460). |
 | B | Failures and inconclusive results recorded | IV | Run 1 failure recorded (D26), run 2 results with both fails [V]. |
@@ -54,8 +56,8 @@ Categories: **IV** implemented and verified · **IU** implemented, not verified 
 | C | Data-quality detection | P | Input audits, share-PIT audit, negative-price guard [V]. Check 4 coverage gap: 26–31% of eligible rows unscored (PR #23) [V]. |
 | C | Costs, slippage, turnover | IV | 0.30% one-way, next-day close in the B5 engine, synthetic validation B2 [T]. |
 | C | Multiple testing, holdout exposure | IV | DSR with N = 102, one confirmation batch rule [V]. |
-| C | VWRP benchmark | P | B5 uses VWRL→VWRP [V]. The equity paper book benchmarks against **SPY**, not VWRP [V: `equity/equity/paper.py`]. |
-| D | Portfolio manager that justifies positions | M | No component decides positions from evidence. The equity paper book follows the screen; the old bot strategy is retired. |
+| C | VWRP benchmark | P | B5 uses VWRL→VWRP [V]. paper-1.1 on a draft PR adds VWRP as primary, SPY secondary (T14) [T]; master still SPY only. |
+| D | Portfolio manager that justifies positions | IU | pm-1.0 on a draft PR (T20): proposal only, 100% VWRP until a gated strategy exists, limits and arithmetic in every record [T]. Not scheduled. |
 | D | Sizing, concentration, drawdown limits in code | P | Bot executor has position and order caps [A: not re-audited]. Nothing at portfolio level against VWRP. |
 | D | Documented no-trade outcome | IV | Strategy V2 and Stage 2 decisions: no signal may drive sizes; VWRP fallback [V]. |
 | D | Out-of-sample and paper evaluation | P | Equity paper book runs daily [A: pipeline rc=1 on 19 Oct]. No VWRP-relative paper gate. |
@@ -83,16 +85,15 @@ Nothing runs as a supervised, self-recovering system yet.
 
 ## Highest-priority blockers
 
-1. **Owner approval to deploy the office:** create `claude/office-state`, the heartbeat and digest tasks, and start
-   G1 (criteria in `RELIABILITY_GATE.md`). Uses plan usage only.
-2. **Code must be on master** before the scheduled prompts can clone it: the M2 PR needs review and merge.
+1. **G1 is running** (started 20 Oct 11:56Z, earliest pass 3 Nov). The crash drill is still to do.
+2. **Owner review of draft PR #27** (pm-1.0, paper-1.1, planner) before merge. Sector rule confirmed 20 Oct 12:19Z.
 3. **Pack B decisions** (weekday brief, decile rule, unscored option, M1 branch) block only their own steps.
 
 ## Risks
 
 - Cloud scheduled sessions failed 3 of 6 runs on 14 Oct in a shared persistent session [V: earlier audit]. G1
   measures this directly.
-- A git push from a scheduled session to `claude/office-state` is assumed, not yet tested from a scheduled session [A].
+- A git push from a scheduled session to `claude/office-state` works: tested by the 20 Oct 11:57Z run [V].
 - Plan usage limits are unknown here. The budgets in code (8 tasks and 40 minutes per run) cap use per run, not per
   month.
 

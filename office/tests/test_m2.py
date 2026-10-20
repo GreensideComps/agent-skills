@@ -191,6 +191,15 @@ def test_test_suites_strip_credentials_and_alert_on_failure(store, clock):
     assert office_call[0][-1] == "tests"  # never the GitHub queue script
 
 
+def test_test_suites_report_missing_runner_with_redacted_stderr(store, clock):
+    env = dict(SECRET_ENV, T212_API_SECRET="sekret-value")
+    fr = FakeRun(lambda cmd, kw: SimpleNamespace(returncode=1, stdout="",
+                                                 stderr="/usr/bin/python3: No module named pytest sekret-value\n"))
+    out = handlers.h_test_suites(ctx_for(store(), clock, env=env, run=fr), {"day": "d"})
+    assert out["alert"]["code"] == "test_runner_missing"
+    assert out["suites"]["trading"]["stderr"] == "/usr/bin/python3: No module named pytest ***"
+
+
 def test_demo_snapshot_skips_without_demo_credentials_and_reads_only_totals(store, clock, tmp_path):
     s = store()
     assert handlers.h_demo_snapshot(ctx_for(s, clock, env={"T212_ENV": "live", "T212_API_KEY": "k"}),

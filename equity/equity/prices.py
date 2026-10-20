@@ -28,7 +28,10 @@ class PriceError(RuntimeError):
 
 
 def yahoo_symbol(security: dict) -> str:
-    """Yahoo uses '-' for share classes (BRK-B); only US lines are priced for now."""
+    """Yahoo uses '-' for share classes (BRK-B); only US lines are priced for now. A security may name its Yahoo
+    symbol outright (`yahoo`), as the London-listed VWRP benchmark (VWRP.L) and the GBPUSD rate do."""
+    if security.get("yahoo"):
+        return security["yahoo"]
     return security["symbol"].replace(".", "-").replace("/", "-")
 
 

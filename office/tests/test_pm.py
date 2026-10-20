@@ -1,0 +1,169 @@
+"""pm-1.0: proposal-only portfolio manager (PM_SPEC.md). Every number here is synthetic."""
+from __future__ import annotations
+
+import ast
+import datetime as dt
+from pathlib import Path
+
+from office import pm, sectors
+
+TODAY = dt.date(2026, 10, 20)
+REG = [{"event": "register", "id": "T-PASS", "kind": "trial"}, {"event": "result", "id": "T-PASS", "verdict": "pass"},
+       {"event": "register", "id": "T-FAIL", "kind": "trial"}, {"event": "result", "id": "T-FAIL", "verdict": "fail"},
+       {"event": "register", "id": "D-1", "kind": "diagnostic"}, {"event": "result", "id": "D-1", "verdict": "pass"}]
+LOOK = {"as_of": "2026-09-30", "source": "test fixture", "top_holdings": {"AAPL": 0.045},
+        "sector_weights": {"Technology": 0.25, "Financials": 0.17, "Industrials": 0.14, "Health Care": 0.10,
+                           "Consumer Discretionary": 0.11, "Consumer Staples": 0.06, "Energy": 0.04,
+                           "Basic Materials": 0.04, "Telecommunications": 0.03, "Utilities": 0.03,
+                           "Real Estate": 0.03}}
+
+
+def strat(holdings, trials=("T-PASS",), owner="cmsg_x"):
+    return {"strategies": [{"id": "S", "owner_decision": owner, "trials": list(trials), "holdings": holdings}]}
+
+
+def run(cfg, look=LOOK, **kw):
+    return pm.propose(eligible_cfg=cfg, trial_events=REG, look_cfg=look, today=TODAY, **kw)
+
+
+def test_empty_config_is_100pct_vwrp_no_trade():
+    r = run({"strategies": []}, look=None)
+    assert r["verdict"] == "default" and r["targets"] == [{"ticker": "VWRP", "weight": 1.0,
+                                                           "reason": "no strategy has passed the research gates"}]
+    assert r["no_trade"] and not r["failed"] and r["review"]["status"] == "not applicable"
+    assert r["unverified"] == ["sector_active"] and any(f.startswith("unverified") for f in r["flags"])
+
+
+def test_default_passes_every_sector_on_verified_data_and_is_unverified_on_stale():
+    r = run({"strategies": []})
+    rows = [c for c in r["constraints"] if c["constraint"].startswith("sector_active:")]
+    assert len(rows) == 11 and all(c["status"] == "pass" and c["value"] == 0 for c in rows)
+    assert all(c["evidence"]["source"] == "test fixture" and "active = " in c["calc"] for c in rows)
+    assert not r["unverified"] and r["verdict"] == "default"
+    for bad in (dict(LOOK, as_of="2026-01-01"), dict(LOOK, source=None),
+                dict(LOOK, sector_weights=dict(LOOK["sector_weights"], Technology=0.50))):
+        r = run({"strategies": []}, look=bad)
+        rows = [c for c in r["constraints"] if c["constraint"].startswith("sector_active:")]
+        assert all(c["status"] == "unverified" for c in rows) and r["verdict"] == "default"
+
+
+def test_shipped_repo_config_gives_default():
+    r = pm.from_repo(Path(__file__).resolve().parents[2], TODAY)
+    assert r["verdict"] == "default" and r["no_trade"] and r["evidence"]["trials"]
+
+
+def test_strategy_needs_owner_decision_and_passing_trials():
+    h = [{"ticker": "X", "weight": 0.02, "sic": 2834}]
+    for cfg, why in ((strat(h, owner="yes"), "owner decision"), (strat(h, trials=()), "cites no trial"),
+                     (strat(h, trials=("T-FAIL",)), "not exactly one pass"), (strat(h, trials=("NOPE",)), "not in"),
+                     (strat(h, trials=("D-1",)), "diagnostic")):
+        r = run(cfg)
+        assert r["verdict"] == "default" and why in r["refused_strategies"][0]["reason"]
+
+
+def test_accepted_book_shows_arithmetic():
+    r = run(strat([{"ticker": "X", "weight": 0.05, "sic": 2834}, {"ticker": "Y", "weight": 0.05, "sic": 6022}]))
+    assert r["verdict"] == "accepted" and not r["no_trade"]
+    assert r["targets"][0] == {"ticker": "VWRP", "weight": 0.9, "reason": "core: the remainder"}
+    hc = next(c for c in r["constraints"] if c["constraint"] == "sector_active:Health Care")
+    assert abs(hc["value"] - (0.9 * 0.10 + 0.05 - 0.10)) < 1e-12 and hc["status"] == "pass"
+    assert "core 0.9000 x VWRP 0.1000 + satellites 0.0500 = 0.1400" in hc["calc"]
+    assert "classification mismatch" in " ".join(r["flags"])
+
+
+def test_limits_reject_whole_candidate():
+    over = [{"ticker": f"T{i}", "weight": 0.05, "sic": 3674} for i in range(5)]       # 25% outside, all tech
+    r = run(strat(over))
+    assert r["verdict"] == "rejected" and r["targets"][0]["weight"] == 1.0
+    assert "outside_core" in r["failed"] and "sector_active:Information Technology" in r["failed"]
+    stale = run(strat(over), look=dict(LOOK, as_of="2026-01-01"))
+    assert "sector_active:Information Technology" in stale["failed"]   # a breach fails even on stale data
+    assert "per_company:Z" in run(strat([{"ticker": "Z", "weight": 0.06, "sic": 2834}]))["failed"]
+
+
+def test_sector_check_unverifiable_rejects():
+    h = [{"ticker": "X", "weight": 0.02, "sic": 2834}]
+    assert run(strat(h), look=None)["verdict"] == "rejected"
+    r = run(strat(h), look=dict(LOOK, as_of="2026-01-01"))
+    assert r["verdict"] == "rejected" and not r["failed"] and "unverified" in r["targets"][0]["reason"]
+    r = run(strat([{"ticker": "Q", "weight": 0.02, "sic": None}]))
+    assert r["verdict"] == "rejected" and any("unknown sector" in f for f in r["flags"])
+
+
+def test_lookthrough_company_flag_and_stale_data():
+    r = run(strat([{"ticker": "AAPL", "weight": 0.01, "sic": 3571}]))
+    lt = next(c for c in r["constraints"] if c["constraint"] == "per_company_lookthrough:AAPL")
+    assert not lt["enforced"] and lt["value"] > 0.05 and lt["status"] == "fail" and any("AAPL" in f for f in r["flags"])
+    stale = dict(LOOK, as_of="2026-01-01", source=None)
+    flags = pm.lookthrough(stale, TODAY)[1]
+    assert any("days old" in f for f in flags) and any("no source" in f for f in flags)
+
+
+def test_review_threshold():
+    flat = [(f"2026-{m:02d}-28", 100.0, 100.0) for m in range(1, 4)]
+    assert pm.review(flat)["status"] == "within threshold"
+    bad = [("2025-01-31", 100.0, 100.0)] + [(f"2026-{m:02d}-28", 100.0, 100.0) for m in range(1, 13)] + \
+          [("2027-01-31", 80.0, 100.0)]
+    r = pm.review(bad)
+    assert r["status"] == "review_threshold breached" and set(r["breached"]) == {"trailing_12m", "since_inception"}
+    assert abs(r["since_inception"]["relative"] + 0.20) < 1e-12 and r["trailing_12m"]["from"] == "2026-01-28"
+    assert pm.review(None)["status"] == "not applicable"
+
+
+def test_sic_mapping():
+    assert sectors.from_sic(2834) == "Health Care" and sectors.from_sic(3674) == "Information Technology"
+    assert sectors.from_sic(6798) == "Real Estate" and sectors.from_sic(1311) == "Energy"
+    assert sectors.from_sic(None) is None and sectors.from_sic(9999) is None
+    assert set(sectors.ICB.values()) == set(sectors.SECTORS)
+
+
+def test_pm_imports_no_broker_code():
+    src = Path(pm.__file__).read_text() + Path(sectors.__file__).read_text()
+    mods = {n.module or "" for n in ast.walk(ast.parse(src)) if isinstance(n, ast.ImportFrom)} | \
+           {a.name for n in ast.walk(ast.parse(src)) if isinstance(n, ast.Import) for a in n.names}
+    assert not {m for m in mods if "t212" in m or "trading" in m or "orders" in m or "requests" in m}
+
+
+def test_review_findings_negative_duplicate_and_rerun():
+    shorts = [{"ticker": f"X{i}", "weight": -0.05, "sic": sic} for i, sic in enumerate((7372, 6022, 3711, 1311, 2834))]
+    r = run(strat(shorts))
+    assert r["verdict"] == "rejected" and "weights_valid" in r["failed"]
+    r = run(strat([{"ticker": "MSFT", "weight": 0.05, "sic": 7372}, {"ticker": "ORCL", "weight": -0.05, "sic": 7372}]))
+    assert r["verdict"] == "rejected"
+    two = {"strategies": [strat([{"ticker": "AAPL", "weight": 0.04, "sic": 3571}])["strategies"][0],
+                          dict(strat([{"ticker": "aapl ", "weight": 0.04, "sic": 3571}])["strategies"][0], id="S2")]}
+    r = run(two)
+    assert "per_company:AAPL" in r["failed"] and r["verdict"] == "rejected"
+    rerun = REG + [{"event": "result", "id": "T-FAIL", "verdict": "pass"}]
+    r = pm.propose(eligible_cfg=strat([{"ticker": "X", "weight": 0.02, "sic": 2834}], trials=("T-FAIL",)),
+                   trial_events=rerun, look_cfg=LOOK, today=TODAY)
+    assert r["verdict"] == "default" and "not exactly one pass" in r["refused_strategies"][0]["reason"]
+
+
+def test_review_findings_trailing_by_date_and_accepted_without_history():
+    gap = [(f"2025-{m:02d}-28", 100.0, 100.0) for m in range(1, 13) if m != 2] + [("2026-01-31", 100.0, 100.0),
+                                                                                ("2026-02-28", 100.0, 100.0)]
+    r = pm.review(gap)
+    assert r["status"] == "unverified" and "2025-02" in r["reason"]
+    assert pm.review([("2026-01-31", 0.0, 100.0), ("2026-02-28", 1.0, 100.0)])["status"] == "unverified"
+    young = pm.review([("2026-01-31", 100.0, 100.0), ("2026-03-31", 80.0, 100.0)])
+    assert young["status"] == "review_threshold breached" and "since inception" in young["trailing_12m"]["note"]
+    acc = run(strat([{"ticker": "X", "weight": 0.05, "sic": 2834}]))
+    assert acc["verdict"] == "accepted" and acc["review"]["status"] == "unverified"
+
+
+def test_review_findings_lookthrough_bounds_and_other_bucket():
+    bad = dict(LOOK, sector_weights=dict(LOOK["sector_weights"], Technology=0.36, Energy=-0.06))
+    assert not pm.lookthrough(bad, TODAY)[0]["verified"]
+    other = dict(LOOK, sector_weights=dict(LOOK["sector_weights"], Industrials=0.13995, Other=0.00005))
+    look, flags = pm.lookthrough(other, TODAY)
+    assert look["verified"] and look["evidence"]["unclassified"] == 0.00005
+    assert not pm.lookthrough(dict(LOOK, top_holdings={"AAPL": None}), TODAY)[0]["verified"]
+
+
+def test_shipped_vanguard_data_passes_default():
+    r = pm.from_repo(Path(__file__).resolve().parents[2], dt.date(2026, 10, 20))
+    rows = [c for c in r["constraints"] if c["constraint"].startswith("sector_active:")]
+    assert len(rows) == 11 and all(c["status"] == "pass" for c in rows) and not r["unverified"]
+    assert rows[0]["evidence"]["as_of"] == "2026-08-31" and "vanguard.co.uk" in rows[0]["evidence"]["source"]
+    assert pm.from_repo(Path(__file__).resolve().parents[2], dt.date(2026, 12, 20))["unverified"]  # 111 days old
