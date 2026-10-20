@@ -12,7 +12,7 @@ REG = [{"event": "register", "id": "T-PASS", "kind": "trial"}, {"event": "result
        {"event": "register", "id": "T-FAIL", "kind": "trial"}, {"event": "result", "id": "T-FAIL", "verdict": "fail"},
        {"event": "register", "id": "D-1", "kind": "diagnostic"}, {"event": "result", "id": "D-1", "verdict": "pass"}]
 LOOK = {"as_of": "2026-09-30", "source": "test fixture", "top_holdings": {"AAPL": 0.045},
-        "sector_weights": {"Technology": 0.25, "Financials": 0.16, "Industrials": 0.11, "Health Care": 0.10,
+        "sector_weights": {"Technology": 0.25, "Financials": 0.17, "Industrials": 0.14, "Health Care": 0.10,
                            "Consumer Discretionary": 0.11, "Consumer Staples": 0.06, "Energy": 0.04,
                            "Basic Materials": 0.04, "Telecommunications": 0.03, "Utilities": 0.03,
                            "Real Estate": 0.03}}
@@ -31,7 +31,20 @@ def test_empty_config_is_100pct_vwrp_no_trade():
     assert r["verdict"] == "default" and r["targets"] == [{"ticker": "VWRP", "weight": 1.0,
                                                            "reason": "no strategy has passed the research gates"}]
     assert r["no_trade"] and not r["failed"] and r["review"]["status"] == "not applicable"
-    assert any(f.startswith("unverifiable") for f in r["flags"])
+    assert r["unverified"] == ["sector_active"] and any(f.startswith("unverified") for f in r["flags"])
+
+
+def test_default_passes_every_sector_on_verified_data_and_is_unverified_on_stale():
+    r = run({"strategies": []})
+    rows = [c for c in r["constraints"] if c["constraint"].startswith("sector_active:")]
+    assert len(rows) == 11 and all(c["status"] == "pass" and c["value"] == 0 for c in rows)
+    assert all(c["evidence"]["source"] == "test fixture" and "active = " in c["calc"] for c in rows)
+    assert not r["unverified"] and r["verdict"] == "default"
+    for bad in (dict(LOOK, as_of="2026-01-01"), dict(LOOK, source=None),
+                dict(LOOK, sector_weights=dict(LOOK["sector_weights"], Technology=0.50))):
+        r = run({"strategies": []}, look=bad)
+        rows = [c for c in r["constraints"] if c["constraint"].startswith("sector_active:")]
+        assert all(c["status"] == "unverified" for c in rows) and r["verdict"] == "default"
 
 
 def test_shipped_repo_config_gives_default():
@@ -53,7 +66,8 @@ def test_accepted_book_shows_arithmetic():
     assert r["verdict"] == "accepted" and not r["no_trade"]
     assert r["targets"][0] == {"ticker": "VWRP", "weight": 0.9, "reason": "core: the remainder"}
     hc = next(c for c in r["constraints"] if c["constraint"] == "sector_active:Health Care")
-    assert abs(hc["value"] - (0.9 * 0.10 + 0.05 - 0.10)) < 1e-12 and hc["pass"]
+    assert abs(hc["value"] - (0.9 * 0.10 + 0.05 - 0.10)) < 1e-12 and hc["status"] == "pass"
+    assert "core 0.9000 x VWRP 0.1000 + satellites 0.0500 = 0.1400" in hc["calc"]
     assert "classification mismatch" in " ".join(r["flags"])
 
 
@@ -62,12 +76,16 @@ def test_limits_reject_whole_candidate():
     r = run(strat(over))
     assert r["verdict"] == "rejected" and r["targets"][0]["weight"] == 1.0
     assert "outside_core" in r["failed"] and "sector_active:Information Technology" in r["failed"]
+    stale = run(strat(over), look=dict(LOOK, as_of="2026-01-01"))
+    assert "sector_active:Information Technology" in stale["failed"]   # a breach fails even on stale data
     assert "per_company:Z" in run(strat([{"ticker": "Z", "weight": 0.06, "sic": 2834}]))["failed"]
 
 
 def test_sector_check_unverifiable_rejects():
     h = [{"ticker": "X", "weight": 0.02, "sic": 2834}]
     assert run(strat(h), look=None)["verdict"] == "rejected"
+    r = run(strat(h), look=dict(LOOK, as_of="2026-01-01"))
+    assert r["verdict"] == "rejected" and not r["failed"] and "unverified" in r["targets"][0]["reason"]
     r = run(strat([{"ticker": "Q", "weight": 0.02, "sic": None}]))
     assert r["verdict"] == "rejected" and any("unknown sector" in f for f in r["flags"])
 
@@ -75,7 +93,7 @@ def test_sector_check_unverifiable_rejects():
 def test_lookthrough_company_flag_and_stale_data():
     r = run(strat([{"ticker": "AAPL", "weight": 0.01, "sic": 3571}]))
     lt = next(c for c in r["constraints"] if c["constraint"] == "per_company_lookthrough:AAPL")
-    assert not lt["enforced"] and lt["value"] > 0.05 and any("AAPL" in f for f in r["flags"])
+    assert not lt["enforced"] and lt["value"] > 0.05 and lt["status"] == "fail" and any("AAPL" in f for f in r["flags"])
     stale = dict(LOOK, as_of="2026-01-01", source=None)
     flags = pm.lookthrough(stale, TODAY)[1]
     assert any("days old" in f for f in flags) and any("no source" in f for f in flags)

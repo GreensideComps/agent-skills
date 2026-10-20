@@ -72,69 +72,93 @@ def eligible(cfg: dict, verdicts: dict[str, dict]) -> tuple[list[dict], list[dic
 
 
 def lookthrough(cfg: dict | None, today: dt.date) -> tuple[dict, list[str]]:
-    """VWRP sector and company weights mapped onto the 11 sectors, and the flags that apply to them (§3)."""
+    """VWRP sector and company weights mapped onto the 11 sectors, whether they are verified, and the flags (§3).
+
+    Verified means: entered with a source, a valid as-of date at most LOOKTHROUGH_MAX_AGE_DAYS old, every provider
+    sector mapped, and weights summing to 100% +/- 2 points. Unverified data is still used to show the arithmetic,
+    but no check that depends on it can pass (owner, 20 Oct 12:19Z)."""
     flags = []
     if not cfg or not cfg.get("sector_weights"):
-        return {"sectors": None, "companies": {}}, ["unverifiable: no VWRP look-through data has been entered"]
+        return {"sectors": None, "companies": {}, "verified": False,
+                "evidence": {"source": None, "as_of": None}}, \
+            ["unverified: no VWRP look-through data has been entered"]
     if not cfg.get("source"):
-        flags.append("unverifiable: VWRP look-through has no source")
+        flags.append("unverified: VWRP look-through has no source")
+    age = None
     try:
         age = (today - dt.date.fromisoformat(cfg["as_of"])).days
-        if age > LOOKTHROUGH_MAX_AGE_DAYS:
-            flags.append(f"unverifiable: VWRP look-through is {age} days old (limit {LOOKTHROUGH_MAX_AGE_DAYS})")
+        if age > LOOKTHROUGH_MAX_AGE_DAYS or age < 0:
+            flags.append(f"unverified: VWRP look-through is {age} days old (limit {LOOKTHROUGH_MAX_AGE_DAYS})")
     except (KeyError, TypeError, ValueError):
-        flags.append("unverifiable: VWRP look-through has no valid as-of date")
+        flags.append("unverified: VWRP look-through has no valid as-of date")
     mapped: dict[str, float] = {}
     for name, w in cfg["sector_weights"].items():
-        s = sectors.from_icb(name)
-        if s is None:
-            flags.append(f"unverifiable: provider sector {name!r} has no mapping")
+        sec = sectors.from_icb(name)
+        if sec is None:
+            flags.append(f"unverified: provider sector {name!r} has no mapping")
             continue
-        mapped[s] = mapped.get(s, 0.0) + float(w)
+        mapped[sec] = mapped.get(sec, 0.0) + float(w)
+    total = sum(float(w) for w in cfg["sector_weights"].values())
+    if abs(total - 1.0) > 0.02:
+        flags.append(f"unverified: VWRP sector weights sum to {total:.4f}, not 1 +/- 0.02")
+    verified = not flags
     flags.append("classification mismatch: VWRP sectors are FTSE/ICB, satellites are SIC-mapped (sectors.py)")
-    return {"sectors": mapped, "companies": {k: float(v) for k, v in cfg.get("top_holdings", {}).items()}}, flags
+    return {"sectors": mapped, "companies": {k: float(v) for k, v in cfg.get("top_holdings", {}).items()},
+            "verified": verified, "evidence": {"source": cfg.get("source"), "as_of": cfg.get("as_of"),
+                                               "age_days": age, "sector_weight_sum": round(total, 6)}}, flags
+
+
+def _status(ok: bool, verified: bool = True) -> str:
+    return "fail" if not ok else ("pass" if verified else "unverified")
 
 
 def check(sats: list[dict], look: dict) -> list[dict]:
-    """Every constraint for a candidate book: core VWRP plus satellites [{ticker, weight, sic}] (§2)."""
+    """Every constraint for a candidate book: core VWRP plus satellites [{ticker, weight, sic}] (§2).
+
+    Each record: constraint, limit, value, calc (the arithmetic), evidence, enforced, status (pass / fail /
+    unverified). A breach is "fail" even on unverified data; a check that only passes on unverified or missing
+    data is "unverified", never "pass"."""
     out_w = sum(float(h["weight"]) for h in sats)
     core = 1.0 - out_w
+    ev = look["evidence"]
     res = [{"constraint": "outside_core", "limit": MAX_OUTSIDE_CORE, "value": out_w, "enforced": True,
-            "calc": " + ".join(f"{h['ticker']} {h['weight']:.4f}" for h in sats) + f" = {out_w:.4f}" if sats
-            else "no satellites = 0", "pass": out_w <= MAX_OUTSIDE_CORE + EPS}]
+            "calc": " + ".join(f"{h['ticker']} {float(h['weight']):.4f}" for h in sats) + f" = {out_w:.4f}" if sats
+            else "no satellites = 0", "evidence": "proposal weights", "status": _status(out_w <= MAX_OUTSIDE_CORE + EPS)}]
     for h in sats:
         w = float(h["weight"])
         res.append({"constraint": f"per_company:{h['ticker']}", "limit": MAX_PER_COMPANY, "value": w,
-                    "enforced": True, "calc": f"direct {w:.4f}", "pass": w <= MAX_PER_COMPANY + EPS})
-        if h["ticker"] in look["companies"]:
-            lt = look["companies"][h["ticker"]]
-            tot = w + core * lt
-            res.append({"constraint": f"per_company_lookthrough:{h['ticker']}", "limit": MAX_PER_COMPANY,
-                        "value": tot, "enforced": False, "calc": f"{w:.4f} + core {core:.4f} x VWRP {lt:.4f} = "
-                        f"{tot:.4f}", "pass": tot <= MAX_PER_COMPANY + EPS})
-    if not sats:
-        res.append({"constraint": "sector_active", "limit": MAX_SECTOR_ACTIVE, "value": 0.0, "enforced": True,
-                    "calc": "100% VWRP: every sector equals VWRP's, active weight 0", "pass": True})
-        return res
+                    "enforced": True, "calc": f"direct {w:.4f}", "evidence": "proposal weights",
+                    "status": _status(w <= MAX_PER_COMPANY + EPS)})
+        lt = look["companies"].get(h["ticker"])
+        tot = w + core * (lt or 0.0)
+        res.append({"constraint": f"per_company_lookthrough:{h['ticker']}", "limit": MAX_PER_COMPANY,
+                    "value": tot, "enforced": False, "evidence": ev,
+                    "calc": f"{w:.4f} + core {core:.4f} x VWRP {lt:.4f} = {tot:.4f}" if lt is not None
+                    else f"{w:.4f} + core {core:.4f} x VWRP weight (not in the entered top holdings) >= {tot:.4f}",
+                    "status": _status(tot <= MAX_PER_COMPANY + EPS, look["verified"] and lt is not None)})
     unknown = [h["ticker"] for h in sats if sectors.from_sic(h.get("sic")) is None]
-    if unknown or look["sectors"] is None:
-        why = (f"unknown sector for {unknown}" if unknown else "") + \
-              ("; " if unknown and look["sectors"] is None else "") + \
-              ("no VWRP look-through data" if look["sectors"] is None else "")
+    if look["sectors"] is None:
         res.append({"constraint": "sector_active", "limit": MAX_SECTOR_ACTIVE, "value": None, "enforced": True,
-                    "calc": f"cannot be computed: {why}", "pass": False})
+                    "calc": "cannot be computed: no VWRP look-through data", "evidence": ev, "status": "unverified"})
         return res
     sat_by: dict[str, float] = {}
     for h in sats:
-        s = sectors.from_sic(h["sic"])
-        sat_by[s] = sat_by.get(s, 0.0) + float(h["weight"])
-    for s in sorted(set(sat_by) | set(look["sectors"])):
-        vw = look["sectors"].get(s, 0.0)
-        port = core * vw + sat_by.get(s, 0.0)
+        sec = sectors.from_sic(h.get("sic"))
+        if sec:
+            sat_by[sec] = sat_by.get(sec, 0.0) + float(h["weight"])
+    for sec in sectors.SECTORS:
+        vw = look["sectors"].get(sec, 0.0)
+        port = core * vw + sat_by.get(sec, 0.0)
         active = port - vw
-        res.append({"constraint": f"sector_active:{s}", "limit": MAX_SECTOR_ACTIVE, "value": active,
-                    "enforced": True, "calc": f"core {core:.4f} x VWRP {vw:.4f} + satellites {sat_by.get(s, 0.0):.4f}"
-                    f" - VWRP {vw:.4f} = {active:+.4f}", "pass": abs(active) <= MAX_SECTOR_ACTIVE + EPS})
+        res.append({"constraint": f"sector_active:{sec}", "limit": MAX_SECTOR_ACTIVE, "value": active,
+                    "enforced": True, "evidence": ev,
+                    "calc": f"portfolio = core {core:.4f} x VWRP {vw:.4f} + satellites {sat_by.get(sec, 0.0):.4f} = "
+                    f"{port:.4f}; active = {port:.4f} - VWRP {vw:.4f} = {active:+.4f}",
+                    "status": _status(abs(active) <= MAX_SECTOR_ACTIVE + EPS, look["verified"] and not unknown)})
+    if unknown:
+        res.append({"constraint": "sector_classified", "limit": None, "value": unknown, "enforced": True,
+                    "calc": f"no sector for {unknown}: their weight is missing from the sector rows above",
+                    "evidence": "SIC codes in pm_eligible.json", "status": "unverified"})
     return res
 
 
@@ -170,26 +194,33 @@ def propose(*, eligible_cfg: dict, trial_events: list[dict], look_cfg: dict | No
     look, flags = lookthrough(look_cfg, today)
     sats = [h for s in ok for h in s.get("holdings", [])]
     checks = check(sats, look)
-    failed = [c["constraint"] for c in checks if c["enforced"] and not c["pass"]]
+    failed = [c["constraint"] for c in checks if c["enforced"] and c["status"] == "fail"]
+    unverified = [c["constraint"] for c in checks if c["enforced"] and c["status"] == "unverified"]
     flags += [f"look-through company weight above {MAX_PER_COMPANY:.0%}: {c['constraint'].split(':', 1)[1]}"
-              for c in checks if not c["enforced"] and not c["pass"]]
+              for c in checks if not c["enforced"] and c["status"] == "fail"]
     flags += [f"unknown sector: {h['ticker']} has no usable SIC code" for h in sats
               if sectors.from_sic(h.get("sic")) is None]
-    if sats and not failed:
+    if sats and not failed and not unverified:
         targets = [{"ticker": h["ticker"], "weight": float(h["weight"]), "reason": f"eligible strategy "
                     f"{s['id']} (owner {s['owner_decision']}, trials {s['trials']})"}
                    for s in ok for h in s.get("holdings", [])]
         core = 1.0 - sum(t["weight"] for t in targets)
         targets.insert(0, {"ticker": CORE, "weight": core, "reason": "core: the remainder"})
         verdict = "accepted"
+    elif sats:
+        why = ", ".join([f"{c} failed" for c in failed] + [f"{c} unverified" for c in unverified])
+        targets = [{"ticker": CORE, "weight": 1.0, "reason": f"candidate rejected ({why}); the 100% VWRP default "
+                    "stands"}]
+        verdict = "rejected"
     else:
-        targets = [{"ticker": CORE, "weight": 1.0, "reason": "no strategy has passed the research gates" if not sats
-                    else f"candidate rejected ({', '.join(failed)}); the 100% VWRP default stands"}]
-        verdict = "default" if not sats else "rejected"
+        # The default is the fallback, so it stands whatever the data; its unverified checks are shown, not passed.
+        targets = [{"ticker": CORE, "weight": 1.0, "reason": "no strategy has passed the research gates"}]
+        verdict = "default"
     tw = {t["ticker"]: round(t["weight"], 6) for t in targets}
     cur = {k: round(float(v), 6) for k, v in (current or {CORE: 1.0}).items() if v}
     return {"version": VERSION, "as_of": today.isoformat(), "verdict": verdict, "targets": targets,
-            "no_trade": tw == cur, "constraints": checks, "failed": failed, "refused_strategies": refused,
+            "no_trade": tw == cur, "constraints": checks, "failed": failed, "unverified": unverified,
+            "refused_strategies": refused,
             "flags": flags, "review": review(series if sats else None), "evidence": evidence or {},
             "orders": "none: pm-1.0 is proposal-only"}
 

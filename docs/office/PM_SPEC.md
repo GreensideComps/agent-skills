@@ -13,7 +13,7 @@ Scope:
   2. every trial id it cites has a passing gate verdict in `research/edge/trials.jsonl`.
 - The file ships empty. Stage 2 and B5 both failed, so today **every proposal is 100% VWRP**, the documented no-trade
   outcome.
-- An ineligible or unverifiable strategy gets weight 0, and the proposal records why.
+- An ineligible strategy gets weight 0, and the proposal records why.
 
 ## 2. Constraints, checked in code on every proposal
 
@@ -26,7 +26,19 @@ Scope:
 
 **Why the sector limit is active, not absolute.** VWRP itself holds roughly 25% in technology [A]. An absolute 10% cap
 would reject the 100% VWRP default. pm-1.0 therefore applies the 10% limit to exposure **relative to VWRP**,
-measured with look-through. This interpretation is recorded for the owner to confirm or change.
+measured with look-through. **Confirmed by the owner, 20 Oct 2026 12:19Z (cmsg_01U4KMvkBYNknqm4HRVie8uvFVThkjb4nfMtWxVvYtRTrB):**
+"±10 percentage points relative to VWRP, measured using look-through sector exposure. The 100% VWRP default should
+pass its active-sector checks. If holdings data is missing or stale, mark the check as unverified rather than
+passing it."
+
+**Check results.** Every check has one of three statuses, and every record shows its calculation and evidence (the
+look-through source, as-of date, age and weight sum):
+- **pass:** within the limit, on verified data;
+- **fail:** outside the limit (on any data);
+- **unverified:** within the limit only on missing, stale, unsourced or unmapped data, or a holding has no sector.
+  An unverified check never counts as a pass.
+
+There is one row per sector (all 11), so the 100% VWRP default shows each active weight as exactly 0.
 
 A proposal that breaks any limit is not scaled down automatically. It is rejected, with the breach shown, and the
 100% VWRP default stands.
@@ -38,15 +50,15 @@ A proposal that breaks any limit is not scaled down automatically. It is rejecte
 - **VWRP look-through:** sector weights and top holdings from a dated input file,
   `office/config/vwrp_lookthrough.json`, copied from Vanguard's published fund data with its source and as-of date.
 - **Flags:**
-  - **unverifiable:** the file is missing, older than 95 days, or entered without a source;
+  - **unverified:** the file is missing, older than 95 days, entered without a source, has a provider sector with
+    no mapping, or its weights do not sum to 100% ± 2 points;
   - **classification mismatch:** VWRP's provider sectors (FTSE/ICB) and the SIC mapping are different systems, and
     the sector names are matched by a fixed table;
   - **unknown sector:** the company has no SIC code (it is not an SEC filer).
-- With satellites, a sector check that cannot be computed (no look-through data, or a holding with an unknown
-  sector) counts as failed, so the proposal is rejected and the 100% VWRP default stands. Stale or unsourced data
-  is shown as unverifiable beside the numbers.
-- With no satellites, no sector check can fail, so the default proposal needs no look-through data. The flag still
-  shows when that data is missing.
+- With satellites, any failed **or unverified** enforced check rejects the candidate, and the 100% VWRP default
+  stands.
+- With no satellites, the default stands whatever the data (it is the fallback). Its sector checks pass only on
+  verified look-through data; otherwise they are recorded as unverified, never as passed.
 
 ## 4. Relative-performance review threshold (−15%)
 
@@ -71,5 +83,5 @@ This is not a trading trigger and not a protection. It only opens a review.
 - the version, the time, and the evidence it used (trial ids, gate verdicts, file hashes);
 - target weights, each with its reason;
 - every constraint: its inputs, the arithmetic, the limit and pass/fail;
-- flags for anything unverifiable;
+- flags for anything unverified;
 - "no trade" when the target equals the current core.
