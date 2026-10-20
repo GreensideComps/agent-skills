@@ -18,6 +18,7 @@ import json
 import sys
 from dataclasses import asdict
 
+from . import retired
 from .client import T212Client
 from .config import SafetyError, load_credentials, load_strategy
 from .executor import Bot
@@ -36,6 +37,9 @@ def _fmt_plan(plan) -> str:
 
 
 def main(argv=None) -> int:
+    if retired.BRANCH_RETIRED:
+        print(f"REFUSED: {retired.MESSAGE}", file=sys.stderr)
+        return 5
     ap = argparse.ArgumentParser(prog="t212bot")
     sub = ap.add_subparsers(dest="cmd", required=True)
     sub.add_parser("status")

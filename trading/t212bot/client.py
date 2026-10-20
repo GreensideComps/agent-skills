@@ -23,6 +23,7 @@ from dataclasses import dataclass
 from typing import Callable
 
 from .config import DEMO_BASE_URL, Credentials, SafetyError
+from .retired import refuse_if_retired
 
 # endpoint key -> minimum seconds between calls (official limit + margin)
 RATE_LIMITS = {
@@ -111,6 +112,8 @@ class T212Client:
 
     def _request(self, method: str, path: str, key: str, payload: dict | None = None,
                  is_order: bool = False, max_tries: int = 4):
+        if method != "GET":
+            refuse_if_retired(f"{method} {path}")
         url = self._base + path
         if not url.startswith(DEMO_BASE_URL + "/api/v0/"):
             raise SafetyError(f"refusing request outside demo API: {path!r}")

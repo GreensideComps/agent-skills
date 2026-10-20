@@ -4,6 +4,9 @@
 #   1. sync the branch   2. run tests   3. bot run --execute   4. report
 #   5. commit journal + report and push (rebasing on conflicts)
 set -uo pipefail
+# Retired (owner decision O10, 2026-10-20): this branch is kept for audit only.
+# Refuse before any git sync, test run or bot call. Remove only by reviewed commit.
+echo "OPS: this branch's bot is retired (owner decision O10) - no sync, no run"; exit 5
 BRANCH="${T212BOT_BRANCH:-claude/trading212-agent-skills-r71zy3}"
 ROOT="$(git rev-parse --show-toplevel)"
 cd "$ROOT"

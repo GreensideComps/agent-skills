@@ -14,6 +14,7 @@ from .config import ROOT, SafetyError, StrategyConfig, kill_switch_engaged, load
 from .journal import Journal, utcnow
 from .market import YahooQuotes, check_against_t212, check_fresh, to_gbp, tradable_now
 from .planner import Holding, plan_rebalance, round_down
+from .retired import refuse_if_retired
 from .signals import resolve_targets
 
 TERMINAL = {"FILLED", "CANCELLED", "REJECTED", "REPLACED"}
@@ -101,6 +102,7 @@ class Bot:
 
     # ------------------------------------------------------------ order flow
     def _place(self, ticker: str, qty: float, ref: dict, reason: str, state: dict) -> dict | None:
+        refuse_if_retired("order placement")
         decs = state.setdefault("qty_decimals", {})
         d0 = decs.get(ticker, self.cfg.default_qty_decimals)
         sign = 1 if qty > 0 else -1
@@ -186,6 +188,7 @@ class Bot:
         return min(q, fit), cash
 
     def _retry_buy_with_fresh_cash(self, ticker, q, d, ref, reason, first_err, state=None):
+        refuse_if_retired("order placement")
         state = state if state is not None else {}
         self.j.event("order_rejected", ticker=ticker, quantity=q, status=first_err.status,
                      body=first_err.body[:500], will_retry_with_fresh_cash=True)
@@ -304,6 +307,7 @@ class Bot:
 
     # ------------------------------------------------------------ main
     def run(self, execute: bool = False, force: bool = False) -> dict:
+        refuse_if_retired("bot run")
         j = self.j
         state = j.load_state()
         state.setdefault("strategy", self.cfg.name)

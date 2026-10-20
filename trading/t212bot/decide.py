@@ -18,6 +18,7 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 from .config import DISCRETIONARY_PATH, SafetyError, StrategyConfig, validate_targets
+from .retired import refuse_if_retired
 
 LONDON = ZoneInfo("Europe/London")
 
@@ -54,6 +55,7 @@ def check_limits(cfg: StrategyConfig, journal, targets: dict, value_now: float, 
 
 def decide(bot, cfg: StrategyConfig, journal, targets: dict, reason: str, execute: bool, now: datetime,
            path: Path = DISCRETIONARY_PATH, scratch: Path | None = None) -> dict:
+    refuse_if_retired("decide")
     if cfg.mode != "discretionary":
         raise SafetyError("strategy.json mode is not 'discretionary'")
     if not reason.strip():

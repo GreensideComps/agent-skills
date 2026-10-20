@@ -8,6 +8,10 @@ from pathlib import Path
 
 import pytest
 
+
+def pytest_configure(config):
+    config.addinivalue_line("markers", "retired_guard: run with the branch retirement in force")
+
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from t212bot.client import Response, T212Client  # noqa: E402
@@ -16,6 +20,16 @@ from t212bot.journal import Journal  # noqa: E402
 from t212bot.market import Quote  # noqa: E402
 
 NOW = datetime(2026, 10, 13, 10, 0, tzinfo=timezone.utc)
+
+
+@pytest.fixture(autouse=True)
+def _legacy_behaviour_unless_testing_the_retirement(request, monkeypatch):
+    """The branch is retired (t212bot/retired.py). The legacy tests keep checking the
+    old logic in-process against the fake broker; tests marked `retired_guard` run
+    with the real, retired setting."""
+    if request.node.get_closest_marker("retired_guard") is None:
+        import t212bot.retired
+        monkeypatch.setattr(t212bot.retired, "BRANCH_RETIRED", False)
 
 INSTRUMENTS = [
     {"ticker": "VWRPl_EQ", "currencyCode": "GBP", "workingScheduleId": 70, "type": "ETF", "name": "Vanguard FTSE All-World (Acc)"},

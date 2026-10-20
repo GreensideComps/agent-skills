@@ -3,6 +3,9 @@
 #   1. sync   2. t212bot monitor   3. commit the journal's monitor event and push
 # Exit code is the monitor's: 0 ok, 1 warning, 2 critical.
 set -uo pipefail
+# Retired (owner decision O10, 2026-10-20): this branch is kept for audit only.
+# Refuse before any git sync, test run or bot call. Remove only by reviewed commit.
+echo "MONITOR: this branch's bot is retired (owner decision O10) - no sync, no run"; exit 5
 BRANCH="${T212BOT_BRANCH:-claude/trading212-agent-skills-r71zy3}"
 ROOT="$(git rev-parse --show-toplevel)"
 cd "$ROOT"
