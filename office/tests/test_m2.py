@@ -184,11 +184,24 @@ def test_test_suites_strip_credentials_and_alert_on_failure(store, clock):
         return SimpleNamespace(returncode=0, stdout="....\n139 passed in 9.0s\n", stderr="")
     fr = FakeRun(res)
     out = handlers.h_test_suites(ctx_for(store(), clock, env=SECRET_ENV, run=fr), {"day": "d"})
-    assert out["suites"]["equity"] == {"exit": 1, "failed": 2, "passed": 116, "summary": "2 failed, 116 passed in 3.1s"}
+    eq = out["suites"]["equity"]
+    assert (eq["exit"], eq["failed"], eq["passed"], eq["summary"]) == (1, 2, 116, "2 failed, 116 passed in 3.1s")
     assert out["suites"]["office"]["passed"] == 139
     assert out["alert"]["code"] == "tests_failing" and "equity" in out["alert"]["text"]
+    assert "cause" not in out["alert"] and out["suites"]["equity"]["cwd"] == "equity"
     office_call = [c for c in fr.calls if c[1].get("cwd", "").endswith("office")][0]
     assert office_call[0][-1] == "tests"  # never the GitHub queue script
+
+
+def test_test_suites_expose_missing_runner_with_redacted_stderr(store, clock):
+    env = dict(SECRET_ENV, T212_API_SECRET="sekret-value")
+    fr = FakeRun(lambda cmd, kw: SimpleNamespace(returncode=1, stdout="",
+                                                 stderr="/usr/bin/python3: No module named pytest sekret-value\n"))
+    out = handlers.h_test_suites(ctx_for(store(), clock, env=env, run=fr), {"day": "d"})
+    assert out["alert"]["code"] == "tests_failing" and out["alert"]["level"] == "critical"   # never softened
+    assert "pytest not importable" in out["alert"]["cause"] and "sekret" not in json.dumps(out)
+    assert out["suites"]["trading"]["stderr_tail"] == "/usr/bin/python3: No module named pytest ***"
+    assert out["runner"]["probe_exit"] == 1 and out["suites"]["office"]["command"].endswith("tests")
 
 
 def test_demo_snapshot_skips_without_demo_credentials_and_reads_only_totals(store, clock, tmp_path):
