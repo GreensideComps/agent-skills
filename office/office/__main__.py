@@ -11,6 +11,7 @@ import subprocess
 import sys
 import tempfile
 import time
+from datetime import datetime
 from pathlib import Path
 
 from . import gate, health, worker
@@ -48,7 +49,9 @@ def main(argv: list[str] | None = None) -> int:
     r.add_argument("--owner-message", required=True)
     gs = sub.add_parser("gate-start")
     gs.add_argument("--owner-message", required=True)
-    sub.add_parser("gate-report")
+    gr = sub.add_parser("gate-report")
+    gr.add_argument("--gate-seq", type=int, default=None, help="score the gate started at this seq (default: latest)")
+    gr.add_argument("--at", default=None, help="evaluate as of this UTC time (ISO), using only events up to it")
     dg = sub.add_parser("digest")
     dg.add_argument("--day", default=None)
     a = ap.parse_args(argv)
@@ -93,7 +96,11 @@ def main(argv: list[str] | None = None) -> int:
         print(render_digest(parse(store.sync()), now, a.day or director.day(now), hb))
     elif a.cmd == "gate-report":
         problems = store.audit_history()
-        print(json.dumps(gate.evaluate(parse(store.sync()), time.time(), problems), indent=1))
+        events, now = parse(store.sync()), time.time()
+        if a.at:
+            now = datetime.fromisoformat(a.at).timestamp()
+            events = [e for e in events if health.ts(e) <= now]
+        print(json.dumps(gate.evaluate(events, now, problems, a.gate_seq), indent=1))
     return 0
 
 

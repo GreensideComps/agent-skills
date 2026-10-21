@@ -263,17 +263,17 @@ def test_health_raises_a_critical_alert_when_a_commit_edited_earlier_log_lines(s
 
 # Gate: synthetic logs (pure function of events), so 14 days can be checked without 14 days of commits.
 
-def synth(days=15, hb=3600.0, skip=(), extra=()):
+def synth(days=15, hb=3600.0, skip=(), extra=(), criteria="G1", late=None):
     from datetime import datetime, timezone
     t0, out = 1_800_000_000.0, []
 
     def add(t, **e):
         e.update(seq=len(out), ts=datetime.fromtimestamp(t, timezone.utc).isoformat(timespec="seconds"))
         out.append(e)
-    add(t0, kind="gate_started", heartbeat_s=hb, owner_message="cmsg_X", criteria="G1")
+    add(t0, kind="gate_started", heartbeat_s=hb, owner_message="cmsg_X", criteria=criteria)
     n = int(days * 86400 / hb)
     for i in range(1, n + 1):
-        t = t0 + i * hb - 60
+        t = t0 + i * hb - 60 + (late or {}).get(i, 0)
         if i in skip:
             continue
         add(t, kind="worker_started", run=f"r{i}", actor="w")
@@ -356,3 +356,93 @@ def test_github_queue_script_refuses_any_branch_but_a_throwaway_one():
                        cwd=str(__import__("pathlib").Path(__file__).resolve().parents[1]), capture_output=True,
                        text=True, env={"PATH": "/usr/bin:/bin", "HTTPS_PROXY": "http://127.0.0.1:9"}, timeout=60)
     assert r.returncode != 0 and "office-queue-test-" in r.stderr
+
+
+def heartbeat(r):
+    return [c for c in r["checks"] if c["check"] == "heartbeat"][0]
+
+
+def test_g1_keeps_its_exact_two_heartbeat_limit_and_g2_allows_fifteen_minutes_more():
+    # One missed run, then the next run starts late: G1's 21 Oct failure was this shape, 67 s over.
+    for crit, late, ok in (("G1", 0, True), ("G1", 67, False), ("G2", 67, True), ("G2", 900, True),
+                           ("G2", 901, False)):
+        ev, now = synth(skip=(100,), late={101: late}, criteria=crit, hb=3 * 3600)
+        r = gate.evaluate(drill(ev), now, [])
+        assert heartbeat(r)["pass"] is ok, (crit, late, heartbeat(r)["detail"])
+        assert r["criteria"] == crit and (r["verdict"] == "pass") is ok
+    ev, now = synth(skip=(100, 101), criteria="G2", hb=3 * 3600)  # two missed runs in a row fail G2 too
+    assert not heartbeat(gate.evaluate(drill(ev), now, []))["pass"]
+    ev, now = synth(days=5, criteria="G2", hb=3 * 3600)  # an open gap is scored at evaluation time
+    r = gate.evaluate(drill(ev), now + 2 * 3 * 3600 + 901, [])
+    assert r["verdict"] == "fail" and "limit 22500 s" in heartbeat(r)["detail"]
+    assert gate.evaluate(drill(ev), now + 2 * 3 * 3600 + 800, [])["verdict"] == "running"
+
+
+def test_g1_detail_text_is_unchanged_and_each_gate_is_scored_under_its_own_criteria():
+    ev, now = synth(skip=(100,), late={101: 67}, criteria="G1", hb=3 * 3600)
+    assert heartbeat(gate.evaluate(drill(ev), now, []))["detail"].endswith("(limit 6.00 h)")
+    g2 = dict(ev[0], seq=len(ev), criteria="G2")
+    both = drill(ev) + [g2]
+    assert gate.evaluate(both, now, [])["criteria"] == "G2"  # latest gate by default
+    assert gate.evaluate(both, now, [], gate_seq=0)["criteria"] == "G1"
+    assert gate.evaluate(both, now, [], gate_seq=0)["verdict"] == "fail"
+    assert gate.evaluate([dict(ev[0], criteria="G9")], now, [])["verdict"] == "unknown criteria"
+    assert gate.CRITERIA_VERSION == "G2"
+
+
+def test_a_missed_run_warns_before_the_gate_limit_and_writes_nothing(store, clock):
+    s, calls = store(), []
+    worker.run(s, ctx_for(s, clock), worker="w", code="x", clock=clock, handlers=ok_handlers(calls))
+    hb = 3 * 3600
+    ev = parse(s.sync())
+    codes = lambda t: [a["code"] for a in health.report(ev, t, hb)["alerts"]]  # noqa: E731
+    assert "heartbeat_overdue" not in codes(clock() + hb + 900)
+    assert "heartbeat_overdue" in codes(clock() + hb + 901)
+    assert "worker_silent" in codes(clock() + 2 * hb + 1) and "heartbeat_overdue" not in codes(clock() + 2 * hb + 1)
+    before = s.sync()
+    health.report(ev, clock() + hb + 901, hb)
+    assert s.sync() == before  # the warning is computed from the log; it never starts or records a run
+    clock.t += 2 * hb + 120  # one scheduled run missed, the next one late
+    worker.run(store(), ctx_for(s, clock), worker="w", code="x", clock=clock, handlers=ok_handlers(calls))
+    ev = parse(s.sync())
+    rep = health.report(ev, clock(), hb)
+    missed = [a for a in rep["alerts"] if a["code"] == "heartbeat_missed"]
+    assert len(missed) == 1 and missed[0]["level"] == "warn" and "6.03 h" in missed[0]["text"]
+    assert not [a for a in health.report(ev, clock() + 86400, hb)["alerts"] if a["code"] == "heartbeat_missed"]
+
+
+def test_a_later_passing_test_run_clears_the_live_alert_and_keeps_the_failure_in_the_log(store, clock):
+    s, calls = store(), []
+    hs = ok_handlers(calls)
+    hs["test_suites"] = lambda ctx, inputs: {"suites": {"research": {"exit": 1}}, "alert": {
+        "level": "critical", "code": "tests_failing", "text": "test suites failed on master: research"}}
+    worker.run(s, ctx_for(s, clock), worker="w", code="x", clock=clock, handlers=hs)
+    failed = [e for e in parse(s.sync()) if e["kind"] == "task_completed" and e["output"].get("alert")]
+    assert len(failed) == 1
+    rep = health.report(parse(s.sync()), clock(), 3 * 3600)
+    assert [a["code"] for a in rep["alerts"]] == ["tests_failing"] and rep["cleared_alerts"] == []
+    clock.t += 86400  # the next day's test task passes
+    hs["test_suites"] = lambda ctx, inputs: {"suites": {"research": {"exit": 0}}}
+    hs["demo_snapshot"] = lambda ctx, inputs: {"ok": "snap"}
+    worker.run(store(), ctx_for(s, clock), worker="w", code="x", clock=clock, handlers=hs)
+    ev = parse(s.sync())
+    rep = health.report(ev, clock(), 3 * 3600)
+    assert "tests_failing" not in [a["code"] for a in rep["alerts"]]  # well inside the old 36 h hold
+    c = rep["cleared_alerts"]
+    assert len(c) == 1 and c[0]["code"] == "tests_failing" and c[0]["raised_seq"] == failed[0]["seq"]
+    assert [e for e in ev if e["seq"] == failed[0]["seq"]] == failed  # the failure event is still there, unchanged
+    md = handlers.render_digest(ev, clock(), director.day(clock()), 3 * 3600)
+    assert "cleared: tests_failing" in md and "test suites failed" not in md
+
+
+def test_an_alert_stays_live_when_the_later_run_also_alerts_or_another_type_passes(store, clock):
+    s, calls = store(), []
+    hs = ok_handlers(calls)
+    fail = lambda ctx, inputs: {"alert": {"level": "critical", "code": "tests_failing", "text": "failed"}}  # noqa: E731
+    hs["test_suites"] = fail
+    worker.run(s, ctx_for(s, clock), worker="w", code="x", clock=clock, handlers=hs)
+    clock.t += 86400
+    worker.run(store(), ctx_for(s, clock), worker="w", code="x", clock=clock, handlers=hs)
+    rep = health.report(parse(s.sync()), clock(), 3 * 3600)
+    assert [a["code"] for a in rep["alerts"]].count("tests_failing") == 2  # the health and digest passes clear neither
+    assert rep["cleared_alerts"] == []
