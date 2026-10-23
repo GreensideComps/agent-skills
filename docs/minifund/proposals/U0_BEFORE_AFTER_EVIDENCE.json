@@ -1,0 +1,87 @@
+{
+ "before": {
+  "registry_sha256": "de03d38b18a2d80b5c4d20f647c8ff35f5471157aba71fa99da6b550fb1217e6",
+  "edge_registry_py_sha256": "129c0e2d2dbab62692a3e1527460dffc495bc3fd396fc721e7642b3ed265bcb8",
+  "n_trials": 102,
+  "registry_result_verdict_field": {
+   "B5-H1-FCFPS-ACCEL-V3": null,
+   "B5-S2A-GP-12M-V3": null
+  },
+  "edge_verdicts": "module absent",
+  "edge_families": "module absent",
+  "banner_screen_paper": "> Evidence tier **E1** for `screen-1.0` (**unvalidated: not a recommendation**). Allowed use: research priority only. Pre-registered backtest failed (mean IC +0.077, t = 1.92 vs bar 2.0); no evidence among companies over $10bn (IC t = 0.6) or in technology. equity/research/audit_2026-10-14/\n>\n> Evidence tier **E1** for `paper-1.0` (**unvalidated: not a recommendation**). Allowed use: prospective record of screen-1.0; not advice. Forward test of screen-1.0, started 2026-10-14. Statistically uninformative for years (STRATEGY_V2 Part 2.4).",
+  "historical_reports_sha256": {
+   "equity/reports/paper/2026-10-14.md": "a7f26f8beab1d6c3",
+   "equity/reports/paper/2026-10-15.md": "76f94db5ed7a547f",
+   "equity/reports/paper/2026-10-16.md": "8c314936ac19f77c",
+   "equity/reports/paper/2026-10-19.md": "73239f1c79791a1c",
+   "equity/reports/paper/2026-10-20.md": "9071a11bec9440a4",
+   "equity/reports/paper/2026-10-23.md": "5322db1d89d4f2a8",
+   "equity/reports/portfolio/2026-10-14-review.md": "3500a7b55cc7f638",
+   "equity/reports/portfolio/2026-10-14-validation.md": "ef2e799fc47e1c37",
+   "equity/reports/portfolio/2026-10-14.md": "dc526bcc099a7fc9",
+   "equity/reports/portfolio/2026-10-15.md": "3b020f2bca0ce414",
+   "equity/reports/portfolio/2026-10-16.md": "e86c69687d7f7467",
+   "equity/reports/portfolio/2026-10-19.md": "527293c1bfe579da",
+   "equity/reports/portfolio/2026-10-20.md": "a097bd3410e795b1",
+   "equity/reports/screens/2026-10-14.md": "7ea51a5d00df26a6",
+   "equity/reports/screens/2026-10-15.md": "ad7c723bf112125a",
+   "equity/reports/screens/2026-10-16.md": "87d68dcc10b42d14",
+   "equity/reports/screens/2026-10-19.md": "af40e7131b2e5917",
+   "equity/reports/screens/2026-10-20.md": "a9e305f0b10f6d45",
+   "equity/reports/screens/2026-10-23.md": "d6784757c78813c7"
+  }
+ },
+ "after": {
+  "registry_sha256": "de03d38b18a2d80b5c4d20f647c8ff35f5471157aba71fa99da6b550fb1217e6",
+  "edge_registry_py_sha256": "129c0e2d2dbab62692a3e1527460dffc495bc3fd396fc721e7642b3ed265bcb8",
+  "n_trials": 102,
+  "registry_result_verdict_field": {
+   "B5-H1-FCFPS-ACCEL-V3": null,
+   "B5-S2A-GP-12M-V3": null
+  },
+  "verdict_ledger_valid": [],
+  "merged_verdicts": {
+   "B5-H1-FCFPS-ACCEL-V3": "fail",
+   "B5-S2A-GP-12M-V3": "fail"
+  },
+  "allocation_eligible": {
+   "B5-H1-FCFPS-ACCEL-V3": [
+    false,
+    "B5-H1-FCFPS-ACCEL-V3 verdict is fail, not pass"
+   ],
+   "B5-S2A-GP-12M-V3": [
+    false,
+    "B5-S2A-GP-12M-V3 verdict is fail, not pass"
+   ]
+  },
+  "db_extra_n": {
+   "MOM": 74,
+   "none": 0
+  },
+  "banner_screen_paper": "> Evidence tier **E1** for `screen-1.0` (**unvalidated exploratory research: not investable evidence, not a recommendation**). Allowed use: research priority only: unvalidated exploratory research, not investable evidence (owner decision D-C, 2026-10-23). Pre-registered backtest failed (mean IC +0.077, t = 1.92 vs bar 2.0); no evidence among companies over $10bn (IC t = 0.6) or in technology. equity/research/audit_2026-10-14/\n>\n> Evidence tier **E1** for `paper-1.0` (**unvalidated exploratory research: not investable evidence, not a recommendation**). Allowed use: prospective record of screen-1.0 only: unvalidated exploratory research, not investable evidence and not advice (owner decision D-C, 2026-10-23). Forward test of screen-1.0, started 2026-10-14. Statistically uninformative for years (STRATEGY_V2 Part 2.4).",
+  "historical_reports_sha256": {
+   "equity/reports/paper/2026-10-14.md": "a7f26f8beab1d6c3",
+   "equity/reports/paper/2026-10-15.md": "76f94db5ed7a547f",
+   "equity/reports/paper/2026-10-16.md": "8c314936ac19f77c",
+   "equity/reports/paper/2026-10-19.md": "73239f1c79791a1c",
+   "equity/reports/paper/2026-10-20.md": "9071a11bec9440a4",
+   "equity/reports/paper/2026-10-23.md": "5322db1d89d4f2a8",
+   "equity/reports/portfolio/2026-10-14-review.md": "3500a7b55cc7f638",
+   "equity/reports/portfolio/2026-10-14-validation.md": "ef2e799fc47e1c37",
+   "equity/reports/portfolio/2026-10-14.md": "dc526bcc099a7fc9",
+   "equity/reports/portfolio/2026-10-15.md": "3b020f2bca0ce414",
+   "equity/reports/portfolio/2026-10-16.md": "e86c69687d7f7467",
+   "equity/reports/portfolio/2026-10-19.md": "527293c1bfe579da",
+   "equity/reports/portfolio/2026-10-20.md": "a097bd3410e795b1",
+   "equity/reports/screens/2026-10-14.md": "7ea51a5d00df26a6",
+   "equity/reports/screens/2026-10-15.md": "ad7c723bf112125a",
+   "equity/reports/screens/2026-10-16.md": "87d68dcc10b42d14",
+   "equity/reports/screens/2026-10-19.md": "af40e7131b2e5917",
+   "equity/reports/screens/2026-10-20.md": "a9e305f0b10f6d45",
+   "equity/reports/screens/2026-10-23.md": "d6784757c78813c7"
+  }
+ },
+ "historical_reports_identical": true,
+ "registry_identical": true
+}

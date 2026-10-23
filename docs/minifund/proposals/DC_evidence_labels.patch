@@ -1,0 +1,46 @@
+diff --git a/equity/config/evidence.json b/equity/config/evidence.json
+index 73dc996..fbc1f9a 100644
+--- a/equity/config/evidence.json
++++ b/equity/config/evidence.json
+@@ -8,8 +8,8 @@
+     "E4": "E3 plus at least 24 months of consistent prospective evidence"
+   },
+   "methods": {
+-    "screen-1.0": {"tier": "E1", "evidence": "Pre-registered backtest failed (mean IC +0.077, t = 1.92 vs bar 2.0); no evidence among companies over $10bn (IC t = 0.6) or in technology. equity/research/audit_2026-10-14/", "allowed_use": "research priority only"},
++    "screen-1.0": {"tier": "E1", "evidence": "Pre-registered backtest failed (mean IC +0.077, t = 1.92 vs bar 2.0); no evidence among companies over $10bn (IC t = 0.6) or in technology. equity/research/audit_2026-10-14/", "allowed_use": "research priority only: unvalidated exploratory research, not investable evidence (owner decision D-C, 2026-10-23)"},
+     "val-1.0": {"tier": "E0", "evidence": "Untested. Growth caps (15% base, 20% bull) and a 3-year average FCF base rate most large companies as 50-90% overvalued by construction (validation of 2026-10-14).", "allowed_use": "descriptive only; never a buy or sell signal"},
+-    "paper-1.0": {"tier": "E1", "evidence": "Forward test of screen-1.0, started 2026-10-14. Statistically uninformative for years (STRATEGY_V2 Part 2.4).", "allowed_use": "prospective record of screen-1.0; not advice"}
++    "paper-1.0": {"tier": "E1", "evidence": "Forward test of screen-1.0, started 2026-10-14. Statistically uninformative for years (STRATEGY_V2 Part 2.4).", "allowed_use": "prospective record of screen-1.0 only: unvalidated exploratory research, not investable evidence and not advice (owner decision D-C, 2026-10-23)"}
+   }
+ }
+diff --git a/equity/equity/evidence.py b/equity/equity/evidence.py
+index e529c36..11e2935 100644
+--- a/equity/equity/evidence.py
++++ b/equity/equity/evidence.py
+@@ -32,7 +32,8 @@ def banner(*method_versions: str, cfg: dict | None = None) -> str:
+     for m in method_versions:
+         e = cfg["methods"].get(m) or {}
+         t = e.get("tier", "E0")
+-        state = "may drive decisions" if t in DECISION_TIERS else "**unvalidated: not a recommendation**"
++        state = ("may drive decisions" if t in DECISION_TIERS
++                 else "**unvalidated exploratory research: not investable evidence, not a recommendation**")
+         out.append(f"> Evidence tier **{t}** for `{m}` ({state}). Allowed use: {e.get('allowed_use', 'none recorded')}. "
+                    f"{e.get('evidence', '')}")
+     return "\n>\n".join(out)
+diff --git a/equity/tests/test_evidence.py b/equity/tests/test_evidence.py
+index 7a18ba9..bb32a08 100644
+--- a/equity/tests/test_evidence.py
++++ b/equity/tests/test_evidence.py
+@@ -19,3 +19,12 @@ def test_config_tiers_are_defined():
+     for m, e in cfg["methods"].items():
+         assert e["tier"] in cfg["tiers"], m
+         assert e["evidence"] and e["allowed_use"], m
++
++
++def test_d_c_screen_and_paper_book_are_labelled_exploratory_not_investable():
++    """Owner decision D-C (2026-10-23): screen-1.0 and its paper book are unvalidated exploratory research."""
++    cfg = evidence.load()
++    for m in ("screen-1.0", "paper-1.0"):
++        assert not evidence.may_drive_decisions(m, cfg)
++        assert "not investable evidence" in cfg["methods"][m]["allowed_use"]
++        assert "unvalidated exploratory research: not investable evidence" in evidence.banner(m, cfg=cfg)

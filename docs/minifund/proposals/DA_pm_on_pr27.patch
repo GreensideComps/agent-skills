@@ -1,0 +1,73 @@
+diff --git a/office/office/pm.py b/office/office/pm.py
+index ae86ee6..2b73c46 100644
+--- a/office/office/pm.py
++++ b/office/office/pm.py
+@@ -45,6 +45,16 @@ def trial_verdicts(events: list[dict]) -> dict[str, dict]:
+         elif e.get("event") == "result" and e.get("verdict") is not None:
+             rec["verdict"] = e["verdict"]
+             rec["verdicts"].append(e["verdict"])
++        elif e.get("event") == "result":
++            rec["unverdicted"] = rec.get("unverdicted", 0) + 1
++    # D-A: a result recorded without a verdict takes it from its verdict annotation
++    # (research/edge/verdict_annotations.jsonl, validated by research/edge_verdicts.py).
++    for e in events:
++        rec = out.get(e.get("id"))
++        if e.get("event") == "verdict_annotation" and rec and rec.get("unverdicted") and e.get("verdict"):
++            rec["verdict"] = e["verdict"]
++            rec["verdicts"].append(e["verdict"])
++            rec["unverdicted"] -= 1
+     return out
+ 
+ 
+@@ -301,9 +311,10 @@ def from_repo(repo: Path, today: dt.date | None = None) -> dict:
+     """Build today's proposal from the files in the repository, with their hashes as evidence."""
+     paths = {"pm_eligible": repo / "office/config/pm_eligible.json",
+              "vwrp_lookthrough": repo / "office/config/vwrp_lookthrough.json",
+-             "trials": repo / "research/edge/trials.jsonl"}
+-    trials = [json.loads(x) for x in paths["trials"].read_text().splitlines() if x.strip()] \
+-        if paths["trials"].exists() else []
++             "trials": repo / "research/edge/trials.jsonl",
++             "verdict_annotations": repo / "research/edge/verdict_annotations.jsonl"}
++    trials = [json.loads(x) for p in (paths["trials"], paths["verdict_annotations"]) if p.exists()
++              for x in p.read_text().splitlines() if x.strip()]
+     look = json.loads(paths["vwrp_lookthrough"].read_text()) if paths["vwrp_lookthrough"].exists() else None
+     return propose(eligible_cfg=json.loads(paths["pm_eligible"].read_text()), trial_events=trials, look_cfg=look,
+                    today=today or dt.datetime.now(dt.timezone.utc).date(),
+diff --git a/office/tests/test_pm.py b/office/tests/test_pm.py
+index bf74c72..71df697 100644
+--- a/office/tests/test_pm.py
++++ b/office/tests/test_pm.py
+@@ -167,3 +167,33 @@ def test_shipped_vanguard_data_passes_default():
+     assert len(rows) == 11 and all(c["status"] == "pass" for c in rows) and not r["unverified"]
+     assert rows[0]["evidence"]["as_of"] == "2026-08-31" and "vanguard.co.uk" in rows[0]["evidence"]["source"]
+     assert pm.from_repo(Path(__file__).resolve().parents[2], dt.date(2026, 12, 20))["unverified"]  # 111 days old
++
++
++def test_d_a_annotated_and_unverdicted_failures_never_qualify():
++    """D-A: B5 run 2 recorded its results without a verdict; the fail verdict comes from the annotation ledger.
++    Either way the strategy is refused and the proposal stays 100% VWRP."""
++    h = [{"ticker": "X", "weight": 0.02, "sic": 2834}]
++    bare = [{"event": "register", "id": "B5-V3", "kind": "trial"}, {"event": "result", "id": "B5-V3", "sr_monthly": 0.16}]
++    for events, why in ((bare, "results are none"),
++                        (bare + [{"event": "verdict_annotation", "id": "B5-V3", "verdict": "fail"}], "['fail']")):
++        r = pm.propose(eligible_cfg=strat(h, trials=("B5-V3",)), trial_events=events, look_cfg=LOOK, today=TODAY)
++        assert r["verdict"] == "default" and why in r["refused_strategies"][0]["reason"]
++    # an annotation cannot turn a recorded fail into a pass, nor qualify a trial that has no result
++    for events in (REG + [{"event": "verdict_annotation", "id": "T-FAIL", "verdict": "pass"}],
++                   [{"event": "register", "id": "N", "kind": "trial"},
++                    {"event": "verdict_annotation", "id": "N", "verdict": "pass"}]):
++        tid = "T-FAIL" if events[0] is REG[0] else "N"
++        r = pm.propose(eligible_cfg=strat(h, trials=(tid,)), trial_events=events, look_cfg=LOOK, today=TODAY)
++        assert r["verdict"] == "default"
++
++
++def test_d_a_real_registry_b5_v3_trials_are_refused(tmp_path):
++    """The committed registry (plus the annotation ledger when present): listing either B5 V3 trial is refused."""
++    import json
++    root = Path(pm.__file__).resolve().parents[2]
++    events = [json.loads(x) for p in ("research/edge/trials.jsonl", "research/edge/verdict_annotations.jsonl")
++              if (root / p).exists() for x in (root / p).read_text().splitlines() if x.strip()]
++    for tid in ("B5-H1-FCFPS-ACCEL-V3", "B5-S2A-GP-12M-V3", "S2-S2a", "S2-S1a"):
++        r = pm.propose(eligible_cfg=strat([{"ticker": "X", "weight": 0.02, "sic": 2834}], trials=(tid,)),
++                       trial_events=events, look_cfg=LOOK, today=TODAY)
++        assert r["verdict"] == "default" and r["refused_strategies"][0]["id"] == "S", tid
