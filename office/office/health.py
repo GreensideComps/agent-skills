@@ -50,7 +50,8 @@ def report(events: list[dict], now: float, heartbeat_s: float = 3600.0) -> dict:
                        "text": f"no worker run for {since_last / 3600:.1f} h (more than two heartbeats)"})
     elif since_last > heartbeat_s + MISSED_MARGIN_S:
         alerts.append({"level": "warn", "code": "heartbeat_overdue",
-                       "text": f"no worker run for {since_last / 3600:.2f} h: the last scheduled run has not started"})
+                       "text": f"no worker run has started for {since_last / 3600:.2f} h: a scheduled run may have "
+                               f"been missed, refused or delayed"})
     for a, b in zip(rs, rs[1:]):  # a missed or late run, already followed by another run: raised for a day
         gap = b["started"] - a["started"]
         if gap > heartbeat_s + MISSED_MARGIN_S and now - b["started"] < 86400:
@@ -75,12 +76,17 @@ def report(events: list[dict], now: float, heartbeat_s: float = 3600.0) -> dict:
                        "text": f"{len(unfinished)} worker run(s) started but never recorded an end"})
     # A task's alert stays live for 36 h, unless a later completion of the same task type came back without one:
     # that clears it from the live list. The event that raised it is never touched; `cleared_alerts` names both.
+    # A completion that checked nothing (output status "skipped", e.g. a demo snapshot without credentials) clears
+    # nothing.
     latest: dict[str, dict] = {}
     raised: list[tuple[str, dict]] = []
     for e in events:
         if e["kind"] != "task_completed" or e.get("task") not in st:
             continue
         typ = st[e["task"]]["type"]
+        out = e.get("output") or {}
+        if out.get("status") == "skipped" and not out.get("alert"):
+            continue
         latest[typ] = e
         if (e.get("output") or {}).get("alert") and now - ts(e) < TASK_ALERT_S:
             raised.append((typ, e))

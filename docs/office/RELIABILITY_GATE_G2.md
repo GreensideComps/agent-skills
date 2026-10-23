@@ -17,9 +17,13 @@ G2 is a new run with new, pre-registered rules. It is not a re-scoring of G1.
 | Criterion | Check 3 limit is 2H + 900 s (6 h 15 min at H = 3 h), not 2H | yes |
 | Operational | Health warns `heartbeat_overdue` when no run has started for more than H + 900 s, and `heartbeat_missed` for a day after a gap longer than H + 900 s | no (alerts only) |
 | Operational | The heartbeat prompt states plainly what the command does and stops, without retrying, if a step is refused (`office/WORKER_G2.md`) | no |
-| Alert display | A task alert stops being live once a later completion of the same task type has no alert; the original event stays in the log and the report lists it under `cleared_alerts` | no |
+| Alert display | A task alert stops being live once a later completion of the same task type has no alert; the original event stays in the log and the report lists it under `cleared_alerts`. A completion that checked nothing (output status `skipped`) clears nothing | no |
+| Alert display | `heartbeat_overdue` says a scheduled run "may have been missed, refused or delayed", not that it "has not started" | no |
+| Operational | `gate-report --gate-seq N` scores gate N only up to the next `gate_started` (events and evaluation time); the history audit still covers the whole branch | no (G1's saved report re-scores identically) |
+| Criterion | The crash drill is the first run of a UTC day, enforced by the worker from the log order, at 00:00 UTC after three full days (see below) | yes (check 10 can now be met) |
+| Start check | Before `gate-start`, one full UTC day of eight clean minute-12 slots under the new prompt (`acceptance`, see below) | no (it decides whether G2 may start) |
 
-Everything else is G1 unchanged: checks 1, 2 and 4-10, the 14 days, H = 3 h, R0 work only, the drill.
+Everything else is G1 unchanged: checks 1, 2 and 4-10, the 14 days, H = 3 h, R0 work only.
 
 ## Check 3 `heartbeat`, exactly
 
@@ -63,9 +67,30 @@ the digest but does not fail G2.
 
 ## Crash-recovery drill (part of G2)
 
-Once, after day 2 and before day 5, a one-off session runs the heartbeat prompt with `worker --drill-crash` at a time
-at least 60 minutes from any scheduled heartbeat. The worker records `worker_started`, claims one task, prints the
-claim and exits with code 3 without running the task or recording `worker_finished`.
+**Why the timing matters.** `director.plan` creates the day's four tasks once per UTC day, and the day's first run
+completes them within minutes. A drill at any later time finds an empty queue, claims nothing and exits normally, so
+nothing is abandoned or recovered (simulated on 23 Oct: an 01:27 drill after the 00:12 run claimed nothing). The drill
+must therefore be the **first run of its UTC day**.
+
+**When.** Once, as a one-off session fired at **00:00 UTC on the fourth UTC day after the day of `gate_started`**, so
+at least three full days (24 or more scheduled runs) come before it. It runs the heartbeat prompt with
+`worker --drill-crash`. The first regular heartbeat that day fires at 00:12.
+
+**Ordering is checked from the log, not assumed from the clock.** After recording its `worker_started`, a drill run
+looks in the log for any other `worker_started` earlier in the same UTC day (a lower seq). If there is one (for example
+the previous day's 21:12 run held past midnight by a usage limit, or a session that started first), the drill
+**refuses**: it claims nothing, records `worker_finished` with `stopped: "drill refused: ..."` naming the earlier run,
+and the command exits with code 4. A refused drill is recorded as it happened; the owner decides whether to schedule
+another. Otherwise the drill plans the day, claims the highest-priority task (health, lease 600 s), prints the claim
+and exits with code 3 without running the task or recording `worker_finished`.
+
+**Recovery.** The health lease expires 10 minutes after the claim. The 00:12 heartbeat normally starts after that and
+recovers the task with `recovered_fence` equal to the drill claim's seq; if it starts while the lease is still held,
+it completes the other tasks and the 03:12 run recovers health, well within check 6's 2H.
+
+**Effect on check 4.** The drill run never records `worker_finished`, so it counts as one unfinished run. Check 4 is
+scored continuously, so the drill needs at least 20 closed runs before it to stay within 5%; the fourth-day timing gives
+24 or more. A second unfinished run in the first days would still breach check 4 at once, as in G1.
 
 **Pass conditions (all):**
 1. The drill run's `worker_started` and one `task_claimed` are in the log, and no `worker_finished` for that run.
@@ -82,6 +107,30 @@ one more drill. Without a recovered drill, check 10 is unmet and G2 cannot pass.
 `trading/KILL` touched first. R0 task types only, so the claimed task is health, test_suites, demo_snapshot (read-only
 demo client) or digest. The only process ended is the worker's own (`os._exit(3)`). The drill kills no other session,
 deletes nothing, and changes no scheduled task, broker setting or permission. It writes only to `claude/office-state`.
+
+## Start check: one clean scheduled day before `gate-start`
+
+The replacement prompt (`office/WORKER_G2.md`) has never run. One clean run is weak evidence against a refusal that has
+so far hit only the 06:57 slot (21 and 23 Oct), so G2 may start only after **one full UTC day of clean scheduled
+slots** under the new prompt and cron, scored by the read-only command
+
+`python3 -m office --heartbeat-h 3 acceptance --day YYYY-MM-DD --code <master sha> [--refusal "<session> <text>"]...`
+
+- **Slots:** the eight fire times 00:12, 03:12, ... 21:12 UTC. Each slot's window runs to the next fire time; the first
+  `worker_started` in it is the slot's run.
+- **clean:** started within 900 s of the fire time, recorded `worker_finished` with `stopped: "idle"`, and ran
+  `--code`.
+- **delayed:** started in the window but more than 900 s late (for example held by a usage limit).
+- **missing:** no run started in the window. A session refused before the worker ran writes no event, so a refusal
+  shows here as missing.
+- **incomplete:** started but no `worker_finished`, or stopped for any other reason (a budget, a pause, a stop file).
+- **wrong_code:** finished cleanly on another commit.
+- **extra:** any further run in a slot's window.
+- **Refusals:** the reviewer reads the day's eight session records and passes every refusal found with `--refusal`.
+
+**Pass:** the day is over, all eight slots are clean, no extra runs, no refusals. Anything else fails, with no partial
+credit and no retry inside the day; the owner then decides whether to try another day. A pass is evidence for that day
+only; it does not show that the safety check will accept every later run.
 
 ## Measured and reported, not pass/fail
 

@@ -19,8 +19,9 @@ The commands in steps 1-5 are byte-identical to the deployed G1 heartbeat prompt
    routines and the 22:27 London research pipeline. No evidence shows that contention caused a G1 miss; this is a
    no-cost precaution.
 
-The prompt has not been run yet. Whether the safety check accepts it can only be shown by running it, which is step 6
-of the G2 start procedure and needs the owner's approval.
+The prompt has not been run yet. Whether the safety check accepts it can only be shown by running it on schedule for a
+full UTC day and scoring that day with `acceptance` (the start check in `docs/office/RELIABILITY_GATE_G2.md`), which
+needs the owner's approval.
 
 ## Heartbeat worker (every 3 hours, a fresh session each run)
 
@@ -49,11 +50,14 @@ If any step is refused by a safety check or a permission prompt: do not reword, 
 Never: place, modify or cancel an order; run anything under trading/ other than what the command runs; run research scripts; edit, commit or push any file yourself (the office writes only to its own claude/office-state branch); create, change or delete scheduled tasks; send email; read or change the live ISA. Do not post any message in the project unless a step was refused, a command failed or the status shows a critical alert.
 ```
 
-## Crash drill (once, a one-off session after day 2 of G2)
+## Crash drill (once, a one-off session at 00:00 UTC on the fourth day of G2)
 
-The same prompt with one change: step 4 runs `worker --drill-crash` in place of `worker`, and step 6 also prints the
-drill line (`{"drill": "exiting after claim", ...}`) and the exit code, which is 3 by design. Pass and fail conditions
-and the safety limits are in `docs/office/RELIABILITY_GATE_G2.md`.
+A one-off session fired at 00:00 UTC on the fourth UTC day after G2 started, before that day's 00:12 heartbeat. The
+same prompt with one change: step 4 runs `worker --drill-crash` in place of `worker`, and step 6 also prints the drill
+line (`{"drill": "exiting after claim", ...}`) and the exit code. Exit 3 is the drill working as designed. Exit 4 means
+the worker refused the drill because another run had already started that UTC day; it claimed nothing, and the session
+prints the refusal and stops without retrying. Pass and fail conditions and the safety limits are in
+`docs/office/RELIABILITY_GATE_G2.md`.
 
 ## Stopping it
 

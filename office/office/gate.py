@@ -32,11 +32,17 @@ def _day(t: float) -> str:
 
 
 def evaluate(events: list[dict], now: float, history_problems: list[str], gate_seq: int | None = None) -> dict:
-    """The verdict for the latest gate (or the one whose `gate_started` has `gate_seq`), under its own criteria."""
+    """The verdict for the latest gate (or the one whose `gate_started` has `gate_seq`), under its own criteria.
+    A gate's window ends where the next `gate_started` begins: an earlier gate is scored only on its own events and
+    no later than that start. The history audit (`history_problems`) always covers the whole branch, which is stricter."""
     starts = [e for e in events if e["kind"] == "gate_started" and (gate_seq is None or e["seq"] == gate_seq)]
     if not starts:
         return {"verdict": "not started", "checks": []}
     g = starts[-1]
+    nxt = next((e for e in events if e["kind"] == "gate_started" and e["seq"] > g["seq"]), None)
+    if nxt is not None:
+        events = [e for e in events if e["seq"] < nxt["seq"]]
+        now = min(now, health.ts(nxt))
     version = g.get("criteria", "G1")
     if version not in GAP_MARGIN_S:
         return {"verdict": "unknown criteria", "criteria": version, "checks": []}
