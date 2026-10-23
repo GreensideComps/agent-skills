@@ -42,3 +42,30 @@ in reply to `STAGE1_CAPABILITY_AUDIT.md` §8. The owner's words are quoted; "Sta
 - **For each:** price and plan as published on the vendor's own page (URL and retrieval date), history start,
   delisted coverage, point-in-time handling, timestamps, and personal versus commercial licence terms.
 - **Output:** a comparison only. The owner decides separately whether any purchase case is worth writing.
+
+## Stage 1 close-out and free-data readiness (owner task 2026-10-23 11:39Z)
+
+Task `cmsg_01U4KMvkBYNknqm4HRVie8uv464y4sReNiYrojmwW6sV3V`, documentation and offline planning only.
+
+| Item | Where | Status |
+|---|---|---|
+| Schemas DataRecord, EventRecord, SleeveTarget, RiskVerdict, PaperFill (timestamps, provenance, revisions, versioning) | `INTERFACES.md` §0–§3 | Done (contracts-0.1) |
+| D-A..D-E and their boundaries | This file | Done |
+| screen-1.0 / paper-book label, historical results unaltered | `SCREEN_1_0_LABEL.md` (label of record, files pinned by hash) | Done; future-banner wording still the proposal `proposals/DC_evidence_labels.patch` |
+| E001–E015 multiple-testing policy | `MULTIPLE_TESTING_PRIOR_ETF.md` | Done; family table awaits review |
+| Append-only annotations and tests | `proposals/` (D-A) | Proposed, **registry not modified** |
+| Stage 2 free-data readiness plan | `STAGE2_FREE_DATA_READINESS.md` | Plan only, nothing built |
+| Stage 4 8-K pre-registration | `STAGE4_8K_PREREG_DRAFT.md` | Draft, not registered, no outcome computed |
+| Sharadar validation | `SHARADAR_VALIDATION_CHECKLIST.md` | Public pages only; 4 items open |
+
+### Approvals needed before the next stage (none is given by this document)
+
+| Id | Approval | Unblocks |
+|---|---|---|
+| U0 | Accept the Stage 1 close-out: the D-A ledger design and two events, the D-C banner wording, the D-B family table | Applying `proposals/` |
+| U1 | Change the registry pin from whole-file to prefix (lines 1–252 stay byte-identical) | Any new trial registration (Stage 3, Stage 4) |
+| U2 | Build Stage 2 §1–§3 as draft PRs (code and offline tests; no scheduled tasks) | Stage 2 |
+| U3 | First bulk SEC header pull for the universe (≤ 5 req/s, from a session) | 8-K data set |
+| U4 | ALFRED access route: free FRED API key (an account) or public pages only | Stage 2 §4 |
+| U5 | Confirm the 8-K baselines use exploration + prospective only, not the one-ever holdout batch; approve the draft text for registration | Registering the 12 trials |
+| U6 | Download Sharadar's public sample (free, no account) for comparison with SEC data | Checklist rows 4–6 |

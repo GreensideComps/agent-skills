@@ -57,7 +57,7 @@ vendor's own terms govern.
   - fundamentals for active or delisted common stock on Nasdaq, NYSE and NYSEMKT;
   - tables include actions, events, sp500, insiders and holdings.
 - **Licence:** "Subscriptions are subject to the Personal Use License Terms" [V: /subscribe].
-- **Fit:** covers N1 and N2 together, US only, from 1998. It is an API/file download, so it suits cloud sessions [A]. Its "as-reported" vs restated handling is [NS] and must be checked in the terms and data docs before any case is made.
+- **Fit:** covers N1 and N2 together, US only, from 1998. It is an API/file download, so it suits cloud sessions [A]. Its as-reported (AR) vs restated (MR) handling is now verified in its public docs; `datekey`, delisting returns and cloud-processing rights stay open (`SHARADAR_VALIDATION_CHECKLIST.md`).
 
 ### EODHD: N1 (partial), N2, N3
 - **Plans** [V: eodhd.com/pricing], monthly / annual:
