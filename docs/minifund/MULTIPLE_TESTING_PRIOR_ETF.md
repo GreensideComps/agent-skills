@@ -86,3 +86,53 @@ N = 176 (0.91 to 0.97 annualised) [V: computed with the `deflated_sharpe` formul
 - `edge_registry` registration requires `families` and `experiment_count` for new trials (audit plan 3.3). The
   extra N is passed to `deflated_sharpe` explicitly rather than added to the registry.
 - A test checks that the configuration counts in the data file equal the `trials` fields in `research/experiments/`.
+
+## 6. Rationale for each family, other prior trials, and the 8-K baselines (owner review point 3)
+
+### 6.1 Why a family is counted or not
+
+A prior experiment enters a new trial's N when a researcher who had seen its results could plausibly have chosen
+the new trial's rule *because of* them. Sharing an input or a mechanism is the test. Sharing an asset class is not.
+
+| Family | Counted for a new trial when the trial … | Not counted when … | Why |
+|---|---|---|---|
+| `MOM` | uses past returns, relative strength or momentum ranks in any form | the trial uses no past-return input | E001/E003/E006/E007/E013 all searched momentum lookbacks and filters; any momentum rule now benefits from that search |
+| `TREND` | uses a moving average, breakout or time-series trend filter | no trend filter | E001/E002/E007/E009/E015 searched trend filter settings |
+| `FACTOR` | tilts on value, profitability, quality, low volatility or factor ETFs | no fundamental or factor input | E003/E004/E013 compared factor premia, including in 2023–26 |
+| `VOLMGMT` | scales exposure by volatility | fixed exposure | E006/E015 searched volatility targets |
+| `LEVERAGE` | uses leveraged products or overlays | unlevered | E008/E009/E010/E015 searched leveraged rules |
+| `ALLOC` | rotates between funds, sectors or regions | single-asset or stock-level event rules | E001 searched rotation schemes |
+| `MEANREV` | buys short-term losers or sells winners over days | holding periods follow an event, not a price move | E005 searched RSI and down-day rules |
+| `INTRADAY` | trades within a session or on session splits | trades only at closes | E008/E010/E011/E012/E014 searched intraday rules |
+
+When a trial's inputs are ambiguous, the family is included (rule 1, conservative).
+
+### 6.2 Other relevant prior trials (not E001–E015)
+
+| Prior work | Where | How it is counted | Why |
+|---|---|---|---|
+| Stage 2 signals S2-S1a … S2-S9 (15), including S2-S4 standardised unexpected EPS and S2-S7a/b insider buying | registry, `counts_for_dsr: true` | **Already in N for every new trial** | D4 counts every registered trial in full, whatever its family. This is stricter than D-B, so D-B adds nothing on top. |
+| DIAG (45) and QX (30) Stage 2 diagnostic horizons | registry, counts | Already in N | Same reason |
+| B5 trials (6 ids) | registry, counts | Already in N | Same reason |
+| M8 screen-1.0 looks (6) | registry, counts | Already in N | Same reason |
+| Exposure-only entries: ETF E001–E015, STAGE1, PORTFOLIO, PROGRAMME, REVIEW | registry, `counts_for_dsr: false` | E001–E015 by family under this rule; the others **not counted** | The others are looks at returns (a market average, the demo holdings, factor means) with no rule searched. They are disclosed in each trial's `touched_holdout` note instead. |
+| B1, B3, B5 diagnostics marked `counts_for_dsr: false` | registry | Not counted | They re-ran registered trials under changed settings (cost, reproduction checks) after the fact. They are recorded, and DSR uses the trials they belong to. |
+| `research/h01`–`h09`, `run_*.py` scripts | repository | Not counted separately | They are the code behind the ETF research recorded as E001–E015 [A: matched by title, not line by line], so counting them again would double-count. |
+
+### 6.3 Applied to the draft 8-K category baselines (not registered)
+
+| Family | Shared? | Reason |
+|---|---|---|
+| `MOM`, `TREND`, `MEANREV` | No | The rules use only the filing's item codes and fixed horizons. No past-return input decides anything (the $1 floor is an eligibility rule, not a signal). |
+| `FACTOR` | No | No fundamental, valuation or quality input. Band membership only sets the universe and cost. |
+| `VOLMGMT`, `LEVERAGE`, `ALLOC` | No | Equal weight, unlevered, single-stock events. |
+| `INTRADAY` | No | Entry and exit are at closes only. |
+
+So D-B adds **0** configurations from E001–E015, and N = registry n_trials + 12 (102 + 12 = 114 if nothing else is
+registered first).
+
+**Closest prior work.** The closest prior work is S2-S4 (earnings surprise), which relates to item 2.02, and S2-S7
+(insiders), which relates weakly to 5.02. Both are already counted in the 102. They are disclosed in the
+pre-registration's prior-knowledge section.
+
+**Status.** Nothing is registered; the 12 trials stay unregistered until U1 and U5 are approved.

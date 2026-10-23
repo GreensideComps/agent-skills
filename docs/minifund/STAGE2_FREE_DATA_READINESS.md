@@ -15,6 +15,13 @@ a request on 23 Oct; [A] = assumption to be checked when built.
   Parsed records point to that raw file, so any parse can be re-run and checked.
 - **Append-only.** A corrected value is a new record with `revision` and `supersedes` (INTERFACES §0.4). No file is
   rewritten.
+- **No guessed values (owner review point 5).** A value that is missing, unparseable or unverified is stored as
+  `null` with a `missing_reason` (for example `header_missing`, `items_missing`, `close_time_unverified`,
+  `split_history_missing`). Code never fills it from another field, a default or a neighbouring record. Readers
+  exclude `null` values and count them; a report never shows a filled-in number.
+- **Limitations travel with the data.** Every report and manifest these components write carries a fixed
+  `limitations` block: survivorship (§5.1), vendor revisions (Yahoo rewrites history), licence (Yahoo unofficial and
+  not redistributable; SEC free), and which values are unverified. A test checks the block is present.
 - **Point-in-time reads use `available_at` only** (INTERFACES §0.2). `retrieved_at` is when we saw it, and is never
   used as the time the market knew it.
 - **Research data stays outside the repo** in `/mnt/project-files/research-data/`, as `edge/manifest.json` does
@@ -31,9 +38,10 @@ a request on 23 Oct; [A] = assumption to be checked when built.
 
 **The timestamp finding (INTERFACES C10).** For Apple 8-K `0000320193-26-000018`:
 - the filing header has `<ACCEPTANCE-DATETIME>20260730163028`, which is Eastern time, i.e. 20:30:28Z;
-- the submissions JSON has `2026-07-31T00:30:28.000Z`, which is 4 hours later.
+- the submissions JSON has `2026-07-31T00:30:28.000Z`, which differs by 4 hours in this one filing.
 
-So the JSON is not usable as UTC. This was checked on one filing only.
+This is one observation. It is **not** generalised: the plan keeps the JSON value verbatim, proposes the header as the
+source of `available_at`, and fixes that rule only if the 200-filing cross-check (acceptance criteria below) passes.
 
 **Proposed files.**
 
@@ -51,7 +59,7 @@ SEC contact (`SEC_USER_AGENT` exported per command; the email is never written i
 
 **Tests (offline).**
 1. Header `ACCEPTANCE-DATETIME` → UTC is correct in both EST and EDT, and on the two DST-change days.
-2. The JSON's `acceptanceDateTime` is kept verbatim and never used for `available_at`.
+2. The JSON's `acceptanceDateTime` is kept verbatim (byte-identical string) and never used for `available_at`.
 3. `items` "2.02,9.01" parses to `["2.02","9.01"]`. Empty or missing items give `[]` with a flag, never a guess.
 4. 8-K/A is recorded with `amendment: true` and the accession of the original when the header names it.
 5. Re-ingesting the same raw bytes writes nothing. Different bytes for the same accession write a revision event.
@@ -102,6 +110,32 @@ SEC contact (`SEC_USER_AGENT` exported per command; the email is never written i
 | `research/daily_prices_to_2022.py` | Builds `research-data/edge/daily_prices_to_2022.csv.gz` for the universe, cut at 2022-12-31 like the existing manifest (`period2 = 2023-01-01T00:00Z`). It adds it to `manifest.json` as a new file with its own hash and history entry; existing entries are not changed. |
 | `research/tests/test_price_provenance.py` | Offline tests on chart-body fixtures. |
 
+**Close timestamps and early closes (owner review point 2).**
+- Yahoo daily bars are stamped with the session's *open* time in epoch seconds; they do not give the close time
+  [A: to confirm on the fixtures]. The close time therefore comes from an exchange calendar, not from the bar.
+- `research/calendars/nyse_sessions.csv` (new, data only): one row per session with `date`, `close_et` (`16:00` or
+  `13:00`), `source` and `source_retrieved_at`. Early closes (13:00 ET) happen on some days around Independence
+  Day, Thanksgiving and Christmas. **The table is not compiled in this PR**, because that needs NYSE's published
+  holiday and early-close notices (a live read, not authorised). Until a sourced row exists, a price record's
+  `available_at` is `null` with `missing_reason: close_time_unverified`, and `session_date` is still stored. Tests
+  use a small fixture calendar labelled synthetic.
+- The existing `nyse_calendar_to_2022.csv.gz` gives session dates only (from SPY bars) [V]. It says which days
+  traded, not when they closed.
+- For the 8-K convention this changes nothing about entry: entry is the first session whose *date* is after the
+  acceptance date, so a 13:00 close is still after the filing. It matters for the `available_at` of the price itself.
+
+**Decision-time prices versus adjusted total-return series (owner review point 2).**
+- Yahoo `close` is split-adjusted and `adjclose` is split- and dividend-adjusted, both **as of the retrieval date**
+  [A: Yahoo's documented behaviour, to confirm on fixtures with a known split]. Neither is the price a trader saw
+  on the day.
+- Decision-time inputs (for example the $1 price floor or a market-cap band) must use the **unadjusted** close:
+  `close × cumulative split factor of splits after that date`, using split events from the same chart response
+  (`events=split`). If split history is missing or inconsistent, the decision-time price is `null`
+  (`split_history_missing`) and the record is not eligible for any decision-time rule.
+- Outcomes (returns over a holding window) use `adjclose` ratios within the window. Each stored series keeps
+  `price_kind: "decision_unadjusted" | "split_adjusted_as_retrieved" | "total_return_as_retrieved"` and the
+  `retrieved_at` of the adjustment, so the two are never mixed.
+
 **Dependencies.** pandas, already used by research [V]. No new package.
 
 **Tests (offline).**
@@ -111,6 +145,10 @@ SEC contact (`SEC_USER_AGENT` exported per command; the email is never written i
 3. A changed close with unchanged adjclose ratios is `unexplained` and is reported.
 4. Nothing after the cut-off date can enter the `_to_2022` file (reuses `edge_exec_prices.assert_cut`).
 5. Existing `manifest.json` entries and hashes are unchanged after adding the daily file.
+6. A session missing from the calendar gives `available_at: null` with `close_time_unverified`; an early-close
+   fixture day gives 13:00 ET.
+7. With a 1-for-10 reverse split in the fixture, the decision-time price before the split is one tenth of Yahoo's
+   split-adjusted `close`; with the split event removed it is `null`, not the adjusted value.
 
 **Data limitations.**
 - Yahoo is unofficial, with no licence for redistribution (stated in `prices.py` [V]).
@@ -243,3 +281,5 @@ until the 8-K pre-registration is registered.
   universe, at ≤ 5 req/s, from a session, not a routine.
 - **U4 ALFRED access.** Either a free FRED API key (needs an account, so it is the owner's decision) or public
   pages only, accepting that they may not work.
+- **U7 Session calendar.** A live read of NYSE's published holiday and early-close notices to compile the sourced
+  session calendar (§2). Until then price `available_at` stays `null`.

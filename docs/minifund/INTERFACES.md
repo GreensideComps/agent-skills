@@ -93,8 +93,8 @@ rows carry neither `retrieved_at` nor a content hash [A]; adding them is audit p
 | `cik`, `accession`, `form` | e.g. `8-K`, `8-K/A` |
 | `items` | 8-K item codes as filed, e.g. `["2.02", "9.01"]` |
 | `acceptance_time_source` | the `<ACCEPTANCE-DATETIME>` value from the filing header, verbatim (America/New_York) |
-| `available_at` | that time converted to UTC with `source_tz: "America/New_York"` |
-| `submissions_json_acceptance` | the `acceptanceDateTime` from `data.sec.gov/submissions`, kept for cross-checking only |
+| `available_at` | **proposed:** the header time converted to UTC with `source_tz: "America/New_York"`, `available_at_basis: "sec_header_acceptance_et"`. Provisional until the 200-filing cross-check passes; `null` (never a substitute) when the header is missing or unparseable |
+| `submissions_json_acceptance` | the `acceptanceDateTime` from `data.sec.gov/submissions`, kept **verbatim as a string**, never parsed into `available_at` and never normalised |
 | `filed_date` | the EDGAR filing date |
 | `is_amendment`, `amends` | links an `/A` filing to the original accession |
 | `period_of_report_date` | the event date the filer states |
@@ -102,9 +102,11 @@ rows carry neither `retrieved_at` nor a content hash [A]; adding them is audit p
 
 **Timestamp finding [V, one filing, 23 Oct].** For Apple's 8-K `0000320193-26-000018`, the filing index and header
 say accepted `2026-07-30 16:30:28` (America/New_York, so 20:30:28Z). The submissions JSON gives
-`2026-07-31T00:30:28.000Z`, four hours later than the true UTC time. The contract therefore takes `available_at`
-from the header and keeps the JSON value only to cross-check. This rests on one filing. Stage 2 must test it on a
-sample across EST and EDT dates before the rule is fixed.
+`2026-07-31T00:30:28.000Z`, which differs from the header's UTC time by four hours **in this one filing**. Nothing
+is concluded about other filings, about the cause, or about whether the offset is constant. The contract therefore
+**proposes** the header as the source of `available_at`, keeps the JSON value verbatim, and makes the rule final only
+after the Stage 2 cross-check of at least 200 filings across EST and EDT dates (`STAGE2_FREE_DATA_READINESS.md` §1).
+If that check finds the header itself unreliable, `available_at` stays `null` for the affected filings.
 
 ### 1.3 `EventRecord` (an interpreted event: roadmap §3)
 
@@ -226,14 +228,14 @@ Each one is listed with the side these contracts take. None is fixed in code by 
 | C7 | Fill rules | Research uses `next_day_close` (`edge_rules.py`) [V]. The equity paper book fills at the logged decision price plus costs (`paper.py`) [V]. A strategy can be tested under one rule and paper-traded under the other. | §3.6: `fill_rule` must match the tested rule. |
 | C8 | `orders.Broker` vs pm output | `orders.py` takes ticker quantities and a decision key [T]. pm outputs weights with no decision key and no sleeve tag. | `SleeveTarget` → `OrderIntent` translation in `paper_book.py`, with `decision_key` derived from `decision_id`. |
 | C9 | Ledgers | Office log and edge registry are hash-chained [T]. The equity JSONL ledgers give each record a 16-hex content id (`rid`, `store.py:29`) but no chain to the previous line [V]. | §0.1: decision-grade records chain; bulk data hashes per file. |
-| C10 | SEC timestamps | `submissions` JSON `acceptanceDateTime` disagrees with the filing header by +4 h in one case [V]. | §1.2: header time is authoritative; JSON kept for cross-checks. |
+| C10 | SEC timestamps | `submissions` JSON `acceptanceDateTime` disagrees with the filing header by +4 h in one case [V]. | §1.2: header proposed as the `available_at` source, subject to the 200-filing cross-check; JSON kept verbatim. Not generalised from one filing. |
 | C11 | Audit §1.3 / §4 vs `equity/config/evidence.json` | The audit said screen-1.0 "has no recorded verdict". The registry entry M8-T1 indeed has none [V], but `evidence.json` already records screen-1.0 as **E1, pre-registered backtest failed (IC t = 1.92 vs 2.0)**, and every screen and paper report prints an "unvalidated: not a recommendation" banner [V]. | The audit is corrected (see its §4). D-C changes only the wording and adds the missing paper-1.1 entry (`proposals/DC_EVIDENCE_LABELS.md`). |
 | C12 | PR #27 paper-1.1 vs `evidence.json` | PR #27 adds `paper-1.1` but `evidence.json` lists only `paper-1.0` [V], so `evidence.tier("paper-1.1")` returns E0 and the banner says "allowed use: none recorded". | Add a `paper-1.1` entry (in D-C proposal, applied on PR #27 only after owner review). |
 | C13 | pm-1.0 vs registry kinds | pm checks `kind == "trial"` but not `counts_for_dsr`. The research-side helper in the D-A proposal checks both. | Align pm to the stricter check when C2 is fixed. |
 
 ## 5. Unresolved assumptions
 
-- A1. The SEC header time is the true acceptance time (C10). Checked on one filing only.
+- A1. The SEC header time is the acceptance time (C10). Checked on one filing only; to be tested on ≥ 200 filings before it is relied on.
 - A2. VWRP's accumulating price is a fair total-return proxy net of its ongoing charge [A].
 - A3. A single GBP base for the fund book is right for an ISA holding USD shares (FX costs come from the T212 fee
   schedule, not yet measured) [A].

@@ -21,7 +21,7 @@ in reply to `STAGE1_CAPABILITY_AUDIT.md` §8. The owner's words are quoted; "Sta
 ## D-D: order of work for the 8-K data set (plan, nothing registered)
 
 1. Stage 2 builds `FilingEvent` ingestion from EDGAR (free; ≤10 requests a second with a declared User-Agent), with
-   header-based `available_at` and a sampled check of the header against the JSON times across EST and EDT dates.
+   a proposed header-based `available_at` (JSON time kept verbatim) and a sampled check of the header against the JSON times across EST and EDT dates.
 2. Freeze the category taxonomy as 8-K item codes plus amendment status (`taxonomy_version 8k-items-1.0`). There are
    no learned or AI categories.
 3. Pre-register the baselines on the exploration window only (`edge_split`), each with families `none` under D-B:
@@ -69,3 +69,28 @@ Task `cmsg_01U4KMvkBYNknqm4HRVie8uv464y4sReNiYrojmwW6sV3V`, documentation and of
 | U4 | ALFRED access route: free FRED API key (an account) or public pages only | Stage 2 §4 |
 | U5 | Confirm the 8-K baselines use exploration + prospective only, not the one-ever holdout batch; approve the draft text for registration | Registering the 12 trials |
 | U6 | Download Sharadar's public sample (free, no account) for comparison with SEC data | Checklist rows 4–6 |
+| U7 | Read NYSE's published holiday and early-close notices to compile `research/calendars/nyse_sessions.csv` (a live read) | Price `available_at` (Stage 2 §2) |
+
+### Owner decision 2026-10-23 12:06Z (`cmsg_01U4KMvkBYNknqm4HRVie8uvGZrinrG9nzsK8dtuPiDUzc`)
+
+- **U0:** "Provisionally approved in principle". The direction for D-A, D-B and D-C is accepted, but nothing is
+  applied until the exact diff, tests and before/after evidence have been reviewed. Historical results stay
+  unchanged.
+- **U2:** "Approved with limits". There are three separate draft PRs, built in this order:
+  1. Stage 2 §3, research provenance;
+  2. Stage 2 §1, SEC filings and the header cross-check tooling;
+  3. Stage 2 §2, daily-price provenance and revisions.
+
+  The work is code and offline tests on committed fixtures only, with:
+  - no live requests, bulk pulls, vendor samples or accounts;
+  - no scheduled-task, G1/G2, worker, gate or health change;
+  - no registry-pin change, trial registration or event-study outcome;
+  - no merge.
+- **Five review points, resolved in the documents before implementing:**
+  1. Eligibility is split into filing-time, execution and outcome stages (prereg §2).
+  2. Close timestamps, early closes, and decision-time versus adjusted prices (Stage 2 §2; prereg §3–4).
+  3. D-B rationale by family and for the other prior trials (`MULTIPLE_TESTING_PRIOR_ETF.md` §6).
+  4. The SEC JSON time is kept verbatim, and the header is the *proposed* `available_at` source subject to the
+     200-filing check (INTERFACES §1.2, Stage 2 §1, prereg §3).
+  5. No guessed values; limitation blocks are required (Stage 2 §0, prereg §3 and §8).
+- **Still unapproved:** U1, U3, U4, U5, U6, and U7, which is new.

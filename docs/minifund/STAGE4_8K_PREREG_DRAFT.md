@@ -25,6 +25,10 @@ The 2023–2026 market is broadly known (`SPLIT_POLICY.md` §3). No in-house stu
 search on 23 Oct found 8-K references only in two unrelated test fixtures. This knowledge is why the categories
 are fixed by item code here and are not chosen from results.
 
+In-house, Stage 2 tested S2-S4 (standardised unexpected EPS, close to item 2.02) and S2-S7a/b (insider buying,
+weakly related to 5.02) in 2015–2022, and both failed. Both are already counted in the registry N. How D-B applies,
+family by family, is set out in `MULTIPLE_TESTING_PRIOR_ETF.md` §6.3: it adds 0.
+
 ## 2. Events: categories and eligibility
 
 **Source.** `FilingEvent` records (INTERFACES §1.2) from Stage 2 ingestion (`STAGE2_FREE_DATA_READINESS.md` §1).
@@ -48,20 +52,44 @@ are fixed by item code here and are not chosen from results.
 
 An event may belong to more than one B3 group. Overlap counts between groups are reported.
 
-**Eligibility (all must hold, judged with data available at `available_at`).**
-1. The CIK maps to a common stock in the research dataset (`research/dataset.py`) in the **large** band at the last
-   month-end before `available_at` (the bands B5 used; cost §5).
-2. Close at entry ≥ $1.00 (B5's `min_price`).
-3. Entry close and SPY close both exist on the entry date.
-4. The event has no item `1.03` (bankruptcy) or `3.01` (delisting notice). These are excluded because the free price
-   data is missing most failed companies (Stage 2 §5.1), so their outcomes would be biased upward. The excluded
-   count is reported.
-5. `available_at` is not null (a header was found).
+**Three separate stages (owner review point 1).** Each uses only the data allowed at its time. No later stage's
+data may feed an earlier one.
+
+*Stage A: filing-time information (known at `available_at`).* All must hold:
+1. `available_at` is not `null`: a header was found and parsed, and the 200-filing cross-check has passed (§3).
+2. Form `8-K`, item set known (not `null`). An event with missing items is excluded and counted, never assigned a
+   group.
+3. No item `1.03` (bankruptcy) or `3.01` (delisting notice). These are excluded because the free price data is
+   missing most failed companies (Stage 2 §5.1), so their outcomes would be biased upward. The excluded count is
+   reported.
+4. The CIK maps to a common stock in the research dataset (`research/dataset.py`) in the **large** band at the last
+   month-end **strictly before** the ET acceptance date (the bands B5 used; cost §5). The band uses only month-end
+   data that existed then.
+
+*Stage B: execution eligibility (known before the entry order).* The entry is a market-on-close order in the entry
+session (§3), so the entry close itself is **not** known when the order is decided. All must hold:
+5. The last close **before** the entry session, as a decision-time unadjusted price (Stage 2 §2), is ≥ $1.00 (B5's
+   `min_price`). If that unadjusted price is `null` (for example missing split history), the event is excluded as
+   `price_unverified`, not filled in.
+6. That prior close exists for both the stock and SPY.
+
+*Stage C: fill and outcome calculation (after the fact).*
+7. **Fill condition.** The stock has a close in the entry session. If it does not (halt, delisting), the event is
+   recorded as `not_filled` and excluded. This condition uses information from after the order, so it is reported
+   separately for each group and horizon: count, and share of Stage B events. It is never treated as a choice.
+8. Returns are computed only from the entry close onwards (§4). No Stage C value is used in A or B.
 
 ## 3. Timestamps and the next-tradable-price convention
 
-- **Information time** = `available_at`: the EDGAR header `ACCEPTANCE-DATETIME`, read as America/New_York and
-  stored in UTC. The submissions JSON time is never used (INTERFACES C10).
+- **Information time** = `available_at`. **Proposed source:** the EDGAR header `ACCEPTANCE-DATETIME`, read as
+  America/New_York and stored in UTC. This becomes final only if the Stage 2 cross-check of ≥ 200 filings across EST
+  and EDT dates passes. The 4-hour difference seen in one filing (INTERFACES C10) is not assumed to hold elsewhere.
+  The submissions JSON `acceptanceDateTime` is stored verbatim for the cross-check and is not used as the
+  information time. If the check fails for some filings, those filings have `available_at: null` and are excluded
+  (Stage A rule 1).
+- **Early closes.** NYSE early closes (13:00 ET) do not change the entry session, because entry depends on the
+  session *date* only. Each price's own close time comes from the sourced session calendar (Stage 2 §2); a session
+  without a sourced close time is still usable for the entry date, but its price `available_at` stays `null`.
 - **Entry** = the close of the first NYSE session whose ET date is **strictly after** the ET acceptance date. Examples:
 
   | Accepted (ET) | Entry close |
@@ -75,12 +103,16 @@ An event may belong to more than one B3 group. Overlap counts between groups are
   matches the `next_day_close` convention of B4/B5.
 - **Exit at horizon h** = the close h NYSE sessions after the entry session, for h ∈ {1, 5, 20}.
 - **Calendar:** SPY trading days (as `nyse_calendar_to_2022.csv.gz`).
-- **Missing prices:** if the stock has no close at exit, the last close is used and then the B5 rule applies
-  (`edge_rules.holding_return`, `missing_return = −0.30`). The count of such events is reported.
+- **Missing exit prices:** if the stock has no close at exit, the B5 rule applies (`edge_rules.holding_return`,
+  `missing_return = −0.30`). This is a **pre-registered penalty convention**, not an estimate of what happened. Events
+  where it applies are flagged `exit_penalty_applied`, counted by group and horizon, and every statistic is also
+  reported with them excluded.
 
 ## 4. Returns
 
-- **Stock return** r_i(t0, t0+h) from adjclose (total return).
+- **Stock return** r_i(t0, t0+h) = adjclose(t0+h) / adjclose(t0) − 1. adjclose is the total-return series **as
+  retrieved**, adjusted afterwards for splits and dividends. It is used only for these window returns (outcomes),
+  never for Stage A or B decisions, which use decision-time unadjusted prices.
 - **Benchmark:** SPY adjclose over the same sessions. **Market-adjusted return** AR = r_i − r_SPY. US large caps
   are benchmarked to the US market here. The VWRP comparison belongs to the portfolio layer (Stage 5), not to this
   event test.
@@ -136,7 +168,7 @@ An event may belong to more than one B3 group. Overlap counts between groups are
 
 - **Trials:** 4 categories × 3 horizons = **12 registered trials**, each `counts_for_dsr: true`, `kind: trial`,
   `phase: exploration`, `families: ["none"]`.
-- **D-B families:** `none`, so 0 configurations are added from E001–E015 (`MULTIPLE_TESTING_PRIOR_ETF.md`).
+- **D-B families:** `none`, so 0 configurations are added from E001–E015. The family-by-family rationale is in `MULTIPLE_TESTING_PRIOR_ETF.md` §6.3; the prior Stage 2 trials are already in N.
 - **Registry N** at registration = n_trials before registration + 12. Today that is 102 + 12 = **114**.
 - **Within the batch:** Holm–Bonferroni over the 12 one-sided tests at family-wise α = 0.05. This is reported, and
   a trial must survive it.
@@ -173,7 +205,15 @@ For each category×horizon the report gives:
 - the two secondary benchmarks;
 - the survivorship caveat (§2, Stage 2 §5.1).
 
-Nothing is left out because it looks bad.
+- a fixed **limitations block**:
+  - survivorship (free prices miss most delisted companies; 1.03/3.01 excluded for that reason);
+  - vendor revisions (Yahoo rewrites adjclose; the retrieval date of the series is stated);
+  - licence (Yahoo unofficial, not redistributable; SEC free);
+  - US-only coverage;
+  - every count of `null` values by reason.
+
+Nothing is left out because it looks bad. **No missing or unverified value is replaced by a guess anywhere in the
+pipeline**: it is `null`, the event is excluded, and the exclusion is counted (owner review point 5).
 
 ## 9. What must exist before registration
 
