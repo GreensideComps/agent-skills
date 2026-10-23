@@ -1,5 +1,9 @@
 # Proposed changes awaiting owner review (not applied)
 
+**Review pack for U0 (23 Oct 12:06Z decision): `U0_REVIEW_EVIDENCE.md`**, with the exact diffs, test commands and
+exit codes, and before/after evidence (`U0_BEFORE_AFTER_EVIDENCE.json`). D-B now has a code proposal too:
+`DB_prior_etf_families.patch`.
+
 Nothing in this folder is applied. Each patch applies cleanly to master `b8cccb4` (or to the PR #27 head where
 stated) and was tested in a scratch copy. The registry file `research/edge/trials.jsonl`, `research/edge_registry.py`
 and every pinned artefact stay byte-identical.
