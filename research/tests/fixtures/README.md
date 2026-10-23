@@ -6,3 +6,9 @@ MANIFEST-3 entry for that file and the blob at commits bb9ea44, 45409e4, 4491452
 D33 changed the live file afterwards (D31 added to the spent set), so the tests read the run-2 bytes from here
 instead of from git history (owner decision D34). The `.orig` suffix keeps it from being imported or collected.
 Do not edit; `.gitattributes` disables line-ending conversion for this folder.
+
+## provenance/
+
+Synthetic files for `test_provenance.py` (mini fund Stage 2 §3). `data_manifest.json` has the shape of
+`research-data/edge/manifest.json`; `prices_small.csv` is two made-up rows for a fictional ticker `SYN`. Two of the
+listed files deliberately do not exist, to test that missing inputs are reported rather than guessed.
