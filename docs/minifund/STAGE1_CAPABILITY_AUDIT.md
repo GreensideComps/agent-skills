@@ -203,6 +203,8 @@ Key couplings and risks:
 | Sharadar (Nasdaq Data Link) | Survivorship-free US fundamentals and prices | 1990s+ | Marketed as PIT [A] | Current price not found | Personal vs commercial | Not evaluated |
 | Consensus estimates (for S8 revisions) | Analyst revisions | — | — | Paid only (I/B/E/S, Zacks, etc.) | Restrictive | Not available |
 
+Vendor rows above are superseded by `DATA_PURCHASE_COMPARISON.md` (23 Oct), which re-checks each vendor's own page. For example, EODHD lists prices in US dollars ($19.99–$99.99 a month), and Sharadar's full-history bundle is $499 a year.
+
 Findings:
 1. **The best free event source is already reachable and unused:** SEC 8-K filings with second-level acceptance times
    and item codes (2.02 results, 7.01/8.01 disclosures, 1.01 agreements, 5.02 officer changes). They are primary
