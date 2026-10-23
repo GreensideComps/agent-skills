@@ -1,7 +1,8 @@
 """Task handlers (M2): the only work a worker can do. R0 only: health, tests, a read-only demo snapshot, the digest.
 
 Each handler takes (ctx, inputs) and returns a small JSON-able output, or raises to fail the attempt. An output may
-carry {"alert": {"level", "code", "text"}}, which `health.report` raises for 36 hours.
+carry {"alert": {"level", "code", "text"}}, which `health.report` raises for 36 hours or until a later run of the
+same task type completes without one.
 
 Side-effect boundaries (enforced here, not by prompt):
 * No handler imports `trading/` into this process. The demo snapshot runs the read-only client in a child process of
@@ -201,6 +202,8 @@ def render_digest(events: list[dict], now: float, day: str, heartbeat_s: float =
              f"Generated {health.utc(now)} from {rep['events']} logged events. Every figure below is read from the "
              f"log; anything not run is marked as such.", "", "## Alerts", ""]
     lines += [f"- **{a['level']}** {a['text']}" for a in rep["alerts"]] or ["- none"]
+    lines += [f"- cleared: {c['code']} raised {c['raised']}, cleared by a later {c['type']} run without an alert "
+              f"at {c['cleared']} (the original result stays in the log)" for c in rep["cleared_alerts"]]
     lines += ["", "## Operation", "",
               f"- Worker runs recorded: {rep['runs']}; last started {health.utc(rep['last_run_started'])} "
               f"({rep['hours_since_last_run']} h ago)",

@@ -1,4 +1,4 @@
-"""Command line: python3 -m office worker | status | digest | pause | resume | gate-start | gate-report.
+"""Command line: python3 -m office worker | status | digest | pause | resume | gate-start | gate-report | acceptance.
 
 State lives on the `claude/office-state` branch (the claude/ prefix is the one cloud sessions may push to) of the repository's own remote (override with --state-remote). Nothing
 here places an order, reads a holdout or starts a research run; see handlers.py for everything a worker can do.
@@ -11,9 +11,10 @@ import subprocess
 import sys
 import tempfile
 import time
+from datetime import datetime
 from pathlib import Path
 
-from . import gate, health, worker
+from . import acceptance, gate, health, worker
 from .events import parse
 from .handlers import Context
 from .store import GitStore
@@ -40,7 +41,8 @@ def main(argv: list[str] | None = None) -> int:
     w.add_argument("--max-tasks", type=int, default=8)
     w.add_argument("--max-seconds", type=float, default=2400.0)
     w.add_argument("--stop-file", default=str(REPO / "office" / "STOP"))
-    w.add_argument("--drill-crash", action="store_true", help="exit right after the first claim (gate drill)")
+    w.add_argument("--drill-crash", action="store_true", help="gate drill: exit right after the first claim; refuses "
+                   "(exit 4, nothing claimed) unless this is the first run of the UTC day")
     sub.add_parser("status")
     p = sub.add_parser("pause")
     p.add_argument("--reason", required=True)
@@ -48,7 +50,14 @@ def main(argv: list[str] | None = None) -> int:
     r.add_argument("--owner-message", required=True)
     gs = sub.add_parser("gate-start")
     gs.add_argument("--owner-message", required=True)
-    sub.add_parser("gate-report")
+    gr = sub.add_parser("gate-report")
+    gr.add_argument("--gate-seq", type=int, default=None, help="score the gate started at this seq (default: latest)")
+    gr.add_argument("--at", default=None, help="evaluate as of this UTC time (ISO), using only events up to it")
+    ac = sub.add_parser("acceptance", help="read-only: score one UTC day of scheduled slots for the G2 start check")
+    ac.add_argument("--day", required=True, help="UTC date, YYYY-MM-DD")
+    ac.add_argument("--code", required=True, help="the master commit every slot's run must have used")
+    ac.add_argument("--minute", type=int, default=12)
+    ac.add_argument("--refusal", action="append", default=[], help="a refusal seen in a session record (repeatable)")
     dg = sub.add_parser("digest")
     dg.add_argument("--day", default=None)
     a = ap.parse_args(argv)
@@ -70,9 +79,10 @@ def main(argv: list[str] | None = None) -> int:
             os._exit(3)
         stats = worker.run(store, ctx, worker=f"worker-{ctx.env.get('CLAUDE_CODE_REMOTE_SESSION_ID', 'local')[-12:]}",
                            code=worker.code_sha(REPO), max_tasks=a.max_tasks, max_seconds=a.max_seconds,
-                           stop_file=Path(a.stop_file), after_claim=crash if a.drill_crash else None)
+                           stop_file=Path(a.stop_file), after_claim=crash if a.drill_crash else None,
+                           drill=a.drill_crash)
         print(json.dumps(stats, indent=1))
-        return 0
+        return 4 if str(stats.get("stopped", "")).startswith("drill refused") else 0
     if a.cmd == "status":
         rep = health.report(parse(store.sync()), time.time(), hb)
         print(json.dumps(rep, indent=1, default=str))
@@ -93,7 +103,16 @@ def main(argv: list[str] | None = None) -> int:
         print(render_digest(parse(store.sync()), now, a.day or director.day(now), hb))
     elif a.cmd == "gate-report":
         problems = store.audit_history()
-        print(json.dumps(gate.evaluate(parse(store.sync()), time.time(), problems), indent=1))
+        events, now = parse(store.sync()), time.time()
+        if a.at:
+            now = datetime.fromisoformat(a.at).timestamp()
+            events = [e for e in events if health.ts(e) <= now]
+        print(json.dumps(gate.evaluate(events, now, problems, a.gate_seq), indent=1))
+    elif a.cmd == "acceptance":
+        r = acceptance.evaluate(parse(store.sync()), a.day, time.time(), code=a.code, minute=a.minute,
+                                refusals=a.refusal)
+        print(json.dumps(r, indent=1))
+        return 0 if r["verdict"] == "pass" else 1
     return 0
 
 
