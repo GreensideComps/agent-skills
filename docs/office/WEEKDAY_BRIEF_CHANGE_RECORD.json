@@ -1,0 +1,21 @@
+{
+ "trigger_id": "trig_012o3Bc5Ja2PiD7rvx2Fzrmd",
+ "name": "Weekday portfolio brief",
+ "cron": "45 6 * * 1-5 (UTC)",
+ "enabled": true,
+ "persist_session": false,
+ "notifications": "push+email",
+ "only_field_changed": "prompt",
+ "owner_approval": "cmsg_01U4KMvkBYNknqm4HRVie8uvU3uARM8qp1vWB8L62R9Sqa (2026-10-20 07:53Z), item 2",
+ "before": {
+  "prompt": "Weekday portfolio brief for the Trading 212 demo account. Strictly read-only: never place, amend or cancel orders, and never change any routine or config.\n\n1. Clone https://github.com/GreensideComps/agent-skills (branch claude/trading212-agent-skills-r71zy3) and use its read-only Trading 212 client in trading/t212bot (credentials come from the T212_ENV, T212_API_KEY and T212_API_SECRET environment variables).\n2. Read the account: cash, positions (quantity, value, weight, P/L) and the watchlist if the API exposes one.\n3. Find notable moves (the biggest daily movers among holdings), upcoming earnings dates for holdings in the next two weeks, and risk flags (concentration over 10%, drawdown, a mismatch with trading/config/strategy.json targets, anything unusual).\n4. Write a short brief in plain English: positions, notable moves, upcoming earnings, risk flags. Say plainly what you could not check and why. Don't invent figures.\n\nIf the T212 variables are missing or trading212.com is unreachable, say so in one line and fall back to the last snapshot in trading/journal/events.jsonl, labelled with its timestamp.",
+  "sha256": "dc25a5460c5964fca26ef804ed99172961c7f7671bf7c40e2ee48a62ac7ed217",
+  "read_via": "get_trigger 2026-10-20 ~08:10Z, updated_at 2026-10-15T08:16:46Z"
+ },
+ "after": {
+  "prompt": "Weekday portfolio brief for the Trading 212 demo account. Strictly read-only: never place, amend or cancel orders; never run the bot's command line (python3 -m t212bot), ops_run.sh or monitor_run.sh; never edit anything under trading/config; never commit or push; and never change any routine, setting or permission. The old LQQ3 strategy is retired (owner decision O10): do not act on trading/config/strategy.json or compare holdings with it.\n\n1. Clone https://github.com/GreensideComps/agent-skills (branch master). Before anything else, run: touch agent-skills/trading/KILL\n   That engages the bot's kill switch in this clone, so no trading run could act even by mistake.\n2. Read the account only through the read-only client, with exactly this command (credentials come from the T212_ENV, T212_API_KEY and T212_API_SECRET environment variables):\n   cd agent-skills/trading && python3 -c 'import json; from t212bot.config import load_credentials; from t212bot.client import T212Client; from t212bot.readonly import ReadOnlyClient; ro = ReadOnlyClient(T212Client(load_credentials())); print(json.dumps({\"summary\": ro.account_summary(), \"positions\": ro.positions(), \"pending_orders\": ro.pending_orders()}, default=str))'\n   It prints the cash and totals, every position (quantity, average price, current price, P/L) and any pending orders as JSON. The Trading 212 API has no watchlist endpoint.\n3. Find notable moves (the biggest daily movers among holdings, from public Yahoo price data), upcoming earnings dates for holdings in the next two weeks, and risk flags (concentration over 10%, drawdown, any pending order, anything unusual).\n4. Write a short brief in plain English: positions, notable moves, upcoming earnings, risk flags. Say plainly what you could not check and why. Don't invent figures.\n\nIf the T212 variables are missing, the command fails or trading212.com is unreachable, say so in one line and do not substitute older figures: the journal in the repository predates the current holdings.",
+  "sha256": "ea999cc410cfb575aa611e1124dfea8e9dcf0da006e3e6b4296ce9b557429294"
+ },
+ "applied": false,
+ "apply_attempt": "update_trigger 2026-10-20 ~08:15Z refused: a task that starts a new thread per run can only be changed by delete and recreate; not done (owner instruction excludes recreating). get_trigger afterwards: prompt unchanged, updated_at 2026-10-15T08:16:46Z."
+}
