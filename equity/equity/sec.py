@@ -16,6 +16,7 @@ import os
 import time
 import urllib.error
 import urllib.request
+from datetime import datetime, timezone
 from pathlib import Path
 
 CACHE_DIR = Path(__file__).resolve().parent.parent / "cache" / "sec"
@@ -82,6 +83,20 @@ class SecClient:
                 continue
             raise SecError(f"HTTP {status} from {url}")
         raise SecError(f"gave up on {url}")
+
+    def get_raw(self, url: str) -> dict:
+        """One paced request with no caching: {'url', 'status', 'body', 'retrieved_at'}. For filing events, whose raw
+        bytes are kept by hash elsewhere (equity.filings_store). Added for mini fund Stage 2 §1; existing callers
+        are unchanged."""
+        if self._last is not None:
+            wait = self.min_interval - (self.clock() - self._last)
+            if wait > 0:
+                self.sleep(wait)
+        self._last = self.clock()
+        self.requests_made += 1
+        status, body = self.transport(url, {"User-Agent": self.ua, "Accept-Encoding": "identity"}, 30)
+        return {"url": url, "status": status, "body": body,
+                "retrieved_at": datetime.now(timezone.utc).replace(microsecond=0).isoformat()}
 
     def tickers(self, max_age_s: float = 86400) -> list[dict]:
         """[{cik, name, ticker, exchange}] for every SEC registrant with a listed ticker."""
