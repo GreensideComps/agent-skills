@@ -48,7 +48,9 @@ def build(j: Journal, cfg: StrategyConfig, book: PriceBook | None = None) -> dic
             shadows[name] = nav
             out[f"{name}_log"] = log
     # same-rules shadow of the live strategy at closing prices (implementation shortfall)
-    if cfg.signal:
+    if cfg.mode == "retired":
+        pass  # no live strategy, so no same-rules shadow (O10, 2026-10-19); the other shadows keep running
+    elif cfg.signal:
         nav, log = signal_nav(book, cfg.yahoo_symbols, cfg.signal, start, capital)
         shadows["B_live_rules_at_close"] = nav
         out["B_live_rules_at_close_log"] = log

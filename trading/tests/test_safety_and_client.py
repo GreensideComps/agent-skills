@@ -44,7 +44,8 @@ def test_strategy_config_validation():
 def test_shipped_strategy_config_is_valid():
     from t212bot.config import load_strategy
     cfg = load_strategy()
-    assert abs(sum(cfg.targets.values()) - 1) < 1e-9
+    # O10 (2026-10-19): the shipped strategy is retired, so it must hold no targets at all
+    assert cfg.mode == "retired" and cfg.targets == {} and cfg.signal is None
 
 
 def test_live_url_absent_from_package():

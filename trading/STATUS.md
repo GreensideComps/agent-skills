@@ -1,5 +1,27 @@
 # System status: factual audit (updated 2026-10-14)
 
+> **2026-10-19: strategy retired (owner decision O10).** `config/strategy.json` is now mode `retired` with no targets;
+> runs snapshot and reconcile read-only, then halt without planning an order. The previous `discretionary_intraday_v1`
+> config is archived in `config/archive/`. Everything below is history.
+>
+> **2026-10-20: the scheduled tasks that ran the old strategy are DELETED** (owner decision O10, card answered
+> 07:31Z). Their ids, schedules, full prompts, branch, enabled state and last-fired dates were recorded first in
+> [`../docs/office/O10_LEGACY_TASKS_RECORD.json`](../docs/office/O10_LEGACY_TASKS_RECORD.json):
+>
+> | Task | Id | Was enabled | Branch it used | Last fired | Now |
+> |---|---|---|---|---|---|
+> | T212 demo: hourly trader + monitor | `trig_01Qh8CiQcWpUK4Jop7EvdEH4` | no | r71zy3 | 2026-10-14 | deleted |
+> | T212 demo: hourly trader + monitor (older copy) | `trig_01HwinHAEB3cteN7zavwCGzQ` | no | r71zy3 | 2026-10-14 | deleted |
+> | T212 demo: trading ops | `trig_015u78BVGNK8bFDbg26cwcn8` | no | r71zy3 | 2026-10-14 | deleted |
+> | T212 demo: research loop | `trig_019cbvFKHAnfuPE24Bqexu9L` | no | r71zy3 | 2026-10-14 | deleted |
+> | Weekday portfolio brief (old, persistent session) | `trig_0188Bhwdq38sQhN9zZAauah7` | no | read-only brief | 2026-10-15 | deleted |
+>
+> The old bot branch `claude/trading212-agent-skills-r71zy3` is kept for audit with its history, and since commit
+> `e07a3e3` it cannot trade: its CLI, `Bot.run`, `decide`, order methods and every non-GET broker request refuse,
+> and its `ops_run.sh` and `monitor_run.sh` exit 5 before syncing (`trading/RETIRED.md` on that branch).
+>
+> On this branch `ops_run.sh` refuses (exit 5) before any git sync while the strategy is retired.
+
 > **Current strategy (2026-10-14): `discretionary_intraday_v1`** (`config/strategy.json`, mode `discretionary`).
 > Owner override: Claude trades the whole Practice account intraday within the limits in `decision_limits`
 > (universe LQQ3, EQQQ, VUAG, SGLN, 3LGO; at most 8 decisions a day; 10% daily loss stop; long-only, no borrowing,
