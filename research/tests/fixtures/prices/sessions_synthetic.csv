@@ -1,0 +1,4 @@
+date,close_et,source,source_retrieved_at
+2022-12-23,13:00,SYNTHETIC fixture (invented early close to test the 13:00 path; not a real NYSE early close),2026-10-23T00:00:00Z
+2022-12-27,16:00,SYNTHETIC fixture,2026-10-23T00:00:00Z
+2022-12-28,16:00,SYNTHETIC fixture,2026-10-23T00:00:00Z

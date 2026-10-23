@@ -1,0 +1,60 @@
+{
+ "_fixture_note": "SYNTHETIC: hand-written in the shape of a Yahoo chart v8 response; fictional ticker SYN",
+ "chart": {
+  "result": [
+   {
+    "meta": {
+     "currency": "USD",
+     "symbol": "SYN",
+     "exchangeTimezoneName": "America/New_York",
+     "gmtoffset": -18000
+    },
+    "timestamp": [
+     1671805800,
+     1672151400,
+     1672237800,
+     1672324200,
+     1672410600,
+     1672756200
+    ],
+    "indicators": {
+     "quote": [
+      {
+       "close": [
+        10.0,
+        11.0,
+        12.0,
+        13.0,
+        13.5,
+        13.6
+       ]
+      }
+     ],
+     "adjclose": [
+      {
+       "adjclose": [
+        10.0,
+        11.0,
+        12.0,
+        13.0,
+        13.5,
+        13.6
+       ]
+      }
+     ]
+    },
+    "events": {
+     "splits": {
+      "1672324200": {
+       "date": 1672324200,
+       "numerator": 1,
+       "denominator": 10,
+       "splitRatio": "1:10"
+      }
+     }
+    }
+   }
+  ],
+  "error": null
+ }
+}
