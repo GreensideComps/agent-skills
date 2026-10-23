@@ -49,7 +49,7 @@ shown working in operation, or the claim rests on an untested assumption).
 | Component | Class | Evidence |
 |---|---|---|
 | News interpretation, event extraction, novelty | M | Nothing in the repo [V]. |
-| Company analysis | P | `equity/equity/valuation.py`, bear-case records, `screener.py` (screen-1.0) [V]. Screen-1.0 itself is unvalidated: M8-T1 has no recorded verdict and touched the holdout [V: registry]. |
+| Company analysis | P | `equity/equity/valuation.py`, bear-case records, `screener.py` (screen-1.0) [V]. Screen-1.0 itself is unvalidated: M8-T1 has no verdict in the registry and touched the holdout [V: registry]; `equity/config/evidence.json` records it as E1 with a failed pre-registered backtest (IC t = 1.92 vs 2.0), and every screen and paper report prints an "unvalidated" banner [V; corrected 23 Oct, see §4]. |
 | Catalyst identification, source verification | M | [V] |
 | Research planner (draft only) | U | `office/office/planner.py` on draft PR #27, not merged [V]. Owner allowed it (D-T15) [R]. |
 | Weekly stock discovery routine | P | Scheduled task exists [R]; its output is not wired into any gated process [A]. |
@@ -229,7 +229,7 @@ N = 102 is the DSR count, not 102 strategies [V: registry]. Of 147 registered id
 | B5 V1/V2 definitions | 4 | Superseded definitions, never run | none | Counted, never evaluated | No |
 | DIAG-* | 45 | Stage 2 horizon diagnostics (3/6/12 months) | no verdict (diagnostic) | Valid as information | No |
 | QX-* | 30 | Stage 2 quality-exclusion sensitivity | no verdict | Valid as information | No |
-| M8-T1 + 5 sub-score audits | 6 | screen-1.0 score vs 12-month return, 2012–2025 cohorts | no recorded verdict; touched holdout [V] | Weak (post hoc, holdout exposure) | Screen-1.0 should be treated as **unvalidated**; it still drives the equity paper book [V]. |
+| M8-T1 + 5 sub-score audits | 6 | screen-1.0 score vs 12-month return, 2012–2025 cohorts | no verdict in the registry; touched holdout [V]. `evidence.json`: pre-registered backtest failed, tier E1 [V] | Weak (post hoc, holdout exposure) | Screen-1.0 is **unvalidated** and already bannered as such in every report [V]; it still drives the equity paper book. D-C tightens the wording (`proposals/DC_evidence_labels.patch`). |
 
 Not in N but relevant:
 - **ETF research E001–E015** (trend, momentum sleeves, leveraged ETPs, intraday): 9 rejected, 2 insurance-only, 1
@@ -313,7 +313,7 @@ for the owner's PR #27 decision. Each item is one PR with offline tests; none pl
 |---|---|---|---|
 | 1.1 | `docs/minifund/STAGE1_CAPABILITY_AUDIT.md` | This document | Owner review |
 | 1.2 | `docs/minifund/INTERFACES.md` (new) | Define record schemas: `DataRecord` (source, retrieved_at, available_at, revision), `EventRecord` (roadmap §3 fields), `SleeveTarget`, `RiskVerdict`, `PaperFill`. Docs only | Review; schemas then used by 2.x/5.x tests |
-| 1.3 | `research/edge/trials.jsonl` via `edge_registry.py` | **Owner decision first.** Optionally append a `verdict` annotation event for B5 V3 results (append-only; history untouched) so registry readers see "fail" | `edge_registry` chain verify; pm test that a "fail" annotation is refused |
+| 1.3 | `research/edge_verdicts.py` (new), `research/edge/verdict_annotations.jsonl` (new) | D-A approved in principle 23 Oct. Separate append-only, hash-chained verdict ledger, so the pinned registry stays byte-identical. Exact events and patch in `proposals/` for review | 11 research tests + 2 pm tests, run in scratch copies (`proposals/README.md`) |
 
 ### Stage 2: trustworthy historical data
 | # | File(s) | Change | Test |
@@ -330,7 +330,7 @@ for the owner's PR #27 decision. Each item is one PR with offline tests; none pl
 | 3.1 | `research/baselines.py` (new) | Baseline ladder over the existing engine: VWRP hold, no-trade, 12-1 momentum and quality using `stage2.py` constructors (no new definitions) | Synthetic-world tests: hold == benchmark; turnover 0 for no-trade |
 | 3.2 | `research/walkforward.py` (new) | Rolling-origin evaluation wrapper over `edge_backtest.run`, exploration window only (refuses holdout via `edge_split`) | Refuses dates past 2022-12; synthetic leak test |
 | 3.3 | `research/edge_registry.py` | Registration requires `baseline_ids`, `experiment_count`, `data_requirements`, `rejection_criteria` for new trials (roadmap §6) | Missing field refused; old events still verify |
-| 3.4 | `research/edge/trials.jsonl` | **Owner decision:** whether to count ETF E001–E015 in N for momentum/factor ideas | DSR test with the new N |
+| 3.4 | `research/edge/prior_etf_families.json` (new) | D-B approved 23 Oct: the family rule in `MULTIPLE_TESTING_PRIOR_ETF.md` adds related E configurations to N at registration only | Counts match `research/experiments/E*.json`; DSR test with the extra N |
 
 ### Stage 4: news intelligence (SEC 8-K first)
 | # | File(s) | Change | Test |
@@ -356,10 +356,26 @@ Forward paper run on the Stage 5 book with criteria registered first, in the G-g
 
 ---
 
-## 8. Owner decisions surfaced (none needed to continue Stage 1 docs)
+## 8. Owner decisions (recorded 23 Oct 2026 10:19Z)
 
-- D-A: Add a `verdict` annotation to the registry for B5 V3 results (1.3)?
-- D-B: Count ETF E001–E015 in N for any momentum/factor trial (3.4)?
-- D-C: Treat screen-1.0 as unvalidated and label the equity paper book accordingly?
-- D-D: Approve SEC 8-K filings as the first (free) event data set for Stage 4?
-- D-E: Whether to commission a costed data-purchase case (2.5); no purchase either way.
+The owner answered all five on 23 Oct (`cmsg_01U4KMvkBYNknqm4HRVie8uv964VkQcqvQbBHhfQQbHd8Z`). Scope and status for
+each are in `STAGE1_DECISIONS.md`:
+- D-A **yes**: an append-only verdict annotation for the failed B5 V3 trials, plus eligibility tests. Proposed, not
+  applied (`proposals/`).
+- D-B **yes, selectively**: a pre-defined family rule for E001–E015 (`MULTIPLE_TESTING_PRIOR_ETF.md`).
+- D-C **yes**: label screen-1.0 and its paper book as unvalidated exploratory research, not investable evidence.
+  Wording patch proposed.
+- D-D **yes**: SEC 8-K filing events as the first Stage 4 data set, with deterministic, pre-registered category
+  baselines before any AI scoring.
+- D-E **yes, research only**: a vendor-verified data-purchase comparison. Nothing bought, subscribed or activated.
+
+Record contracts for Stages 2–6 and the contradictions found against PR #27 are in `INTERFACES.md`.
+
+### Corrections to this audit (23 Oct)
+
+- §1.3 and §4 said screen-1.0 "has no recorded verdict". That is true of the registry only.
+  `equity/config/evidence.json` records its pre-registered backtest as failed (E1), and every screen and paper
+  report already carries an "unvalidated: not a recommendation" banner [V]. D-C is therefore a wording change, not a
+  missing label.
+- Plan item 1.3 proposed appending to `trials.jsonl`. That would break two D33/D34 protection tests, so the proposal
+  is now a separate ledger (`proposals/README.md`).

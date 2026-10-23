@@ -1,0 +1,243 @@
+diff --git a/research/edge_verdicts.py b/research/edge_verdicts.py
+new file mode 100644
+index 0000000..81c7de7
+--- /dev/null
++++ b/research/edge_verdicts.py
+@@ -0,0 +1,144 @@
++"""Verdict annotations for registry results recorded without a verdict (owner decision D-A, 2026-10-23).
++
++B5 run 2 recorded its two primary results in `research/edge/trials.jsonl` (lines 241-242) with the statistics the
++deflated Sharpe needs but no `verdict` field; the fail verdicts are in the run's report. This module keeps those
++verdicts in a separate append-only file, `research/edge/verdict_annotations.jsonl`, so the registry and
++`edge_registry.py` stay byte-identical (both are pinned by the D33/D34 tests).
++
++Each annotation is bound to the registry line it annotates by that line's number and sha256, and to its evidence by
++the evidence file's sha256. Lines are hash-chained like the registry. An annotation adds no result: it changes
++neither `n_trials` nor the Sharpe ratios the deflated Sharpe pools.
++
++    python3 edge_verdicts.py            # validate both files and print every verdict
++"""
++from __future__ import annotations
++
++import hashlib
++import json
++import sys
++from datetime import date
++from pathlib import Path
++
++import edge_registry
++
++PATH = Path(__file__).resolve().parent / "edge" / "verdict_annotations.jsonl"
++VERDICTS = {"pass", "fail", "inconclusive"}
++REQUIRED = {"event", "id", "date", "verdict", "label", "annotates_line", "annotates_line_sha256", "evidence",
++            "evidence_sha256", "owner_decision", "prev"}
++REPO = Path(__file__).resolve().parent.parent
++
++
++def _hex64(h) -> bool:
++    return isinstance(h, str) and len(h) == 64 and all(c in "0123456789abcdef" for c in h)
++
++
++def load(path: Path = PATH) -> list[dict]:
++    if not path.exists():
++        return []
++    return [json.loads(l) for l in path.read_text().splitlines() if l.strip()]
++
++
++def validate(path: Path = PATH, registry: Path = edge_registry.PATH, repo: Path = REPO) -> list[str]:
++    """Problems found (empty = valid): a broken chain, missing fields, an annotation of anything but a result line
++    without a verdict, a line hash that no longer matches the registry, evidence whose sha256 differs, a second
++    annotation for one trial, or a verdict outside VERDICTS."""
++    problems = edge_registry.validate(registry)
++    if problems:
++        return [f"registry: {p}" for p in problems]
++    if not path.exists():
++        return []
++    reg_lines = registry.read_text().splitlines()
++    prev, seen = edge_registry.GENESIS, set()
++    for n, raw in enumerate(path.read_text().splitlines(), 1):
++        if not raw.strip():
++            continue
++        try:
++            e = json.loads(raw)
++        except json.JSONDecodeError as x:
++            problems.append(f"line {n}: not JSON ({x})")
++            prev = edge_registry.line_hash(raw)
++            continue
++        if e.get("prev") != prev:
++            problems.append(f"line {n}: hash chain broken (a line was edited, removed or reordered)")
++        prev = edge_registry.line_hash(raw)
++        missing = REQUIRED - e.keys()
++        if missing or e.get("event") != "verdict_annotation":
++            problems.append(f"line {n}: not a complete verdict_annotation (missing {sorted(missing)})")
++            continue
++        tid, ln = e["id"], e["annotates_line"]
++        target = reg_lines[ln - 1] if isinstance(ln, int) and 1 <= ln <= len(reg_lines) else None
++        r = json.loads(target) if target else {}
++        if target is None or r.get("event") != "result" or r.get("id") != tid:
++            problems.append(f"line {n}: registry line {ln} is not {tid}'s result")
++        elif edge_registry.line_hash(target) != e["annotates_line_sha256"]:
++            problems.append(f"line {n}: registry line {ln} no longer has the annotated sha256")
++        elif r.get("verdict") is not None:
++            problems.append(f"line {n}: {tid}'s result already carries verdict {r['verdict']!r}")
++        if tid in seen:
++            problems.append(f"line {n}: second verdict annotation for {tid}")
++        seen.add(tid)
++        if e["verdict"] not in VERDICTS:
++            problems.append(f"line {n}: verdict {e['verdict']!r} not in {sorted(VERDICTS)}")
++        if not str(e["owner_decision"]).startswith("cmsg_"):
++            problems.append(f"line {n}: no owner decision id (cmsg_...)")
++        ev = repo / str(e["evidence"])
++        if not _hex64(e["evidence_sha256"]) or not ev.is_file() \
++                or hashlib.sha256(ev.read_bytes()).hexdigest() != e["evidence_sha256"]:
++            problems.append(f"line {n}: evidence {e['evidence']} does not have the recorded sha256")
++    return problems
++
++
++def append(events: list[dict], path: Path = PATH, registry: Path = edge_registry.PATH, repo: Path = REPO) -> None:
++    """Append `events` (chained, dated today) in one rename. Refuses, leaving the file untouched, unless the files
++    are valid before and after and every earlier byte is unchanged."""
++    before = validate(path, registry, repo)
++    if before:
++        raise ValueError(f"invalid before append: {before}")
++    old = path.read_bytes() if path.exists() else b""
++    lines = [l for l in old.decode().splitlines() if l.strip()]
++    prev = edge_registry.line_hash(lines[-1]) if lines else edge_registry.GENESIS
++    for event in events:
++        raw = json.dumps({"date": date.today().isoformat(), **event, "prev": prev}, sort_keys=True)
++        lines.append(raw)
++        prev = edge_registry.line_hash(raw)
++    tmp = path.with_suffix(".tmp")
++    tmp.write_text("\n".join(lines) + "\n")
++    after = validate(tmp, registry, repo)
++    if after or not tmp.read_bytes().startswith(old):
++        tmp.unlink()
++        raise ValueError(f"annotation rejected, file unchanged: {after or 'history changed'}")
++    tmp.replace(path)
++
++
++def verdicts(reg_events: list[dict], annotations: list[dict]) -> dict[str, str]:
++    """Each resulted trial's verdict: the one on its result, else its annotation. Trials with neither are left out;
++    a reader must treat a missing verdict as "not a pass"."""
++    out = {e["id"]: e["verdict"] for e in reg_events if e.get("event") == "result" and e.get("verdict") is not None}
++    for a in annotations:
++        out.setdefault(a["id"], a["verdict"])
++    return out
++
++
++def allocation_eligible(trial_id: str, reg_events: list[dict], annotations: list[dict]) -> tuple[bool, str]:
++    """Whether `trial_id` may be cited as allocation evidence, and why not. Only a registered `trial` counted for
++    the deflated Sharpe whose verdict is "pass" qualifies. Necessary, not sufficient: the portfolio manager adds its
++    own conditions (owner listing, confirmation, prospective evidence)."""
++    reg = edge_registry.registered(reg_events).get(trial_id)
++    if reg is None:
++        return False, f"{trial_id} is not registered"
++    if reg.get("kind") != "trial" or not reg.get("counts_for_dsr"):
++        return False, f"{trial_id} is registered as {reg.get('kind')}, not a counted trial"
++    v = verdicts(reg_events, annotations).get(trial_id)
++    if v != "pass":
++        return False, f"{trial_id} verdict is {v or 'not recorded'}, not pass"
++    return True, "pass"
++
++
++if __name__ == "__main__":
++    probs = validate()
++    for t, v in sorted(verdicts(edge_registry.load(), load()).items()):
++        print(f"{t}: {v}")
++    if probs:
++        print("INVALID:\n  " + "\n  ".join(probs))
++        sys.exit(1)
++    print("valid")
+diff --git a/research/tests/test_edge_verdict_annotation.py b/research/tests/test_edge_verdict_annotation.py
+new file mode 100644
+index 0000000..5e21c5d
+--- /dev/null
++++ b/research/tests/test_edge_verdict_annotation.py
+@@ -0,0 +1,87 @@
++"""Owner decision D-A (2026-10-23): append-only verdict annotations for results recorded without a verdict, and
++eligibility checks so a failed trial can never qualify. The tests write only to copies; the committed registry is
++only read and must stay byte-identical."""
++import hashlib
++import json
++from pathlib import Path
++
++import pytest
++
++import edge_registry
++import edge_verdicts as ev
++
++REPO = Path(__file__).resolve().parents[2]
++PROPOSED = REPO / "docs" / "minifund" / "proposals" / "DA_VERDICT_ANNOTATION_EVENTS.json"
++B5_V3 = ("B5-H1-FCFPS-ACCEL-V3", "B5-S2A-GP-12M-V3")
++RUN_2_REGISTRY_SHA256 = "de03d38b18a2d80b5c4d20f647c8ff35f5471157aba71fa99da6b550fb1217e6"
++
++
++def proposed():
++    return json.loads(PROPOSED.read_text())
++
++
++@pytest.fixture
++def ledger(tmp_path):
++    return tmp_path / "verdict_annotations.jsonl"
++
++
++def test_proposed_annotations_validate_and_leave_the_registry_untouched(ledger):
++    reg_before = edge_registry.PATH.read_bytes()
++    ev.append(proposed(), ledger)
++    assert ev.validate(ledger) == []
++    assert edge_registry.PATH.read_bytes() == reg_before
++    assert hashlib.sha256(b"".join(reg_before.splitlines(keepends=True)[:252])).hexdigest() == RUN_2_REGISTRY_SHA256
++    events = edge_registry.load()
++    assert edge_registry.n_trials(events) == 102  # an annotation adds no trial and no result
++    assert {t: ev.verdicts(events, ev.load(ledger))[t] for t in B5_V3} == {t: "fail" for t in B5_V3}
++
++
++def test_failed_and_unverdicted_trials_never_qualify(ledger):
++    events = edge_registry.load()
++    for t in B5_V3:  # before D-A is applied: no verdict recorded, still refused
++        ok, why = ev.allocation_eligible(t, events, [])
++        assert not ok and "not recorded" in why
++    ev.append(proposed(), ledger)
++    ann = ev.load(ledger)
++    for t in B5_V3:  # after: refused as failed
++        ok, why = ev.allocation_eligible(t, events, ann)
++        assert not ok and "fail" in why
++    assert not [t for t in edge_registry.registered(events) if ev.allocation_eligible(t, events, ann)[0]]
++    assert not ev.allocation_eligible("S2-S2a", events, ann)[0]  # inconclusive is not a pass
++    assert not ev.allocation_eligible("DIAG-S1a-h3", events, ann)[0]  # diagnostics never qualify
++    assert not ev.allocation_eligible("NOT-REGISTERED", events, ann)[0]
++
++
++@pytest.mark.parametrize("change, problem", [
++    ({"annotates_line": 240}, "is not B5-H1-FCFPS-ACCEL-V3's result"),
++    ({"id": "S2-S1a", "annotates_line": 0}, "is not S2-S1a's result"),
++    ({"annotates_line_sha256": "0" * 64}, "no longer has the annotated sha256"),
++    ({"verdict": "pass?"}, "not in"),
++    ({"owner_decision": "owner said so"}, "owner decision id"),
++    ({"evidence_sha256": "f" * 64}, "does not have the recorded sha256"),
++])
++def test_bad_annotations_are_refused_and_nothing_is_written(ledger, change, problem):
++    with pytest.raises(ValueError, match=problem):
++        ev.append([dict(proposed()[0], **change)], ledger)
++    assert not ledger.exists() and not ledger.with_suffix(".tmp").exists()
++
++
++def test_an_annotation_of_a_result_that_has_a_verdict_is_refused(ledger):
++    lines = edge_registry.PATH.read_text().splitlines()
++    n = next(i for i, l in enumerate(lines, 1) if '"id": "S2-S1a"' in l and '"result"' in l)
++    a = dict(proposed()[0], id="S2-S1a", annotates_line=n, annotates_line_sha256=edge_registry.line_hash(lines[n - 1]))
++    with pytest.raises(ValueError, match="already carries verdict"):
++        ev.append([a], ledger)
++
++
++def test_a_second_annotation_and_any_edit_are_refused(ledger):
++    ev.append(proposed(), ledger)
++    with pytest.raises(ValueError, match="second verdict annotation"):
++        ev.append([dict(proposed()[0], verdict="pass", label="pass")], ledger)
++    text = ledger.read_text()
++    ledger.write_text(text.replace('"verdict": "fail"', '"verdict": "pass"', 1))
++    assert any("hash chain" in p for p in ev.validate(ledger))
++
++
++def test_the_committed_annotation_file_if_present_is_valid():
++    assert ev.validate() == []
