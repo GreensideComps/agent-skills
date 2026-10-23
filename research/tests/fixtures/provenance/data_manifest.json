@@ -1,0 +1,8 @@
+{
+ "note": "SYNTHETIC test fixture in the shape of research-data/edge/manifest.json; not real data",
+ "files": {
+  "prices_small.csv": {"rows": 2, "sha256": "4a3c243177635af341028b62cb3b470814c1da8c13dc9431e55d273889f26a71"},
+  "missing.csv.gz": {"rows": 0, "sha256": "0000000000000000000000000000000000000000000000000000000000000000"},
+  "fx_small.csv": {"rows": 0, "sha256": "1111111111111111111111111111111111111111111111111111111111111111"}
+ }
+}
