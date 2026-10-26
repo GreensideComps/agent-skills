@@ -23,7 +23,7 @@ PINNED = {
     "screens/2026-10-16.md": "87d68dcc10b42d14d5b379d558c4d8d2bf0faeae1c84365b58eaf44e6b6235b0",
     "screens/2026-10-19.md": "af40e7131b2e59177121923d4fd34301446cbbfb250cc63a6dcc79e7055ca2ac",
     "screens/2026-10-20.md": "a9e305f0b10f6d453ada2313bbf9d1d8a89195008988da741fd7749c9a27545b",
-    "screens/2026-10-23.md": "d6784757c78813c7116c6937f6fdb7161191256be03a4202ee36c38ca7ac41e0",
+    "screens/2026-10-23.md": "c298a067749b7340e8e135c6562569156ab671c3ff51a96705795408ffcfdd6b",  # see OVERWRITTEN
     "paper/2026-10-14.md": "a7f26f8beab1d6c38dccdc497854b6ab030fc7fe3846178b3796400d6decd644",
     "paper/2026-10-15.md": "76f94db5ed7a547f04a57566f0b0f0da4c22d3953f805964f6d044a70cadce6c",
     "paper/2026-10-16.md": "8c314936ac19f77c0b4a090482bcba23c4c022ed681e6a5e95128698533858c8",
@@ -32,6 +32,14 @@ PINNED = {
     "paper/2026-10-23.md": "5322db1d89d4f2a8b92d48cb6642b36b9dd6bc0e1460444cdeb41300ffb1546e",
 }
 
+
+# Reports replaced before this guard existed. The label of record pinned the first version; the scheduled pipeline
+# run of 2026-10-23 21:55Z (commit ef9004a) rewrote the file. Both versions stay in git history; the current file is
+# pinned above (proposed, pending owner decision) and the original is recorded here, never restored over it.
+OVERWRITTEN = {
+    "screens/2026-10-23.md": {"label_sha256": "d6784757c78813c7116c6937f6fdb7161191256be03a4202ee36c38ca7ac41e0",
+                              "original_commit": "b8cccb4", "overwritten_by_commit": "ef9004a"},
+}
 
 class ReportError(RuntimeError):
     pass
