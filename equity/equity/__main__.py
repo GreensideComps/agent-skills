@@ -13,7 +13,7 @@ import sys
 from datetime import date, timedelta
 from pathlib import Path
 
-from . import index, pipeline, research
+from . import index, pipeline, reports_io, research
 from .ingest import ingest_company, last_snapshot, latest_securities, resolve
 from .jobs import JobSkipped, job, job_health
 from .sec import SecClient, SecError
@@ -233,8 +233,7 @@ def cmd_crosscheck(store: Store, a) -> int:
         time.sleep(0.5)
     from collections import Counter  # noqa: PLC0415
     counts = Counter(r["status"] for r in rows)
-    out = Path(__file__).resolve().parent.parent / "reports" / "verification" / f"{date.today()}-sec-vs-yahoo.md"
-    out.parent.mkdir(parents=True, exist_ok=True)
+    out = reports_io.REPORTS_DIR / "verification" / f"{date.today()}-sec-vs-yahoo.md"
     lines = [f"# SEC-derived fundamentals vs Yahoo (independent check), {date.today()}", "",
              f"Latest fiscal year per company. Tolerance {TOLERANCE:.0%}. Neither source is assumed correct; "
              "a CONFLICT needs review. Yahoo is unofficial and used only as a check.", "",
@@ -245,7 +244,7 @@ def cmd_crosscheck(store: Store, a) -> int:
         diff = "" if r.get("rel_diff") is None else f"{r['rel_diff']:+.2%}"
         lines.append(f"| {r['symbol']} | {r['metric']} | {r.get('fy_end', '')} | {_n(r.get('sec'))} | "
                      f"{_n(r.get('yahoo'))} | {diff} | {r['status']} | {r.get('sec_concept') or ''} |")
-    out.write_text("\n".join(lines) + "\n")
+    out = reports_io.write_report_once(out, "\n".join(lines) + "\n")
     print(dict(counts), "->", out)
     return 2 if counts.get("CONFLICT") else 0
 
@@ -319,9 +318,8 @@ def cmd_screen(store: Store, a) -> int:
         j["outputs"] = {"rid": rec["rid"], "companies": rec["companies"], "eligible": rec["eligible"],
                         "valuations": len(vals), "alerts": len(al["alerts"]), "alert_baseline": al["baseline"]}
     md = screener.report(rec, a.top, {v["company_id"]: v for v in vals}, al)
-    out = Path(__file__).resolve().parent.parent / "reports" / "screens" / f"{rec['as_of']}.md"
-    out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text(md)
+    out = reports_io.REPORTS_DIR / "screens" / f"{rec['as_of']}.md"
+    out = reports_io.write_report_once(out, md)
     print(md)
     print("->", out)
     return 0
@@ -422,9 +420,8 @@ def cmd_paper(store: Store, a) -> int:
         nav = paper.mark(store, prices, rec["as_of"])
         j["outputs"] = {"rebalanced": rb["rebalanced"], "excess_return": nav["excess_return"]}
     md = paper.report(store)
-    out = Path(__file__).resolve().parent.parent / "reports" / "paper" / f"{rec['as_of']}.md"
-    out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text(md)
+    out = reports_io.REPORTS_DIR / "paper" / f"{rec['as_of']}.md"
+    out = reports_io.write_report_once(out, md)
     print(json.dumps(rb, default=str))
     print(md)
     return 0
@@ -444,9 +441,8 @@ def cmd_reliability(store: Store, a) -> int:
     from . import reliability  # noqa: PLC0415
     res = reliability.run(store)
     md = reliability.report(res)
-    out = Path(__file__).resolve().parent.parent / "reports" / "health" / f"{res['as_of'][:10]}.md"
-    out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text(md)
+    out = reports_io.REPORTS_DIR / "health" / f"{res['as_of'][:10]}.md"
+    out = reports_io.write_report_once(out, md)
     print(md)
     print("->", out)
     return res["exit_code"]
@@ -539,9 +535,8 @@ def cmd_portfolio(store: Store, a) -> int:
         an = portfolio.analyse(snap, store, rets, bench)
         j["outputs"] = {"holdings": len(snap["positions"]), "flags": len(an["flags"]), "total": an["total_value"]}
     md = portfolio.report(an, failed)
-    out = Path(__file__).resolve().parent.parent / "reports" / "portfolio" / f"{snap['as_of']}.md"
-    out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text(md)
+    out = reports_io.REPORTS_DIR / "portfolio" / f"{snap['as_of']}.md"
+    out = reports_io.write_report_once(out, md)
     print(md)
     print("->", out)
     return 0  # flags are in the report; a non-zero exit means the run itself failed
