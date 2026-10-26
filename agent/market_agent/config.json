@@ -1,0 +1,64 @@
+{
+  "version": "agent-1.0",
+  "note": "Always-on demo market agent. Demo account only (the client refuses any other host). Owner mandate: cmsg_01U4KMvkBYNknqm4HRVie8uvK9gRYqGXBK4bQP49dBz49i (26 Oct 2026).",
+  "intervals_s": {
+    "loop": 15,
+    "prices": 60,
+    "broker": 300,
+    "calendar": 21600,
+    "news": 1800,
+    "heartbeat": 60
+  },
+  "benchmark": {
+    "t212": "VWRPl_EQ",
+    "yahoo": "VWRP.L",
+    "fx": "GBPUSD=X"
+  },
+  "extra_symbols": [
+    "SPY"
+  ],
+  "yahoo_overrides": {
+    "FB_US_EQ": "META",
+    "IBTAl_EQ": "IBTA.L",
+    "VWRPl_EQ": "VWRP.L"
+  },
+  "freshness_s": {
+    "market_open": 600,
+    "market_open_delayed": 1500,
+    "market_closed": 345600,
+    "delayed_suffixes": [
+      ".L"
+    ],
+    "note": "Yahoo's London quotes arrive about 15 minutes late, so London lines get the delayed limit."
+  },
+  "abnormal_move": 0.25,
+  "exits": {
+    "tickers": [
+      "INTC_US_EQ",
+      "BE_US_EQ",
+      "TEM_US_EQ"
+    ],
+    "rationale": "Demo exits authorised by the owner on 26 Oct 2026 (cmsg_01U4KMvkBYNknqm4HRVie8uv9v5pmAfwrJqmTEjzQ4uxCP item 3, restated in the 08:24Z handoff). They are the only sells that held up in /mnt/project-files/portfolio/2026-10-14-validation.md."
+  },
+  "core": {
+    "rationale": "VWRP is the default core holding while no tactical strategy has passed the research gates (pm-1.0: pm_eligible.json is empty).",
+    "invest_cash_above_gbp": 20.0,
+    "cash_buffer_gbp": 5.0
+  },
+  "limits": {
+    "buy_whitelist": [
+      "VWRPl_EQ"
+    ],
+    "max_order_gbp": 600.0,
+    "max_orders_per_day": 8,
+    "max_turnover_gbp_per_day": 1300.0,
+    "max_consecutive_order_errors": 2,
+    "fill_check_timeout_s": 900
+  },
+  "alerts": {
+    "daily_move_pct": 5.0,
+    "concentration_pct": 10.0,
+    "fx_move_pct": 1.0,
+    "drawdown_from_cost_pct": 15.0
+  }
+}

@@ -1,0 +1,292 @@
+"""Offline tests: a fake broker and fake feeds; any real network call fails the test."""
+from __future__ import annotations
+
+import datetime as dt
+import sys
+from pathlib import Path
+
+import pytest
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from market_agent import agent as agent_mod, execution, feeds  # noqa: E402
+from market_agent.__main__ import health  # noqa: E402
+from market_agent.store import LeaseHeld, Store  # noqa: E402
+
+T0 = dt.datetime(2026, 10, 27, 15, 0, tzinfo=dt.timezone.utc).timestamp()  # Tue: LSE and NASDAQ both open
+
+
+class Ambiguous(Exception):
+    pass
+
+
+class ApiErr(Exception):
+    pass
+
+
+def iso(t):
+    return dt.datetime.fromtimestamp(t, dt.timezone.utc).isoformat().replace("+00:00", "Z")
+
+
+class Clock:
+    def __init__(self):
+        self.t = T0
+
+    def __call__(self):
+        return self.t
+
+
+def pos(t, q, avail, pies, value, cost, ccy="USD", px=10.0):
+    return {"instrument": {"ticker": t, "currency": ccy}, "quantity": q, "quantityAvailableForTrading": avail,
+            "quantityInPies": pies, "currentPrice": px, "walletImpact": {"currentValue": value, "totalCost": cost}}
+
+
+class FakeBroker:
+    def __init__(self, clock):
+        self.clock = clock
+        self.cash = 0.0
+        self.pos = [pos("INTC_US_EQ", 0.2, 0, 0.2, 17.0, 20.0), pos("MSFT_US_EQ", 0.3, 0, 0.3, 150.0, 160.0)]
+        self.orders, self.history, self.pending = [], [], []
+        self.fail_next = None
+
+    def account_summary(self):
+        return {"totalValue": self.cash + sum(p["walletImpact"]["currentValue"] for p in self.pos),
+                "cash": {"availableToTrade": self.cash}}
+
+    def positions(self):
+        return [dict(p) for p in self.pos]
+
+    def pending_orders(self):
+        return list(self.pending)
+
+    def exchanges(self):
+        day = dt.datetime.fromtimestamp(self.clock(), dt.timezone.utc).replace(hour=0, minute=0, second=0)
+        d = day.timestamp()
+        ev = lambda h, k: {"date": iso(d + h * 3600), "type": k}  # noqa: E731
+        return [{"name": "LSE", "workingSchedules": [{"id": 70, "timeEvents": [ev(8, "OPEN"), ev(16.5, "CLOSE")]}]},
+                {"name": "NASDAQ", "workingSchedules": [{"id": 71, "timeEvents": [ev(13.5, "OPEN"),
+                                                                                    ev(20, "AFTER_HOURS_OPEN")]}]}]
+
+    def instruments(self):
+        return [{"ticker": "INTC_US_EQ", "workingScheduleId": 71}, {"ticker": "MSFT_US_EQ", "workingScheduleId": 71},
+                {"ticker": "VWRPl_EQ", "workingScheduleId": 70}]
+
+    def place_market_order(self, ticker, quantity):
+        if self.fail_next:
+            e, self.fail_next = self.fail_next, None
+            raise e
+        oid = 1000 + len(self.orders)
+        self.orders.append((ticker, quantity))
+        self.history.insert(0, {"order": {"id": oid, "ticker": ticker, "status": "FILLED",
+                                          "side": "BUY" if quantity > 0 else "SELL", "createdAt": iso(self.clock())},
+                                "fill": {"quantity": abs(quantity), "price": 10.0}})
+        return {"id": oid, "status": "NEW"}
+
+    def history_orders(self, ticker=None, limit=50, max_pages=5):
+        return [h for h in self.history if ticker in (None, h["order"]["ticker"])]
+
+    def get_order(self, oid):
+        raise ApiErr("404")
+
+
+def fake_get(clock, prices=None):
+    prices = prices or {}
+
+    def get(url, params):
+        if url == feeds.SPARK:
+            out = {}
+            for s in params["symbols"].split(","):
+                p = prices.get(s, 100.0)
+                if p is not None:
+                    out[s] = {"timestamp": [clock() - 120, clock() - 60], "close": [p, p], "previousClose": p}
+            return out
+        if url == feeds.SEARCH:
+            return {"news": [{"uuid": f"n-{params['q']}", "title": "headline", "providerPublishTime": clock() - 60,
+                              "relatedTickers": [params["q"]]}]}
+        raise AssertionError(url)
+    return get
+
+
+@pytest.fixture(autouse=True)
+def no_network(monkeypatch):
+    def boom(*a, **k):
+        raise AssertionError("network call in a test")
+    monkeypatch.setattr(feeds, "http_get", boom)
+    monkeypatch.setattr(feeds.requests, "get", boom)
+
+
+def make(tmp_path, enabled=True, prices=None):
+    clock = Clock()
+    st = Store(tmp_path, clock=clock, sleep=lambda s: None)
+    if enabled:
+        st.set_control(True, "test", "test")
+    b = FakeBroker(clock)
+    ag = agent_mod.Agent(st, b, agent_mod.load_config(), ambiguous_exc=Ambiguous, api_exc=ApiErr,
+                         get=fake_get(clock, prices), clock=clock, sleep=lambda s: None)
+    st.acquire_lease()
+    return ag, b, st, clock
+
+
+def advance(ag, clock, n=1, by=301):
+    for _ in range(n):
+        clock.t += by
+        ag.step()
+
+
+def test_pie_held_exit_sends_nothing_and_alerts(tmp_path):
+    ag, b, st, clock = make(tmp_path)
+    advance(ag, clock, 3)
+    assert b.orders == []
+    ev = st.events(dt.datetime.fromtimestamp(clock.t, dt.timezone.utc).strftime("%Y-%m-%d"))
+    assert any(e["kind"] == "alert" and e["code"] == "exit_blocked_pie:INTC_US_EQ" for e in ev)
+    assert sum(1 for e in ev if e["kind"] == "alert" and e["code"] == "exit_blocked_pie:INTC_US_EQ") == 1
+    assert any(e["kind"] == "decision" and e["no_trade"] for e in ev)
+
+
+def test_tradeable_exit_sells_once_then_reconciles_to_filled(tmp_path):
+    ag, b, st, clock = make(tmp_path)
+    b.pos[0] = pos("INTC_US_EQ", 0.2, 0.2, 0, 17.0, 20.0)
+    advance(ag, clock, 1)
+    assert b.orders == [("INTC_US_EQ", -0.2)]
+    b.pos = b.pos[1:]  # the sell filled
+    advance(ag, clock, 3)
+    assert b.orders == [("INTC_US_EQ", -0.2)]  # never re-sent
+    final = execution.latest_intents(st.intents())
+    assert [r["status"] for r in final.values()] == ["filled"]
+    assert list(final.values())[0]["broker"]["order"]["status"] == "FILLED"
+
+
+def test_cash_goes_to_vwrp_core_only(tmp_path):
+    ag, b, st, clock = make(tmp_path, prices={"VWRP.L": 140.0})
+    b.cash = 100.0
+    advance(ag, clock, 2)
+    assert b.orders == [("VWRPl_EQ", 0.67)]  # floor((100 - 5) / 140, 2 dp)
+
+
+def test_kill_switch_and_missing_control_block_orders(tmp_path):
+    ag, b, st, clock = make(tmp_path, enabled=False)
+    b.pos[0] = pos("INTC_US_EQ", 0.2, 0.2, 0, 17.0, 20.0)
+    advance(ag, clock, 2)
+    assert b.orders == []
+    assert st.control()["trading_enabled"] is False
+    refused = [r for r in st.intents() if r["status"] == "not_sent"]
+    assert refused and "kill switch" in refused[0]["refusals"][0]
+
+
+def test_market_closed_blocks_orders(tmp_path):
+    ag, b, st, clock = make(tmp_path)
+    clock.t = T0 + 7 * 3600  # 22:00 UTC: both closed
+    b.pos[0] = pos("INTC_US_EQ", 0.2, 0.2, 0, 17.0, 20.0)
+    advance(ag, clock, 1)
+    assert b.orders == []
+    assert any("market closed" in r.get("refusals", [""])[0] or "market closed" in r.get("refusals", [])
+               for r in st.intents())
+
+
+def test_ambiguous_order_is_never_resent_and_blocks_trading(tmp_path):
+    ag, b, st, clock = make(tmp_path)
+    b.pos[0] = pos("INTC_US_EQ", 0.2, 0.2, 0, 17.0, 20.0)
+    b.fail_next = Ambiguous("timeout")
+    advance(ag, clock, 1)
+    assert b.orders == []
+    advance(ag, clock, 3)
+    assert b.orders == []  # the ambiguous intent is unresolved, so nothing else is sent
+    statuses = [r["status"] for r in execution.latest_intents(st.intents()).values()]
+    assert statuses[0] == "ambiguous" and set(statuses[1:]) <= {"not_sent"}
+
+
+def test_crash_after_intent_resolves_without_resend(tmp_path):
+    ag, b, st, clock = make(tmp_path)
+    st.intent(id="x1", ticker="INTC_US_EQ", quantity=-0.2, value_gbp=17, status="intended", reason="r")
+    clock.t += 200
+    ag.ex.reconcile(clock.t, 900)
+    assert execution.latest_intents(st.intents())["x1"]["status"] == "not_sent"
+    assert b.orders == []
+
+
+def test_risk_gate_limits():
+    lim = agent_mod.load_config()["limits"]
+    base = dict(control={"trading_enabled": True}, records=[], pending=[], limits=lim, day="2026-10-27",
+                consecutive_errors=0, quote_ok=True, market_open=True,
+                positions={"INTC_US_EQ": {"quantityAvailableForTrading": 0.2}})
+    ok = {"ticker": "INTC_US_EQ", "quantity": -0.2, "value_gbp": 17}
+    assert execution.risk_check(ok, **base) == []
+    assert "exceeds" in execution.risk_check({**ok, "quantity": -0.3}, **base)[0]
+    assert "whitelist" in execution.risk_check({"ticker": "TSLA_US_EQ", "quantity": 1, "value_gbp": 5}, **base)[0]
+    assert "limit" in execution.risk_check({"ticker": "VWRPl_EQ", "quantity": 9, "value_gbp": 900}, **base)[0]
+    assert "pending" in execution.risk_check(ok, **{**base, "pending": [{"ticker": "INTC_US_EQ"}]})[0]
+    assert "errors" in execution.risk_check(ok, **{**base, "consecutive_errors": 2})[0]
+    assert "price" in execution.risk_check(ok, **{**base, "quote_ok": False})[0]
+
+
+def test_quote_validation():
+    f = {"market_open": 600, "market_closed": 345600}
+    assert feeds.validate("X", {"price": 10, "t": T0 - 60, "prev_close": 10}, T0, True, f, 0.25, None)[0]
+    assert not feeds.validate("X", None, T0, True, f, 0.25, None)[0]
+    assert "stale" in feeds.validate("X", {"price": 10, "t": T0 - 900, "prev_close": 10}, T0, True, f, 0.25, None)[1]
+    assert "future" in feeds.validate("X", {"price": 10, "t": T0 + 900}, T0, True, f, 0.25, None)[1]
+    assert "bad" in feeds.validate("X", {"price": float("nan"), "t": T0}, T0, True, f, 0.25, None)[1]
+    q = {"price": 20, "t": T0 - 60, "prev_close": 10}
+    assert "abnormal" in feeds.validate("X", q, T0, True, f, 0.25, None)[1]
+    assert feeds.validate("X", {**q, "t": T0}, T0, True, f, 0.25, {"price": 20.1, "t": T0 - 60})[0]
+
+
+def test_london_quotes_get_the_delayed_freshness_limit():
+    f = agent_mod.load_config()["freshness_s"]
+    q = {"price": 140, "t": T0 - 1000, "prev_close": 140}
+    assert feeds.validate("VWRP.L", q, T0, True, f, 0.25, None)[0]
+    assert not feeds.validate("SPY", {**q}, T0, True, f, 0.25, None)[0]
+
+
+def test_stale_price_blocks_core_buy(tmp_path):
+    ag, b, st, clock = make(tmp_path, prices={"VWRP.L": None})
+    b.cash = 100.0
+    advance(ag, clock, 2)
+    assert b.orders == []
+
+
+def test_lease_prevents_a_second_instance(tmp_path):
+    clock = Clock()
+    a = Store(tmp_path, clock=clock, sleep=lambda s: None)
+    a.acquire_lease()
+    b = Store(tmp_path, clock=clock, sleep=lambda s: None)
+    with pytest.raises(LeaseHeld):
+        b.acquire_lease()
+    clock.t += 200  # a stopped renewing
+    b.acquire_lease()
+    with pytest.raises(LeaseHeld):
+        a.renew_lease()
+
+
+def test_session_state_and_health():
+    evs = [{"date": iso(T0 - 3600), "type": "OPEN"}, {"date": iso(T0 + 3600), "type": "CLOSE"}]
+    assert feeds.session_state(evs, T0)["open"] and not feeds.session_state(evs, T0 + 7200)["open"]
+    assert health(None, T0)[0] == 2
+    assert health({"t": T0 - 400}, T0)[0] == 2
+    assert health({"t": T0 - 30, "duty_age_s": {"prices": 30, "broker": 100}}, T0)[0] == 0
+    assert health({"t": T0 - 30, "duty_age_s": {"prices": 900, "broker": 100}}, T0)[0] == 1
+
+
+def test_records_are_append_only_and_baseline_written_once(tmp_path):
+    ag, b, st, clock = make(tmp_path)
+    advance(ag, clock, 2)
+    base = st.read("baseline.json")
+    b.pos[1]["walletImpact"]["currentValue"] = 200.0
+    advance(ag, clock, 2)
+    assert st.read("baseline.json") == base
+    day = dt.datetime.fromtimestamp(clock.t, dt.timezone.utc).strftime("%Y-%m-%d")
+    snaps = [e for e in st.events(day) if e["kind"] == "snapshot"]
+    assert snaps[-1]["vs_vwrp"]["portfolio_return"] > 0
+
+
+def test_uptime_counts_gaps(tmp_path):
+    from market_agent.__main__ import uptime
+    clock = Clock()
+    st = Store(tmp_path, clock=clock, sleep=lambda s: None)
+    for i in range(60):
+        clock.t = T0 + i * 60
+        if not 20 <= i < 30:  # a 10-minute outage
+            st.event("heartbeat")
+    u = uptime(st, T0 + 59 * 60, 1)
+    assert len(u["gaps"]) == 1 and u["gaps"][0]["minutes"] == 11.0
+    assert 0.80 < u["uptime"] < 0.82
