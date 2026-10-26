@@ -1,0 +1,36 @@
+[
+  {
+    "annotates_line": 241,
+    "annotates_line_sha256": "de7310344222a2be418fd6ed8c1bf6340ca92b03f2625097e30841100ec8494e",
+    "event": "verdict_annotation",
+    "evidence": "equity/reports/research/edge/b5_trials.md",
+    "evidence_sha256": "5dee03ea80bb3df568e624518543cef17cbd41ba53113301b6b53964288579bc",
+    "gates_failed": [
+      "P1",
+      "P2",
+      "P3"
+    ],
+    "id": "B5-H1-FCFPS-ACCEL-V3",
+    "label": "fail",
+    "note": "D-A (owner, 2026-10-23 10:19Z): records the run-2 verdict already in the report (D32). Adds no result; N stays 102; the result line is unchanged.",
+    "owner_decision": "cmsg_01U4KMvkBYNknqm4HRVie8uv964VkQcqvQbBHhfQQbHd8Z",
+    "verdict": "fail"
+  },
+  {
+    "annotates_line": 242,
+    "annotates_line_sha256": "5dee8e0f0796885d3d04ae318cb951ad7c184aa130d6b3f7cf4a3b3578ba8108",
+    "event": "verdict_annotation",
+    "evidence": "equity/reports/research/edge/b5_trials.md",
+    "evidence_sha256": "5dee03ea80bb3df568e624518543cef17cbd41ba53113301b6b53964288579bc",
+    "gates_failed": [
+      "P1",
+      "P2",
+      "P3"
+    ],
+    "id": "B5-S2A-GP-12M-V3",
+    "label": "fail",
+    "note": "D-A (owner, 2026-10-23 10:19Z): records the run-2 verdict already in the report (D32). Adds no result; N stays 102; the result line is unchanged.",
+    "owner_decision": "cmsg_01U4KMvkBYNknqm4HRVie8uv964VkQcqvQbBHhfQQbHd8Z",
+    "verdict": "fail"
+  }
+]

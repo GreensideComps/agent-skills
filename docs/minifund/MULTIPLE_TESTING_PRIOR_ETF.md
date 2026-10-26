@@ -29,9 +29,9 @@ holdout-exposure entry, `ETF-RESEARCH-E001-E015`, with `counts_for_dsr: false` [
 | Exp. | Configs (`trials`) | Decision | Families |
 |---|---|---|---|
 | E001 Asset-allocation timing: trend, dual momentum, rotation, risk parity | 36 | REJECTED | ALLOC, MOM, TREND |
-| E002 Trend following on the US market, 1928–2026 | 2 | INSURANCE_ONLY | TREND |
+| E002 Trend following on the US market, 1928–2026 | 2 | INSURANCE_ONLY | TREND, MOM (12-month absolute momentum) |
 | E003 Persistence of factor premia (momentum, value, profitability) | 6 | MOMENTUM_SUPPORTED | MOM, FACTOR |
-| E004 Tradeable MSCI World factor UCITS ETFs vs MSCI World | 5 | PROMOTED | FACTOR |
+| E004 Tradeable MSCI World factor UCITS ETFs vs MSCI World | 5 | PROMOTED | FACTOR, MOM (IWFM; momentum chosen as the tilt) |
 | E005 Short-term mean reversion (RSI-2, down-day streaks) | 10 | REJECTED | MEANREV |
 | E006 Volatility-managed momentum sleeve | 6 | REJECTED | MOM, VOLMGMT |
 | E007 Momentum sleeve with trend filter | 12 | INSURANCE_ONLY | MOM, TREND |
@@ -70,10 +70,10 @@ rule's assignment and is the part for owner review.
 
 | Trial type | Families | Added from E | N |
 |---|---|---|---|
-| Stock 12-1 momentum baseline | MOM | E001, E003, E006, E007, E013 = 74 | 176 |
-| Quality + momentum composite | MOM, FACTOR | the above + E004 = 79 | 181 |
+| Stock 12-1 momentum baseline | MOM | E001, E002, E003, E004, E006, E007, E013 = 81 | 183 |
+| Quality + momentum composite | MOM, FACTOR | the same seven = 81 | 183 |
 | Value or quality tilt alone | FACTOR | E003, E004, E013 = 25 | 127 |
-| Sector or region rotation | ALLOC, MOM | E001, E003, E006, E007, E013 = 74 | 176 |
+| Sector or region rotation | ALLOC, MOM | the MOM seven = 81 | 183 |
 | SEC 8-K category baseline | none | 0 | 102 |
 
 `N` assumes today's registry count of 102 and grows as new trials are registered. For scale: with the variance floor
@@ -136,3 +136,6 @@ registered first).
 pre-registration's prior-knowledge section.
 
 **Status.** Nothing is registered; the 12 trials stay unregistered until U1 and U5 are approved.
+
+
+**Re-audit 2026-10-26 (review finding P30-2).** Every row was re-checked against the experiment's hypothesis, data and decision, not its title. E004 (IWFM momentum ETF, momentum chosen as the tilt) and E002 (12-month absolute-momentum filter) gain MOM, so a momentum trial's extra N is 81, not 74. Each tag's basis is recorded in `research/edge/prior_etf_families.json` (version 1.1), and the table's sha256 is pinned by `research/tests/test_edge_families.py`.

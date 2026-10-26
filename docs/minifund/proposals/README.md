@@ -1,4 +1,13 @@
-# Proposed changes awaiting owner review (not applied)
+# U0 proposals (code applied 2026-10-26; ledger append not made)
+
+**Status 2026-10-26.** After the owner's handover on 26 Oct ("this is your project", 12:58Z), D-A, D-B and D-C are
+applied as code on this branch, with every review finding (P30-1 to P30-9) fixed: `research/edge_verdicts.py`,
+`research/edge_families.py`, `research/edge_dsr.py`, `research/edge/prior_etf_families.json` (1.1) and the
+`evidence.json`/`evidence.py` wording. **The verdict-ledger append itself was not made**: the two fail annotations
+(`DA_verdict_annotations.expected.jsonl`) remain a proposal, because a ledger append is a permanent-safeguard item
+and was refused when attempted. Until it is made, the B5 V3 trials already read as "verdict not recorded, not a
+pass", so nothing can treat them as eligible. The patch files below are kept as the historical record of what was
+proposed; `DA_pm_on_pr27.patch` is not applied.
 
 **Review pack for U0 (23 Oct 12:06Z decision): `U0_REVIEW_EVIDENCE.md`**, with the exact diffs, test commands and
 exit codes, and before/after evidence (`U0_BEFORE_AFTER_EVIDENCE.json`). D-B now has a code proposal too:
