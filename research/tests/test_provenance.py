@@ -52,7 +52,8 @@ def test_same_inputs_and_params_give_the_same_manifest_apart_from_times(tmp_path
     f = tmp_path / "a.csv"
     f.write_bytes(b"x,y\n1,2\n")
     m1 = make(tmp_path, [f], {"h": [1, 5, 20]}, started_at="2026-10-23T00:00:00+00:00")
-    m2 = make(tmp_path, [f], {"h": [1, 5, 20]}, started_at="2026-10-24T09:00:00+00:00", finished_at="x")
+    m2 = make(tmp_path, [f], {"h": [1, 5, 20]}, started_at="2026-10-24T09:00:00+00:00",
+              finished_at="2026-10-24T09:05:00Z")
     assert m1["content_sha256"] == m2["content_sha256"]
     strip = lambda m: {k: v for k, v in m.items() if k not in pv.TIME_FIELDS}
     assert strip(m1) == strip(m2)
@@ -92,7 +93,7 @@ def test_a_missing_package_is_null_not_an_error():
         if name == "statsmodels":
             raise pv.importlib.metadata.PackageNotFoundError(name)
         return "1.0"
-    v = pv.package_versions(("numpy", "statsmodels"), version=version)
+    v = pv.package_versions(("numpy", "statsmodels"), version=version, modules={})
     assert v == {"numpy": {"version": "1.0"}, "statsmodels": {"version": None, "missing_reason": "not_installed"}}
 
 
