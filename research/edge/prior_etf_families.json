@@ -1,0 +1,136 @@
+{
+ "version": "prior-etf-families-1.1",
+ "decision": "owner decision D-B, 2026-10-23 10:19Z, cmsg_01U4KMvkBYNknqm4HRVie8uv964VkQcqvQbBHhfQQbHd8Z",
+ "rule": "docs/minifund/MULTIPLE_TESTING_PRIOR_ETF.md sections 3 and 6",
+ "audit": "1.1 (2026-10-26): every row re-audited against the experiment's hypothesis, data and decision_detail, not its title (review finding P30-2); E004 and E002 gain MOM",
+ "families": [
+  "MOM",
+  "TREND",
+  "FACTOR",
+  "VOLMGMT",
+  "LEVERAGE",
+  "ALLOC",
+  "MEANREV",
+  "INTRADAY"
+ ],
+ "experiments": {
+  "E001": {
+   "configurations": 36,
+   "families": [
+    "ALLOC",
+    "MOM",
+    "TREND"
+   ],
+   "basis": "hypothesis: rules that time or rotate between asset classes (ALLOC); title and method include dual momentum (MOM) and trend timing (TREND)"
+  },
+  "E002": {
+   "configurations": 2,
+   "families": [
+    "MOM",
+    "TREND"
+   ],
+   "basis": "hypothesis: a 10-month SMA (TREND) or 12-month absolute-momentum filter (MOM, time-series momentum)"
+  },
+  "E003": {
+   "configurations": 6,
+   "families": [
+    "MOM",
+    "FACTOR"
+   ],
+   "basis": "hypothesis: persistence of published factor premia (FACTOR); data: momentum, value and profitability factor files (MOM)"
+  },
+  "E004": {
+   "configurations": 5,
+   "families": [
+    "FACTOR",
+    "MOM"
+   ],
+   "basis": "hypothesis: factor ETFs including momentum beat MSCI World (FACTOR); data: IWFM momentum ETF; decision: momentum chosen as the tilt (MOM). Review finding P30-2"
+  },
+  "E005": {
+   "configurations": 10,
+   "families": [
+    "MEANREV"
+   ],
+   "basis": "hypothesis: buying short-term dips (RSI-2, down-day streaks) beats buy-and-hold"
+  },
+  "E006": {
+   "configurations": 6,
+   "families": [
+    "MOM",
+    "VOLMGMT"
+   ],
+   "basis": "hypothesis: scaling the momentum sleeve (MOM) by inverse relative volatility (VOLMGMT)"
+  },
+  "E007": {
+   "configurations": 12,
+   "families": [
+    "MOM",
+    "TREND"
+   ],
+   "basis": "hypothesis: momentum sleeve (MOM) moved to cash below a 10-month SMA (TREND)"
+  },
+  "E008": {
+   "configurations": 4,
+   "families": [
+    "INTRADAY",
+    "LEVERAGE"
+   ],
+   "basis": "hypothesis: US-open breakout day trading (INTRADAY) with 3x Nasdaq ETPs (LEVERAGE)"
+  },
+  "E009": {
+   "configurations": 3,
+   "families": [
+    "TREND",
+    "LEVERAGE"
+   ],
+   "basis": "hypothesis: 3x Nasdaq ETP (LEVERAGE) held only above a moving average (TREND)"
+  },
+  "E010": {
+   "configurations": 2,
+   "families": [
+    "INTRADAY",
+    "LEVERAGE"
+   ],
+   "basis": "hypothesis: 3x Nasdaq ETP (LEVERAGE) held only in London hours, flat at the close (INTRADAY)"
+  },
+  "E011": {
+   "configurations": 12,
+   "families": [
+    "INTRADAY"
+   ],
+   "basis": "hypothesis: intraday gold rules flat at every close"
+  },
+  "E012": {
+   "configurations": 14,
+   "families": [
+    "INTRADAY"
+   ],
+   "basis": "hypothesis: round-the-clock intraday rules on gold and Nasdaq futures"
+  },
+  "E013": {
+   "configurations": 14,
+   "families": [
+    "MOM",
+    "FACTOR"
+   ],
+   "basis": "hypothesis: momentum sleeve (MOM) split with quality/profitability (FACTOR); data: ME_Prior_12_2 momentum portfolios"
+  },
+  "E014": {
+   "configurations": 6,
+   "families": [
+    "INTRADAY"
+   ],
+   "basis": "hypothesis: New York-morning sweep and break-of-structure intraday model"
+  },
+  "E015": {
+   "configurations": 6,
+   "families": [
+    "TREND",
+    "VOLMGMT",
+    "LEVERAGE"
+   ],
+   "basis": "hypothesis: 3x exposure (LEVERAGE) scaled by realised volatility (VOLMGMT) while the trend rule is on (TREND)"
+  }
+ }
+}

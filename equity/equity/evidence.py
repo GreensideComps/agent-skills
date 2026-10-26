@@ -10,6 +10,7 @@ from pathlib import Path
 
 CONFIG_PATH = Path(__file__).resolve().parent.parent / "config" / "evidence.json"
 DECISION_TIERS = {"E3", "E4"}  # tiers allowed to drive rankings or sizing
+DEFAULT_STATE = "**unvalidated: not a recommendation**"
 
 
 def load(path: Path = CONFIG_PATH) -> dict:
@@ -32,7 +33,9 @@ def banner(*method_versions: str, cfg: dict | None = None) -> str:
     for m in method_versions:
         e = cfg["methods"].get(m) or {}
         t = e.get("tier", "E0")
-        state = "may drive decisions" if t in DECISION_TIERS else "**unvalidated: not a recommendation**"
+        # a method may carry its own wording (owner decision D-C); every other method keeps the default text, so
+        # their banners stay byte-identical (review finding P30-7)
+        state = "may drive decisions" if t in DECISION_TIERS else e.get("state_text", DEFAULT_STATE)
         out.append(f"> Evidence tier **{t}** for `{m}` ({state}). Allowed use: {e.get('allowed_use', 'none recorded')}. "
                    f"{e.get('evidence', '')}")
     return "\n>\n".join(out)

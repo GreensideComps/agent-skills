@@ -1,0 +1,252 @@
+diff --git a/research/edge/prior_etf_families.json b/research/edge/prior_etf_families.json
+new file mode 100644
+index 0000000..f452234
+--- /dev/null
++++ b/research/edge/prior_etf_families.json
+@@ -0,0 +1,118 @@
++{
++ "version": "prior-etf-families-1.0",
++ "decision": "owner decision D-B, 2026-10-23 10:19Z, cmsg_01U4KMvkBYNknqm4HRVie8uv964VkQcqvQbBHhfQQbHd8Z",
++ "rule": "docs/minifund/MULTIPLE_TESTING_PRIOR_ETF.md sections 3 and 6",
++ "families": [
++  "MOM",
++  "TREND",
++  "FACTOR",
++  "VOLMGMT",
++  "LEVERAGE",
++  "ALLOC",
++  "MEANREV",
++  "INTRADAY"
++ ],
++ "experiments": {
++  "E001": {
++   "configurations": 36,
++   "families": [
++    "ALLOC",
++    "MOM",
++    "TREND"
++   ]
++  },
++  "E002": {
++   "configurations": 2,
++   "families": [
++    "TREND"
++   ]
++  },
++  "E003": {
++   "configurations": 6,
++   "families": [
++    "MOM",
++    "FACTOR"
++   ]
++  },
++  "E004": {
++   "configurations": 5,
++   "families": [
++    "FACTOR"
++   ]
++  },
++  "E005": {
++   "configurations": 10,
++   "families": [
++    "MEANREV"
++   ]
++  },
++  "E006": {
++   "configurations": 6,
++   "families": [
++    "MOM",
++    "VOLMGMT"
++   ]
++  },
++  "E007": {
++   "configurations": 12,
++   "families": [
++    "MOM",
++    "TREND"
++   ]
++  },
++  "E008": {
++   "configurations": 4,
++   "families": [
++    "INTRADAY",
++    "LEVERAGE"
++   ]
++  },
++  "E009": {
++   "configurations": 3,
++   "families": [
++    "TREND",
++    "LEVERAGE"
++   ]
++  },
++  "E010": {
++   "configurations": 2,
++   "families": [
++    "INTRADAY",
++    "LEVERAGE"
++   ]
++  },
++  "E011": {
++   "configurations": 12,
++   "families": [
++    "INTRADAY"
++   ]
++  },
++  "E012": {
++   "configurations": 14,
++   "families": [
++    "INTRADAY"
++   ]
++  },
++  "E013": {
++   "configurations": 14,
++   "families": [
++    "MOM",
++    "FACTOR"
++   ]
++  },
++  "E014": {
++   "configurations": 6,
++   "families": [
++    "INTRADAY"
++   ]
++  },
++  "E015": {
++   "configurations": 6,
++   "families": [
++    "TREND",
++    "VOLMGMT",
++    "LEVERAGE"
++   ]
++  }
++ }
++}
+diff --git a/research/edge_families.py b/research/edge_families.py
+new file mode 100644
+index 0000000..1ec5d70
+--- /dev/null
++++ b/research/edge_families.py
+@@ -0,0 +1,60 @@
++"""Owner decision D-B (2026-10-23): prior ETF experiments E001-E015 count towards a new trial's multiple-testing N
++only when they share a declared family with it (docs/minifund/MULTIPLE_TESTING_PRIOR_ETF.md). This module reads the
++fixed family table and computes the extra count. It never writes to the edge registry: the extra N is passed to
++the deflated Sharpe explicitly at evaluation time."""
++from __future__ import annotations
++
++import hashlib
++import json
++from pathlib import Path
++
++HERE = Path(__file__).resolve().parent
++PATH = HERE / "edge" / "prior_etf_families.json"
++EXPERIMENTS = HERE / "experiments"
++NONE = "none"
++
++
++def load(path: Path = PATH) -> dict:
++    return json.loads(Path(path).read_text())
++
++
++def table_sha256(path: Path = PATH) -> str:
++    return hashlib.sha256(Path(path).read_bytes()).hexdigest()
++
++
++def validate(path: Path = PATH, experiments: Path = EXPERIMENTS) -> list[str]:
++    """Problems with the table: unknown families, or configuration counts that differ from the experiment files."""
++    t, errs = load(path), []
++    vocab = set(t["families"])
++    files = {p.stem: p for p in Path(experiments).glob("E*.json")}
++    if set(files) != set(t["experiments"]):
++        errs.append(f"experiments differ: table {sorted(t['experiments'])} vs files {sorted(files)}")
++    for e, row in t["experiments"].items():
++        if not row["families"] or set(row["families"]) - vocab:
++            errs.append(f"{e}: families {row['families']} not in the vocabulary")
++        if e in files and json.loads(files[e].read_text())["trials"] != row["configurations"]:
++            errs.append(f"{e}: {row['configurations']} configurations, file says otherwise")
++    return errs
++
++
++def extra_n(families: list[str], path: Path = PATH) -> dict:
++    """{'count', 'experiments'}: configurations of every experiment sharing a family, each experiment once.
++    A trial must declare its families; ['none'] declares that it shares none."""
++    t = load(path)
++    declared = set(families)
++    if not declared:
++        raise ValueError("families must be declared; use ['none'] for a trial that shares none")
++    if NONE in declared:
++        if declared != {NONE}:
++            raise ValueError("'none' cannot be combined with other families")
++        return {"count": 0, "experiments": {}, "table_sha256": table_sha256(path)}
++    unknown = declared - set(t["families"])
++    if unknown:
++        raise ValueError(f"unknown families {sorted(unknown)}")
++    hit = {e: r["configurations"] for e, r in sorted(t["experiments"].items()) if declared & set(r["families"])}
++    return {"count": sum(hit.values()), "experiments": hit, "table_sha256": table_sha256(path)}
++
++
++if __name__ == "__main__":
++    problems = validate()
++    print("valid" if not problems else "\n".join(problems))
+diff --git a/research/tests/test_edge_families.py b/research/tests/test_edge_families.py
+new file mode 100644
+index 0000000..015fb04
+--- /dev/null
++++ b/research/tests/test_edge_families.py
+@@ -0,0 +1,56 @@
++"""Owner decision D-B: the prior ETF family table and the extra multiple-testing count it gives. The edge registry is
++only read and must stay byte-identical."""
++import hashlib
++import json
++import sys
++from pathlib import Path
++
++import pytest
++
++sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
++import edge_families as fam  # noqa: E402
++import edge_registry  # noqa: E402
++
++RUN_2_REGISTRY_SHA256 = "de03d38b18a2d80b5c4d20f647c8ff35f5471157aba71fa99da6b550fb1217e6"
++
++
++def test_table_matches_the_experiment_files():
++    assert fam.validate() == []
++
++
++def test_documented_examples():
++    assert fam.extra_n(["MOM"])["count"] == 74
++    assert sorted(fam.extra_n(["MOM"])["experiments"]) == ["E001", "E003", "E006", "E007", "E013"]
++    assert fam.extra_n(["MOM", "FACTOR"])["count"] == 79
++    assert fam.extra_n(["FACTOR"])["count"] == 25
++    assert fam.extra_n(["ALLOC", "MOM"])["count"] == 74
++
++
++def test_an_experiment_sharing_several_families_counts_once():
++    # E001 is ALLOC, MOM and TREND: 36 once, not three times
++    assert fam.extra_n(["ALLOC", "MOM", "TREND"])["experiments"]["E001"] == 36
++    every = fam.extra_n(fam.load()["families"])
++    assert every["count"] == 138 and len(every["experiments"]) == 15
++
++
++def test_unrelated_trials_add_zero():
++    assert fam.extra_n(["none"])["count"] == 0
++
++
++@pytest.mark.parametrize("bad", [[], ["none", "MOM"], ["MOMENTUM"]])
++def test_undeclared_or_unknown_families_are_refused(bad):
++    with pytest.raises(ValueError):
++        fam.extra_n(bad)
++
++
++def test_a_changed_count_is_caught(tmp_path):
++    t = fam.load()
++    t["experiments"]["E013"]["configurations"] = 1
++    p = tmp_path / "t.json"
++    p.write_text(json.dumps(t))
++    assert any("E013" in e for e in fam.validate(p))
++
++
++def test_the_registry_and_its_count_are_untouched():
++    assert hashlib.sha256(edge_registry.PATH.read_bytes()).hexdigest() == RUN_2_REGISTRY_SHA256
++    assert edge_registry.n_trials(edge_registry.load()) == 102
