@@ -11,7 +11,7 @@ import time
 import traceback
 from pathlib import Path
 
-from . import execution, feeds
+from . import active, execution, feeds
 
 HERE = Path(__file__).resolve().parent
 
@@ -116,7 +116,7 @@ class Agent:
     def learn_schedules(self) -> None:
         """Map each instrument to its market calendar. The full instrument list is cached; it is fetched again only
         for a ticker it does not know (the endpoint allows one call a minute)."""
-        want = set(self.positions) | {self.cfg["benchmark"]["t212"]} | set(self.cfg["exits"]["tickers"])
+        want = set(self.positions) | {self.cfg["benchmark"]["t212"]} | set(self.cfg["exits"]["tickers"]) | set(self._watch())
         if want - set(self.schedule_of):
             self.schedule_of = {i["ticker"]: i["workingScheduleId"] for i in self.c.instruments()
                                 if i.get("ticker") and i.get("workingScheduleId") is not None}
@@ -148,7 +148,7 @@ class Agent:
         ov = self.cfg["yahoo_overrides"]
         syms = {feeds.yahoo_symbol(t, ov) for t in self.positions} | {self.cfg["benchmark"]["yahoo"],
                                                                         self.cfg["benchmark"]["fx"]}
-        syms |= set(self.cfg["extra_symbols"])
+        syms |= set(self.cfg["extra_symbols"]) | {feeds.yahoo_symbol(t, ov) for t in self._watch()}
         syms.discard(None)
         raw = feeds.fetch_quotes(sorted(syms), get=self.get)
         now = self.clock()
@@ -242,7 +242,10 @@ class Agent:
             notes.append("waits: an earlier order is unresolved")
             self.s.event("decision", orders=[], no_trade=True, notes=notes)
             return
-        sells = self._exit_orders(notes) + self._rebalance_orders(notes)
+        vw = self.quotes.get(self.cfg["benchmark"]["yahoo"])
+        vwrp_px = vw["price"] if vw else None
+        recs = self.s.intents()
+        sells = self._exit_orders(notes) + self._active_exits(recs, vwrp_px) + self._rebalance_orders(notes)
         order = None
         if sells:
             order = next((o for o in sells if self.market_open(o[0])), None)
@@ -250,6 +253,8 @@ class Agent:
                 notes.append(f"{len(sells)} sell(s) wait for their market to open")
         else:
             order = self._core_order(day, notes)
+            if order is None:
+                order = self._active_entry(recs, day, vwrp_px, notes)
         acted = [self._order(*order, day)] if order else []
         self.s.event("decision", orders=[a for a in acted if a],
                      no_trade=not any(a and a.get("status") == "placed" for a in acted), notes=notes)
@@ -279,8 +284,39 @@ class Agent:
                         f"exit: {self.cfg['exits']['rationale']}", {"type": "authorised_exit", "quote": q}))
         return out
 
+    # ------------------------------------------------------------ active sleeve (C6)
+    def _watch(self) -> list[str]:
+        a = self.cfg.get("active") or {}
+        return list(a.get("watchlist", [])) if a.get("enabled") else []
+
+    def _active_exits(self, recs, vwrp_px) -> list[tuple]:
+        if not self._watch():
+            return []
+        return active.exit_orders(recs, self.positions, self._quote, self.clock(), vwrp_px)
+
+    def _active_entry(self, recs, day, vwrp_px, notes) -> tuple | None:
+        if not self._watch():
+            return None
+        disabled = self.s.read("strategies.json") or {}
+        new = active.kill_check(active.strategy_scores(recs), self.cfg, disabled, feeds_ts(self.clock()))
+        if new:
+            disabled = {**disabled, **new}
+            self.s._replace("strategies.json", disabled)
+            for k, v in new.items():
+                self.s.event("strategy_disabled", strategy=k, **v)
+                self.alert("warn", f"strategy_disabled:{k}", f"strategy {k} switched off: {v['why']}")
+        total = float((self.summary or {}).get("totalValue") or 0)
+        cash = float(((self.summary or {}).get("cash") or {}).get("availableToTrade") or 0)
+        fxq = self.quotes.get(self.cfg["benchmark"]["fx"])
+        orders, n = active.entry_orders(self.cfg, recs, self.positions, self._quote, fxq["price"] if fxq else None,
+                                        total, cash, day, self.clock(), vwrp_px, disabled)
+        notes += n
+        if any("FROZEN" in x for x in n):
+            self.alert("critical", "active_frozen", n[0])
+        return next((o for o in orders if self.market_open(o[0])), None)
+
     def _satellite(self) -> dict[str, dict]:
-        skip = {self.cfg["benchmark"]["t212"], *self.cfg["exits"]["tickers"]}
+        skip = {self.cfg["benchmark"]["t212"], *self.cfg["exits"]["tickers"], *self._watch()}
         return {t: p for t, p in self.positions.items() if t not in skip}
 
     def _rebalance_orders(self, notes: list[str]) -> list[tuple]:
@@ -354,7 +390,12 @@ class Agent:
             notes.append(f"core buy waits: no validated {self.cfg['benchmark']['yahoo']} price "
                          f"({self.quote_state.get(self.cfg['benchmark']['yahoo'])})")
             return None
-        spend = min((cash - core["cash_buffer_gbp"]) / (1 + core.get("buy_reserve", 0)), lim["max_order_gbp"])
+        total = float((self.summary or {}).get("totalValue") or 0)
+        keep = (self.cfg.get("active") or {}).get("cash_reserve_weight", 0) * total if self._watch() else 0.0
+        if cash - keep <= core["invest_cash_above_gbp"]:
+            notes.append(f"cash £{cash:.2f}: £{keep:.2f} is kept for the active sleeve")
+            return None
+        spend = min((cash - keep - core["cash_buffer_gbp"]) / (1 + core.get("buy_reserve", 0)), lim["max_order_gbp"])
         qty = math.floor(spend / q["price"] * 100) / 100
         if qty <= 0:
             return None
@@ -405,7 +446,7 @@ class Agent:
 
     def _t212_of(self, sym: str) -> str | None:
         ov = self.cfg["yahoo_overrides"]
-        for t in list(self.positions) + [self.cfg["benchmark"]["t212"]]:
+        for t in list(self.positions) + [self.cfg["benchmark"]["t212"]] + self._watch():
             if feeds.yahoo_symbol(t, ov) == sym:
                 return t
         return None

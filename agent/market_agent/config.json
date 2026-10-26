@@ -1,5 +1,5 @@
 {
-  "version": "agent-1.1",
+  "version": "agent-1.2",
   "note": "Always-on demo market agent. Demo account only (the client refuses any other host). Owner mandate: cmsg_01U4KMvkBYNknqm4HRVie8uvK9gRYqGXBK4bQP49dBz49i (26 Oct 2026).",
   "intervals_s": {
     "loop": 15,
@@ -51,7 +51,22 @@
   },
   "limits": {
     "buy_whitelist": [
-      "VWRPl_EQ"
+      "VWRPl_EQ",
+      "JPM_US_EQ",
+      "V_US_EQ",
+      "LLY_US_EQ",
+      "COST_US_EQ",
+      "NFLX_US_EQ",
+      "ORCL_US_EQ",
+      "CRM_US_EQ",
+      "AAPL_US_EQ",
+      "TSLA_US_EQ",
+      "UBER_US_EQ",
+      "WMT_US_EQ",
+      "XOM_US_EQ",
+      "UNH_US_EQ",
+      "MA_US_EQ",
+      "ADBE_US_EQ"
     ],
     "max_order_gbp": 600.0,
     "max_orders_per_day": 40,
@@ -71,12 +86,56 @@
   },
   "satellite": {
     "enabled": true,
-    "target_weight": 0.2,
-    "rebalance_above": 0.22,
+    "target_weight": 0.15,
+    "rebalance_above": 0.17,
     "single_name_cap": 0.05,
     "min_position_gbp": 2.0,
     "min_trade_gbp": 1.0,
     "qty_decimals": 4,
-    "rationale": "Decision C2 (CEO mandate, 26 Oct 2026): 80% VWRP core, 20% satellite, at most 5% of the book per company. With no validated ranking, picks are trimmed pro rata; a pick worth under £2 after the trim is sold in full."
+    "rationale": "Decisions C2 and C6 (CEO mandate, 26 Oct 2026): 80% VWRP core. The passive picks are held at 15% of the book, trimmed pro rata with no validated ranking, and a pick worth under £2 after the trim is sold in full. The other 5% is cash for the active sleeve. No company may exceed 5% of the book."
+  },
+  "active": {
+    "enabled": true,
+    "watchlist": [
+      "JPM_US_EQ",
+      "V_US_EQ",
+      "LLY_US_EQ",
+      "COST_US_EQ",
+      "NFLX_US_EQ",
+      "ORCL_US_EQ",
+      "CRM_US_EQ",
+      "AAPL_US_EQ",
+      "TSLA_US_EQ",
+      "UBER_US_EQ",
+      "WMT_US_EQ",
+      "XOM_US_EQ",
+      "UNH_US_EQ",
+      "MA_US_EQ",
+      "ADBE_US_EQ"
+    ],
+    "entry_weight": 0.02,
+    "cash_reserve_weight": 0.05,
+    "qty_decimals": 4,
+    "daily_loss_stop": 0.03,
+    "freeze_loss": 0.25,
+    "sleeve_start_gbp": 239.0,
+    "kill_after_trades": 30,
+    "rationale": "Decision C6: the 20% satellite trades short-term to learn quickly and cheaply which ideas work. No edge is proven; the kill rule switches off any strategy that does not beat VWRP after 30 trades. Long only: no leverage, CFDs or shorting. Forward data only.",
+    "strategies": {
+      "drop_rebound": {
+        "rule": "a watchlist name down 5% or more on the day: buy 2% of the book, expecting a partial rebound",
+        "trigger_move": -0.05,
+        "stop_loss": 0.08,
+        "take_profit": 0.06,
+        "time_stop_days": 10
+      },
+      "breakout_momentum": {
+        "rule": "a watchlist name up 5% or more on the day: buy 2% of the book, expecting continuation",
+        "trigger_move": 0.05,
+        "stop_loss": 0.05,
+        "take_profit": 0.1,
+        "time_stop_days": 5
+      }
+    }
   }
 }

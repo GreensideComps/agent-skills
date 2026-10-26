@@ -69,6 +69,7 @@ class FakeBroker:
 
     def instruments(self):
         return [{"ticker": "INTC_US_EQ", "workingScheduleId": 71}, {"ticker": "MSFT_US_EQ", "workingScheduleId": 71},
+                {"ticker": "JPM_US_EQ", "workingScheduleId": 71},
                 {"ticker": "UBER_US_EQ", "workingScheduleId": 71}, {"ticker": "VWRPl_EQ", "workingScheduleId": 70}]
 
     def place_market_order(self, ticker, quantity):
@@ -115,7 +116,7 @@ def no_network(monkeypatch):
     monkeypatch.setattr(feeds.requests, "get", boom)
 
 
-def make(tmp_path, enabled=True, prices=None, satellite=False):
+def make(tmp_path, enabled=True, prices=None, satellite=False, active_on=False):
     clock = Clock()
     st = Store(tmp_path, clock=clock, sleep=lambda s: None)
     if enabled:
@@ -123,6 +124,7 @@ def make(tmp_path, enabled=True, prices=None, satellite=False):
     b = FakeBroker(clock)
     cfg = agent_mod.load_config()
     cfg["satellite"]["enabled"] = satellite  # the older tests hold a 90% single-stock book on purpose
+    cfg["active"]["enabled"] = active_on
     ag = agent_mod.Agent(st, b, cfg, ambiguous_exc=Ambiguous, api_exc=ApiErr,
                          get=fake_get(clock, prices), clock=clock, sleep=lambda s: None)
     st.acquire_lease()
@@ -214,7 +216,7 @@ def test_risk_gate_limits():
     ok = {"ticker": "INTC_US_EQ", "quantity": -0.2, "value_gbp": 17}
     assert execution.risk_check(ok, **base) == []
     assert "exceeds" in execution.risk_check({**ok, "quantity": -0.3}, **base)[0]
-    assert "whitelist" in execution.risk_check({"ticker": "TSLA_US_EQ", "quantity": 1, "value_gbp": 5}, **base)[0]
+    assert "whitelist" in execution.risk_check({"ticker": "XYZ_US_EQ", "quantity": 1, "value_gbp": 5}, **base)[0]
     assert "limit" in execution.risk_check({"ticker": "VWRPl_EQ", "quantity": 9, "value_gbp": 900}, **base)[0]
     assert "pending" in execution.risk_check(ok, **{**base, "pending": [{"ticker": "INTC_US_EQ"}]})[0]
     assert "errors" in execution.risk_check(ok, **{**base, "consecutive_errors": 2})[0]
@@ -353,3 +355,74 @@ def test_single_name_cap_in_the_risk_gate():
     assert "cap" in execution.risk_check({"ticker": "MSFT_US_EQ", "quantity": 1, "value_gbp": 5}, **base)[0]  # unknown: refused
     assert execution.risk_check({"ticker": "MSFT_US_EQ", "quantity": 1, "value_gbp": 5, "post_weight": 0.04}, **base) == []
     assert execution.risk_check({"ticker": "VWRPl_EQ", "quantity": 1, "value_gbp": 5, "post_weight": 0.9}, **base) == []
+
+
+def _active_book(b):
+    b.cash = 60.0  # 5% of the book is kept for the sleeve, so the core buys nothing
+    b.pos = [pos("VWRPl_EQ", 6.0, 6.0, 0, 840.0, 840.0, ccy="GBP")]
+
+
+def test_active_entry_on_a_5pct_drop_then_stop_loss_exit(tmp_path):
+    prices = {"VWRP.L": 140.0, "GBPUSD=X": 1.25}
+    ag, b, st, clock = make(tmp_path, active_on=True, prices=prices)
+    _active_book(b)
+    get = fake_get(clock, prices)
+
+    def dropped(url, params):  # JPM 5.5% below its previous close
+        d = get(url, params)
+        if url == feeds.SPARK and "JPM" in d:
+            d["JPM"]["close"] = [94.5, 94.5]
+            d["JPM"]["previousClose"] = 100.0
+        return d
+    ag.get = dropped
+    advance(ag, clock, 1, by=30)
+    buys = [o for o in b.orders if o[0] == "JPM_US_EQ"]
+    assert len(buys) == 1 and buys[0][1] > 0
+    rec = next(r for r in execution.latest_intents(st.intents()).values() if r["ticker"] == "JPM_US_EQ")
+    assert rec["signal"]["strategy"] == "drop_rebound" and rec["signal"]["stop"] == 0.08
+    assert 0.019 < rec["value_gbp"] / 900.0 < 0.021                     # 2% of the book
+    # the fill lands, then the price falls through the 8% stop
+    b.pos.append(pos("JPM_US_EQ", buys[0][1], buys[0][1], 0, rec["value_gbp"], rec["value_gbp"]))
+    b.cash -= rec["value_gbp"]
+
+    def crashed(url, params):
+        d = dropped(url, params)
+        if url == feeds.SPARK and "JPM" in d:
+            d["JPM"]["close"] = [86.0, 86.0]
+            d["JPM"]["previousClose"] = 86.5
+        return d
+    ag.get = crashed
+    advance(ag, clock, 2, by=301)
+    sells = [o for o in b.orders if o[0] == "JPM_US_EQ" and o[1] < 0]
+    assert len(sells) == 1
+    ex = next(r for r in execution.latest_intents(st.intents()).values()
+              if (r.get("signal") or {}).get("type") == "active_exit")
+    assert ex["signal"]["why"] == "stop" and ex["signal"]["entry_id"] == rec["id"]
+
+
+def test_core_keeps_cash_for_the_active_sleeve(tmp_path):
+    ag, b, st, clock = make(tmp_path, active_on=True, prices={"VWRP.L": 140.0, "GBPUSD=X": 1.25})
+    _active_book(b)
+    b.cash = 40.0  # below 5% of a £880 book plus the £20 threshold
+    advance(ag, clock, 2)
+    assert b.orders == []
+
+
+def test_kill_rule_disables_a_strategy_that_trails_vwrp():
+    from market_agent import active
+    cfg = agent_mod.load_config()
+    recs = []
+    for i in range(30):
+        e = {"id": f"e{i}", "ticker": "JPM_US_EQ", "status": "filled", "t": i, "value_gbp": 20,
+             "signal": {"type": "active_entry", "strategy": "drop_rebound", "vwrp_px": 100.0},
+             "broker": {"fill": {"walletImpact": {"netValue": 20.0, "taxes": [{"quantity": -0.03}]}}}}
+        x = {"id": f"x{i}", "ticker": "JPM_US_EQ", "status": "filled", "t": i + 0.5, "value_gbp": 20,
+             "signal": {"type": "active_exit", "entry_id": f"e{i}", "vwrp_px": 101.0},
+             "broker": {"fill": {"walletImpact": {"netValue": 20.1, "taxes": [{"quantity": -0.03}]}}}}
+        recs += [e, x]
+    sc = active.strategy_scores(recs)
+    assert sc["drop_rebound"]["n"] == 30 and sc["drop_rebound"]["avg_ret"] < sc["drop_rebound"]["avg_vwrp_ret"]
+    new = active.kill_check(sc, cfg, {}, "2026-11-01T00:00:00Z")
+    assert "drop_rebound" in new
+    assert active.kill_check(sc, cfg, new, "t") == {}                      # disabled once
+    assert active.kill_check({"x": {**sc["drop_rebound"], "n": 29}}, cfg, {}, "t") == {}

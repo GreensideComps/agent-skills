@@ -1,4 +1,4 @@
-# Always-on demo market agent (agent-1.0)
+# Always-on demo market agent (agent-1.2)
 
 **Mandate:** the owner's 26 Oct 2026 handoff (`cmsg_01U4KMvkBYNknqm4HRVie8uvK9gRYqGXBK4bQP49dBz49i`), covering
 the demo account only. The Trading 212 client refuses any host but `demo.trading212.com`, and `load_credentials`
@@ -36,12 +36,32 @@ A market whose calendar is unknown is treated as closed.
 
 ## Decisions (the only actions)
 
-1. **Exits of INTC, BE and TEM** (authorised by the owner): sell the quantity available to trade.
-   - Shares held inside a pie show 0 available, and the API cannot sell them. The agent records that as a blocked
-     exit and raises an alert.
-2. **Core:** idle cash above £20 is invested in VWRP (`VWRPl_EQ`), keeping a £5 buffer.
-   - At most one core buy a day.
-   - VWRP stays the default core while no tactical strategy has passed the research gates.
+The agent places at most one order per pass, and sends nothing while an earlier order is unresolved. Sells come
+before buys.
+
+1. **Full exits:** INTC, BE and TEM (authorised by the owner), and IBTA (decision C2). The agent sells the quantity
+   available to trade.
+   - Shares inside a pie show 0 available, and the API cannot sell them. The agent records a blocked exit and
+     raises an alert.
+2. **Active exits** (agent-1.2): each open active trade has its own hard stop, take-profit and time stop.
+   - These are checked against validated prices at every decision, which is about every 5 minutes.
+3. **Passive rebalance** (agent-1.1/1.2):
+   - Trigger: the passive picks exceed 17% of the book, or a name exceeds the 5% cap.
+   - Plan: the agent fixes a plan (`state/rebalance_plan.json`) that trims the picks pro rata to 15%. A pick worth
+     under £2 after the trim is sold in full.
+4. **Core:** cash above the active sleeve's reserve (5% of the book) plus £20 is invested in VWRP.
+   - The agent leaves an 8% margin for the broker's hold on buys.
+   - Each buy is capped at £600, with 10 minutes between buys.
+5. **Active entries** (agent-1.2, decision C6): watchlist names only. No leverage, CFDs or shorting.
+   - Each entry is 2% of the book and is tagged with its strategy and rule.
+   - `drop_rebound`: a name down 5% or more on the day. Stop −8%, take-profit +6%, time stop 10 days.
+   - `breakout_momentum`: a name up 5% or more on the day. Stop −5%, take-profit +10%, time stop 5 days.
+   - Sleeve limits:
+     - The sleeve's P&L for the day reaching −3% of the book stops entries until the next day.
+     - A cumulative active loss of 25% of the £239 sleeve freezes entries and raises a critical alert.
+   - Kill rule: after 30 closed trades, a strategy whose average net return (after FX fees) is at or below
+     VWRP's over the same holding periods is switched off automatically (`state/strategies.json`).
+   - Neither strategy is a proven edge. They exist to learn on forward data only.
 
 Every other pass is recorded as a `decision` with `no_trade: true` and its reasons.
 
