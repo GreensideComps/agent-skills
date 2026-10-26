@@ -205,3 +205,9 @@ def test_the_kill_file_halts_a_trading_run_under_masters_strategy_before_any_ord
         b._disc_path = disc
         res = b.run(execute=True, force=True)
         assert len(fake.posts) == posts, res
+
+
+def test_prompt_saves_the_brief_without_overwriting_and_only_reads_the_agent_state():
+    p = PROMPT.read_text()
+    assert "/mnt/project-files/portfolio/briefs/YYYY-MM-DD.md" in p and "never overwrite" in p
+    assert "Read it only; never edit anything under /mnt/project-files/market-agent" in p
