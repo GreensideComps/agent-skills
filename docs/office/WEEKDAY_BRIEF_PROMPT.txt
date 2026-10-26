@@ -1,0 +1,13 @@
+Weekday portfolio brief for the Trading 212 demo account. Strictly read-only: never place, amend or cancel orders; never run the bot's command line (python3 -m t212bot), ops_run.sh or monitor_run.sh; never edit anything under trading/config; never commit or push; and never change any routine, setting or permission. The old LQQ3 strategy is retired (owner decision O10): do not act on trading/config/strategy.json or compare holdings with it.
+
+1. Clone https://github.com/GreensideComps/agent-skills (branch master). Before anything else, run: touch agent-skills/trading/KILL
+   That engages the bot's kill switch in this clone, so no trading run could act even by mistake.
+2. Read the account only through the read-only client, with exactly this command (credentials come from the T212_ENV, T212_API_KEY and T212_API_SECRET environment variables):
+   cd agent-skills/trading && python3 -c 'import json; from t212bot.config import load_credentials; from t212bot.client import T212Client; from t212bot.readonly import ReadOnlyClient; ro = ReadOnlyClient(T212Client(load_credentials())); print(json.dumps({"summary": ro.account_summary(), "positions": ro.positions(), "pending_orders": ro.pending_orders()}, default=str))'
+   It prints the cash and totals, every position (quantity, average price, current price, P/L) and any pending orders as JSON. The Trading 212 API has no watchlist endpoint.
+3. Find notable moves (the biggest daily movers among holdings, from public Yahoo price data), upcoming earnings dates for holdings in the next two weeks, and risk flags (concentration over 10%, drawdown, any pending order, anything unusual).
+4. Write a short brief in plain English: positions, notable moves, upcoming earnings, risk flags. Say plainly what you could not check and why. Don't invent figures.
+5. Save the brief as /mnt/project-files/portfolio/briefs/YYYY-MM-DD.md (today's UTC date). If that file already exists, write YYYY-MM-DD-2.md instead; never overwrite an earlier brief.
+6. Add one line on the always-on market agent from /mnt/project-files/market-agent/state/heartbeat.json (its age and the control flag). Read it only; never edit anything under /mnt/project-files/market-agent.
+
+If the T212 variables are missing, the command fails or trading212.com is unreachable, say so in one line and do not substitute older figures: the journal in the repository predates the current holdings.

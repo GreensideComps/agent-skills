@@ -7,7 +7,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from office import director, gate, handlers, health, worker
+from office import acceptance, director, gate, handlers, health, worker
 from office import queue as q
 from office.events import GENESIS, canonical, line_hash, parse
 from office.handlers import Context
@@ -263,17 +263,17 @@ def test_health_raises_a_critical_alert_when_a_commit_edited_earlier_log_lines(s
 
 # Gate: synthetic logs (pure function of events), so 14 days can be checked without 14 days of commits.
 
-def synth(days=15, hb=3600.0, skip=(), extra=()):
+def synth(days=15, hb=3600.0, skip=(), extra=(), criteria="G1", late=None):
     from datetime import datetime, timezone
     t0, out = 1_800_000_000.0, []
 
     def add(t, **e):
         e.update(seq=len(out), ts=datetime.fromtimestamp(t, timezone.utc).isoformat(timespec="seconds"))
         out.append(e)
-    add(t0, kind="gate_started", heartbeat_s=hb, owner_message="cmsg_X", criteria="G1")
+    add(t0, kind="gate_started", heartbeat_s=hb, owner_message="cmsg_X", criteria=criteria)
     n = int(days * 86400 / hb)
     for i in range(1, n + 1):
-        t = t0 + i * hb - 60
+        t = t0 + i * hb - 60 + (late or {}).get(i, 0)
         if i in skip:
             continue
         add(t, kind="worker_started", run=f"r{i}", actor="w")
@@ -356,3 +356,293 @@ def test_github_queue_script_refuses_any_branch_but_a_throwaway_one():
                        cwd=str(__import__("pathlib").Path(__file__).resolve().parents[1]), capture_output=True,
                        text=True, env={"PATH": "/usr/bin:/bin", "HTTPS_PROXY": "http://127.0.0.1:9"}, timeout=60)
     assert r.returncode != 0 and "office-queue-test-" in r.stderr
+
+
+def heartbeat(r):
+    return [c for c in r["checks"] if c["check"] == "heartbeat"][0]
+
+
+def test_g1_keeps_its_exact_two_heartbeat_limit_and_g2_allows_fifteen_minutes_more():
+    # One missed run, then the next run starts late: G1's 21 Oct failure was this shape, 67 s over.
+    for crit, late, ok in (("G1", 0, True), ("G1", 67, False), ("G2", 67, True), ("G2", 900, True),
+                           ("G2", 901, False)):
+        ev, now = synth(skip=(100,), late={101: late}, criteria=crit, hb=3 * 3600)
+        r = gate.evaluate(drill(ev), now, [])
+        assert heartbeat(r)["pass"] is ok, (crit, late, heartbeat(r)["detail"])
+        assert r["criteria"] == crit and (r["verdict"] == "pass") is ok
+    ev, now = synth(skip=(100, 101), criteria="G2", hb=3 * 3600)  # two missed runs in a row fail G2 too
+    assert not heartbeat(gate.evaluate(drill(ev), now, []))["pass"]
+    ev, now = synth(days=5, criteria="G2", hb=3 * 3600)  # an open gap is scored at evaluation time
+    r = gate.evaluate(drill(ev), now + 2 * 3 * 3600 + 901, [])
+    assert r["verdict"] == "fail" and "limit 22500 s" in heartbeat(r)["detail"]
+    assert gate.evaluate(drill(ev), now + 2 * 3 * 3600 + 800, [])["verdict"] == "running"
+
+
+def test_g1_detail_text_is_unchanged_and_each_gate_is_scored_under_its_own_criteria():
+    ev, now = synth(skip=(100,), late={101: 67}, criteria="G1", hb=3 * 3600)
+    assert heartbeat(gate.evaluate(drill(ev), now, []))["detail"].endswith("(limit 6.00 h)")
+    g2 = dict(ev[0], seq=len(ev), criteria="G2")
+    both = drill(ev) + [g2]
+    assert gate.evaluate(both, now, [])["criteria"] == "G2"  # latest gate by default
+    assert gate.evaluate(both, now, [], gate_seq=0)["criteria"] == "G1"
+    assert gate.evaluate(both, now, [], gate_seq=0)["verdict"] == "fail"
+    assert gate.evaluate([dict(ev[0], criteria="G9")], now, [])["verdict"] == "unknown criteria"
+    assert gate.CRITERIA_VERSION == "G2"
+
+
+def test_a_missed_run_warns_before_the_gate_limit_and_writes_nothing(store, clock):
+    s, calls = store(), []
+    worker.run(s, ctx_for(s, clock), worker="w", code="x", clock=clock, handlers=ok_handlers(calls))
+    hb = 3 * 3600
+    ev = parse(s.sync())
+    codes = lambda t: [a["code"] for a in health.report(ev, t, hb)["alerts"]]  # noqa: E731
+    assert "heartbeat_overdue" not in codes(clock() + hb + 900)
+    assert "heartbeat_overdue" in codes(clock() + hb + 901)
+    assert "worker_silent" in codes(clock() + 2 * hb + 1) and "heartbeat_overdue" not in codes(clock() + 2 * hb + 1)
+    before = s.sync()
+    health.report(ev, clock() + hb + 901, hb)
+    assert s.sync() == before  # the warning is computed from the log; it never starts or records a run
+    clock.t += 2 * hb + 120  # one scheduled run missed, the next one late
+    worker.run(store(), ctx_for(s, clock), worker="w", code="x", clock=clock, handlers=ok_handlers(calls))
+    ev = parse(s.sync())
+    rep = health.report(ev, clock(), hb)
+    missed = [a for a in rep["alerts"] if a["code"] == "heartbeat_missed"]
+    assert len(missed) == 1 and missed[0]["level"] == "warn" and "6.03 h" in missed[0]["text"]
+    assert not [a for a in health.report(ev, clock() + 86400, hb)["alerts"] if a["code"] == "heartbeat_missed"]
+
+
+def test_a_later_passing_test_run_clears_the_live_alert_and_keeps_the_failure_in_the_log(store, clock):
+    s, calls = store(), []
+    hs = ok_handlers(calls)
+    hs["test_suites"] = lambda ctx, inputs: {"suites": {"research": {"exit": 1}}, "alert": {
+        "level": "critical", "code": "tests_failing", "text": "test suites failed on master: research"}}
+    worker.run(s, ctx_for(s, clock), worker="w", code="x", clock=clock, handlers=hs)
+    failed = [e for e in parse(s.sync()) if e["kind"] == "task_completed" and e["output"].get("alert")]
+    assert len(failed) == 1
+    rep = health.report(parse(s.sync()), clock(), 3 * 3600)
+    assert [a["code"] for a in rep["alerts"]] == ["tests_failing"] and rep["cleared_alerts"] == []
+    clock.t += 86400  # the next day's test task passes
+    hs["test_suites"] = lambda ctx, inputs: {"suites": {"research": {"exit": 0}}}
+    hs["demo_snapshot"] = lambda ctx, inputs: {"ok": "snap"}
+    worker.run(store(), ctx_for(s, clock), worker="w", code="x", clock=clock, handlers=hs)
+    ev = parse(s.sync())
+    rep = health.report(ev, clock(), 3 * 3600)
+    assert "tests_failing" not in [a["code"] for a in rep["alerts"]]  # well inside the old 36 h hold
+    c = rep["cleared_alerts"]
+    assert len(c) == 1 and c[0]["code"] == "tests_failing" and c[0]["raised_seq"] == failed[0]["seq"]
+    assert [e for e in ev if e["seq"] == failed[0]["seq"]] == failed  # the failure event is still there, unchanged
+    md = handlers.render_digest(ev, clock(), director.day(clock()), 3 * 3600)
+    assert "cleared: tests_failing" in md and "test suites failed" not in md
+
+
+def test_an_alert_stays_live_when_the_later_run_also_alerts_or_another_type_passes(store, clock):
+    s, calls = store(), []
+    hs = ok_handlers(calls)
+    fail = lambda ctx, inputs: {"alert": {"level": "critical", "code": "tests_failing", "text": "failed"}}  # noqa: E731
+    hs["test_suites"] = fail
+    worker.run(s, ctx_for(s, clock), worker="w", code="x", clock=clock, handlers=hs)
+    clock.t += 86400
+    worker.run(store(), ctx_for(s, clock), worker="w", code="x", clock=clock, handlers=hs)
+    rep = health.report(parse(s.sync()), clock(), 3 * 3600)
+    assert [a["code"] for a in rep["alerts"]].count("tests_failing") == 2  # the health and digest passes clear neither
+    assert rep["cleared_alerts"] == []
+
+
+# H1: the crash drill must be the first run of its UTC day, checked from the log order, not the clock.
+
+MIDNIGHT = 1_800_057_600.0  # 2027-01-16T00:00:00Z
+
+
+def die(lease):
+    raise SystemExit("drill exit")  # stands in for os._exit(3): lease held, no worker_finished
+
+
+def test_a_drill_before_the_first_heartbeat_is_recovered_once_and_passes_the_gate_checks(store, clock):
+    s, calls = store(), []
+    clock.t = MIDNIGHT - 3600
+    worker.record(s, "gate_started", owner_message="cmsg_X", heartbeat_s=3 * 3600, criteria="G2")
+    clock.t = MIDNIGHT + 95  # the 00:00 drill session starts about 1.5 min late
+    with pytest.raises(SystemExit):
+        worker.run(s, ctx_for(s, clock), worker="drill", code="x", clock=clock, handlers=ok_handlers(calls),
+                   after_claim=die, drill=True)
+    ev = parse(s.sync())
+    claim = [e for e in ev if e["kind"] == "task_claimed"]
+    assert len(claim) == 1 and calls == [] and not [e for e in ev if e["kind"] == "worker_finished"]
+    clock.t = MIDNIGHT + 12 * 60 + 93  # the 00:12 heartbeat, after the 600 s health lease expired
+    stats = worker.run(store(), ctx_for(s, clock), worker="hb", code="x", clock=clock, handlers=ok_handlers(calls))
+    assert stats["completed"] == 4 and stats["stopped"] == "idle"
+    ev = parse(s.sync())
+    rec = [e for e in ev if e["kind"] == "task_claimed" and e["recovered_fence"] is not None]
+    assert len(rec) == 1 and rec[0]["recovered_fence"] == claim[0]["seq"] and rec[0]["task"] == claim[0]["task"]
+    done = [e["task"] for e in ev if e["kind"] == "task_completed"]
+    assert len(done) == 4 and len(set(done)) == 4  # every task once, the recovered one included
+    r = gate.evaluate(ev, clock(), [])
+    by = {c["check"]: c["pass"] for c in r["checks"]}
+    assert r["criteria"] == "G2" and by["crash_recovered"] and by["no_duplicates"] and by["no_orphans"]
+    # With only the drill closed, check 4 reads 1 of 1 runs unfinished: why the drill waits for 24 earlier runs.
+    assert not by["runs_finish"] and "1 of 1 closed runs" in [c for c in r["checks"]
+                                                              if c["check"] == "runs_finish"][0]["detail"]
+
+
+def test_one_drill_after_three_full_days_of_runs_stays_inside_the_unfinished_run_limit():
+    ev, now = synth(days=3.5, criteria="G2", hb=3 * 3600)
+    starts = [e for e in ev if e["kind"] == "worker_started"]
+    drill_run = starts[24]["run"]  # the 25th run: 24 closed runs before it
+    ev = [e for e in ev if not (e["kind"] == "worker_finished" and e["run"] == drill_run)]
+    r = gate.evaluate(drill(ev), now, [])
+    c = [c for c in r["checks"] if c["check"] == "runs_finish"][0]
+    assert c["pass"] and c["detail"].startswith("1 of ") and r["verdict"] == "running"
+    ev2 = [e for e in ev if not (e["kind"] == "worker_finished" and e["run"] == starts[3]["run"])]
+    assert gate.evaluate(drill(ev2), now, [])["verdict"] == "fail"  # one more unfinished run this early fails G2
+
+
+def test_a_drill_whose_lease_outlives_the_first_heartbeat_is_recovered_by_a_later_run(store, clock):
+    s, calls = store(), []
+    clock.t = MIDNIGHT + 189
+    with pytest.raises(SystemExit):
+        worker.run(s, ctx_for(s, clock), worker="drill", code="x", clock=clock, handlers=ok_handlers(calls),
+                   after_claim=die, drill=True)
+    clock.t = MIDNIGHT + 12 * 60 + 60  # lease still held until 00:13:09: this run must leave the task alone
+    stats = worker.run(store(), ctx_for(s, clock), worker="hb1", code="x", clock=clock, handlers=ok_handlers(calls))
+    assert stats["completed"] == 3 and [c[0] for c in calls] == ["test_suites", "demo_snapshot", "digest"]
+    clock.t = MIDNIGHT + 3 * 3600 + 12 * 60 + 93
+    stats = worker.run(store(), ctx_for(s, clock), worker="hb2", code="x", clock=clock, handlers=ok_handlers(calls))
+    assert stats["completed"] == 1 and calls[-1][0] == "health"
+    ev = parse(s.sync())
+    assert sum(e["kind"] == "task_completed" for e in ev) == 4
+    assert len([e for e in ev if e["kind"] == "task_claimed" and e["recovered_fence"] is not None]) == 1
+
+
+def test_a_drill_after_an_earlier_run_that_day_refuses_and_claims_nothing(store, clock):
+    s, calls = store(), []
+    clock.t = MIDNIGHT + 12 * 60 + 93
+    worker.run(s, ctx_for(s, clock), worker="hb", code="x", clock=clock, handlers=ok_handlers(calls))
+    before = [e for e in parse(s.sync()) if e["kind"] == "task_claimed"]
+    clock.t = MIDNIGHT + 75 * 60
+    stats = worker.run(store(), ctx_for(s, clock), worker="drill", code="x", clock=clock,
+                       handlers=ok_handlers(calls), after_claim=die, drill=True)  # die is never reached
+    assert stats["stopped"].startswith("drill refused") and stats["planned"] == 0 and stats["completed"] == 0
+    ev = parse(s.sync())
+    assert [e for e in ev if e["kind"] == "task_claimed"] == before
+    assert ev[-1]["kind"] == "worker_finished" and ev[-1]["stats"]["stopped"] == stats["stopped"]
+
+
+def test_the_drill_order_check_uses_the_log_sequence_not_the_scheduled_time(store, clock):
+    s, calls = store(), []
+    clock.t = MIDNIGHT + 30  # another run of the same day reached the log first, a few seconds earlier
+    worker.record(s, "worker_started", run="r-other", worker="hb", code="x", session=None)
+    clock.t = MIDNIGHT + 95
+    stats = worker.run(store(), ctx_for(s, clock), worker="drill", code="x", clock=clock,
+                       handlers=ok_handlers(calls), after_claim=die, drill=True)
+    assert "r-other" in stats["stopped"] and not [e for e in parse(s.sync()) if e["kind"] == "task_claimed"]
+    clock.t = MIDNIGHT - 600  # a run late on the previous UTC day does not block the next day's drill
+    ev = [{"kind": "worker_started", "run": "a", "seq": 0, "ts": health.utc_s(MIDNIGHT - 600)},
+          {"kind": "worker_started", "run": "b", "seq": 1, "ts": health.utc_s(MIDNIGHT + 95)}]
+    assert worker.drill_refusal(ev, "b") is None
+    same_second = ev + [dict(ev[1], seq=2, run="c")]  # same timestamp, later in the log: refused
+    assert "first run" in worker.drill_refusal(same_second, "c") and worker.drill_refusal(same_second, "b") is None
+
+
+# L1-L3
+
+def test_the_overdue_warning_does_not_claim_the_run_never_started(store, clock):
+    s = store()
+    worker.run(s, ctx_for(s, clock), worker="w", code="x", clock=clock, handlers=ok_handlers([]))
+    a = [a for a in health.report(parse(s.sync()), clock() + 3 * 3600 + 901, 3 * 3600)["alerts"]
+         if a["code"] == "heartbeat_overdue"][0]
+    assert "has not started" not in a["text"] and "missed, refused or delayed" in a["text"]
+
+
+def test_a_skipped_demo_snapshot_does_not_clear_a_pending_orders_warning(store, clock):
+    s, calls = store(), []
+    hs = ok_handlers(calls)
+    hs["demo_snapshot"] = lambda ctx, inputs: {"alert": {"level": "warn", "code": "demo_pending_orders",
+                                                         "text": "2 pending demo orders"}}
+    worker.run(s, ctx_for(s, clock), worker="w", code="x", clock=clock, handlers=hs)
+    clock.t += 86400
+    hs["demo_snapshot"] = lambda ctx, inputs: {"status": "skipped", "reason": "no demo credentials in this session"}
+    worker.run(store(), ctx_for(s, clock), worker="w", code="x", clock=clock, handlers=hs)
+    rep = health.report(parse(s.sync()), clock(), 3 * 3600)
+    assert "demo_pending_orders" in [a["code"] for a in rep["alerts"]] and rep["cleared_alerts"] == []
+    clock.t += 86400
+    hs["demo_snapshot"] = lambda ctx, inputs: {"positions": 22}  # a real read without pending orders does clear it
+    worker.run(store(), ctx_for(s, clock), worker="w", code="x", clock=clock, handlers=hs)
+    rep = health.report(parse(s.sync()), clock(), 3 * 3600)
+    assert "demo_pending_orders" not in [a["code"] for a in rep["alerts"]]
+
+
+def test_an_earlier_gate_is_scored_only_up_to_the_next_gate_start():
+    ev, now = synth(days=3, criteria="G1", hb=3 * 3600)
+    g1_alone = gate.evaluate(drill(ev), now, [], gate_seq=0)
+    later = ev[-1]["seq"] + 1
+    g2 = dict(ev[0], seq=later, ts=health.utc_s(now), criteria="G2")
+    after, _ = synth(days=20, hb=3 * 3600)  # a long run of events after G2 started, with a 30 h gap
+    tail = [dict(e, seq=later + 1 + i) for i, e in enumerate(after[1:])
+            if health.ts(e) > now + 30 * 3600]
+    both = ev + [g2] + tail
+    r = gate.evaluate(both, now + 20 * 86400, [], gate_seq=0)
+    assert r == g1_alone  # neither G2's events nor the later evaluation time leak into G1
+    assert gate.evaluate(both, now + 20 * 86400, [])["criteria"] == "G2"
+
+
+# H3: one full UTC day of clean slots before G2 may start.
+
+DAY = "2027-01-16"
+
+
+def day_log(lags=None, skip=(), code="c0", stopped="idle", unfinished=(), extra=()):
+    lags = lags or {}
+    out = []
+
+    def add(t, **e):
+        out.append(dict(e, seq=len(out), ts=health.utc_s(t)))
+    for i, t in enumerate(acceptance.slots(DAY)):
+        if i in skip:
+            continue
+        st = t + lags.get(i, 120)
+        add(st, kind="worker_started", run=f"r{i}", actor="w", code=code)
+        if i not in unfinished:
+            add(st + 60, kind="worker_finished", run=f"r{i}", stats={"stopped": stopped})
+    for t in extra:
+        add(t, kind="worker_started", run=f"x{t}", actor="w", code=code)
+    return out
+
+
+END = MIDNIGHT + 86400 + 12 * 60
+
+
+def verdict(ev, **kw):
+    return acceptance.evaluate(ev, DAY, kw.pop("now", END), code=kw.pop("code", "c0"), **kw)
+
+
+def test_acceptance_passes_only_a_full_day_of_eight_clean_slots():
+    r = verdict(day_log())
+    assert r["verdict"] == "pass" and r["counts"] == {"clean": 8} and [s["slot"][11:16] for s in r["slots"]] == [
+        "00:12", "03:12", "06:12", "09:12", "12:12", "15:12", "18:12", "21:12"]
+    assert verdict(day_log(), now=END - 1)["verdict"] == "pending"
+
+
+def test_acceptance_fails_on_a_missing_refused_delayed_incomplete_extra_or_wrong_commit_slot():
+    cases = {
+        "missing": day_log(skip=(2,)),  # e.g. a refused 06:12 session: the office log has no event for it
+        "delayed": day_log(lags={4: 901}),
+        "incomplete": day_log(unfinished=(5,)),
+        "wrong_code": day_log(code="c1"),
+    }
+    for status, ev in cases.items():
+        r = verdict(ev)
+        assert r["verdict"] == "fail" and status in r["counts"], (status, r["counts"])
+    assert verdict(day_log(stopped="time budget"))["counts"] == {"incomplete": 8}
+    assert verdict(day_log(lags={4: 900}))["verdict"] == "pass"  # 15 min late is still on time
+    r = verdict(day_log(extra=(MIDNIGHT + 7 * 3600,)))
+    assert r["verdict"] == "fail" and r["extra_runs"] and r["counts"] == {"clean": 8}
+    r = verdict(day_log(), refusals=["cse_X 06:58Z Real-World Transactions"])
+    assert r["verdict"] == "fail" and r["counts"] == {"clean": 8}
+    assert verdict(day_log(), code="c1")["verdict"] == "fail"
+
+
+def test_acceptance_reads_only_and_ignores_runs_outside_the_day():
+    ev = day_log() + [{"kind": "worker_started", "run": "prev", "seq": 99, "ts": health.utc_s(MIDNIGHT - 60),
+                       "actor": "w", "code": "c0"}]
+    before = json.dumps(ev, sort_keys=True)
+    assert verdict(ev)["verdict"] == "pass" and json.dumps(ev, sort_keys=True) == before

@@ -1,0 +1,104 @@
+{
+ "retrieved_utc": "2026-10-20",
+ "url": "https://www.vanguard.co.uk/professional/product/etf/equity/9679/ftse-all-world-ucits-etf-usd-accumulating",
+ "page_sha256": "cd861cccd09ac11979a92aed7b6de4e1e051915485e9285d1b11f669581e0d88",
+ "rows": [
+  {
+   "sectorCode": "60",
+   "date": "2026-08-31",
+   "sectorName": "Energy",
+   "fundPercent": 4.15356,
+   "benchmarkPercent": 4.14968,
+   "__typename": "FundSectorDiversificationType"
+  },
+  {
+   "sectorCode": "35",
+   "date": "2026-08-31",
+   "sectorName": "Real Estate",
+   "fundPercent": 1.74243,
+   "benchmarkPercent": 1.74143,
+   "__typename": "FundSectorDiversificationType"
+  },
+  {
+   "sectorCode": "20",
+   "date": "2026-08-31",
+   "sectorName": "Health Care",
+   "fundPercent": 7.97072,
+   "benchmarkPercent": 7.97814,
+   "__typename": "FundSectorDiversificationType"
+  },
+  {
+   "sectorCode": "15",
+   "date": "2026-08-31",
+   "sectorName": "Telecommunications",
+   "fundPercent": 3.32067,
+   "benchmarkPercent": 3.32603,
+   "__typename": "FundSectorDiversificationType"
+  },
+  {
+   "sectorCode": "30",
+   "date": "2026-08-31",
+   "sectorName": "Financials",
+   "fundPercent": 15.49143,
+   "benchmarkPercent": 15.46601,
+   "__typename": "FundSectorDiversificationType"
+  },
+  {
+   "sectorCode": "45",
+   "date": "2026-08-31",
+   "sectorName": "Consumer Staples",
+   "fundPercent": 3.88856,
+   "benchmarkPercent": 3.89436,
+   "__typename": "FundSectorDiversificationType"
+  },
+  {
+   "sectorCode": "65",
+   "date": "2026-08-31",
+   "sectorName": "Utilities",
+   "fundPercent": 2.5439,
+   "benchmarkPercent": 2.55129,
+   "__typename": "FundSectorDiversificationType"
+  },
+  {
+   "sectorCode": "32201",
+   "date": "2026-08-31",
+   "sectorName": "Other",
+   "fundPercent": 0.00551,
+   "benchmarkPercent": 0.04429,
+   "__typename": "FundSectorDiversificationType"
+  },
+  {
+   "sectorCode": "10",
+   "date": "2026-08-31",
+   "sectorName": "Technology",
+   "fundPercent": 34.10595,
+   "benchmarkPercent": 34.08874,
+   "__typename": "FundSectorDiversificationType"
+  },
+  {
+   "sectorCode": "55",
+   "date": "2026-08-31",
+   "sectorName": "Basic Materials",
+   "fundPercent": 3.4405,
+   "benchmarkPercent": 3.4249,
+   "__typename": "FundSectorDiversificationType"
+  },
+  {
+   "sectorCode": "40",
+   "date": "2026-08-31",
+   "sectorName": "Consumer Discretionary",
+   "fundPercent": 11.01967,
+   "benchmarkPercent": 11.04032,
+   "__typename": "FundSectorDiversificationType"
+  },
+  {
+   "sectorCode": "50",
+   "date": "2026-08-31",
+   "sectorName": "Industrials",
+   "fundPercent": 12.3171,
+   "benchmarkPercent": 12.29483,
+   "__typename": "FundSectorDiversificationType"
+  }
+ ],
+ "note": "Rows copied verbatim from the page's embedded FundSectorDiversificationType data. The block does not repeat the fund id; it is the only sector block on the VWRP (portId 9679) product page."
+}

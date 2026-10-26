@@ -1,9 +1,11 @@
-"""The 14-day unattended-operation gate, measured from the event log (criteria: docs/office/RELIABILITY_GATE.md).
+"""The 14-day unattended-operation gate, measured from the event log (criteria: docs/office/RELIABILITY_GATE.md for
+G1, docs/office/RELIABILITY_GATE_G2.md for G2).
 
-The gate starts with a `gate_started` event naming the owner's message and the heartbeat interval; the criteria are
-fixed in this file before that event exists (`CRITERIA_VERSION`). Elapsed time is measured from event timestamps
-written by the store from the real clock. Every check is a pure function of the log, so anyone can recompute the
-verdict from the branch history.
+The gate starts with a `gate_started` event naming the owner's message, the heartbeat interval and the criteria
+version; the criteria are fixed in this file before that event exists (`CRITERIA_VERSION` is what a new gate-start
+records). A run is always scored under the version its own `gate_started` names, so G1 keeps its original rules.
+Elapsed time is measured from event timestamps written by the store from the real clock. Every check is a pure
+function of the log, so anyone can recompute the verdict from the branch history.
 """
 from __future__ import annotations
 
@@ -13,7 +15,10 @@ from . import health
 from .handlers import HANDLERS
 from .queue import tasks
 
-CRITERIA_VERSION = "G1"
+CRITERIA_VERSION = "G2"
+# Heartbeat check: the longest gap may be at most 2H plus this margin. G1 had none and failed on 21 Oct by 67 s after
+# one missed run; G2 adds 15 minutes for session start lag, so exactly one missed run is tolerated, never two.
+GAP_MARGIN_S = {"G1": 0.0, "G2": 900.0}
 DAYS = 14
 ALLOWED_KINDS = {"task_created", "task_refused", "task_claimed", "task_completed", "task_failed", "task_quarantined",
                  "worker_started", "worker_finished", "office_paused", "office_resumed", "gate_started"}
@@ -26,12 +31,23 @@ def _day(t: float) -> str:
     return datetime.fromtimestamp(t, timezone.utc).strftime("%Y-%m-%d")
 
 
-def evaluate(events: list[dict], now: float, history_problems: list[str]) -> dict:
-    starts = [e for e in events if e["kind"] == "gate_started"]
+def evaluate(events: list[dict], now: float, history_problems: list[str], gate_seq: int | None = None) -> dict:
+    """The verdict for the latest gate (or the one whose `gate_started` has `gate_seq`), under its own criteria.
+    A gate's window ends where the next `gate_started` begins: an earlier gate is scored only on its own events and
+    no later than that start. The history audit (`history_problems`) always covers the whole branch, which is stricter."""
+    starts = [e for e in events if e["kind"] == "gate_started" and (gate_seq is None or e["seq"] == gate_seq)]
     if not starts:
         return {"verdict": "not started", "checks": []}
     g = starts[-1]
+    nxt = next((e for e in events if e["kind"] == "gate_started" and e["seq"] > g["seq"]), None)
+    if nxt is not None:
+        events = [e for e in events if e["seq"] < nxt["seq"]]
+        now = min(now, health.ts(nxt))
+    version = g.get("criteria", "G1")
+    if version not in GAP_MARGIN_S:
+        return {"verdict": "unknown criteria", "criteria": version, "checks": []}
     g0, hb = health.ts(g), float(g["heartbeat_s"])
+    limit = 2 * hb + GAP_MARGIN_S[version]
     win = [e for e in events if e["seq"] >= g["seq"]]
     checks: list[dict] = []
 
@@ -46,8 +62,14 @@ def evaluate(events: list[dict], now: float, history_problems: list[str]) -> dic
     marks = [g0] + [r["started"] for r in rs] + [now]
     gaps = [b - a for a, b in zip(marks, marks[1:])]
     worst = max(gaps) if gaps else None
-    check("heartbeat", worst is not None and worst <= 2 * hb,
-          f"{len(rs)} runs; longest gap {worst / 3600:.2f} h (limit {2 * hb / 3600:.2f} h)" if worst else "no runs")
+    if version == "G1":  # G1's detail text, unchanged
+        detail = (f"{len(rs)} runs; longest gap {worst / 3600:.2f} h (limit {2 * hb / 3600:.2f} h)" if worst
+                  else "no runs")
+    else:
+        i = gaps.index(worst)
+        detail = (f"{len(rs)} runs; longest gap {worst:.0f} s from {health.utc_s(marks[i])} to "
+                  f"{health.utc_s(marks[i + 1])} (limit {limit:.0f} s)")
+    check("heartbeat", worst is not None and worst <= limit, detail)
 
     unfinished = [r for r in rs[:-1] if r["finished"] is None]
     share = len(unfinished) / max(1, len(rs) - 1)
@@ -98,5 +120,5 @@ def evaluate(events: list[dict], now: float, history_problems: list[str]) -> dic
     verdict = "pass" if all(c["pass"] for c in checks) and not paused else (
         "running" if elapsed < DAYS and all(c["pass"] for c in checks if c["check"] not in
                                             ("elapsed", "daily_outputs", "crash_recovered")) else "fail")
-    return {"verdict": verdict, "criteria": CRITERIA_VERSION, "started": health.utc(g0), "owner_message":
+    return {"verdict": verdict, "criteria": version, "started": health.utc(g0), "owner_message":
             g.get("owner_message"), "heartbeat_h": hb / 3600, "paused": paused, "checks": checks}
