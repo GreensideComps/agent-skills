@@ -1,7 +1,8 @@
 """Task handlers (M2): the only work a worker can do. R0 only: health, tests, a read-only demo snapshot, the digest.
 
 Each handler takes (ctx, inputs) and returns a small JSON-able output, or raises to fail the attempt. An output may
-carry {"alert": {"level", "code", "text"}}, which `health.report` raises for 36 hours.
+carry {"alert": {"level", "code", "text"}}, which `health.report` raises for 36 hours or until a later run of the
+same task type completes without one.
 
 Side-effect boundaries (enforced here, not by prompt):
 * No handler imports `trading/` into this process. The demo snapshot runs the read-only client in a child process of
@@ -109,12 +110,21 @@ def _counts(tail: str) -> dict:
 
 
 def h_test_suites(ctx: Context, inputs: dict) -> dict:
+    """Run every suite on a fresh clone and record enough to diagnose a failure without re-running it: the
+    interpreter and pytest seen by the test environment, and per suite the command, folder, exit code, summary
+    and the last lines of stdout and stderr (redacted). A failure is never softened: any non-zero exit raises the
+    critical `tests_failing` alert, with a `cause` only when the probe establishes one."""
     with tempfile.TemporaryDirectory(prefix="office-tests-") as tmp:
         repo = Path(tmp) / "repo"
         sha = clone(ctx, repo)
         res, failed = {}, []
         home = Path(tmp) / "home"
         home.mkdir()
+        env = clean_env(ctx.env, str(home))
+        probe = ctx.run(["python3", "-c", "import sys, pytest; print(sys.executable, pytest.__version__)"],
+                        cwd=str(repo), env=env, capture_output=True, text=True, timeout=120)
+        runner = {"probe_exit": probe.returncode, "probe_stdout": (probe.stdout or "").strip()[-200:],
+                  "probe_stderr": redact((probe.stderr or "").strip(), ctx.env)[-300:]}
         deadline = time.monotonic() + SUITE_BUDGET_S
         for name, sub, args in SUITES:
             d = repo / sub
@@ -126,26 +136,26 @@ def h_test_suites(ctx: Context, inputs: dict) -> dict:
                 res[name] = {"status": "timeout"}
                 failed.append(name)
                 continue
+            cmd = ["python3", "-m", "pytest", "-q", "-p", "no:cacheprovider", *args]
             try:
-                r = ctx.run(["python3", "-m", "pytest", "-q", "-p", "no:cacheprovider", *args], cwd=str(d),
-                            env=clean_env(ctx.env, str(home)), capture_output=True, text=True, timeout=left)
+                r = ctx.run(cmd, cwd=str(d), env=env, capture_output=True, text=True, timeout=left)
                 tail = (r.stdout.strip().splitlines() or [""])[-1]
-                res[name] = {"exit": r.returncode, **_counts(tail), "summary": tail[-200:]}
+                res[name] = {"exit": r.returncode, **_counts(tail), "summary": tail[-200:], "cwd": sub,
+                             "command": " ".join(cmd)}
                 if r.returncode:
                     failed.append(name)
-                    err = "\n".join((r.stderr or "").strip().splitlines()[-3:])
-                    if err:  # e.g. "No module named pytest": without it an empty summary hides the cause
-                        res[name]["stderr"] = redact(err, ctx.env)[-300:]
+                    res[name]["stdout_tail"] = redact("\n".join(r.stdout.strip().splitlines()[-3:]), ctx.env)[-400:]
+                    res[name]["stderr_tail"] = redact("\n".join((r.stderr or "").strip().splitlines()[-3:]),
+                                                      ctx.env)[-400:]
             except subprocess.TimeoutExpired:
                 res[name] = {"status": "timeout"}
                 failed.append(name)
-    out = {"commit": sha, "suites": res}
-    if failed and all("No module named pytest" in res[n].get("stderr", "") for n in failed):
-        out["alert"] = {"level": "critical", "code": "test_runner_missing",
-                        "text": f"pytest is not installed in the worker session; no suite ran on {sha[:10]}"}
-    elif failed:
+    out = {"commit": sha, "runner": runner, "suites": res}
+    if failed:
         out["alert"] = {"level": "critical", "code": "tests_failing",
                         "text": f"tests failing on {ctx.branch} {sha[:10]}: {', '.join(failed)}"}
+        if probe.returncode:
+            out["alert"]["cause"] = f"pytest not importable in the test environment: {runner['probe_stderr'][-120:]}"
     return out
 
 
@@ -192,6 +202,8 @@ def render_digest(events: list[dict], now: float, day: str, heartbeat_s: float =
              f"Generated {health.utc(now)} from {rep['events']} logged events. Every figure below is read from the "
              f"log; anything not run is marked as such.", "", "## Alerts", ""]
     lines += [f"- **{a['level']}** {a['text']}" for a in rep["alerts"]] or ["- none"]
+    lines += [f"- cleared: {c['code']} raised {c['raised']}, cleared by a later {c['type']} run without an alert "
+              f"at {c['cleared']} (the original result stays in the log)" for c in rep["cleared_alerts"]]
     lines += ["", "## Operation", "",
               f"- Worker runs recorded: {rep['runs']}; last started {health.utc(rep['last_run_started'])} "
               f"({rep['hours_since_last_run']} h ago)",

@@ -35,11 +35,28 @@ def record(store, kind: str, **fields) -> None:
     store.transact(lambda events: [{"kind": kind, **fields}])
 
 
+def drill_refusal(events: list[dict], run_id: str) -> str | None:
+    """Why a crash drill must not claim anything, or None. The drill is only meaningful as the first run of its UTC
+    day: the day's tasks are created and finished by the first run, so a later drill would find nothing to abandon.
+    The order is read from the log (the seq of each `worker_started`), not from the time the session was scheduled."""
+    mine = next((e for e in events if e["kind"] == "worker_started" and e.get("run") == run_id), None)
+    if mine is None:
+        return "drill refused: this run's worker_started is not in the log"
+    today = director.day(health.ts(mine))
+    earlier = [e for e in events if e["kind"] == "worker_started" and e["seq"] < mine["seq"]
+               and director.day(health.ts(e)) == today]
+    if earlier:
+        return (f"drill refused: run {earlier[0].get('run')} started earlier on {today} at {earlier[0]['ts']}; "
+                f"the drill must be the first run of the UTC day")
+    return None
+
+
 def run(store, ctx: Context, *, worker: str, code: str, clock: Callable[[], float] = time.time,
         max_tasks: int = 8, max_seconds: float = 2400.0, stop_file: Path | None = None,
         enabled: set[str] | None = None, handlers: dict | None = None,
-        after_claim: Callable[[q.Lease], None] | None = None) -> dict:
-    """One run. Returns its stats (also recorded in `worker_finished`). `after_claim` is a test and drill hook."""
+        after_claim: Callable[[q.Lease], None] | None = None, drill: bool = False) -> dict:
+    """One run. Returns its stats (also recorded in `worker_finished`). `after_claim` is a test and drill hook.
+    With `drill`, the run claims nothing unless it is the first run of its UTC day (`drill_refusal`)."""
     handlers = HANDLERS if handlers is None else handlers
     run_id = f"r-{int(clock())}-{secrets.token_hex(3)}"
     t0 = clock()
@@ -47,6 +64,12 @@ def run(store, ctx: Context, *, worker: str, code: str, clock: Callable[[], floa
            session=ctx.env.get("CLAUDE_CODE_REMOTE_SESSION_ID"))
     stats = {"completed": 0, "failed": 0, "lost": 0, "planned": 0, "stopped": None}
     stop = _stop_reason(store, stop_file, ctx.env)
+    if stop is None and drill:
+        refused = drill_refusal(parse(store.sync()), run_id)
+        if refused is not None:
+            stats.update(stopped=refused, seconds=round(clock() - t0, 1))
+            record(store, "worker_finished", run=run_id, stats=stats)
+            return stats
     if stop is None:
         stats["planned"] = sum(r["status"] == "created" for r in director.plan(store, clock(), enabled=enabled,
                                                                                clock=clock))

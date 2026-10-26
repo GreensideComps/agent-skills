@@ -1,0 +1,6 @@
+# Test dependencies for the office's daily test_suites task. Fresh worker sessions run Python 3.13 with
+# numpy, pandas and scipy but without these (diagnosed 20 Oct 2026, evidence in
+# research/office/diagnostics/test_env_20261020T1330Z_A.json). Without statsmodels the research suite
+# skips one cross-check (test_newey_west_errors_match_statsmodels_hac): 459 passed, 1 skipped.
+pytest==9.1.1
+statsmodels==0.15.0
