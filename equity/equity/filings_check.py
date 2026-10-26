@@ -7,7 +7,8 @@ distinct years. For each filing it checks the header time against SEC's filing-d
 submissions JSON `acceptanceDateTime` and the header time as a distribution by time zone, and draws no conclusion
 from it: one observed four-hour difference is not assumed to hold elsewhere.
 
-Result: `insufficient_sample`, `pass` (sample met, no null `available_at`, no unexplained filing date) or `fail`.
+Result: `insufficient_sample`, `fail`, `consistent_with_filing_dates` or `validated` (see `crosscheck`). There is no
+`pass`: agreeing with the filing-date rule alone does not make a time usable (review finding P32-3).
 
     python3 -m equity.filings_check <filing_events.jsonl> [--holidays holidays.txt]
 
@@ -23,7 +24,7 @@ from collections import Counter, defaultdict
 from datetime import date, datetime, time, timezone
 from pathlib import Path
 
-from .filings import ET, LIMITATIONS, business_days_after
+from .filings import BASIS, ET, LIMITATIONS, business_days_after, sha256
 
 MIN_TOTAL, MIN_PER_ZONE, MIN_YEARS = 200, 80, 10
 CUTOFF = time(17, 30)
@@ -48,16 +49,33 @@ def expected_filed_dates(local: datetime, holidays: set[date]) -> set[date]:
     return {business_days_after(d, 1, holidays)[0]}
 
 
-def crosscheck(events: list[dict], holidays: set[date] = frozenset()) -> dict:
+def _independent(e):
+    """The event's independent acceptance time as UTC, or None. It must carry its source URL and sha256."""
+    ind = e.get("independent_acceptance")
+    if not isinstance(ind, dict) or not ind.get("source_url") or not ind.get("sha256"):
+        return None
+    return _json_utc(ind.get("time"))
+
+
+def crosscheck(events: list[dict], holidays: set[date] = frozenset(), holidays_sha256: str | None = None) -> dict:
+    """Check proposed header times. Status, strongest last:
+
+    * `insufficient_sample`: the sample minimums are not met;
+    * `fail`: a proposed time is missing, a filing date is unexplained, or an independent time disagrees;
+    * `consistent_with_filing_dates`: the header times agree with SEC's filing-date rule. This alone never makes a
+      time usable (review finding P32-3: a whole sample shifted by hours can still agree);
+    * `validated`: additionally every filing has an independent acceptance time equal to the header time to the
+      second, every JSON time parses, the JSON-minus-header offset is a single value per zone, and a holiday list
+      with a recorded sha256 was used. The offsets still need separate owner acceptance."""
     eights = [e for e in events if e.get("form") in ("8-K", "8-K/A")]
-    null_avail = [e["accession"] for e in eights if e.get("available_at") is None]
+    null_avail = [e["accession"] for e in eights if e.get("proposed_available_at") is None]
     zones, years = Counter(), set()
     offsets = defaultdict(Counter)
-    json_unparseable, unexplained = [], []
+    json_unparseable, unexplained, independent_missing, mismatches = [], [], [], []
     for e in eights:
-        if e.get("available_at") is None:
+        if e.get("proposed_available_at") is None:
             continue
-        utc = datetime.fromisoformat(e["available_at"].replace("Z", "+00:00"))
+        utc = datetime.fromisoformat(e["proposed_available_at"].replace("Z", "+00:00"))
         local = utc.astimezone(ET)
         zone = local.tzname()
         zones[zone] += 1
@@ -67,6 +85,12 @@ def crosscheck(events: list[dict], holidays: set[date] = frozenset()) -> dict:
             json_unparseable.append(e["accession"])
         else:
             offsets[zone][int((j - utc).total_seconds())] += 1
+        ind = _independent(e)
+        if ind is None:
+            independent_missing.append(e["accession"])
+        elif ind != utc:
+            mismatches.append({"accession": e["accession"], "header_utc": utc.isoformat(),
+                               "independent_utc": ind.isoformat(), "seconds": int((ind - utc).total_seconds())})
         filed = e.get("filed_date")
         try:
             filed_d = date.fromisoformat(filed)
@@ -79,14 +103,27 @@ def crosscheck(events: list[dict], holidays: set[date] = frozenset()) -> dict:
     checked = sum(zones.values())
     sample_ok = checked >= MIN_TOTAL and zones["EST"] >= MIN_PER_ZONE and zones["EDT"] >= MIN_PER_ZONE \
         and len(years) >= MIN_YEARS
+    single_offsets = bool(offsets) and all(len(c) == 1 for c in offsets.values())
+    blockers = []
+    if independent_missing:
+        blockers.append("independent_acceptance_missing")
+    if json_unparseable:
+        blockers.append("json_unparseable")
+    if not single_offsets:
+        blockers.append("json_offset_not_single_per_zone")
+    if not holidays or not holidays_sha256:
+        blockers.append("holidays_not_supplied")
     if not sample_ok:
         status = "insufficient_sample"
-    elif null_avail or unexplained:
+    elif null_avail or unexplained or mismatches:
         status = "fail"
+    elif blockers:
+        status = "consistent_with_filing_dates"
     else:
-        status = "pass"
+        status = "validated"
     return {
         "status": status,
+        "basis": BASIS,
         "requirement": {"min_total": MIN_TOTAL, "min_per_zone": MIN_PER_ZONE, "min_distinct_years": MIN_YEARS},
         "events": len(eights),
         "checked": checked,
@@ -94,9 +131,14 @@ def crosscheck(events: list[dict], holidays: set[date] = frozenset()) -> dict:
         "distinct_years": sorted(years),
         "available_at_null": null_avail,
         "unexplained_filed_dates": unexplained,
+        "independent_missing": len(independent_missing),
+        "independent_mismatches": mismatches,
+        "validation_blockers": blockers,
         "json_minus_header_seconds_by_zone": {z: dict(sorted(c.items())) for z, c in sorted(offsets.items())},
+        "json_offsets_need_owner_acceptance": True,
         "json_unparseable": json_unparseable,
         "holidays_supplied": len(holidays),
+        "holidays_sha256": holidays_sha256,
         "note": "JSON offsets are reported, not interpreted; no offset is assumed for other filings.",
         "limitations": list(LIMITATIONS),
     }
@@ -131,12 +173,14 @@ def main(argv=None) -> int:
     ap.add_argument("--holidays", type=Path, help="one ISO date per line (exchange/SEC holidays), optional")
     a = ap.parse_args(argv)
     events = [json.loads(ln) for ln in a.events.read_text().splitlines() if ln.strip()]
-    hol = set()
+    hol, hol_sha = set(), None
     if a.holidays:
-        hol = {date.fromisoformat(x.strip()) for x in a.holidays.read_text().splitlines() if x.strip()}
-    rep = crosscheck(events, hol)
+        raw = a.holidays.read_bytes()
+        hol_sha = sha256(raw)
+        hol = {date.fromisoformat(x.strip()) for x in raw.decode().splitlines() if x.strip()}
+    rep = crosscheck(events, hol, hol_sha)
     print(json.dumps(rep, indent=1))
-    return 0 if rep["status"] == "pass" else 1
+    return 0 if rep["status"] == "validated" else 1
 
 
 if __name__ == "__main__":

@@ -85,17 +85,22 @@ class SecClient:
         raise SecError(f"gave up on {url}")
 
     def get_raw(self, url: str) -> dict:
-        """One paced request with no caching: {'url', 'status', 'body', 'retrieved_at'}. For filing events, whose raw
-        bytes are kept by hash elsewhere (equity.filings_store). Added for mini fund Stage 2 §1; existing callers
-        are unchanged."""
+        """One paced request with no caching or retries: {'url', 'status', 'body', 'error', 'retrieved_at'}. A
+        connection failure, timeout or OSError gives status None and `error` set to the exception's type name, so the
+        caller labels it instead of crashing (review finding P32-6). For filing events, whose raw bytes are kept by
+        hash elsewhere (equity.filings_store). Added for mini fund Stage 2 §1; existing callers are unchanged."""
         if self._last is not None:
             wait = self.min_interval - (self.clock() - self._last)
             if wait > 0:
                 self.sleep(wait)
         self._last = self.clock()
         self.requests_made += 1
-        status, body = self.transport(url, {"User-Agent": self.ua, "Accept-Encoding": "identity"}, 30)
-        return {"url": url, "status": status, "body": body,
+        error = None
+        try:
+            status, body = self.transport(url, {"User-Agent": self.ua, "Accept-Encoding": "identity"}, 30)
+        except (urllib.error.URLError, TimeoutError, OSError) as e:
+            status, body, error = None, None, type(e).__name__
+        return {"url": url, "status": status, "body": body, "error": error,
                 "retrieved_at": datetime.now(timezone.utc).replace(microsecond=0).isoformat()}
 
     def tickers(self, max_age_s: float = 86400) -> list[dict]:

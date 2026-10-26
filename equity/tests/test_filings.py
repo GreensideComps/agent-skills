@@ -34,7 +34,7 @@ def no_network(monkeypatch):
 
 def headers():
     out = {}
-    for p in FX.glob("9999999-*.hdr.*"):
+    for p in FX.glob("0009999999-*.hdr.*"):
         out[p.name.split(".hdr")[0]] = p.read_bytes()
     return out
 
@@ -81,8 +81,9 @@ def test_json_acceptance_is_kept_verbatim_and_not_used():
     for acc, js in zip(raw["accessionNumber"], raw["acceptanceDateTime"]):
         if acc in ev:
             assert ev[acc]["submissions_json_acceptance"] == js
-    e = ev["9999999-22-000003"]
-    assert e["available_at"] == "2022-07-29T20:30:28Z" != e["submissions_json_acceptance"]
+    e = ev["0009999999-22-000003"]
+    assert e["available_at"] is None
+    assert e["proposed_available_at"] == "2022-07-29T20:30:28Z" != e["submissions_json_acceptance"]
     assert e["available_at_basis"] == "sec_header_acceptance_et"
     assert e["available_at_status"] == "proposed_pending_crosscheck"
 
@@ -100,41 +101,44 @@ def test_items_parse_or_are_null_with_a_reason(raw, out):
 
 
 def test_empty_items_are_never_filled_from_the_header():
-    e = build()["9999999-21-000006"]
+    e = build()["0009999999-21-000006"]
     assert e["items"] is None and e["header_items"] is None and "items_missing" in e["missing_reasons"]
 
 
 def test_both_header_formats_parse():
-    tagged = fl.parse_header((FX / "9999999-22-000001.hdr.sgml").read_text())
-    colon = fl.parse_header((FX / "9999999-21-000002.hdr.txt").read_text())
+    tagged = fl.parse_header((FX / "0009999999-22-000001.hdr.sgml").read_text())
+    colon = fl.parse_header((FX / "0009999999-21-000002.hdr.txt").read_text())
     assert tagged["acceptance_datetime"] == "20220728163028" and tagged["items"] == ["2.02", "9.01"]
-    assert colon["acceptance_datetime"] == "20210210090500" and colon["accession"] == "9999999-21-000002"
+    assert colon["acceptance_datetime"] == "20210210090500" and colon["accession"] == "0009999999-21-000002"
     assert colon["type"] == "8-K" and len(colon["item_descriptions"]) == 2 and colon["items"] == []
 
 
 # 4. amendments
 def test_amendment_is_flagged_and_the_original_is_not_guessed():
-    e = build()["9999999-21-000004"]
+    e = build()["0009999999-21-000004"]
     assert e["form"] == "8-K/A" and e["is_amendment"] is True and e["amends"] is None
 
 
 def test_only_8k_forms_become_events():
     ev = build()
-    assert "9999999-21-000008" not in ev and len(ev) == 7
+    assert "0009999999-21-000008" not in ev and len(ev) == 7
 
 
 # 6. missing header
 def test_a_missing_header_gives_null_available_at():
-    e = build()["9999999-21-000007"]
-    assert e["available_at"] is None and e["available_at_status"] == "unavailable"
-    assert e["missing_reasons"] == ["header_missing"] and e["source"]["header"] is None
+    e = build()["0009999999-21-000007"]
+    assert e["available_at"] is None and e["proposed_available_at"] is None
+    assert e["available_at_status"] == "unavailable"
+    assert e["missing_reasons"] == ["acceptance_unverified", "header_missing"] and e["source"]["header"] is None
 
 
-def test_a_header_for_a_different_accession_is_refused():
+def test_a_header_for_a_different_accession_is_labelled_and_the_batch_continues():
     h = headers()
-    h["9999999-22-000003"] = h["9999999-22-000001"]
-    with pytest.raises(fl.FilingError):
-        build(h)
+    h["0009999999-22-000003"] = h["0009999999-22-000001"]
+    ev = build(h)
+    assert len(ev) == 7
+    bad = [a for a, e in ev.items() if "header_accession_mismatch" in e["missing_reasons"]]
+    assert bad == ["0009999999-22-000003"] and ev[bad[0]]["proposed_available_at"] is None
 
 
 # 5. store: idempotent, revisions append, history never edited
@@ -153,13 +157,13 @@ def test_changed_bytes_for_an_accession_are_a_revision(tmp_path):
     st.append(list(build().values()))
     before = st.events_path.read_bytes()
     h = headers()
-    h["9999999-22-000001"] = h["9999999-22-000001"].replace(b"163028", b"163029")
-    counts = st.append([build(h)["9999999-22-000001"]])
+    h["0009999999-22-000001"] = h["0009999999-22-000001"].replace(b"163028", b"163029")
+    counts = st.append([build(h)["0009999999-22-000001"]])
     assert counts == {"written": 1, "unchanged": 0, "revisions": 1}
     assert st.events_path.read_bytes().startswith(before)
-    cur = st.current()["9999999-22-000001"]
+    cur = st.current()["0009999999-22-000001"]
     assert cur["revision"] == 1 and cur["revision_reason"] == "content_changed"
-    assert cur["supersedes"] == build()["9999999-22-000001"]["record_id"]
+    assert cur["supersedes"] == build()["0009999999-22-000001"]["record_id"]
 
 
 def test_an_edited_line_breaks_the_chain(tmp_path):
@@ -175,7 +179,7 @@ def test_an_edited_line_breaks_the_chain(tmp_path):
 
 def test_raw_bytes_are_stored_by_hash_and_checked(tmp_path):
     st = FilingStore(tmp_path)
-    body = (FX / "9999999-22-000001.hdr.sgml").read_bytes()
+    body = (FX / "0009999999-22-000001.hdr.sgml").read_bytes()
     h = st.put_raw(body)
     assert st.put_raw(body) == h and st.get_raw(h) == body
     (st.raw_dir / h).write_bytes(b"tampered")
@@ -199,15 +203,15 @@ def test_requests_are_paced_at_least_0_1_s_apart():
         return 200, b"<ACCEPTANCE-DATETIME>20220728163028\n"
 
     c = SecClient(ua="fixture-test test@example.invalid", transport=transport, sleep=sleep, clock=clock)
-    for acc in ["9999999-22-000001", "9999999-22-000003", "9999999-21-000004"]:
+    for acc in ["0009999999-22-000001", "0009999999-22-000003", "0009999999-21-000004"]:
         r = c.get_raw(fl.header_url(CIK, acc))
         assert r["status"] == 200 and r["retrieved_at"]
     assert all(b - a >= 0.1 for a, b in zip(sent, sent[1:])) and c.min_interval >= 0.1
 
 
 def test_header_url_shape():
-    assert fl.header_url(CIK, "9999999-22-000001") == \
-        "https://www.sec.gov/Archives/edgar/data/9999999/999999922000001/9999999-22-000001.hdr.sgml"
+    assert fl.header_url(CIK, "0009999999-22-000001") == \
+        "https://www.sec.gov/Archives/edgar/data/9999999/000999999922000001/0009999999-22-000001.hdr.sgml"
 
 
 # cross-check
@@ -216,7 +220,7 @@ def test_crosscheck_reports_offsets_without_interpreting_them():
     assert rep["status"] == "insufficient_sample" and rep["checked"] == 6
     # fixture offsets are invented: two equal, one +4 h, one -5 h (see fixtures/sec/README.md)
     assert rep["json_minus_header_seconds_by_zone"] == {"EDT": {0: 2, 14400: 1}, "EST": {-18000: 1, 0: 2}}
-    assert rep["available_at_null"] == ["9999999-21-000007"]
+    assert rep["available_at_null"] == ["0009999999-21-000007"] and rep["basis"] == "sec_header_acceptance_et"
     assert rep["unexplained_filed_dates"] == []
     assert rep["limitations"] and "not interpreted" in rep["note"]
 
@@ -224,7 +228,7 @@ def test_crosscheck_reports_offsets_without_interpreting_them():
 def test_a_late_filing_needs_the_holiday_list_to_be_explained():
     ev = list(build().values())
     without = fc.crosscheck(ev)
-    assert [u["accession"] for u in without["unexplained_filed_dates"]] == ["9999999-21-000005"]
+    assert [u["accession"] for u in without["unexplained_filed_dates"]] == ["0009999999-21-000005"]
     assert fc.crosscheck(ev, THANKSGIVING_2021)["unexplained_filed_dates"] == []
 
 
@@ -239,8 +243,8 @@ def _synthetic_events(n_est, n_edt, years, bad=0):
             filed = f"{y}-{month:02d}-{10 + i % 15:02d}"
             if k < bad:
                 filed = f"{y}-{month:02d}-{11 + i % 15:02d}"
-            out.append({"form": "8-K", "accession": f"x-{k}", "available_at": avail, "filed_date": filed,
-                        "submissions_json_acceptance": avail})
+            out.append({"form": "8-K", "accession": f"x-{k}", "available_at": None, "proposed_available_at": avail,
+                        "filed_date": filed, "submissions_json_acceptance": avail})
             k += 1
     return out
 
@@ -250,12 +254,12 @@ def test_the_check_passes_only_with_the_full_sample_and_no_problems():
     weekdays_only = [e for e in _synthetic_events(150, 150, years)
                      if date.fromisoformat(e["filed_date"]).weekday() < 5]
     rep = fc.crosscheck(weekdays_only)
-    assert rep["checked"] >= 200 and rep["status"] == "pass", rep["unexplained_filed_dates"][:3]
+    assert rep["checked"] >= 200 and rep["status"] == "consistent_with_filing_dates", rep["unexplained_filed_dates"][:3]
     assert fc.crosscheck(weekdays_only[:150])["status"] == "insufficient_sample"
     broken = list(weekdays_only)
     broken[0] = dict(broken[0], filed_date="1999-01-01")
     assert fc.crosscheck(broken)["status"] == "fail"
-    nulls = weekdays_only + [{"form": "8-K", "accession": "y", "available_at": None, "filed_date": "2015-01-05"}]
+    nulls = weekdays_only + [{"form": "8-K", "accession": "y", "proposed_available_at": None, "filed_date": "2015-01-05"}]
     assert fc.crosscheck(nulls)["status"] == "fail"
 
 
@@ -268,7 +272,7 @@ def test_sample_selection_is_deterministic_and_spread():
 
 
 def test_events_carry_limitations_and_contract_version():
-    e = build()["9999999-22-000001"]
+    e = build()["0009999999-22-000001"]
     assert e["schema"] == "FilingEvent" and e["schema_version"] == "contracts-0.1"
     assert e["items"] == ["2.02", "9.01"] and e["header_items"] == ["2.02", "9.01"]
     assert fl.LIMITATIONS and any("survivorship" in x for x in fl.LIMITATIONS)
