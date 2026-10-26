@@ -110,8 +110,10 @@ def share_outliers(df: pd.DataFrame) -> pd.Series:
 
 
 def share_outliers_pit(df: pd.DataFrame) -> pd.Series:
-    """Sensitivity variant, NOT the approved rule: the median is taken over the company's rows dated on or before
-    each month (expanding, including the month itself), so a flag uses no later information at all."""
+    """The median is taken over the company's rows dated on or before each month (expanding, including the month
+    itself), so a flag uses no later information at all. Phase A sensitivity variant (QX-PIT-*); the PRIMARY quality
+    rule of the B5 trials from ADDENDUM_3 (owner decision D20). `share_outliers` remains the Phase A / Stage 2 rule
+    (D5) and B5's P9 reverse veto."""
     sh = df["shares_out"].where(df["shares_out"] > 0, df["shares_diluted"])
     order = df.assign(_sh=sh, _m=pd.to_datetime(df["month"])).sort_values(["cik", "_m"])
     med = order.groupby("cik")["_sh"].transform(lambda x: x.expanding().median()).reindex(df.index)

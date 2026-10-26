@@ -87,12 +87,12 @@ is a weak model of the concentrated portfolio the owner would hold. Phase B buil
 - **Currency:** stock returns are converted to GBP monthly (`research/dataset.usd_to_gbp_monthly`), because the
   ISA and VWRP are in GBP.
 - **Benchmarks:**
-  1. VWRP in GBP, labelled by segment (`PHASE_B_PLAN.md` §2.5): **actual VWRP** (VWRP.L) from 2019-09;
-     **VWRL-based** (VWRL.L, the same fund's distributing class, dividends reinvested) from 2012-06 to 2019-08;
+  1. VWRP in GBP, labelled by segment (`PHASE_B_PLAN.md` §2.5): **actual VWRP** (VWRP.L) from 2019-08 (first full monthly return; first price 2019-07-25);
+     **VWRL-based** (VWRL.L, the same fund's distributing class, dividends reinvested) from 2012-06 to 2019-07;
      **proxy** (Ken French developed-market return less 0.2%/yr, converted USD to GBP) before 2012-06. The proxy
      excludes emerging markets (about 10% of FTSE All-World). On exploration data VWRP tracks VWRL within
      0.37%/yr; the proxy differs from VWRL by 2.8%/yr tracking error. "vs actual VWRP" is reported only from
-     2019-09; 2015-01 to 2019-08 is "vs VWRL".
+     2019-08; 2015-01 to 2019-07 is "vs VWRL".
   2. The equal-weighted large-cap universe (does selection beat the pool it picks from?).
   3. Factor-matched: the strategy's FF5 + momentum alpha (USD, excess of the risk-free rate).
 - **Metrics:** CAGR; volatility; maximum drawdown; Sharpe; information ratio and tracking error vs VWRP; worst

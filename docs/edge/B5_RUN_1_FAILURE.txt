@@ -1,0 +1,16 @@
+Traceback (most recent call last):
+  File "/home/user/agent-skills/research/edge_b5_run.py", line 416, in <module>
+    sys.exit(main())
+             ~~~~^^
+  File "/home/user/agent-skills/research/edge_b5_run.py", line 408, in main
+    runs = {t: run_one(t, panels, data, registry) for t in TRIALS}
+               ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/user/agent-skills/research/edge_b5_run.py", line 305, in run_one
+    v = run_combined(run_id, registry, panel, data, vcfg, starts)
+  File "/home/user/agent-skills/research/edge_b5_run.py", line 266, in run_combined
+    return {"results": res, "nav_gbp": b5.combine_tranches([r.nav_gbp for r in res], first),
+                                       ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/user/agent-skills/research/edge_b5.py", line 200, in combine_tranches
+    raise ValueError("every tranche must have a NAV on the evaluation start date")
+ValueError: every tranche must have a NAV on the evaluation start date
+EXIT 1

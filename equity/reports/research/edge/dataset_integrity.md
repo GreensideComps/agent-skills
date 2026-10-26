@@ -1,5 +1,7 @@
 # Research dataset integrity (edge-discovery Phase A)
 
+> **Survivorship (material, unbounded; added 2026-10-16 at the owner's request):** companies that delisted before the 2026 price download are missing from the universe entirely. The -30% and -100% missing-price rules do not address them and are not evidence that survivorship bias is bounded.
+
 Read-only checks. FAIL = a defect to fix before trusting results; WARN = a known limitation results must state. Returns are inspected only up to 2022-12.
 
 Two kinds of check. **Source** checks describe the data files: a FAIL there is a defect in the data, which the programme may already neutralise. **Programme** checks ask whether a defect can still reach a programme result: a FAIL there means programme results cannot be trusted. The script exits 1 only on a programme FAIL.

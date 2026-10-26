@@ -28,3 +28,29 @@ def test_company_months_point_in_time_active_window_and_staleness():
     # figures for periods that ended over 18 months ago are unknown, not carried forever
     assert out["2022-05-31"]["ttm_revenue"] == 120.0
     assert panel.ttm(rows[:2], "2022-12-31")["val"] == 120.0
+
+
+def test_share_counts_filed_after_the_month_end_never_change_that_month():
+    """Owner review 2026-10-19 item 1 (identity rule C): shares_out (cover page, instant) and shares_diluted
+    (weighted average of the latest period) at a month-end use only facts filed on or before it. A late count, a
+    restatement of an earlier period and an amendment, all filed afterwards, leave the month unchanged."""
+    base = [row("revenue", "2015-01-01", "2015-12-31", 100.0, "2016-02-20"),
+            row("shares_out", "", "2016-02-10", 10.0, "2016-02-20", unit="shares"),
+            row("shares_diluted", "2015-01-01", "2015-12-31", 11.0, "2016-02-20", unit="shares"),
+            row("total_assets", "", "2015-12-31", 1000.0, "2016-02-20")]
+    later = [row("shares_out", "", "2016-02-10", 1e5, "2016-04-15", unit="shares"),  # amended cover count, same date
+             row("shares_out", "", "2016-03-31", 2e5, "2016-05-05", unit="shares"),  # period ends before the month-end
+             row("shares_diluted", "2015-01-01", "2015-12-31", 3e5, "2016-04-15", unit="shares"),  # restated
+             row("shares_diluted", "2016-01-01", "2016-03-31", 4e5, "2016-05-05", unit="shares"),  # Q1, filed in May
+             row("total_assets", "", "2016-03-31", 5e5, "2016-05-05")]
+    months = monthly.month_ends("2016-01-31", "2016-06-30")
+    pit = {r["month"]: r for r in monthly.company_months(7, base, months)}
+    full = {r["month"]: r for r in monthly.company_months(7, base + later, months)}
+    for mo in ("2016-02-29", "2016-03-31"):
+        for f in ("shares_out", "shares_diluted", "total_assets"):
+            assert full[mo][f] == pit[mo][f]
+        assert (full[mo]["shares_out"], full[mo]["shares_diluted"]) == (10.0, 11.0)
+    # each later fact is used from the month-end after its own filing date, not before
+    assert (full["2016-04-30"]["shares_out"], full["2016-04-30"]["shares_diluted"]) == (1e5, 3e5)
+    assert (full["2016-05-31"]["shares_out"], full["2016-05-31"]["shares_diluted"]) == (2e5, 4e5)
+    assert full["2016-05-31"]["total_assets"] == 5e5

@@ -20,6 +20,7 @@ from __future__ import annotations
 import hashlib
 import json
 import math
+import os
 import statistics
 import sys
 from datetime import date
@@ -125,9 +126,122 @@ def validate(path: Path = PATH) -> list[str]:
     return problems
 
 
-def append(event: dict, path: Path = PATH) -> dict:
+STATUS = Path(__file__).resolve().parent / "edge" / "status.json"
+
+
+def check4_complete(status: Path = STATUS) -> bool:
+    """B5 ADDENDUM_1 §6: TTM check 4 (independent source) recorded complete by the owner. Missing counts as open."""
+    try:
+        return json.loads(status.read_text())["ttm_check4_independent_source"]["complete"] is True
+    except (OSError, KeyError, TypeError, ValueError):
+        return False
+
+
+# The two B5 version-3 trials and their robustness runs (edge_b5_run.TRIALS and rob_id; a test keeps the lists
+# equal). Owner review 2026-10-19 item 4: no code path may run or record one of these unless the run is open.
+# ADDENDUM_3 (D20, D21): version 3 = version 2 + addenda 1-3; P9 is the full-window reverse veto, ROB-WINQ.
+B5_RUN_IDS = frozenset(["B5-H1-FCFPS-ACCEL-V3", "B5-S2A-GP-12M-V3"] + [
+    f"B5-{t}-V3-ROB-{g}" for t in ("H1", "S2A") for g in ("2XCOST", "MISS100", "NEXTMONTH", "DATAERR", "WINQ")])
+# Registered ids that must never run or be recorded. Version 1 and version 2 (both superseded, never run; their
+# trial ids stay registered and counted in N) and all of their robustness runs.
+B5_RETIRED_IDS = frozenset([f"B5-{t}{v}" for t in ("H1-FCFPS-ACCEL", "S2A-GP-12M") for v in ("", "-V2")] + [
+    f"B5-{t}{v}-ROB-{g}" for t in ("H1", "S2A") for v in ("", "-V2")
+    for g in ("2XCOST", "MISS100", "NEXTMONTH", "DATAERR", "PITQ")])
+B5_LOCK = Path(__file__).resolve().parent / "edge" / "b5_run.lock"
+B5_REPO = Path(__file__).resolve().parent.parent
+# The manifest a B5 run must be authorised against (edge_b5_run reads these two names; a test keeps them equal).
+# B5_RUN_FIX_2 / execution hardening: proposed, not registered, so no run can open until the owner registers it.
+B5_MANIFEST_ID = "B5-V3-RUN-MANIFEST-3"
+B5_MANIFEST = B5_REPO / "docs" / "edge" / "B5_RUN_MANIFEST_3.json"
+# Owner authorisations already used by a run that took the one-run lock. None can open another run, whatever
+# status.json says (D27: run 1, authorised by D26 at 09:05Z, stopped with an error; its lock is kept. D32: run 2,
+# authorised by D31 at 13:25Z, completed once; its lock is archived). Adding D31 here (owner decisions O4 and D33, 19 Oct)
+# changes this file after MANIFEST-3 was spent, so MANIFEST-3 no longer matches the code and can never run again.
+B5_SPENT_AUTHORISATIONS = frozenset({"cmsg_01U4KMvkBYNknqm4HRVie8uvUzn9qQCoyy3U7K3j4iY3kK",  # D26, run 1
+                                     "cmsg_01U4KMvkBYNknqm4HRVie8uvNzjD1qcmHEXGwqYmiFikfZ"})  # D31, run 2
+
+
+def _sha(p: Path) -> str:
+    return hashlib.sha256(p.read_bytes()).hexdigest()
+
+
+def b5_authorisation(status: Path = STATUS) -> dict:
+    """The owner's B5 run authorisation in `status`, or PermissionError. Valid only when `authorised` is True, the
+    owner message is a cmsg_ id that no earlier run has spent (`B5_SPENT_AUTHORISATIONS`), and it names the current
+    run manifest by id (`B5_MANIFEST_ID`) and by sha256 (`manifest_sha256`), so an approval given for one manifest
+    can never authorise a run of different code or inputs."""
+    try:
+        auth = json.loads(status.read_text())["b5_trial_run"]
+    except (OSError, KeyError, TypeError, ValueError):
+        auth = None
+    if not isinstance(auth, dict) or auth.get("authorised") is not True \
+            or not str(auth.get("owner_message", "")).startswith("cmsg_"):
+        raise PermissionError("B5 run not authorised by the owner (status.json b5_trial_run)")
+    if auth["owner_message"] in B5_SPENT_AUTHORISATIONS:
+        raise PermissionError(f"authorisation {auth['owner_message']} was spent by an earlier run; a new run needs "
+                              "a new owner authorisation")
+    if auth.get("manifest_id") != B5_MANIFEST_ID:
+        raise PermissionError(f"the authorisation names manifest {auth.get('manifest_id')!r}, not {B5_MANIFEST_ID}")
+    h = auth.get("manifest_sha256")
+    if not (isinstance(h, str) and len(h) == 64 and all(c in "0123456789abcdef" for c in h)):
+        raise PermissionError("the authorisation does not name the manifest's sha256")
+    return auth
+
+
+def b5_manifest_ok(manifest_sha256: str, registry: Path, manifest: Path, repo: Path, files: bool) -> None:
+    """PermissionError unless `manifest` has `manifest_sha256`, the registry registers B5_MANIFEST_ID at that sha256,
+    and (with `files`) every input and code file it lists still has its recorded sha256."""
+    try:
+        actual = _sha(manifest)
+        reg = registered(load(registry)).get(B5_MANIFEST_ID)
+        listed = json.loads(manifest.read_text()) if files else {}
+    except (OSError, ValueError) as e:
+        raise PermissionError(f"B5 run manifest unreadable: {e}") from None
+    if actual != manifest_sha256:
+        raise PermissionError("the run manifest file does not match the authorised sha256")
+    if reg is None or reg.get("spec_sha256") != manifest_sha256:
+        raise PermissionError(f"{B5_MANIFEST_ID} is not registered at the authorised sha256")
+    for group in ("inputs", "code"):
+        for path, h in listed.get(group, {}).items() if files else ():
+            p = Path(path) if Path(path).is_absolute() else repo / path
+            try:
+                ok = _sha(p) == h
+            except OSError:
+                ok = False
+            if not ok:
+                raise PermissionError(f"{group} file {path} does not match the run manifest")
+
+
+def b5_run_open(verify_files: bool = False) -> str:
+    """The owner message id of the open B5 run, else PermissionError. Open means all of:
+
+    * the real status.json holds a valid, unspent authorisation for the current manifest (`b5_authorisation`);
+    * the one-run lock, which only `edge_b5_run.preflight` creates after every other control has passed, exists
+      and names that same owner message and manifest sha256;
+    * the manifest file has that sha256 and the real registry registers it (`b5_manifest_ok`); with
+      `verify_files` (the run's entry points: load_inputs, run_one, finish), every listed file is re-hashed too.
+
+    It reads the module paths (STATUS, B5_LOCK, PATH, B5_MANIFEST, B5_REPO), never arguments, so no caller can point
+    it at a copied registry, status file, manifest or lock."""
+    auth = b5_authorisation(STATUS)
+    try:
+        lock = json.loads(B5_LOCK.read_text())
+        same = lock["owner_message"] == auth["owner_message"] and lock["manifest"] == auth["manifest_sha256"]
+    except (OSError, KeyError, TypeError, ValueError):
+        same = False
+    if not same:
+        raise PermissionError("B5 run not open: needs the one-run lock taken by edge_b5_run.preflight for this "
+                              "authorisation and manifest")
+    b5_manifest_ok(auth["manifest_sha256"], PATH, B5_MANIFEST, B5_REPO, verify_files)
+    return auth["owner_message"]
+
+
+def append(event: dict, path: Path = PATH, status: Path = STATUS) -> dict:
     """Append one event, chaining it to the last line. Refuses if the file is already invalid or the result
-    would be invalid; the file is left untouched in that case."""
+    would be invalid; the file is left untouched in that case. Refuses a confirmation batch while TTM check 4 is
+    open (B5 ADDENDUM_1 §6)."""
+    if event.get("event") == "batch" and not check4_complete(status):
+        raise ValueError("confirmation pre-registration refused: TTM check 4 (independent source) is open")
     problems = validate(path) if path.exists() else []
     if problems:
         raise ValueError(f"registry invalid before append: {problems}")
@@ -146,9 +260,51 @@ def append(event: dict, path: Path = PATH) -> dict:
     return e
 
 
+def stage(events: list[dict], path: Path = PATH) -> tuple[Path, bytes]:
+    """Write the registry plus `events` (chained, dated today) to a staged copy beside it and return the copy and the
+    registry's current bytes; the registry itself is not touched. Refuses (and removes the copy) unless the registry
+    is valid before, the copy is valid, every earlier byte is unchanged and exactly these events were added. A
+    confirmation batch is never staged. `commit` makes the copy the registry in one rename."""
+    if any(e.get("event") == "batch" for e in events):
+        raise ValueError("a confirmation batch is appended only through append")
+    problems = validate(path)
+    if problems:
+        raise ValueError(f"registry invalid before staging: {problems}")
+    old = path.read_bytes()
+    lines = [l for l in old.decode().splitlines() if l.strip()]
+    prev = line_hash(lines[-1]) if lines else GENESIS
+    new = []
+    for event in events:
+        raw = json.dumps({"prev": prev, "date": date.today().isoformat(), **event}, sort_keys=True)
+        new.append(raw)
+        prev = line_hash(raw)
+    text = ("\n".join(lines + new) + "\n").encode()
+    staged = path.with_suffix(".staged")
+    staged.write_bytes(text)
+    after = validate(staged)
+    if after or not text.startswith(old) or len(load(staged)) != len(load(path)) + len(events):
+        staged.unlink()
+        raise ValueError(f"staged events rejected, registry unchanged: {after or 'history or count mismatch'}")
+    return staged, old
+
+
+def commit(staged: Path, old: bytes, path: Path = PATH) -> None:
+    """Replace the registry with a `stage`d copy in one rename, refusing if the registry changed since staging."""
+    if path.read_bytes() != old:
+        raise ValueError("registry changed since staging; nothing committed")
+    if validate(staged) or not staged.read_bytes().startswith(old):
+        raise ValueError("staged copy no longer valid; nothing committed")
+    os.replace(staged, path)
+
+
 def require(trial_id: str, path: Path = PATH) -> dict:
     """The registration of `trial_id`, or an error if it is not registered or already has a result. Research
-    code calls this before computing anything, so an unregistered or repeated look cannot run."""
+    code calls this before computing anything, so an unregistered or repeated look cannot run. A B5 trial or
+    robustness id also needs the B5 run to be open (`b5_run_open`), whichever script asks."""
+    if trial_id in B5_RETIRED_IDS:
+        raise ValueError(f"{trial_id} is retired (superseded) and can never be run or recorded")
+    if trial_id in B5_RUN_IDS:
+        b5_run_open()
     events = load(path)
     reg = registered(events).get(trial_id)
     if reg is None:

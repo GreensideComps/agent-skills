@@ -1,0 +1,146 @@
+"""Command line: python3 -m office worker | status | digest | pause | resume | gate-start | gate-report | acceptance |
+pm-propose | plan-draft.
+
+State lives on the `claude/office-state` branch (the claude/ prefix is the one cloud sessions may push to) of the repository's own remote (override with --state-remote). Nothing
+here places an order, reads a holdout or starts a research run; see handlers.py for everything a worker can do.
+"""
+from __future__ import annotations
+
+import argparse
+import json
+import subprocess
+import sys
+import tempfile
+import time
+from datetime import datetime
+from pathlib import Path
+
+from . import acceptance, gate, health, worker
+from .events import parse
+from .handlers import Context
+from .store import GitStore
+
+REPO = Path(__file__).resolve().parents[2]
+# The first commit of claude/office-state (created 2026-10-20, empty log). A history rebuilt from scratch has another.
+ROOTS = {"claude/office-state": "8428e34ae414ee50f1ddaf95827c2d5c7f99720d"}
+
+
+def origin() -> str:
+    return subprocess.run(["git", "-C", str(REPO), "remote", "get-url", "origin"], capture_output=True, text=True,
+                          check=True).stdout.strip()
+
+
+def main(argv: list[str] | None = None) -> int:
+    ap = argparse.ArgumentParser(prog="office")
+    ap.add_argument("--state-remote", default=None)
+    ap.add_argument("--branch", default="claude/office-state")
+    ap.add_argument("--workdir", default=None, help="git workdir for the state branch (default: a temp dir)")
+    ap.add_argument("--heartbeat-h", type=float, default=1.0)
+    sub = ap.add_subparsers(dest="cmd", required=True)
+    w = sub.add_parser("worker")
+    w.add_argument("--out-dir", default=None)
+    w.add_argument("--max-tasks", type=int, default=8)
+    w.add_argument("--max-seconds", type=float, default=2400.0)
+    w.add_argument("--stop-file", default=str(REPO / "office" / "STOP"))
+    w.add_argument("--drill-crash", action="store_true", help="gate drill: exit right after the first claim; refuses "
+                   "(exit 4, nothing claimed) unless this is the first run of the UTC day")
+    sub.add_parser("status")
+    p = sub.add_parser("pause")
+    p.add_argument("--reason", required=True)
+    r = sub.add_parser("resume")
+    r.add_argument("--owner-message", required=True)
+    gs = sub.add_parser("gate-start")
+    gs.add_argument("--owner-message", required=True)
+    gr = sub.add_parser("gate-report")
+    gr.add_argument("--gate-seq", type=int, default=None, help="score the gate started at this seq (default: latest)")
+    gr.add_argument("--at", default=None, help="evaluate as of this UTC time (ISO), using only events up to it")
+    ac = sub.add_parser("acceptance", help="read-only: score one UTC day of scheduled slots for the G2 start check")
+    ac.add_argument("--day", required=True, help="UTC date, YYYY-MM-DD")
+    ac.add_argument("--code", required=True, help="the master commit every slot's run must have used")
+    ac.add_argument("--minute", type=int, default=12)
+    ac.add_argument("--refusal", action="append", default=[], help="a refusal seen in a session record (repeatable)")
+    dg = sub.add_parser("digest")
+    dg.add_argument("--day", default=None)
+    sub.add_parser("pm-propose", help="print today's pm-1.0 proposal (proposal only; touches no state)")
+    pd = sub.add_parser("plan-draft", help="draft this week's research proposal for owner approval (D-T15)")
+    pd.add_argument("--candidate", required=True, help="JSON file with the candidate's fields")
+    pd.add_argument("--out-dir", default=str(REPO / "docs" / "edge" / "proposals"))
+    a = ap.parse_args(argv)
+
+    if a.cmd == "plan-draft":
+        import datetime as dt
+        from . import planner
+        reg = REPO / "research" / "edge" / "trials.jsonl"
+        try:
+            if not reg.exists():
+                raise planner.PlannerError(f"trial registry {reg} is missing; prior-trial overlap cannot be computed")
+            events = [json.loads(x) for x in reg.read_text().splitlines() if x.strip()]
+            print(planner.draft(json.loads(Path(a.candidate).read_text()), events,
+                                dt.datetime.now(dt.timezone.utc).date(), Path(a.out_dir),
+                                also_check=(REPO / "docs" / "edge" / "proposals",)))
+        except planner.PlannerError as e:
+            print("REFUSED:", e)
+            return 2
+        return 0
+
+    if a.cmd == "pm-propose":
+        from . import pm
+        print(json.dumps(pm.from_repo(REPO), indent=1))
+        return 0
+
+    remote = a.state_remote or origin()
+    workdir = Path(a.workdir or tempfile.mkdtemp(prefix="office-state-"))
+    store = GitStore(workdir, a.branch, remote, actor="worker" if a.cmd == "worker" else "cli",
+                     root=ROOTS.get(a.branch) if a.state_remote is None else None)
+    hb = a.heartbeat_h * 3600
+
+    if a.cmd == "worker":
+        ctx = Context(store=store, repo_url=origin(), now=time.time, out_dir=Path(a.out_dir) if a.out_dir else None,
+                      heartbeat_s=hb)
+
+        def crash(lease):
+            print(json.dumps({"drill": "exiting after claim", "task": lease.task, "fence": lease.fence}))
+            sys.stdout.flush()
+            import os
+            os._exit(3)
+        stats = worker.run(store, ctx, worker=f"worker-{ctx.env.get('CLAUDE_CODE_REMOTE_SESSION_ID', 'local')[-12:]}",
+                           code=worker.code_sha(REPO), max_tasks=a.max_tasks, max_seconds=a.max_seconds,
+                           stop_file=Path(a.stop_file), after_claim=crash if a.drill_crash else None,
+                           drill=a.drill_crash)
+        print(json.dumps(stats, indent=1))
+        return 4 if str(stats.get("stopped", "")).startswith("drill refused") else 0
+    if a.cmd == "status":
+        rep = health.report(parse(store.sync()), time.time(), hb)
+        print(json.dumps(rep, indent=1, default=str))
+        return 1 if any(x["level"] == "critical" for x in rep["alerts"]) else 0
+    if a.cmd == "pause":
+        worker.pause(store, a.reason)
+    elif a.cmd == "resume":
+        worker.resume(store, a.owner_message)
+    elif a.cmd == "gate-start":
+        if not a.owner_message.startswith("cmsg_"):
+            raise SystemExit("gate-start needs the owner's message id (cmsg_...)")
+        worker.record(store, "gate_started", owner_message=a.owner_message, heartbeat_s=hb,
+                      criteria=gate.CRITERIA_VERSION)
+    elif a.cmd == "digest":
+        from . import director
+        from .handlers import render_digest
+        now = time.time()
+        print(render_digest(parse(store.sync()), now, a.day or director.day(now), hb))
+    elif a.cmd == "gate-report":
+        problems = store.audit_history()
+        events, now = parse(store.sync()), time.time()
+        if a.at:
+            now = datetime.fromisoformat(a.at).timestamp()
+            events = [e for e in events if health.ts(e) <= now]
+        print(json.dumps(gate.evaluate(events, now, problems, a.gate_seq), indent=1))
+    elif a.cmd == "acceptance":
+        r = acceptance.evaluate(parse(store.sync()), a.day, time.time(), code=a.code, minute=a.minute,
+                                refusals=a.refusal)
+        print(json.dumps(r, indent=1))
+        return 0 if r["verdict"] == "pass" else 1
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
