@@ -16,6 +16,7 @@ import gzip
 import hashlib
 import io
 import json
+import os
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -24,6 +25,7 @@ import edge_exec_prices
 import price_provenance as pp
 
 OUT_NAME = "daily_prices_to_2022.csv.gz"
+PROTECTED_ROOT = "/mnt/project-files/research-data"
 COLUMNS = ["symbol", "session_date", "close", "adjclose", "close_unadjusted", "split_basis", "available_at",
            "missing_reasons", "raw_sha256"]
 
@@ -89,19 +91,45 @@ def add_to_manifest(manifest_path: Path, name: str, blob: bytes, rows: int, prov
         raise ManifestError("manifest history would change")
     if any(m["provenance"].get(k) != v for k, v in before.get("provenance", {}).items()):
         raise ManifestError("manifest provenance would change")
+    # same format as edge_exec_prices writes (indent 1, unescaped, no trailing newline), so every existing line is
+    # kept byte for byte apart from the comma that a new entry adds (P33-8)
+    text = json.dumps(m, indent=1, ensure_ascii=False)
+    if json.dumps(before, indent=1, ensure_ascii=False) != old_text:
+        raise ManifestError("manifest is not in the expected format; refusing to rewrite it")
+    kept = set(text.splitlines())
+    lost = [ln for ln in old_text.splitlines() if ln not in kept and ln.rstrip(",") + "," not in kept]
+    if lost:
+        raise ManifestError(f"{len(lost)} existing manifest lines would change")
     tmp = manifest_path.with_name(manifest_path.name + ".tmp")
-    tmp.write_text(json.dumps(m, indent=1) + "\n")
+    tmp.write_text(text)
     tmp.replace(manifest_path)
     return m
+
+
+def check_out_dir(out_dir, approved_by: str | None) -> None:
+    """Refuse the live research-data folder unless an owner approval message id is given. The path is checked as
+    written first, so the refusal happens without touching that folder, then again after resolving symlinks."""
+    approved = isinstance(approved_by, str) and approved_by.startswith("cmsg_")
+    if approved:
+        return
+    root = os.path.normpath(PROTECTED_ROOT)
+    for p in (os.path.normpath(os.path.abspath(out_dir)), None):
+        if p is None:
+            p = str(Path(out_dir).resolve())
+        if p == root or p.startswith(root + os.sep):
+            raise ManifestError(f"{out_dir} is under {PROTECTED_ROOT}; writing there needs --approved-by cmsg_...")
 
 
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("--raw-index", type=Path, required=True)
     ap.add_argument("--out-dir", type=Path, required=True)
-    ap.add_argument("--sessions", type=Path, help="sourced session calendar CSV (optional; none exists yet)")
+    ap.add_argument("--sessions", type=Path, help="approved session calendar CSV (optional; none exists yet)")
+    ap.add_argument("--sessions-sha256", help="expected sha256 of --sessions")
+    ap.add_argument("--approved-by", help="owner approval message id (cmsg_...) for writing to live research data")
     a = ap.parse_args(argv)
-    sessions = pp.load_sessions(a.sessions) if a.sessions else None
+    check_out_dir(a.out_dir, a.approved_by)
+    sessions = pp.load_sessions(a.sessions, a.sessions_sha256) if a.sessions else None
     rows = build_rows(json.loads(a.raw_index.read_text()), sessions)
     out = a.out_dir / OUT_NAME
     if out.exists():

@@ -17,8 +17,9 @@ import price_provenance as pp  # noqa: E402
 import price_revisions as pr  # noqa: E402
 
 FX = Path(__file__).resolve().parent / "fixtures" / "prices"
-URL_SPLITS = "https://query1.finance.yahoo.com/v8/finance/chart/SYN?interval=1d&events=div%7Csplit"
-URL_PLAIN = "https://query1.finance.yahoo.com/v8/finance/chart/SYN?interval=1d"
+CUT = "period1=1640995200&period2=1672531200"
+URL_SPLITS = f"https://query1.finance.yahoo.com/v8/finance/chart/SYN?{CUT}&interval=1d&events=div%7Csplit"
+URL_PLAIN = f"https://query1.finance.yahoo.com/v8/finance/chart/SYN?{CUT}&interval=1d"
 T0, T1 = "2026-10-23T12:00:00+00:00", "2026-10-30T12:00:00+00:00"
 
 
@@ -69,15 +70,17 @@ def test_session_dates_come_from_the_exchange_time_zone():
         parse("chart_SYN_no_tz.json")
 
 
-# decision-time versus adjusted prices
-def test_decision_time_price_undoes_the_later_reverse_split():
+# decision-time versus adjusted prices (P33-1: replaces the earlier test that treated the inference as verified)
+def test_decision_time_price_undoes_the_later_reverse_split_but_is_flagged_unverified():
     recs = {r["session_date"]: r for r in parse("chart_SYN_pull1.json")["records"]}
     assert recs["2022-12-23"]["close"] == 10.0
     assert recs["2022-12-23"]["close_unadjusted"] == pytest.approx(1.0)
     assert recs["2022-12-28"]["close_unadjusted"] == pytest.approx(1.2)
     assert recs["2022-12-29"]["close_unadjusted"] == 13.0  # on and after the split day nothing changes
-    assert recs["2022-12-23"]["price_kinds"]["close_unadjusted"] == "decision_unadjusted"
-    assert recs["2022-12-23"]["split_basis"] == "vendor_reported"
+    for r in recs.values():
+        assert r["price_kinds"]["close_unadjusted"] == "decision_unadjusted_unverified"
+        assert r["split_basis"] == "vendor_reported_unverified"
+        assert "split_history_unverified" in r["missing_reasons"]
 
 
 def test_without_split_history_the_decision_price_is_null_not_the_adjusted_close():
@@ -92,19 +95,24 @@ def test_without_a_sourced_calendar_available_at_is_null():
         assert r["available_at"] is None and "close_time_unverified" in r["missing_reasons"]
 
 
-def test_close_times_come_from_the_calendar_including_early_closes():
-    cal = pp.load_sessions(FX / "sessions_synthetic.csv")
+def test_close_times_come_from_the_calendar_including_early_closes(monkeypatch):
+    h = hashlib.sha256((FX / "sessions_synthetic.csv").read_bytes()).hexdigest()
+    monkeypatch.setattr(pp, "APPROVED_CALENDARS", frozenset({h}))  # exercises the maths only; nothing is approved
+    cal = pp.load_sessions(FX / "sessions_synthetic.csv", h)
     recs = {r["session_date"]: r for r in parse("chart_SYN_pull1.json", sessions=cal)["records"]}
+    assert {r["calendar_sha256"] for r in recs.values()} == {h}
     assert recs["2022-12-23"]["available_at"] == "2022-12-23T18:00:00Z"   # 13:00 EST (synthetic early close)
     assert recs["2022-12-27"]["available_at"] == "2022-12-27T21:00:00Z"   # 16:00 EST
     assert recs["2022-12-30"]["available_at"] is None                      # not in the calendar
 
 
-def test_a_calendar_row_without_a_source_is_refused(tmp_path):
+def test_a_calendar_row_without_a_source_is_refused(tmp_path, monkeypatch):
     p = tmp_path / "cal.csv"
     p.write_text("date,close_et,source,source_retrieved_at\n2022-12-27,16:00,,\n")
+    h = hashlib.sha256(p.read_bytes()).hexdigest()
+    monkeypatch.setattr(pp, "APPROVED_CALENDARS", frozenset({h}))
     with pytest.raises(pp.PriceError):
-        pp.load_sessions(p)
+        pp.load_sessions(p, h)
 
 
 # 2-3. revision classes
@@ -201,11 +209,11 @@ def test_same_rows_give_the_same_file_bytes():
 
 def test_raw_responses_are_stored_once_by_hash(tmp_path):
     body = (FX / "chart_SYN_pull1.json").read_bytes()
-    p = pp.store_raw(body, tmp_path)
-    assert p.name == hashlib.sha256(body).hexdigest() and pp.store_raw(body, tmp_path) == p
+    p = pp.store_raw(body, tmp_path, URL_SPLITS)
+    assert p.name == hashlib.sha256(body).hexdigest() and pp.store_raw(body, tmp_path, URL_SPLITS) == p
     p.write_bytes(b"tampered")
     with pytest.raises(pp.PriceError):
-        pp.store_raw(body, tmp_path)
+        pp.store_raw(body, tmp_path, URL_SPLITS)
 
 
 def test_limitations_cover_survivorship_revisions_and_licence():

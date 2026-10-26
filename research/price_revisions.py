@@ -11,6 +11,18 @@ Classes:
 * `split_adjustment`     close and adjclose changed by the same common factor, under the same block rule;
 * `unexplained`          anything else (including a single changed value); reported, never hidden;
 * `new_row` / `dropped_row`  a session present in only one pull.
+
+Values within ADJUSTMENT_TOL (relative) of each other count as the same; such sub-tolerance changes are counted as
+`float_noise`, not reported as revisions (P33-5).
+
+Known limits, kept on the safe side by design:
+* One factor per class (P33-6, accepted exception). Two dividends between pulls rescale older sessions by two
+  different factors; the sessions that do not match the most common factor are classed `unexplained`. That is a
+  false alarm, never a hidden change. Piecewise factor blocks can come with the work package that approves live
+  pulls.
+* No persistence (P33-7, accepted exception). `compare()` returns events and writes nothing; an append-only
+  `price_revisions.jsonl` is deferred to the live-pull work package, because without a second real pull there is
+  nothing to persist.
 """
 from __future__ import annotations
 
@@ -29,6 +41,11 @@ def _same(a, b):
     return a is not None and b is not None and abs(a - b) <= ADJUSTMENT_TOL * max(1.0, abs(b))
 
 
+def _equal(a, b):
+    """Both missing, exactly equal, or equal within the relative tolerance."""
+    return a == b or _same(a, b)
+
+
 def compare(old: list[dict], new: list[dict]) -> dict:
     o = {r["session_date"]: r for r in old}
     n = {r["session_date"]: r for r in new}
@@ -41,12 +58,14 @@ def compare(old: list[dict], new: list[dict]) -> dict:
     for d in sorted(set(o) - set(n)):
         events.append({"session_date": d, "class": "dropped_row", "old_record_id": o[d]["record_id"]})
 
-    changed = {}
+    changed, noise = {}, 0
     for d in sorted(set(o) & set(n)):
         a, b = o[d], n[d]
-        close_same = a["close"] == b["close"]
-        adj_same = a["adjclose"] == b["adjclose"]
+        close_same = _equal(a["close"], b["close"])
+        adj_same = _equal(a["adjclose"], b["adjclose"])
         if close_same and adj_same:
+            if a["close"] != b["close"] or a["adjclose"] != b["adjclose"]:
+                noise += 1
             continue
         changed[d] = {"rc": None if close_same else _ratio(b["close"], a["close"]),
                       "ra": None if adj_same else _ratio(b["adjclose"], a["adjclose"]),
@@ -76,7 +95,7 @@ def compare(old: list[dict], new: list[dict]) -> dict:
     events.sort(key=lambda e: (e["session_date"], e["class"]))
     counts = Counter(e["class"] for e in events)
     return {"symbol": next(iter(sym), None), "events": events, "counts": dict(counts),
-            "unexplained": counts.get("unexplained", 0)}
+            "unexplained": counts.get("unexplained", 0), "float_noise": noise}
 
 
 def _block_ok(changed: dict, d: str, shared: list[str]) -> bool:
