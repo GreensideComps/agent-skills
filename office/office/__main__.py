@@ -1,4 +1,5 @@
-"""Command line: python3 -m office worker | status | digest | pause | resume | gate-start | gate-report | acceptance.
+"""Command line: python3 -m office worker | status | digest | pause | resume | gate-start | gate-report | acceptance |
+pm-propose | plan-draft.
 
 State lives on the `claude/office-state` branch (the claude/ prefix is the one cloud sessions may push to) of the repository's own remote (override with --state-remote). Nothing
 here places an order, reads a holdout or starts a research run; see handlers.py for everything a worker can do.
@@ -60,7 +61,32 @@ def main(argv: list[str] | None = None) -> int:
     ac.add_argument("--refusal", action="append", default=[], help="a refusal seen in a session record (repeatable)")
     dg = sub.add_parser("digest")
     dg.add_argument("--day", default=None)
+    sub.add_parser("pm-propose", help="print today's pm-1.0 proposal (proposal only; touches no state)")
+    pd = sub.add_parser("plan-draft", help="draft this week's research proposal for owner approval (D-T15)")
+    pd.add_argument("--candidate", required=True, help="JSON file with the candidate's fields")
+    pd.add_argument("--out-dir", default=str(REPO / "docs" / "edge" / "proposals"))
     a = ap.parse_args(argv)
+
+    if a.cmd == "plan-draft":
+        import datetime as dt
+        from . import planner
+        reg = REPO / "research" / "edge" / "trials.jsonl"
+        try:
+            if not reg.exists():
+                raise planner.PlannerError(f"trial registry {reg} is missing; prior-trial overlap cannot be computed")
+            events = [json.loads(x) for x in reg.read_text().splitlines() if x.strip()]
+            print(planner.draft(json.loads(Path(a.candidate).read_text()), events,
+                                dt.datetime.now(dt.timezone.utc).date(), Path(a.out_dir),
+                                also_check=(REPO / "docs" / "edge" / "proposals",)))
+        except planner.PlannerError as e:
+            print("REFUSED:", e)
+            return 2
+        return 0
+
+    if a.cmd == "pm-propose":
+        from . import pm
+        print(json.dumps(pm.from_repo(REPO), indent=1))
+        return 0
 
     remote = a.state_remote or origin()
     workdir = Path(a.workdir or tempfile.mkdtemp(prefix="office-state-"))

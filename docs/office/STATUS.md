@@ -1,5 +1,17 @@
 # Edge status (durable; updated each working session)
 
+**Current state, 26 Oct 2026** (supersedes the dated sections below, which are kept as written):
+
+- master `ef9004a` (PR #29 merged 23 Oct as `7d215e8`, then the 23 Oct equity pipeline commit) [V].
+- **G1 FAILED** on 21 Oct (longest heartbeat gap 6.02 h, limit 6.00 h), evaluated 10:01Z. The record and report are in
+  project files, `research/office/G1_GATE_RECORD_2026-10-20.md` and `gate_report_2026-10-21T1001Z.json`
+  (sha256 `1c125c01…`); neither is changed [V].
+- G2 has not started. Its criteria are on master (`RELIABILITY_GATE_G2.md`), and the acceptance day is targeted for
+  1 Nov [V].
+- Heartbeat: the minute-57 task only [V].
+- The always-on demo market agent (agent-1.0, PR #35) has been running since 26 Oct 08:39Z [V].
+- pm-1.0, paper-1.1 and the planner arrive with PR #27.
+
 Last updated: 2026-10-20 by the "Research office" thread. Labels: **[V]** verified directly in this session,
 **[T]** a test asserts it, **[A]** inference or report not re-checked.
 
