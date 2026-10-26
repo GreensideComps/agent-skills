@@ -320,6 +320,7 @@ def _settle(b):
 
 def test_satellite_rebalance_trims_pro_rata_then_buys_core(tmp_path):
     ag, b, st, clock = make(tmp_path, satellite=True, prices={"VWRP.L": 140.0})
+    ag.cfg["satellite"].update(target_weight=0.20, rebalance_above=0.22)  # the pro rata case (agent-1.1)
     _book(b)
     total = 17.0 + 150.0 + 6.0
     for _ in range(12):
@@ -426,3 +427,13 @@ def test_kill_rule_disables_a_strategy_that_trails_vwrp():
     assert "drop_rebound" in new
     assert active.kill_check(sc, cfg, new, "t") == {}                      # disabled once
     assert active.kill_check({"x": {**sc["drop_rebound"], "n": 29}}, cfg, {}, "t") == {}
+
+
+def test_target_zero_sells_every_passive_pick(tmp_path):
+    ag, b, st, clock = make(tmp_path, satellite=True, prices={"VWRP.L": 140.0})
+    _book(b)
+    for _ in range(12):
+        advance(ag, clock, 1, by=30)
+        _settle(b)
+    assert {p["instrument"]["ticker"] for p in b.pos} == set()
+    assert any(o[0] == "VWRPl_EQ" and o[1] > 0 for o in b.orders)

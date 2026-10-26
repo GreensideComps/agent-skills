@@ -214,7 +214,7 @@ class Agent:
                      max_weight=max((r["weight"] or 0 for r in rows), default=0), vs_vwrp=rel, rows=rows)
         lim = self.cfg["alerts"]
         for r in rows:
-            if r["weight"] and r["weight"] * 100 > lim["concentration_pct"]:
+            if r["weight"] and r["weight"] * 100 > lim["concentration_pct"] and r["ticker"] != self.cfg["benchmark"]["t212"]:
                 self.alert("warn", f"concentration:{r['ticker']}", f"{r['ticker']} is {r['weight']:.1%} of the portfolio")
             if r["cost_gbp"] and r["value_gbp"] / float(r["cost_gbp"]) - 1 < -lim["drawdown_from_cost_pct"] / 100:
                 self.alert("info", f"drawdown:{r['ticker']}",

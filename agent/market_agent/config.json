@@ -1,5 +1,5 @@
 {
-  "version": "agent-1.2",
+  "version": "agent-1.3",
   "note": "Always-on demo market agent. Demo account only (the client refuses any other host). Owner mandate: cmsg_01U4KMvkBYNknqm4HRVie8uvK9gRYqGXBK4bQP49dBz49i (26 Oct 2026).",
   "intervals_s": {
     "loop": 15,
@@ -69,8 +69,8 @@
       "ADBE_US_EQ"
     ],
     "max_order_gbp": 600.0,
-    "max_orders_per_day": 40,
-    "max_turnover_gbp_per_day": 2600.0,
+    "max_orders_per_day": 60,
+    "max_turnover_gbp_per_day": 3000.0,
     "max_consecutive_order_errors": 2,
     "fill_check_timeout_s": 900,
     "max_name_weight": 0.05,
@@ -86,13 +86,13 @@
   },
   "satellite": {
     "enabled": true,
-    "target_weight": 0.15,
-    "rebalance_above": 0.17,
+    "target_weight": 0.0,
+    "rebalance_above": 0.0,
     "single_name_cap": 0.05,
     "min_position_gbp": 2.0,
     "min_trade_gbp": 1.0,
     "qty_decimals": 4,
-    "rationale": "Decisions C2 and C6 (CEO mandate, 26 Oct 2026): 80% VWRP core. The passive picks are held at 15% of the book, trimmed pro rata with no validated ranking, and a pick worth under £2 after the trim is sold in full. The other 5% is cash for the active sleeve. No company may exceed 5% of the book."
+    "rationale": "Owner 26 Oct 15:09Z: the inherited picks need not be kept. No validated ranking exists, and they add a large tech overweight and single-stock risk on top of VWRP for no evidenced return, so they are sold in full. The book is VWRP plus the active sleeve."
   },
   "active": {
     "enabled": true,
@@ -114,7 +114,7 @@
       "ADBE_US_EQ"
     ],
     "entry_weight": 0.02,
-    "cash_reserve_weight": 0.05,
+    "cash_reserve_weight": 0.1,
     "qty_decimals": 4,
     "daily_loss_stop": 0.03,
     "freeze_loss": 0.25,
