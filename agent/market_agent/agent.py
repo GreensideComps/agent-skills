@@ -232,14 +232,40 @@ class Agent:
                 self.alert("info", f"move:{sym}", f"{sym} {mv:+.1%} on the day ({pc} -> {q['price']})")
 
     def decide(self) -> None:
-        """The only two actions agent-1.0 takes: the owner-authorised exits, and investing idle cash in the VWRP
-        core. Everything else is a recorded no-trade."""
+        """agent-1.1 takes three kinds of action, at most one order per pass (each waits for the last to resolve):
+        the authorised full exits, the satellite rebalance (pro rata trims to the target weight and the single-name
+        cap, from a plan fixed when the rebalance starts), and investing idle cash in the VWRP core once no sell is
+        outstanding. Everything else is a recorded no-trade."""
         day = feeds_ts(self.clock())[:10]
-        acted, notes = [], []
+        notes: list[str] = []
+        if execution.unresolved(self.s.intents()):
+            notes.append("waits: an earlier order is unresolved")
+            self.s.event("decision", orders=[], no_trade=True, notes=notes)
+            return
+        sells = self._exit_orders(notes) + self._rebalance_orders(notes)
+        order = None
+        if sells:
+            order = next((o for o in sells if self.market_open(o[0])), None)
+            if order is None:
+                notes.append(f"{len(sells)} sell(s) wait for their market to open")
+        else:
+            order = self._core_order(day, notes)
+        acted = [self._order(*order, day)] if order else []
+        self.s.event("decision", orders=[a for a in acted if a],
+                     no_trade=not any(a and a.get("status") == "placed" for a in acted), notes=notes)
+
+    def _quote(self, t212: str) -> dict | None:
+        sym = feeds.yahoo_symbol(t212, self.cfg["yahoo_overrides"])
+        return self.quotes.get(sym) if self.quote_state.get(sym) == "ok" else None
+
+    def _value(self, p: dict) -> float:
+        return float((p.get("walletImpact") or {}).get("currentValue") or 0)
+
+    def _exit_orders(self, notes: list[str]) -> list[tuple]:
+        out = []
         for t in self.cfg["exits"]["tickers"]:
             p = self.positions.get(t)
             if not p:
-                notes.append(f"{t}: not held")
                 continue
             avail = float(p.get("quantityAvailableForTrading") or 0)
             if avail <= 0:
@@ -247,39 +273,100 @@ class Agent:
                 self.alert("warn", f"exit_blocked_pie:{t}",
                            f"exit of {t} waits: its shares are inside a pie (the API cannot sell pie shares)")
                 continue
-            sym = feeds.yahoo_symbol(t, self.cfg["yahoo_overrides"])
-            q = self.quotes.get(sym) if self.quote_state.get(sym) == "ok" else None
-            px = float(p.get("currentPrice") or 0)
-            val = float((p.get("walletImpact") or {}).get("currentValue") or 0) * avail / float(p.get("quantity") or avail)
-            acted.append(self._order(t, -avail, val, px, q is not None, f"exit: {self.cfg['exits']['rationale']}",
-                                     {"type": "authorised_exit", "quote": q}, day))
-        cash = float(((self.summary or {}).get("cash") or {}).get("availableToTrade") or 0)
-        core = self.cfg["core"]
-        bt = self.cfg["benchmark"]["t212"]
-        core_today = [r for r in execution.today_orders(self.s.intents(), day)
-                      if (r.get("signal") or {}).get("type") == "core_invest"]
-        if core_today:
-            notes.append("core buy already made today; cash figures may lag the fill, so no second buy")
-        elif cash > core["invest_cash_above_gbp"] and not execution.unresolved(self.s.intents()):
-            sym = self.cfg["benchmark"]["yahoo"]
-            q = self.quotes.get(sym) if self.quote_state.get(sym) == "ok" else None
-            if q:
-                qty = math.floor((cash - core["cash_buffer_gbp"]) / q["price"] * 100) / 100
-                if qty > 0:
-                    acted.append(self._order(bt, qty, qty * q["price"], q["price"], True,
-                                             f"core: {core['rationale']} Cash £{cash:.2f} is idle.",
-                                             {"type": "core_invest", "quote": q, "cash": cash}, day))
-            else:
-                notes.append(f"core buy waits: no validated {sym} price ({self.quote_state.get(sym)})")
+            q = self._quote(t)
+            val = self._value(p) * avail / float(p.get("quantity") or avail)
+            out.append((t, -avail, val, float(p.get("currentPrice") or 0), q is not None,
+                        f"exit: {self.cfg['exits']['rationale']}", {"type": "authorised_exit", "quote": q}))
+        return out
+
+    def _satellite(self) -> dict[str, dict]:
+        skip = {self.cfg["benchmark"]["t212"], *self.cfg["exits"]["tickers"]}
+        return {t: p for t, p in self.positions.items() if t not in skip}
+
+    def _rebalance_orders(self, notes: list[str]) -> list[tuple]:
+        sat = self.cfg.get("satellite") or {}
+        if not sat.get("enabled"):
+            return []
+        total = float((self.summary or {}).get("totalValue") or 0)
+        if total <= 0:
+            return []
+        held = self._satellite()
+        plan = self.s.read("rebalance_plan.json")
+        if plan and plan.get("status") == "active":
+            pass
         else:
-            notes.append(f"cash £{cash:.2f}: below the £{core['invest_cash_above_gbp']:.0f} investing threshold"
-                         if cash <= core["invest_cash_above_gbp"] else "core buy waits for an unresolved order")
-        self.s.event("decision", orders=[a for a in acted if a], no_trade=not any(a and a.get("status") == "placed"
-                                                                                  for a in acted), notes=notes)
+            value = sum(self._value(p) for p in held.values())
+            cap = sat["single_name_cap"] * total
+            if value / total <= sat["rebalance_above"] and all(self._value(p) <= cap * 1.1 for p in held.values()):
+                return []
+            # Fix the targets once, so the trims converge however prices and the order of fills move.
+            f = min(1.0, sat["target_weight"] * total / value) if value else 1.0
+            targets = {}
+            for t, p in held.items():
+                v = self._value(p)
+                tv = min(v * f, cap)
+                qty = float(p.get("quantity") or 0)
+                targets[t] = {"value_now": round(v, 2), "target_value": round(tv, 2) if tv >= sat["min_position_gbp"] else 0.0,
+                              "target_qty": round(qty * tv / v, 8) if v and tv >= sat["min_position_gbp"] else 0.0}
+            plan = {"status": "active", "ts": feeds_ts(self.clock()), "total_gbp": total, "satellite_gbp": round(value, 2),
+                    "factor": round(f, 6), "rationale": sat["rationale"], "targets": targets}
+            self.s._replace("rebalance_plan.json", plan)
+            self.s.event("rebalance_plan", **plan)
+        out = []
+        for t, tg in plan["targets"].items():
+            p = held.get(t)
+            if not p:
+                continue
+            qty, avail = float(p.get("quantity") or 0), float(p.get("quantityAvailableForTrading") or 0)
+            v = self._value(p)
+            px = v / qty if qty else 0
+            sell = qty if tg["target_qty"] <= 0 else qty - tg["target_qty"]
+            if tg["target_qty"] > 0:
+                d = 10 ** sat["qty_decimals"]
+                sell = math.floor(sell * d) / d
+            sell = min(sell, avail)
+            if sell <= 0 or (tg["target_qty"] > 0 and sell * px < sat["min_trade_gbp"]):
+                continue
+            q = self._quote(t)
+            out.append((t, -sell, sell * px, float(p.get("currentPrice") or 0), q is not None,
+                        f"rebalance: {sat['rationale']} Target {tg['target_value']:.2f} GBP from {tg['value_now']:.2f}.",
+                        {"type": "satellite_trim", "plan_ts": plan["ts"], "target": tg, "quote": q}))
+        if not out:
+            plan = {**plan, "status": "done", "done_ts": feeds_ts(self.clock())}
+            self.s._replace("rebalance_plan.json", plan)
+            self.s.event("rebalance_done", plan_ts=plan["ts"])
+        return out
+
+    def _core_order(self, day: str, notes: list[str]) -> tuple | None:
+        cash = float(((self.summary or {}).get("cash") or {}).get("availableToTrade") or 0)
+        core, lim = self.cfg["core"], self.cfg["limits"]
+        bt = self.cfg["benchmark"]["t212"]
+        if cash <= core["invest_cash_above_gbp"]:
+            notes.append(f"cash £{cash:.2f}: below the £{core['invest_cash_above_gbp']:.0f} investing threshold")
+            return None
+        last = [r for r in execution.today_orders(self.s.intents(), day)
+                if (r.get("signal") or {}).get("type") == "core_invest"]
+        if last and self.clock() - max(float(r.get("t", 0)) for r in last) < core["cooldown_s"]:
+            notes.append("core buy cooling down: cash figures may lag the last fill")
+            return None
+        q = self._quote(bt)
+        if not q:
+            notes.append(f"core buy waits: no validated {self.cfg['benchmark']['yahoo']} price "
+                         f"({self.quote_state.get(self.cfg['benchmark']['yahoo'])})")
+            return None
+        spend = min((cash - core["cash_buffer_gbp"]) / (1 + core.get("buy_reserve", 0)), lim["max_order_gbp"])
+        qty = math.floor(spend / q["price"] * 100) / 100
+        if qty <= 0:
+            return None
+        return (bt, qty, qty * q["price"], q["price"], True, f"core: {core['rationale']} Cash £{cash:.2f} is idle.",
+                {"type": "core_invest", "quote": q, "cash": cash})
 
     def _order(self, ticker, qty, value, price, quote_ok, reason, signal, day):
         order = {"ticker": ticker, "quantity": qty, "value_gbp": abs(value), "price": price, "reason": reason,
                  "signal": signal}
+        total = float((self.summary or {}).get("totalValue") or 0)
+        if qty > 0 and total:
+            order["post_weight"] = (self._value(self.positions.get(ticker) or {}) + abs(value)) / total
         refusals = execution.risk_check(order, control=self.s.control(), records=self.s.intents(),
                                         pending=self.pending, positions=self.positions, limits=self.cfg["limits"],
                                         day=day, consecutive_errors=self.ex.consecutive_errors, quote_ok=quote_ok,
@@ -289,6 +376,8 @@ class Agent:
             return None  # the same refusal is recorded once, not every five minutes
         self.alerted.add(key)
         rec = self.ex.submit(order, refusals)
+        if rec["status"] == "placed":
+            self.due["broker"] = min(self.due.get("broker", 0), self.clock() + 20)  # confirm the fill quickly
         if rec["status"] in ("rejected", "ambiguous"):
             self.alert("critical", f"order_{rec['status']}:{rec['id']}", f"order {ticker} {qty}: {rec['status']}: "
                                                                           f"{rec.get('error', '')[:200]}")

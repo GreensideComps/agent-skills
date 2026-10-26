@@ -69,7 +69,7 @@ class FakeBroker:
 
     def instruments(self):
         return [{"ticker": "INTC_US_EQ", "workingScheduleId": 71}, {"ticker": "MSFT_US_EQ", "workingScheduleId": 71},
-                {"ticker": "VWRPl_EQ", "workingScheduleId": 70}]
+                {"ticker": "UBER_US_EQ", "workingScheduleId": 71}, {"ticker": "VWRPl_EQ", "workingScheduleId": 70}]
 
     def place_market_order(self, ticker, quantity):
         if self.fail_next:
@@ -115,13 +115,15 @@ def no_network(monkeypatch):
     monkeypatch.setattr(feeds.requests, "get", boom)
 
 
-def make(tmp_path, enabled=True, prices=None):
+def make(tmp_path, enabled=True, prices=None, satellite=False):
     clock = Clock()
     st = Store(tmp_path, clock=clock, sleep=lambda s: None)
     if enabled:
         st.set_control(True, "test", "test")
     b = FakeBroker(clock)
-    ag = agent_mod.Agent(st, b, agent_mod.load_config(), ambiguous_exc=Ambiguous, api_exc=ApiErr,
+    cfg = agent_mod.load_config()
+    cfg["satellite"]["enabled"] = satellite  # the older tests hold a 90% single-stock book on purpose
+    ag = agent_mod.Agent(st, b, cfg, ambiguous_exc=Ambiguous, api_exc=ApiErr,
                          get=fake_get(clock, prices), clock=clock, sleep=lambda s: None)
     st.acquire_lease()
     return ag, b, st, clock
@@ -160,7 +162,7 @@ def test_cash_goes_to_vwrp_core_only(tmp_path):
     ag, b, st, clock = make(tmp_path, prices={"VWRP.L": 140.0})
     b.cash = 100.0
     advance(ag, clock, 2)
-    assert b.orders == [("VWRPl_EQ", 0.67)]  # floor((100 - 5) / 140, 2 dp)
+    assert b.orders == [("VWRPl_EQ", 0.62)]  # floor((100 - 5) / 1.08 / 140, 2 dp): room for the broker's hold
 
 
 def test_kill_switch_and_missing_control_block_orders(tmp_path):
@@ -179,8 +181,8 @@ def test_market_closed_blocks_orders(tmp_path):
     b.pos[0] = pos("INTC_US_EQ", 0.2, 0.2, 0, 17.0, 20.0)
     advance(ag, clock, 1)
     assert b.orders == []
-    assert any("market closed" in r.get("refusals", [""])[0] or "market closed" in r.get("refusals", [])
-               for r in st.intents())
+    day = dt.datetime.fromtimestamp(clock.t, dt.timezone.utc).strftime("%Y-%m-%d")
+    assert any("wait for their market" in n for e in st.events(day) if e["kind"] == "decision" for n in e["notes"])
 
 
 def test_ambiguous_order_is_never_resent_and_blocks_trading(tmp_path):
@@ -290,3 +292,64 @@ def test_uptime_counts_gaps(tmp_path):
     u = uptime(st, T0 + 59 * 60, 1)
     assert len(u["gaps"]) == 1 and u["gaps"][0]["minutes"] == 11.0
     assert 0.80 < u["uptime"] < 0.82
+
+
+def _book(b, msft=150.0, cash=0.0):
+    b.cash = cash
+    b.pos = [pos("INTC_US_EQ", 0.2, 0.2, 0, 17.0, 20.0), pos("MSFT_US_EQ", 0.3, 0.3, 0, msft, 160.0),
+             pos("UBER_US_EQ", 0.1, 0.1, 0, 6.0, 6.0)]
+
+
+def _settle(b):
+    """Apply the fake broker's sells to its positions and cash, as the real broker would."""
+    for t, q in b.orders[len(getattr(b, "_done", [])):]:
+        for p in list(b.pos):
+            if p["instrument"]["ticker"] == t and q < 0:
+                v = p["walletImpact"]["currentValue"]
+                frac = -q / p["quantity"]
+                b.cash += v * frac
+                p["quantity"] += q
+                p["quantityAvailableForTrading"] += q
+                p["walletImpact"]["currentValue"] = v * (1 - frac)
+                if p["quantity"] <= 1e-9:
+                    b.pos.remove(p)
+    b._done = list(b.orders)
+
+
+def test_satellite_rebalance_trims_pro_rata_then_buys_core(tmp_path):
+    ag, b, st, clock = make(tmp_path, satellite=True, prices={"VWRP.L": 140.0})
+    _book(b)
+    total = 17.0 + 150.0 + 6.0
+    for _ in range(12):
+        advance(ag, clock, 1, by=30)
+        _settle(b)
+    sells = [o for o in b.orders if o[1] < 0]
+    assert sells[0] == ("INTC_US_EQ", -0.2)                       # the authorised exit goes first
+    assert ("UBER_US_EQ", -0.1) in sells                          # under £2 after the trim: sold in full
+    msft = next(p for p in b.pos if p["instrument"]["ticker"] == "MSFT_US_EQ")
+    assert msft["walletImpact"]["currentValue"] <= 0.05 * total + 0.01   # the 5% single-name cap binds
+    assert len([o for o in b.orders if o[0] == "MSFT_US_EQ"]) == 1       # one trim, never repeated
+    buys = [o for o in b.orders if o[1] > 0]
+    assert buys and all(o[0] == "VWRPl_EQ" for o in buys) and b.orders.index(buys[0]) > b.orders.index(sells[-1])
+    plan = st.read("rebalance_plan.json")
+    assert plan["status"] == "done" and plan["targets"]["UBER_US_EQ"]["target_qty"] == 0.0
+
+
+def test_sells_wait_for_their_market_and_block_the_core_buy(tmp_path):
+    ag, b, st, clock = make(tmp_path, satellite=True, prices={"VWRP.L": 140.0})
+    clock.t = T0 - 4 * 3600  # 11:00 UTC: LSE open, NASDAQ closed
+    _book(b, cash=100.0)
+    advance(ag, clock, 2, by=30)
+    assert b.orders == []  # US sells wait; the core buy waits for them
+    assert not [r for r in st.intents() if r.get("status") == "not_sent"]  # no refusal spam while waiting
+
+
+def test_single_name_cap_in_the_risk_gate():
+    lim = {**agent_mod.load_config()["limits"], "buy_whitelist": ["VWRPl_EQ", "MSFT_US_EQ"]}
+    base = dict(control={"trading_enabled": True}, records=[], pending=[], limits=lim, day="2026-10-27",
+                consecutive_errors=0, quote_ok=True, market_open=True, positions={})
+    assert "cap" in execution.risk_check({"ticker": "MSFT_US_EQ", "quantity": 1, "value_gbp": 5, "post_weight": 0.06},
+                                         **base)[0]
+    assert "cap" in execution.risk_check({"ticker": "MSFT_US_EQ", "quantity": 1, "value_gbp": 5}, **base)[0]  # unknown: refused
+    assert execution.risk_check({"ticker": "MSFT_US_EQ", "quantity": 1, "value_gbp": 5, "post_weight": 0.04}, **base) == []
+    assert execution.risk_check({"ticker": "VWRPl_EQ", "quantity": 1, "value_gbp": 5, "post_weight": 0.9}, **base) == []

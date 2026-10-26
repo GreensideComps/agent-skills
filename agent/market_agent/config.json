@@ -1,5 +1,5 @@
 {
-  "version": "agent-1.0",
+  "version": "agent-1.1",
   "note": "Always-on demo market agent. Demo account only (the client refuses any other host). Owner mandate: cmsg_01U4KMvkBYNknqm4HRVie8uvK9gRYqGXBK4bQP49dBz49i (26 Oct 2026).",
   "intervals_s": {
     "loop": 15,
@@ -36,29 +36,47 @@
     "tickers": [
       "INTC_US_EQ",
       "BE_US_EQ",
-      "TEM_US_EQ"
+      "TEM_US_EQ",
+      "IBTAl_EQ"
     ],
-    "rationale": "Demo exits authorised by the owner on 26 Oct 2026 (cmsg_01U4KMvkBYNknqm4HRVie8uv9v5pmAfwrJqmTEjzQ4uxCP item 3, restated in the 08:24Z handoff). They are the only sells that held up in /mnt/project-files/portfolio/2026-10-14-validation.md."
+    "rationale": "Full sells. INTC/BE/TEM: demo exits authorised by the owner on 26 Oct 2026 (cmsg_01U4KMvkBYNknqm4HRVie8uv9v5pmAfwrJqmTEjzQ4uxCP item 3). IBTAl_EQ: a cash-like bond ETF, sold into the VWRP core per decision C2 (research/office/DECISION_REGISTER.md)."
   },
   "core": {
     "rationale": "VWRP is the default core holding while no tactical strategy has passed the research gates (pm-1.0: pm_eligible.json is empty).",
     "invest_cash_above_gbp": 20.0,
-    "cash_buffer_gbp": 5.0
+    "cash_buffer_gbp": 5.0,
+    "buy_reserve": 0.08,
+    "cooldown_s": 600,
+    "note": "The broker holds roughly 4-8.5% extra cash on market buys (seen 13 Oct 2026), so a buy uses cash/(1+buy_reserve) and the rest follows in a later buy."
   },
   "limits": {
     "buy_whitelist": [
       "VWRPl_EQ"
     ],
     "max_order_gbp": 600.0,
-    "max_orders_per_day": 8,
-    "max_turnover_gbp_per_day": 1300.0,
+    "max_orders_per_day": 40,
+    "max_turnover_gbp_per_day": 2600.0,
     "max_consecutive_order_errors": 2,
-    "fill_check_timeout_s": 900
+    "fill_check_timeout_s": 900,
+    "max_name_weight": 0.05,
+    "cap_exempt": [
+      "VWRPl_EQ"
+    ]
   },
   "alerts": {
     "daily_move_pct": 5.0,
     "concentration_pct": 10.0,
     "fx_move_pct": 1.0,
     "drawdown_from_cost_pct": 15.0
+  },
+  "satellite": {
+    "enabled": true,
+    "target_weight": 0.2,
+    "rebalance_above": 0.22,
+    "single_name_cap": 0.05,
+    "min_position_gbp": 2.0,
+    "min_trade_gbp": 1.0,
+    "qty_decimals": 4,
+    "rationale": "Decision C2 (CEO mandate, 26 Oct 2026): 80% VWRP core, 20% satellite, at most 5% of the book per company. With no validated ranking, picks are trimmed pro rata; a pick worth under £2 after the trim is sold in full."
   }
 }

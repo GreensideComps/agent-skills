@@ -53,6 +53,10 @@ def risk_check(order: dict, *, control: dict, records: list[dict], pending: list
         why.append("invalid quantity")
     elif q > 0 and order["ticker"] not in limits["buy_whitelist"]:
         why.append(f"{order['ticker']} is not on the buy whitelist")
+    elif q > 0 and order["ticker"] not in limits.get("cap_exempt", []) and \
+            float(order.get("post_weight", 1.0)) > limits.get("max_name_weight", 1.0):
+        why.append(f"{order['ticker']} would be {float(order.get('post_weight', 1.0)):.1%} of the book "
+                   f"(single-name cap {limits['max_name_weight']:.0%})")
     elif q < 0:
         avail = float((positions.get(order["ticker"]) or {}).get("quantityAvailableForTrading") or 0)
         if -q > avail + 1e-9:
