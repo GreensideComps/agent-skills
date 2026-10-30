@@ -45,8 +45,11 @@ def portfolio(df, col, band="large", lag=0, every=1, cost=xs.COST_PER_TURNOVER):
         if len(s) < 30:
             continue
         if i % every == 0 or not held:
-            q = pd.qcut((-s[col]).rank(method="first"), 5, labels=False)
-            new = set(s.loc[q == 4, "cik"])
+            if s[col].nunique() == 1:  # a membership flag: hold every flagged name
+                new = set(s["cik"])
+            else:
+                q = pd.qcut((-s[col]).rank(method="first"), 5, labels=False)
+                new = set(s.loc[q == 4, "cik"])
             turn = 1.0 if not held else len(new - held) / max(len(new), 1)
             held = new
         else:
