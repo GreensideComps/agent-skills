@@ -5,14 +5,16 @@ without stopping the rest. Nothing here sends an order except `Executor.submit`,
 """
 from __future__ import annotations
 
+import calendar
 import json
 import math
 import time
 import traceback
 import uuid
 from pathlib import Path
+from urllib.parse import quote
 
-from . import active, execution, feeds, review
+from . import active, execution, feeds, review, social
 
 HERE = Path(__file__).resolve().parent
 
@@ -54,10 +56,10 @@ class Agent:
             return
         base = self.cfg["intervals_s"][name]
         try:
-            fn()
+            nxt = fn()  # a duty may ask to run again sooner than its interval, in seconds
             self.fail[name] = 0
             self.last_ok[name] = self.clock()
-            self.due[name] = now + base
+            self.due[name] = now + (nxt if isinstance(nxt, (int, float)) and not isinstance(nxt, bool) else base)
         except Exception as e:  # noqa: BLE001 - every duty is isolated; the failure is recorded and retried
             n = self.fail.get(name, 0) + 1
             self.fail[name] = n
@@ -86,6 +88,8 @@ class Agent:
             self._run("attention", self.refresh_attention)
         if self._watch() and ((self.cfg.get("active") or {}).get("review") or {}).get("enabled"):
             self._run("review", self.refresh_review)
+        if self._social():
+            self._run("social", self.refresh_social)
         if self.need_decide:  # decisions use this pass's positions and the prices fetched after them
             self.need_decide = False
             self._run_once("decide", self.decide)
@@ -253,12 +257,75 @@ class Agent:
             rows.append({k: v for k, v in rev.items() if k != "t"})
         self.s.event("review", rows=rows)
 
+    def refresh_social(self) -> float | None:
+        """social_trend (C8): once per Friday close, score every brand's Wikipedia attention and 20-day run-up and
+        keep the candidates in state/social.json. A partial scan is finished on the next run, never re-scored."""
+        sc = self._social()
+        now = self.clock()
+        fri = social.signal_friday(now)
+        scan = self.s.read("social.json") or {}
+        if scan.get("friday") != fri:
+            scan = {"friday": fri, "started": feeds_ts(now), "valid_until": social.valid_until(fri, sc["valid_days"]),
+                    "confirmation": social.CONFIRMATION, "rows": {}}
+        todo = [t for t in sorted(sc["universe"])
+                if t not in scan["rows"] or (scan["rows"][t].get("error") and scan["rows"][t].get("tries", 1) < 3)]
+        if not todo:
+            return None
+        fri_t = calendar.timegm(time.strptime(fri, "%Y-%m-%d"))
+        end = time.strftime("%Y%m%d", time.gmtime(min(fri_t, now - 86400)))  # whole days only, up to the Friday
+        start = time.strftime("%Y%m%d", time.gmtime(fri_t - 86400 * (28 + 7 * 52 + 14)))
+        done: list[str] = []
+        wait = None
+        for t in todo[:sc["brands_per_run"]]:  # a few brands per run, so the loop never stalls for long
+            self.s.renew_lease()
+            art = sc["universe"][t]
+            row = {"ticker": t, "article": art, "tries": (scan["rows"].get(t) or {}).get("tries", 0) + 1}
+            self.sleep(sc["pacing_s"])  # Wikimedia limits unidentified callers to 10 requests a minute
+            try:
+                row.update(social.attention(feeds.pageviews(quote(art, safe=""), start, end, get=self.wiki_get)) or {})
+            except Exception as e:  # noqa: BLE001 - one missing brand never stops the rest
+                if getattr(e, "retry_after", 0):  # rate-limited: stop here and come back when Wikimedia says
+                    wait = max(60.0, e.retry_after)
+                    break
+                row["error"] = str(e)[:120]
+            if "error" not in row:
+                try:
+                    closes, _ = review.history(feeds.yahoo_symbol(t, self.cfg["yahoo_overrides"]), self.get)
+                    r = social.run_up(closes)
+                    row["ret20"] = r if r is None else round(r, 4)
+                except Exception as e:  # noqa: BLE001
+                    row["price_error"] = str(e)[:120]
+            scan["rows"][t] = social.judge(row, sc)
+            done.append(t)
+        if not done:
+            return wait or sc["resume_s"]
+        scan["ts"] = feeds_ts(self.clock())
+        self.s._replace("social.json", scan)
+        errs = sorted(t for t, r in scan["rows"].items() if r.get("error"))
+        cands = sorted(t for t, r in scan["rows"].items() if r.get("candidate"))
+        self.s.event("social_scan", strategy=social.NAME, friday=fri, candidates=cands, errors=errs,
+                     confirmation=social.CONFIRMATION, rows=[scan["rows"][t] for t in done])
+        for t in cands:
+            if t in done:
+                self.s.event("social_signal", strategy=social.NAME, friday=fri, **scan["rows"][t])
+        if wait or len(done) < len(todo) or any(r.get("error") and r["tries"] < 3 for r in scan["rows"].values()):
+            return wait or sc["resume_s"]  # finish the scan sooner than the hourly cadence
+        return None
+
+    def _social(self) -> dict | None:
+        a = self.cfg.get("active") or {}
+        sc = a.get("social") or {}
+        return sc if a.get("enabled") and sc.get("enabled") else None
+
     def _gate(self, strategy: str, ticker: str):
         rev = self.reviews.get(ticker)
         ok, why = review.entry_ok(strategy, rev, self.cfg["active"]["review"], self.clock())
         return ok, why, rev
 
-    def _review_why(self, ticker: str) -> str | None:
+    def _review_why(self, ticker: str, strategy: str | None = None) -> str | None:
+        if strategy == social.NAME:  # C8 trades exit on their own attention rule, not the price review
+            sc = self._social() or self.cfg["active"].get("social")
+            return social.exit_why(self.s.read("social.json"), ticker, sc) if sc else None
         rc = self.cfg["active"]["review"]
         rev = self.reviews.get(ticker)
         if not rev or self.clock() - rev["t"] > rc["max_age_s"] or rev["scores"]["composite"] is None:
@@ -370,7 +437,9 @@ class Agent:
     # ------------------------------------------------------------ active sleeve (C6)
     def _watch(self) -> list[str]:
         a = self.cfg.get("active") or {}
-        return list(a.get("watchlist", [])) if a.get("enabled") else []
+        if not a.get("enabled"):
+            return []
+        return list(a.get("watchlist", [])) + sorted((self._social() or {}).get("universe", {}))
 
     def _active_exits(self, recs, vwrp_px) -> list[tuple]:
         if not self._watch():
@@ -469,6 +538,12 @@ class Agent:
         notes += n
         if any("FROZEN" in x for x in n):
             self.alert("critical", "active_frozen", n[0])
+        if self._social() and not active.sleeve_block(self.cfg, recs, self.positions, day, total):
+            so, n = social.entry_orders(self.cfg, recs, self.positions, self._quote, fxq["price"] if fxq else None,
+                                        total, cash, self.clock(), vwrp_px, disabled, self.s.read("social.json"),
+                                        self.reviews)
+            notes += n
+            orders += so
         return next((o for o in orders if self.market_open(o[0])), None)
 
     def _satellite(self) -> dict[str, dict]:

@@ -1,4 +1,4 @@
-# Always-on demo market agent (agent-1.5)
+# Always-on demo market agent (agent-1.6)
 
 **Mandate:** the owner's 26 Oct 2026 handoff (`cmsg_01U4KMvkBYNknqm4HRVie8uvK9gRYqGXBK4bQP49dBz49i`), covering
 the demo account only. The Trading 212 client refuses any host but `demo.trading212.com`, and `load_credentials`
@@ -88,6 +88,22 @@ before buys.
      `drop_rebound` needs long ≥ 0 and medium ≥ -0.3. No entry within 3 days of earnings, and none without a
      review under 6 hours old (missing data is UNVERIFIED).
    - Exits: an open trade whose composite falls to -0.35 or below exits early (`why: review`), on top of its stops.
+9. **social_trend** (agent-1.6, decision C8, owner 30 Oct 08:15Z, `social.py`, spec
+   `research/strategies/C8_SOCIAL_AND_MERGER_ARB.md`): a fixed universe of 32 US consumer brands
+   (`active.social.universe`, written 30 Oct before any signal), each mapped to its English Wikipedia article.
+   - After each Friday US close: the brand's 28-day mean of views vs the 28-day means ending each of the 52 weeks
+     before; a candidate needs z ≥ 3, the last 7 days above the 7 before, and the stock not up more than 15% over
+     20 trading days. Results go to `state/social.json` and `social_scan` / `social_signal` events.
+   - Google Trends (429) and Reddit (403) refuse this host, so candidates count as confirmed without them, as the
+     spec allows; every scan records that.
+   - Entry: 2% of the book at the next US session (until the Friday + 4 days), once per brand per week.
+   - Exits: -12% (also as a broker stop), +25%, 84 calendar days (60 trading days), or attention back below
+     baseline + 1 SD at the next weekly scan (`why: attention`). The price review neither gates nor exits these
+     trades, but its scores are logged on the entry.
+   - Wikimedia rate-limits this host's shared IP, so the scan goes 12 brands a run at 7 s pacing, honours
+     Retry-After, and resumes until done. A brand with no data gets no signal.
+   - **merger_arb is not built**: SEC EDGAR refuses automated requests without a User-Agent naming a contact email
+     (HTTP 403), and none is configured here.
 
 Every other pass is recorded as a `decision` with `no_trade: true` and its reasons.
 

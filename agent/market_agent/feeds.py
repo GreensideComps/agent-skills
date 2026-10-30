@@ -109,13 +109,16 @@ def fetch_news(query: str, get: Callable = http_get, count: int = 5) -> list[dic
 
 
 WIKI = "https://wikimedia.org/api/rest_v1/metrics/pageviews/per-article/en.wikipedia/all-access/user/{a}/daily/{s}/{e}"
-WIKI_UA = {"User-Agent": "market-agent/1.4 (demo research; github.com/GreensideComps/agent-skills)"}
+# Wikimedia's User-Agent policy asks for contact details as a full URL or an email; the repository URL is used.
+WIKI_UA = {"User-Agent": "market-agent/1.6 (https://github.com/GreensideComps/agent-skills; demo research) python-requests"}
 
 
 def wiki_get(url: str, params: dict, timeout: float = 20.0) -> dict:
     r = requests.get(url, params=params, headers=WIKI_UA, timeout=timeout)
     if r.status_code != 200:
-        raise FeedError(f"pageviews: HTTP {r.status_code}")
+        e = FeedError(f"pageviews: HTTP {r.status_code}")
+        e.retry_after = float(r.headers.get("Retry-After") or 0) if r.status_code == 429 else 0.0
+        raise e
     return r.json()
 
 

@@ -59,7 +59,8 @@ def strategy_scores(records: list[dict]) -> dict[str, dict]:
 
 def exit_orders(records, positions, quote_of, now, vwrp_px, review_why=None) -> list[tuple]:
     """Stop-loss, take-profit and time-stop exits for open trades whose price is validated, plus an early exit when
-    `review_why(ticker)` names one (agent-1.5: the multi-horizon review turned against the trade)."""
+    `review_why(ticker, strategy)` names one (agent-1.5: the multi-horizon review turned against the trade; agent-1.6:
+    a social_trend brand's attention faded)."""
     out = []
     for t in trades(records):
         if t["exit"]:
@@ -76,7 +77,7 @@ def exit_orders(records, positions, quote_of, now, vwrp_px, review_why=None) -> 
         ret = q["price"] / sig["entry_px"] - 1
         why = ("stop" if ret <= -sig["stop"] else "take_profit" if ret >= sig["take_profit"]
                else "time" if now - e.get("t", now) >= sig["time_stop_s"]
-               else (review_why(tk) if review_why else None))
+               else (review_why(tk, sig["strategy"]) if review_why else None))
         if why:
             v = float((p.get("walletImpact") or {}).get("currentValue") or 0)
             out.append((tk, -avail, v, float(p.get("currentPrice") or 0), True,
@@ -105,6 +106,17 @@ def sleeve_pnl(records, positions, day: str) -> tuple[float, float]:
     return today, total
 
 
+def sleeve_block(cfg, records, positions, day: str, total: float) -> str | None:
+    """Why the whole sleeve takes no new entries (the daily loss stop or the freeze), or None."""
+    a = cfg["active"]
+    today_pnl, cum_pnl = sleeve_pnl(records, positions, day)
+    if today_pnl <= -a["daily_loss_stop"] * total:
+        return f"active: no entries today, sleeve P&L £{today_pnl:.2f} hit the daily stop"
+    if cum_pnl <= -a["freeze_loss"] * a["sleeve_start_gbp"]:
+        return f"active: FROZEN, cumulative P&L £{cum_pnl:.2f} is {a['freeze_loss']:.0%} of the sleeve start"
+    return None
+
+
 def entry_orders(cfg, records, positions, quote_of, fx, total, cash, day, now, vwrp_px, disabled,
                  gate=None) -> tuple[list, list]:
     """Candidate entries, at most one per ticker per day, sized at `entry_weight` of the book. `gate(strategy,
@@ -112,11 +124,9 @@ def entry_orders(cfg, records, positions, quote_of, fx, total, cash, day, now, v
     traded. Returns (orders, notes)."""
     a = cfg["active"]
     notes: list[str] = []
-    today_pnl, cum_pnl = sleeve_pnl(records, positions, day)
-    if today_pnl <= -a["daily_loss_stop"] * total:
-        return [], [f"active: no entries today, sleeve P&L £{today_pnl:.2f} hit the daily stop"]
-    if cum_pnl <= -a["freeze_loss"] * a["sleeve_start_gbp"]:
-        return [], [f"active: FROZEN, cumulative P&L £{cum_pnl:.2f} is {a['freeze_loss']:.0%} of the sleeve start"]
+    block = sleeve_block(cfg, records, positions, day, total)
+    if block:
+        return [], [block]
     open_tk = {t["entry"]["ticker"] for t in trades(records) if not t["exit"]}
     tried = {r["ticker"] for r in execution.latest_intents(records).values()
              if (r.get("signal") or {}).get("type") == "active_entry" and r.get("ts", "").startswith(day)}

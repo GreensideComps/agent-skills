@@ -70,7 +70,8 @@ class FakeBroker:
     def instruments(self):
         return [{"ticker": "INTC_US_EQ", "workingScheduleId": 71}, {"ticker": "MSFT_US_EQ", "workingScheduleId": 71},
                 {"ticker": "JPM_US_EQ", "workingScheduleId": 71},
-                {"ticker": "UBER_US_EQ", "workingScheduleId": 71}, {"ticker": "VWRPl_EQ", "workingScheduleId": 70}]
+                {"ticker": "UBER_US_EQ", "workingScheduleId": 71}, {"ticker": "CROX_US_EQ", "workingScheduleId": 71},
+                {"ticker": "VWRPl_EQ", "workingScheduleId": 70}]
 
     def place_market_order(self, ticker, quantity):
         if self.fail_next:
@@ -131,6 +132,10 @@ def fake_get(clock, prices=None, falling=()):
         if url == feeds.SEARCH:
             return {"news": [{"uuid": f"n-{params['q']}", "title": "headline", "providerPublishTime": clock() - 60,
                               "relatedTickers": [params["q"]]}]}
+        if url.startswith("https://wikimedia.org/") and "Crocs" in url and url.endswith("/20261030"):  # attention takes off
+            n = 420
+            return {"items": [{"timestamp": "2026010100", "views": 1000 + 40 * (d % 5) if d < n - 28 else 2500 + 40 * (d - n + 28)}
+                              for d in range(n)]}
         if url.startswith("https://wikimedia.org/"):
             spike = "Oracle" in url
             return {"items": [{"timestamp": f"202610{d:02d}00", "views": 1000 + 13 * (d % 3) + (9000 if spike and d == 29 else 0)}
@@ -573,5 +578,63 @@ def test_review_turning_against_an_open_trade_exits_it():
     positions = {"JPM_US_EQ": pos("JPM_US_EQ", 0.2, 0.2, 0, 20.0, 20.0)}
     q = lambda t: {"price": 99.0}  # noqa: E731 - inside the stop and the take-profit
     assert active.exit_orders([e], positions, q, 3600.0, 140.0) == []
-    out = active.exit_orders([e], positions, q, 3600.0, 140.0, lambda t: "review")
+    out = active.exit_orders([e], positions, q, 3600.0, 140.0, lambda t, s: "review")
     assert len(out) == 1 and out[0][6]["why"] == "review" and out[0][1] == -0.2
+
+
+def test_social_attention_and_candidate_rules():
+    from market_agent import social
+    flat = [("d", 1000 + 40 * (d % 5)) for d in range(392)]
+    assert social.attention(flat[:300]) is None                               # not enough history: no signal
+    a = social.attention(flat)
+    assert abs(a["z"]) < 3
+    hot = social.attention(flat[:-28] + [("d", 2500 + 40 * d) for d in range(28)])
+    assert hot["z"] > 3 and hot["rising"]
+    sc = agent_mod.load_config()["active"]["social"]
+    assert social.judge({**hot, "ret20": 0.05}, sc)["candidate"]
+    assert not social.judge({**hot, "ret20": 0.20}, sc)["candidate"]           # the crowd got there first
+    assert not social.judge({**hot, "rising": False, "ret20": 0.0}, sc)["candidate"]
+    assert not social.judge({"error": "pageviews: HTTP 404"}, sc)["candidate"]  # missing data: no trade
+    fri = dt.datetime(2026, 10, 30, tzinfo=dt.timezone.utc).timestamp()
+    assert social.signal_friday(fri + 20 * 3600) == "2026-10-23"              # before Friday's close
+    assert social.signal_friday(fri + 21.5 * 3600) == "2026-10-30"
+    assert social.signal_friday(fri + 3 * 86400) == "2026-10-30"              # Monday
+    assert social.exit_why({"rows": {"X": {"z": 0.4}}}, "X", sc) == "attention"
+    assert social.exit_why({"rows": {"X": {"z": 2.0}}}, "X", sc) is None
+    assert social.exit_why(None, "X", sc) is None                             # unknown attention: hold
+
+
+def test_social_trend_scans_on_the_weekend_buys_monday_and_exits_when_attention_fades(tmp_path):
+    from market_agent import active
+    ag, b, st, clock = make(tmp_path, active_on=True, prices={"VWRP.L": 140.0, "GBPUSD=X": 1.25})
+    _active_book(b)
+    clock.t = dt.datetime(2026, 10, 31, 12, 0, tzinfo=dt.timezone.utc).timestamp()   # Saturday
+    advance(ag, clock, 4, by=150)
+    scan = st.read("social.json")
+    assert scan["friday"] == "2026-10-30" and len(scan["rows"]) == 32
+    assert [t for t, r in scan["rows"].items() if r["candidate"]] == ["CROX_US_EQ"]
+    assert "unavailable" in scan["confirmation"]
+    assert not [o for o in b.orders if o[0] == "CROX_US_EQ"]                 # markets shut at the weekend
+    clock.t = dt.datetime(2026, 11, 2, 15, 0, tzinfo=dt.timezone.utc).timestamp()    # Monday, NASDAQ open
+    advance(ag, clock, 1, by=30)
+    buys = [o for o in b.orders if o[0] == "CROX_US_EQ"]
+    assert len(buys) == 1 and buys[0][1] > 0
+    rec = next(r for r in execution.latest_intents(st.intents()).values() if r["ticker"] == "CROX_US_EQ")
+    sig = rec["signal"]
+    assert sig["strategy"] == "social_trend" and sig["stop"] == 0.12 and sig["take_profit"] == 0.25
+    assert sig["friday"] == "2026-10-30" and sig["attention"]["z"] > 3
+    b.pos.append(pos("CROX_US_EQ", buys[0][1], buys[0][1], 0, rec["value_gbp"], rec["value_gbp"]))
+    b.cash -= rec["value_gbp"]
+    advance(ag, clock, 1, by=301)
+    stop = [p for p in b.pending if p["ticker"] == "CROX_US_EQ"]
+    assert len(stop) == 1 and stop[0]["stopPrice"] == 88.0                    # the 12% broker stop
+    advance(ag, clock, 2, by=301)
+    assert len([o for o in b.orders if o[0] == "CROX_US_EQ"]) == 1            # bought once, held
+    st._replace("social.json", {**scan, "rows": {**scan["rows"], "CROX_US_EQ": {**scan["rows"]["CROX_US_EQ"], "z": 0.5}}})
+    advance(ag, clock, 3, by=301)
+    sells = [o for o in b.orders if o[0] == "CROX_US_EQ" and o[1] < 0]
+    assert sells == [("CROX_US_EQ", -buys[0][1])]
+    ex = next(r for r in execution.latest_intents(st.intents()).values()
+              if (r.get("signal") or {}).get("type") == "active_exit")
+    assert ex["signal"]["why"] == "attention" and ex["signal"]["strategy"] == "social_trend"
+    assert active.open_trades(st.intents()) == []
