@@ -65,3 +65,10 @@ zero, the tag is switched off on the demo.
 Most short-term strategies fail this rule; that is its job. The research so far: 0 of 15 Stage 2
 signals, B5 failed, 0 of 94 regime variants. A strategy that passes is rare, and even then the first
 real step is deliberately small.
+
+## Amendment 1 (30 Oct 2026 12:00Z, tightening only)
+
+The office thread confirmed the live trading tags: drop_rebound, breakout_momentum, social_trend,
+merger_arb, vol_squeeze, gap_go. drop_rebound is added to the count. attention_spike is logged
+forward only and never trades, but stays in the count (more conservative). k is now 7, so with 30
+trades the t-statistic needed is about 2.62.

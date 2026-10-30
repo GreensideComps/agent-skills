@@ -31,7 +31,7 @@ VWRP = "VWRPl_EQ"
 NON_STRATEGY_SELLS = {"satellite_trim", "authorised_exit", "core_invest"}
 # Every strategy tag ever switched on in the demo active sleeve. Killed tags stay
 # listed: they count towards the multiple-testing adjustment in the go-live rule.
-REGISTERED = ["breakout_momentum", "social_trend", "merger_arb", "vol_squeeze", "gap_go", "attention_spike"]
+REGISTERED = ["drop_rebound", "breakout_momentum", "social_trend", "merger_arb", "vol_squeeze", "gap_go", "attention_spike"]
 KILL_AFTER = 30
 GO_LIVE_MIN_TRADES = 30
 GO_LIVE_MIN_DAYS = 91
