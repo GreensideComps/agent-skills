@@ -59,11 +59,15 @@ def portfolio(df, col, band="large", lag=0, every=1, cost=xs.COST_PER_TURNOVER):
             turn = 0.0
         p = g[g["cik"].isin(held)]["ret_next"].mean()
         rows.append({"month": mo, "excess": p - g["ret_next"].mean() - 2 * cost * turn, "univ": g["ret_next"].mean()})
+    if not rows:  # no month had enough scored names (e.g. a large-cap-only score in the mid band)
+        return pd.DataFrame(columns=["excess", "univ"], index=pd.DatetimeIndex([], name="month"), dtype=float)
     return pd.DataFrame(rows).set_index("month")
 
 
 def stats(x: pd.Series) -> dict:
     x = x.dropna()
+    if len(x) < 3:
+        return {"months": len(x), "ann": float("nan"), "t_nw": None, "sr_m": float("nan"), "skew": 0.0, "kurt": 3.0}
     return {"months": len(x), "ann": float(x.mean() * 12), "t_nw": xs.newey_west_t(x),
             "sr_m": float(x.mean() / x.std()), "skew": float(x.skew()), "kurt": float(x.kurt() + 3)}
 
