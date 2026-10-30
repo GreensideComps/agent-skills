@@ -32,6 +32,7 @@ RATE_LIMITS = {
     "order_get": 1.1,
     "order_market": 1.3,       # 50 / min
     "order_limit": 2.1,        # 1 / 2s
+    "order_stop": 2.1,         # 1 / 2s
     "order_cancel": 1.3,       # 50 / min
     "history_orders": 3.1,     # 20 / min
     "history_dividends": 3.1,
@@ -169,6 +170,16 @@ class T212Client:
         return self._request("POST", "/api/v0/equity/orders/market", "order_market",
                              {"ticker": ticker, "quantity": quantity, "extendedHours": extended_hours},
                              is_order=True)
+
+    def place_stop_order(self, ticker: str, quantity: float, stop_price: float,
+                         time_validity: str = "GOOD_TILL_CANCEL") -> dict:
+        """A resting stop order at the broker (negative quantity sells). It fills at market once the price trades
+        at or through `stop_price`, in the instrument's currency, whether or not anything here is running."""
+        if not isinstance(ticker, str) or not ticker or quantity == 0 or not stop_price or stop_price <= 0:
+            raise SafetyError("invalid stop order")
+        return self._request("POST", "/api/v0/equity/orders/stop", "order_stop",
+                             {"ticker": ticker, "quantity": quantity, "stopPrice": stop_price,
+                              "timeValidity": time_validity}, is_order=True)
 
     def cancel_order(self, order_id: int) -> None:
         self._request("DELETE", f"/api/v0/equity/orders/{int(order_id)}", "order_cancel", is_order=True)
