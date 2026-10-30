@@ -1,0 +1,87 @@
+{
+ "recorded_at_utc": "2026-10-20T07:21Z",
+ "source": "list_triggers(enabled=false), read before deletion",
+ "authority": "owner message cmsg_01U4KMvkBYNknqm4HRVie8uvWBGcbQVLRwVrW8HKHTK5JK (2026-10-20 07:19Z), O10 item 1",
+ "branch_reference": "claude/trading212-agent-skills-r71zy3 (all four T212 tasks; the old brief names no branch)",
+ "not_in_scope": "trig_01T5SvciArD711wsDLswsPDA (Weekly Ledger Health-Check, disabled, unrelated) left untouched",
+ "tasks": [
+  {
+   "id": "trig_01Qh8CiQcWpUK4Jop7EvdEH4",
+   "name": "T212 demo: hourly trader + monitor",
+   "schedule": "CRON_TZ=Europe/London 57 7-20 * * 1-5",
+   "enabled": false,
+   "ended_reason": "",
+   "created_at": "2026-10-14T14:50:42Z",
+   "last_fired_at": "2026-10-14T14:57:59Z",
+   "last_run_status": "SUCCEEDED (wake delivered)",
+   "persistent_session_id": "session_01YUC5AUqbYMBJGFs6AXfj6u",
+   "command_summary": "bash trading/monitor_run.sh; python3 -m t212bot decide ... --execute; commit and push",
+   "prompt": "Hourly trading-decision and monitor run for the Trading 212 PRACTICE (demo) account (branch claude/trading212-agent-skills-r71zy3). The owner chose (2026-10-14) to have Claude trade the whole demo account intraday to make as much money as possible, 3x ETPs allowed. strategy.json is in mode \"discretionary\".\n\n1. Run: bash trading/monitor_run.sh  (sync + read-only checks; exit 0 ok, 1 warn, 2 critical). Read its output and alerts.\n2. If the LSE is open for trading (08:15-16:15 London, weekdays) and nothing CRITICAL is unresolved, make a decision:\n   - Gather real data only: intraday bars (Yahoo chart API, interval 5m/15m/60m) for QQQ, NQ=F, ES=F, GC=F, LQQ3.L, EQQQ.L, VUAG.L, SGLN.L, 3LGO.L; the 100-day trend state from the monitor; and a quick WebSearch for market-moving news today (Fed/CPI/earnings/geopolitics). Never invent numbers.\n   - Choose target weights over the universe in strategy.json decision_limits (LQQ3l_EQ, EQQQl_EQ, VUAGl_EQ, SGLNl_EQ, 3LGO1l_EQ), long-only, sum <= 1, or all cash. \"No change\" is a valid and often best decision: each switch costs roughly 0.1-0.3% in spread, so only trade when the expected move clearly exceeds that.\n   - If changing: cd trading && python3 -m t212bot decide --set TICKER=W ... --reason \"<data-based reason, 1-2 sentences>\" --execute   (or --cash). Then commit trading/config/discretionary_targets.json and trading/journal and push (rebase and retry on conflict).\n3. At the 20:57 run (after the US close): write a short scorecard in trading/journal/scorecard.md (append): today's account return vs B_live_rules_at_close (trend rule shadow) and A_benchmark_vwrp from `python3 -m t212bot report` / PERFORMANCE.md, decisions made, cumulative since 2026-10-14. Commit and push. Tell the owner plainly if discretionary trading is behind the trend rule.\n4. Notify the owner (one line) for each executed trade, any WARN/CRITICAL that needs attention, and the evening scorecard. Otherwise reply in one line and do not notify.\n5. Fix genuine bugs in trading/ with a regression test (cd trading && python3 -m pytest -q must pass).\n\nHard rules: orders only via `python3 -m t212bot decide` or the ops run; never weaken a safety check or the decision limits (max 8 decisions/day, -10% daily stop to cash); demo only - never contact live.trading212.com; respect trading/KILL; never print or commit credentials.",
+   "prompt_sha256": "df69ce996ea23a5b379f4f89a70882cc3f4078297e00bc82898cae0abc2b7d86"
+  },
+  {
+   "id": "trig_01HwinHAEB3cteN7zavwCGzQ",
+   "name": "T212 demo: hourly trader + monitor (older copy)",
+   "schedule": "CRON_TZ=Europe/London 57 7-20 * * 1-5",
+   "enabled": false,
+   "ended_reason": "",
+   "created_at": "2026-10-14T07:30:04Z",
+   "last_fired_at": "2026-10-14T13:58:02Z",
+   "last_run_status": "SUCCEEDED (wake delivered)",
+   "persistent_session_id": "session_01F4uFy8TB6eMUyemT5Ba7e8",
+   "command_summary": "bash trading/monitor_run.sh; python3 -m t212bot decide ... --execute; commit and push",
+   "prompt": "Hourly trading-decision and monitor run for the Trading 212 PRACTICE (demo) account (branch claude/trading212-agent-skills-r71zy3). The owner chose (2026-10-14) to have Claude trade the whole demo account intraday to make as much money as possible, 3x ETPs allowed. strategy.json is in mode \"discretionary\".\n\n1. Run: bash trading/monitor_run.sh  (sync + read-only checks; exit 0 ok, 1 warn, 2 critical). Read its output and alerts.\n2. If the LSE is open for trading (08:15-16:15 London, weekdays) and nothing CRITICAL is unresolved, make a decision:\n   - Gather real data only: intraday bars (Yahoo chart API, interval 5m/15m/60m) for QQQ, NQ=F, ES=F, GC=F, LQQ3.L, EQQQ.L, VUAG.L, SGLN.L, 3LGO.L; the 100-day trend state from the monitor; and a quick WebSearch for market-moving news today (Fed/CPI/earnings/geopolitics). Never invent numbers.\n   - Choose target weights over the universe in strategy.json decision_limits (LQQ3l_EQ, EQQQl_EQ, VUAGl_EQ, SGLNl_EQ, 3LGO1l_EQ), long-only, sum <= 1, or all cash. \"No change\" is a valid and often best decision: each switch costs roughly 0.1-0.3% in spread, so only trade when the expected move clearly exceeds that.\n   - If changing: cd trading && python3 -m t212bot decide --set TICKER=W ... --reason \"<data-based reason, 1-2 sentences>\" --execute   (or --cash). Then commit trading/config/discretionary_targets.json and trading/journal and push (rebase and retry on conflict).\n3. At the 20:57 run (after the US close): write a short scorecard in trading/journal/scorecard.md (append): today's account return vs B_live_rules_at_close (trend rule shadow) and A_benchmark_vwrp from `python3 -m t212bot report` / PERFORMANCE.md, decisions made, cumulative since 2026-10-14. Commit and push. Tell the owner plainly if discretionary trading is behind the trend rule.\n4. Notify the owner (one line) for each executed trade, any WARN/CRITICAL that needs attention, and the evening scorecard. Otherwise reply in one line and do not notify.\n5. Fix genuine bugs in trading/ with a regression test (cd trading && python3 -m pytest -q must pass).\n\nHard rules: orders only via `python3 -m t212bot decide` or the ops run; never weaken a safety check or the decision limits (max 8 decisions/day, -10% daily stop to cash); demo only - never contact live.trading212.com; respect trading/KILL; never print or commit credentials.",
+   "prompt_sha256": "df69ce996ea23a5b379f4f89a70882cc3f4078297e00bc82898cae0abc2b7d86"
+  },
+  {
+   "id": "trig_015u78BVGNK8bFDbg26cwcn8",
+   "name": "T212 demo: trading ops",
+   "schedule": "CRON_TZ=Europe/London 20 8 * * 1-5",
+   "enabled": false,
+   "ended_reason": "",
+   "created_at": "2026-10-13T12:51:01Z",
+   "last_fired_at": "2026-10-14T07:21:01Z",
+   "last_run_status": "SUCCEEDED (wake delivered)",
+   "persistent_session_id": "session_01F4uFy8TB6eMUyemT5Ba7e8",
+   "command_summary": "git sync; bash trading/ops_run.sh (python3 -m t212bot run --execute)",
+   "prompt": "Scheduled trading-ops run for the Trading 212 PRACTICE (demo) account bot (branch claude/trading212-agent-skills-r71zy3, already checked out in this session). The account owner authorised this bot to trade the demo account autonomously.\n\n1. Sync: git fetch origin claude/trading212-agent-skills-r71zy3 && git checkout claude/trading212-agent-skills-r71zy3 && git pull --rebase origin claude/trading212-agent-skills-r71zy3\n2. Check (without printing values) that T212_ENV equals \"demo\" and T212_API_KEY / T212_API_SECRET are set. If not, stop and report which is missing.\n3. Run exactly: bash trading/ops_run.sh   (tests, then `python3 -m t212bot run --execute` which trades only if a rebalance is due and the LSE is open, then regenerates trading/PERFORMANCE.md, commits the journal and pushes).\n4. Report briefly from its output, the newest trading/journal/events.jsonl entries and trading/PERFORMANCE.md: run status, orders/fills/slippage if any, account value vs shadow benchmarks, errors.\n5. On failure (non-zero exit, failed tests, run_failed, order_ambiguous, order_rejected): find the root cause; fix genuine bugs in trading/ with a regression test (cd trading && python3 -m pytest -q must pass), commit and push. Never weaken a safety check.\n\nHard rules: demo only - never contact live.trading212.com; never place/modify/cancel orders except via `python3 -m t212bot`; never print or commit credentials; respect trading/KILL. If nothing noteworthy happened, keep the report to two lines, and send a push notification only for trades, failures or anything needing the owner's attention.",
+   "prompt_sha256": "8b154fe08bc55bfea6b7f501a3e0a038af374b8119caf4fb2d493f33682e2809"
+  },
+  {
+   "id": "trig_019cbvFKHAnfuPE24Bqexu9L",
+   "name": "T212 demo: research loop",
+   "schedule": "CRON_TZ=Europe/London 13 1,13 * * *",
+   "enabled": false,
+   "ended_reason": "",
+   "created_at": "2026-10-13T12:51:41Z",
+   "last_fired_at": "2026-10-14T12:14:17Z",
+   "last_run_status": "SUCCEEDED (wake delivered)",
+   "persistent_session_id": "session_01F4uFy8TB6eMUyemT5Ba7e8",
+   "command_summary": "git sync; follow research/LOOP.md (may change trading/config/strategy.json via PROMOTION_GATE)",
+   "prompt": "Research-loop run for the self-improving quantitative research system of the £100 Trading 212 PRACTICE (demo) account (branch claude/trading212-agent-skills-r71zy3, checked out in this session). The account owner asked for continuous research that keeps finding and testing better approaches until they say stop.\n\nFirst: git fetch origin claude/trading212-agent-skills-r71zy3 && git checkout claude/trading212-agent-skills-r71zy3 && git pull --rebase origin claude/trading212-agent-skills-r71zy3\n\nThen follow research/LOOP.md exactly: pick the next item from research/AGENDA.md, research it rigorously (pre-registered grids, costs, out-of-sample tests, bootstrap vs the champion, deflated Sharpe with the cumulative trial count), and apply research/PROMOTION_GATE.md before anything may change trading/config/strategy.json. Reuse code in research/ and trading/. Context: an earlier test run (2026-10-13) reached these conclusions but could not push them, so re-run them properly here: P1 volatility-managed momentum - rejected (DSR 0.86-0.90 < 0.90, no edge on the real ETFs); P2 trend-filtered momentum sleeve - rejected (lower OOS CAGR than champion; insurance only).\n\nHard rules: demo only - never contact live.trading212.com; never place, modify or cancel orders (the ops run trades); never invent data or results - every number must come from code you ran and committed; never print or commit credentials; if research/STOP exists, log that and end. Prefer 'no change' when in doubt. Commit and push (rebase and retry on conflict). Finish with a 5-line summary: item, what ran, key numbers, decision, next item. Push-notify the owner only if a challenger enters shadow or is promoted, or if something is broken.",
+   "prompt_sha256": "19a8a865088ce124f0f73d3284592d59cf56e42587de6ed809257ca7bdd34ecc"
+  },
+  {
+   "id": "trig_0188Bhwdq38sQhN9zZAauah7",
+   "name": "Weekday portfolio brief (old)",
+   "schedule": "45 6 * * 1-5 (UTC)",
+   "enabled": false,
+   "ended_reason": "",
+   "created_at": "2026-10-14T13:36:35Z",
+   "last_fired_at": "2026-10-15T06:47:02Z",
+   "last_run_status": "SUCCEEDED (wake delivered)",
+   "persistent_session_id": "session_01Qu7Muapiow7aAhQ6UXjvgp",
+   "command_summary": "read-only portfolio/watchlist brief (no orders)",
+   "prompt": "Using the Trading 212 tools in GreensideComps/agent-skills, read the portfolio and watchlist (read-only, no orders). Post a short brief: positions, notable moves, upcoming earnings, and any risk flags.",
+   "prompt_sha256": "aaa0302e11237e3aa489b14c5f266d20a96bf21d831a709e6c44e774908670c2"
+  }
+ ],
+ "deletion": {
+  "authority": "owner tapped 'Delete all five' on the decision card at 2026-10-20T07:31:56Z (card cmsg_01U4KMvkBYNknqm4HRVie8uvPQBeCw8iNbV4C7h8YZ8SJC)",
+  "deleted_at_utc": "2026-10-20T07:32Z",
+  "method": "delete_trigger, one call per id; each returned 'Deleted: it will not run again'",
+  "verified": "list_triggers after deletion lists none of the five ids; remaining tasks: weekday brief trig_012o3Bc5Ja2PiD7rvx2Fzrmd, monthly signal log trig_014YqFuWkepFLFUzGchCbRWk, equity daily pipeline trig_01PYai2PEsqMTtFSMDCD99BY, weekly stock discovery trig_015scjHUCMP5NZDTQVcPxJrT (all enabled, unchanged) and the unrelated disabled trig_01T5SvciArD711wsDLswsPDA (unchanged)",
+  "sessions_after_deletion": "session_01F4uFy8TB6eMUyemT5Ba7e8, session_01YUC5AUqbYMBJGFs6AXfj6u and session_01Qu7Muapiow7aAhQ6UXjvgp still returned by get_session at ~07:33Z",
+  "permissions": "no trading permission, environment variable, credential or other scheduled task was changed"
+ }
+}
