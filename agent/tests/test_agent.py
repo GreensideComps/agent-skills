@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import datetime as dt
+import time
 import sys
 from pathlib import Path
 
@@ -638,3 +639,87 @@ def test_social_trend_scans_on_the_weekend_buys_monday_and_exits_when_attention_
               if (r.get("signal") or {}).get("type") == "active_exit")
     assert ex["signal"]["why"] == "attention" and ex["signal"]["strategy"] == "social_trend"
     assert active.open_trades(st.intents()) == []
+
+
+DEAL_8K = ("Acme Corp entered into an Agreement and Plan of Merger with Parent. Each share will be converted into the "
+           "right to receive $20.00 per share in cash, without interest. The transaction is expected to close in the "
+           "first quarter of 2027, subject to customary conditions.")
+DEAL_PROXY = ("PROXY. The merger agreement provides that each share of Acme common stock will be converted into the right "
+              "to receive $20.00 per share in cash. If Parent receives an unsolicited proposal, the board may recommend "
+              "that stockholders reject such tender offer. We expect the merger to be completed in the first quarter "
+              "of 2027.")
+
+
+def _efts(hits):
+    return {"hits": {"hits": [{"_id": f"{a}:{f}", "_source": {"form": form, "file_date": d, "file_type": ft,
+                                                               "items": items, "display_names": [name]}}
+                              for a, f, form, d, ft, items, name in hits]}}
+
+
+def test_merger_filings_parse_and_deal_filters():
+    from market_agent import merger
+    p = merger.parse(DEAL_PROXY, "DEFM14A")
+    assert p["price"] == 20.0 and p["agreement"] and not p["mixed"] and not p["hostile"]   # boilerplate is not hostile
+    assert time.gmtime(p["close"])[:3] == (2027, 3, 31)
+    mixed = merger.parse("Agreement and Plan of Merger: $10.00 per share in cash and 0.5 shares of Parent stock.")
+    assert mixed["mixed"]
+    rej = merger.parse("The Board unanimously recommends that stockholders reject the Offer. Agreement", "SC 14D9")
+    assert rej["hostile"]
+    name = "Acme Corp  (ACME)  (CIK 0000000123)"
+    hits = merger.search(lambda u, p: _efts([("0001-26-1", "p.htm", "DEFM14A", "2026-10-01", "DEFM14A", [], name),
+                                             ("0001-26-2", "k.htm", "8-K", "2026-09-01", "8-K", ["1.01"], name)]),
+                         "2026-05-01", "2026-10-30")
+    assert hits[0]["target"] == {"ticker": "ACME", "cik": "0000000123", "name": "Acme Corp"}
+    docs = {hits[0]["id"]: p, hits[1]["id"]: merger.parse(DEAL_8K, "8-K")}
+    d = merger.build_deals(hits, docs, lambda tk: tk + "_US_EQ")["ACME_US_EQ"]
+    assert d["eligible"] and d["offer"] == 20.0
+    only_8k = merger.build_deals(hits[1:], docs, lambda tk: tk + "_US_EQ")
+    assert only_8k == {}                                                        # an 8-K alone may be the acquirer's
+    one = merger.build_deals(hits[:1], docs, lambda tk: tk + "_US_EQ")["ACME_US_EQ"]
+    assert not one["eligible"] and "two filings" in one["why"]
+    cfg = agent_mod.load_config()
+    now = dt.datetime(2026, 11, 2, 15, tzinfo=dt.timezone.utc).timestamp()
+    st = {"deals": {"ACME_US_EQ": d}}
+    q = lambda px: (lambda t: {"price": px})  # noqa: E731
+    args = (cfg, [], {}, None, 1.25, 1000.0, 100.0, "2026-11-02", now, 140.0, {})
+    o, _ = merger.entry_orders(*args[:3], q(19.0), *args[4:], st)
+    assert len(o) == 1 and o[0][6]["strategy"] == "merger_arb" and o[0][6]["stop"] == 0.10   # 5.3% to March: ok
+    assert merger.entry_orders(*args[:3], q(19.9), *args[4:], st)[0] == []     # 0.5% spread: too thin
+    assert merger.entry_orders(*args[:3], q(15.0), *args[4:], st)[0] == []     # 33%: the market doubts it
+    assert merger.entry_orders(*args[:3], q(19.0), *args[4:], {**st, "terminated": {"ACME_US_EQ": {}}})[0] == []
+
+
+def test_merger_arb_buys_an_agreed_deal_and_exits_on_termination(tmp_path):
+    from market_agent import merger
+    ag, b, st, clock = make(tmp_path, active_on=True, prices={"VWRP.L": 140.0, "GBPUSD=X": 1.25, "ACME": 19.0})
+    _active_book(b)
+    b.instruments_extra = True
+    name = "Acme Corp  (ACME)  (CIK 0000000123)"
+    term = []
+
+    def sec(url, params):
+        if url == merger.EFTS and params.get("forms") == "8-K":
+            return _efts(term)
+        if url == merger.EFTS:
+            return _efts([("0001-26-1", "p.htm", "DEFM14A", "2026-10-01", "DEFM14A", [], name),
+                          ("0001-26-2", "k.htm", "8-K", "2026-09-01", "8-K", ["1.01"], name)])
+        return DEAL_PROXY if url.endswith("p.htm") else DEAL_8K
+    ag.sec_get = sec
+    ag.schedule_of["ACME_US_EQ"] = 71
+    orig = b.instruments
+    b.instruments = lambda: orig() + [{"ticker": "ACME_US_EQ", "workingScheduleId": 71}]
+    advance(ag, clock, 3, by=301)
+    assert st.read("merger.json")["deals"]["ACME_US_EQ"]["eligible"]
+    buys = [o for o in b.orders if o[0] == "ACME_US_EQ"]
+    assert len(buys) == 1 and buys[0][1] > 0
+    rec = next(r for r in execution.latest_intents(st.intents()).values() if r["ticker"] == "ACME_US_EQ")
+    b.pos.append(pos("ACME_US_EQ", buys[0][1], buys[0][1], 0, rec["value_gbp"], rec["value_gbp"]))
+    b.cash -= rec["value_gbp"]
+    advance(ag, clock, 1, by=301)
+    assert [p for p in b.pending if p["ticker"] == "ACME_US_EQ"][0]["stopPrice"] == 17.1   # the 10% broker stop
+    term.append(("0001-26-9", "t.htm", "8-K", iso(clock())[:10], "8-K", ["1.02", "9.01"], name))
+    clock.t = T0 + 86400                                                              # next day: a new deal scan, market open
+    advance(ag, clock, 3, by=301)
+    ex = next(r for r in execution.latest_intents(st.intents()).values()
+              if (r.get("signal") or {}).get("type") == "active_exit")
+    assert ex["signal"]["why"] == "deal_terminated"

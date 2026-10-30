@@ -138,3 +138,32 @@ def attention_z(series: list[tuple[str, int]], lookback: int) -> dict | None:
     sd = (sum((x - mu) ** 2 for x in base) / (len(base) - 1)) ** 0.5
     return {"day": series[-1][0], "views": series[-1][1], "base_mean": round(math.expm1(mu)),
             "z": round((last - mu) / sd, 2) if sd > 0 else None}
+
+
+def sec_user_agent(state_dir) -> str | None:
+    """The SEC contact User-Agent ("<app> <email>"), from SEC_USER_AGENT or state/sec_user_agent.txt; never in git."""
+    import os
+    from pathlib import Path
+    ua = os.environ.get("SEC_USER_AGENT")
+    if not ua:
+        f = Path(state_dir) / "sec_user_agent.txt"
+        ua = f.read_text().strip() if f.exists() else None
+    return ua if ua and "@" in ua else None
+
+
+def sec_get(ua: str, max_bytes: int = 3_000_000) -> Callable:
+    """A getter for SEC EDGAR that sends only to sec.gov hosts, with the declared User-Agent: JSON for full-text
+    search, the first `max_bytes` of text for an archived filing."""
+    def get(url: str, params: dict) -> dict | str:
+        if not url.startswith(("https://efts.sec.gov/", "https://www.sec.gov/")):
+            raise FeedError("sec_get refuses a non-SEC host")
+        r = requests.get(url, params=params, headers={"User-Agent": ua, "Accept-Encoding": "gzip, deflate"},
+                         timeout=30, stream=True)
+        if r.status_code != 200:
+            raise FeedError(f"sec: HTTP {r.status_code}")
+        if url.startswith("https://efts.sec.gov/"):
+            return r.json()
+        body = r.raw.read(max_bytes, decode_content=True)
+        r.close()
+        return body.decode(r.encoding or "utf-8", errors="replace")
+    return get

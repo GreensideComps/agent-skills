@@ -14,7 +14,7 @@ import uuid
 from pathlib import Path
 from urllib.parse import quote
 
-from . import active, execution, feeds, review, social
+from . import active, execution, feeds, merger, review, social
 
 HERE = Path(__file__).resolve().parent
 
@@ -25,7 +25,8 @@ def load_config(path: Path | None = None) -> dict:
 
 class Agent:
     def __init__(self, store, client, cfg: dict, *, ambiguous_exc, api_exc, get=feeds.http_get,
-                 clock=time.time, sleep=time.sleep):
+                 clock=time.time, sleep=time.sleep, sec_get=None):
+        self.sec_get = sec_get  # SEC EDGAR getter; built from the contact User-Agent on first use when not injected
         self.s, self.c, self.cfg, self.get, self.clock, self.sleep = store, client, cfg, get, clock, sleep
         self.ex = execution.Executor(store, client, ambiguous_exc, api_exc)
         self.wiki_get = feeds.wiki_get if get is feeds.http_get else get
@@ -48,6 +49,7 @@ class Agent:
         self.attn: dict[str, float] = {}     # last Wikipedia attention z per T212 ticker
         self.earn: dict[str, str] = {}
         self.earn_t = 0.0
+        self.mstate: dict = store.read("merger.json") or {}  # merger_arb deals, terminations, watch list
 
     # ------------------------------------------------------------ scheduling
     def _run(self, name: str, fn) -> None:
@@ -90,6 +92,8 @@ class Agent:
             self._run("review", self.refresh_review)
         if self._social():
             self._run("social", self.refresh_social)
+        if self._merger():
+            self._run("merger", self.refresh_merger)
         if self.need_decide:  # decisions use this pass's positions and the prices fetched after them
             self.need_decide = False
             self._run_once("decide", self.decide)
@@ -312,6 +316,81 @@ class Agent:
             return wait or sc["resume_s"]  # finish the scan sooner than the hourly cadence
         return None
 
+    def refresh_merger(self) -> float | None:
+        """merger_arb (C8): find agreed all-cash takeovers in SEC EDGAR, read their filings (cached, a few per run),
+        and keep the deal list in state/merger.json; flag terminations and record deals that closed."""
+        mc = self._merger()
+        if self.sec_get is None:
+            ua = feeds.sec_user_agent(self.s.root)
+            if not ua:
+                if "merger_no_ua" not in self.alerted:
+                    self.alerted.add("merger_no_ua")
+                    self.s.event("merger_scan", strategy=merger.NAME, skipped="no SEC contact User-Agent configured")
+                return None
+            self.sec_get = feeds.sec_get(ua)
+        get, now = self.sec_get, self.clock()
+        day = lambda t: time.strftime("%Y-%m-%d", time.gmtime(t))  # noqa: E731
+        hits = merger.search(get, day(now - mc["lookback_days"] * 86400), day(now))
+        st = {"docs": {}, "terminated": {}, "gone": {}, **(self.s.read("merger.json") or {})}
+        docs = {k: v for k, v in st["docs"].items() if k in {h["id"] for h in hits}}
+        tciks = {h["target"]["cik"] for h in hits if merger.is_target_form(h["form"])}
+        todo = [h for h in sorted(hits, key=lambda h: h["date"], reverse=True)
+                if h["target"]["cik"] in tciks and h["id"] not in docs]
+        for h in todo[:mc["docs_per_run"]]:
+            self.s.renew_lease()
+            self.sleep(mc["pacing_s"])  # well under the SEC's 10 requests a second
+            try:
+                docs[h["id"]] = merger.parse(merger.text_of(get(h["url"], {})), h["form"])
+            except Exception as e:  # noqa: BLE001 - an unreadable filing confirms nothing
+                docs[h["id"]] = {"error": str(e)[:120], "price": None, "mixed": False, "hostile": False,
+                                 "agreement": False, "close": None}
+        known = self.schedule_of
+
+        def tradeable(tk):
+            t = f"{tk}_US_EQ"
+            return t if t in known else None
+        deals = merger.build_deals(hits, docs, tradeable)
+        recs = self.s.intents()
+        vw = self.quotes.get(self.cfg["benchmark"]["yahoo"])
+        fxq = self.quotes.get(self.cfg["benchmark"]["fx"])
+        for e in merger.open_deals(recs):
+            tk, tgt, since = e["ticker"], e["signal"]["target"], e.get("ts", "")[:10]
+            if tk not in st["terminated"]:
+                self.sleep(mc["pacing_s"])
+                th = merger.search(get, since, day(now), pages=1, q='"merger agreement"', forms="8-K",
+                                   ciks=tgt["cik"].zfill(10))
+                t = merger.terminated(th, tgt["cik"], since)
+                if t:
+                    st["terminated"][tk] = {"ts": feeds_ts(now), "filing": t["id"], "date": t["date"]}
+                    self.s.event("merger_terminated", strategy=merger.NAME, ticker=tk, filing=t["id"])
+                    self.alert("warn", f"merger_terminated:{tk}", f"{tk}: target filed a termination 8-K; exiting")
+            if tk in self.positions:
+                st["gone"].pop(e["id"], None)
+                continue
+            first = st["gone"].setdefault(e["id"], now)
+            if now - first >= mc["closed_after_s"]:  # shares gone for a day with no sell of ours: cashed out
+                rec = self.s.intent(id=uuid.uuid4().hex, **merger.closed_exit_record(
+                    e, fxq["price"] if fxq else None, vw["price"] if vw else None))
+                self.s.event("order_outcome", intent=rec["id"], status="filled", via="deal_closed", estimated=True)
+                self.alert("info", f"merger_closed:{tk}", f"{tk}: deal closed, cash-out recorded at the offer")
+                st["gone"].pop(e["id"], None)
+        open_tk = {e["ticker"] for e in merger.open_deals(self.s.intents())}
+        st.update(ts=feeds_ts(now), docs=docs, deals=deals,
+                  watch=sorted({t for t, d in deals.items() if d["eligible"]} | open_tk))
+        self.s._replace("merger.json", st)
+        if st["watch"] != self.mstate.get("watch"):
+            self.due["prices"] = 0  # price newly found deals before the next decision
+        self.mstate = st
+        self.s.event("merger_scan", strategy=merger.NAME, hits=len(hits), read=len(docs), deals=len(deals),
+                     eligible={t: {k: d[k] for k in ("offer", "close")} for t, d in deals.items() if d["eligible"]},
+                     skipped={t: d["why"] for t, d in deals.items() if not d["eligible"]})
+        return mc["resume_s"] if len(todo) > mc["docs_per_run"] else None
+
+    def _merger(self) -> dict | None:
+        a = self.cfg.get("active") or {}
+        mc = a.get("merger") or {}
+        return mc if a.get("enabled") and mc.get("enabled") else None
+
     def _social(self) -> dict | None:
         a = self.cfg.get("active") or {}
         sc = a.get("social") or {}
@@ -323,6 +402,8 @@ class Agent:
         return ok, why, rev
 
     def _review_why(self, ticker: str, strategy: str | None = None) -> str | None:
+        if strategy == merger.NAME:  # a deal trade exits on a termination, its stop or the cash-out, not on price
+            return "deal_terminated" if ticker in self.mstate.get("terminated", {}) else None
         if strategy == social.NAME:  # C8 trades exit on their own attention rule, not the price review
             sc = self._social() or self.cfg["active"].get("social")
             return social.exit_why(self.s.read("social.json"), ticker, sc) if sc else None
@@ -439,7 +520,8 @@ class Agent:
         a = self.cfg.get("active") or {}
         if not a.get("enabled"):
             return []
-        return list(a.get("watchlist", [])) + sorted((self._social() or {}).get("universe", {}))
+        return (list(a.get("watchlist", [])) + sorted((self._social() or {}).get("universe", {}))
+                + (list(self.mstate.get("watch", [])) if self._merger() else []))
 
     def _active_exits(self, recs, vwrp_px) -> list[tuple]:
         if not self._watch():
@@ -544,6 +626,11 @@ class Agent:
                                         self.reviews)
             notes += n
             orders += so
+        if self._merger() and not active.sleeve_block(self.cfg, recs, self.positions, day, total):
+            mo, n = merger.entry_orders(self.cfg, recs, self.positions, self._quote, fxq["price"] if fxq else None,
+                                        total, cash, day, self.clock(), vwrp_px, disabled, self.mstate)
+            notes += n
+            orders += mo
         return next((o for o in orders if self.market_open(o[0])), None)
 
     def _satellite(self) -> dict[str, dict]:
@@ -639,8 +726,11 @@ class Agent:
         total = float((self.summary or {}).get("totalValue") or 0)
         if qty > 0 and total:
             order["post_weight"] = (self._value(self.positions.get(ticker) or {}) + abs(value)) / total
+        limits = self.cfg["limits"]
+        if (signal or {}).get("strategy") == merger.NAME and (self.mstate.get("deals", {}).get(ticker) or {}).get("eligible"):
+            limits = {**limits, "buy_whitelist": [*limits["buy_whitelist"], ticker]}  # a deal that passed every filter
         refusals = execution.risk_check(order, control=self.s.control(), records=self.s.intents(),
-                                        pending=self.pending, positions=self.positions, limits=self.cfg["limits"],
+                                        pending=self.pending, positions=self.positions, limits=limits,
                                         day=day, consecutive_errors=self.ex.consecutive_errors, quote_ok=quote_ok,
                                         market_open=self.market_open(ticker))
         key = f"{ticker}:{qty}:{';'.join(refusals)}"

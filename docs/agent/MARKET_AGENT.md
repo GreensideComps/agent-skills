@@ -1,4 +1,4 @@
-# Always-on demo market agent (agent-1.6)
+# Always-on demo market agent (agent-1.7)
 
 **Mandate:** the owner's 26 Oct 2026 handoff (`cmsg_01U4KMvkBYNknqm4HRVie8uvK9gRYqGXBK4bQP49dBz49i`), covering
 the demo account only. The Trading 212 client refuses any host but `demo.trading212.com`, and `load_credentials`
@@ -102,8 +102,19 @@ before buys.
      trades, but its scores are logged on the entry.
    - Wikimedia rate-limits this host's shared IP, so the scan goes 12 brands a run at 7 s pacing, honours
      Retry-After, and resumes until done. A brand with no data gets no signal.
-   - **merger_arb is not built**: SEC EDGAR refuses automated requests without a User-Agent naming a contact email
-     (HTTP 403), and none is configured here.
+10. **merger_arb** (agent-1.7, decision C8, `merger.py`): agreed all-cash takeovers found in SEC EDGAR full-text
+   search. The SEC requires a contact User-Agent; the owner supplied it (30 Oct 09:47Z). It is read at run time from
+   `state/sec_user_agent.txt` or `SEC_USER_AGENT`, is never committed, and is sent only to sec.gov.
+   - Every 6 hours: search 180 days of DEFM14A, PREM14A, SC TO-T, SC 14D9 and 8-K filings for "per share in cash";
+     read up to 40 filings a run (cached); one record per target in `state/merger.json`.
+   - A target is named only by filings about it (proxy, 14D9, tender offer), never by an 8-K alone, since acquirers
+     file 8-Ks too. The price must agree in two filings. Skipped: stock or election consideration in the
+     consideration clause, a 14D9 whose board recommends rejecting, no merger agreement, no stated close date (a
+     tender offer's expiry + 30 days counts), not on T212.
+   - Entry: live spread 2–15%, close within 12 months, annualised ≥ 8%; 2% of the book; at most 3 open deals.
+   - Exits: a target 8-K with item 1.02 and no 2.01 (`why: deal_terminated`), -10% (broker stop), or the cash-out:
+     shares gone from the account for a day are recorded as sold at the offer, marked `estimated`.
+   - Interim review at 10 deals is information only; the kill rule after 30 trades still applies.
 
 Every other pass is recorded as a `decision` with `no_trade: true` and its reasons.
 
