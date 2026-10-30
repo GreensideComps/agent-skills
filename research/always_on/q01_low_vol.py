@@ -36,7 +36,8 @@ def features(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def portfolio(df, col, band="large", lag=0, every=1, cost=xs.COST_PER_TURNOVER):
-    d = df[(df["month"] >= START) & (df["month"] <= END) & (df["band"] == band)
+    in_band = df["band"].notna() if band == "all" else df["band"] == band
+    d = df[(df["month"] >= START) & (df["month"] <= END) & in_band
            & (df["close_raw"] >= xs.MIN_PRICE) & df["ret_next"].notna()].copy()
     if lag:
         d[col] = d.groupby("cik")[col].shift(lag)  # signal one month stale
@@ -67,7 +68,7 @@ def stats(x: pd.Series) -> dict:
             "sr_m": float(x.mean() / x.std()), "skew": float(x.skew()), "kurt": float(x.kurt() + 3)}
 
 
-def main(out: Path, trials=(("Q01a", "vol12"), ("Q01b", "vol24"), ("Q01c", "beta24")), df=None):
+def main(out: Path, trials=(("Q01a", "vol12"), ("Q01b", "vol24"), ("Q01c", "beta24")), df=None, band="large", band2="mid"):
     df = features(xs.load()) if df is None else df
     ev = reg.load()
     n = reg.n_trials(ev) + N_EXTRA
@@ -78,7 +79,7 @@ def main(out: Path, trials=(("Q01a", "vol12"), ("Q01b", "vol24"), ("Q01c", "beta
     mvol = lc.rolling(12).std().shift(1)
     hivol = mvol > mvol[(mvol.index >= START) & (mvol.index <= END)].median()
     for tid, col in trials:
-        r = portfolio(df, col)
+        r = portfolio(df, col, band=band)
         s = stats(r["excess"])
         d = reg.deflated_sharpe(s["sr_m"], s["months"], s["skew"], s["kurt"], reg.LEGACY_STAT, ev)
         # deflate with the larger N (registry + regime track)
@@ -96,10 +97,10 @@ def main(out: Path, trials=(("Q01a", "vol12"), ("Q01b", "vol24"), ("Q01c", "beta
             "T3_bear_ann": float(e[bull.reindex(e.index) == False].mean() * 12),
             "T3_hivol_ann": float(e[hivol.reindex(e.index) == True].mean() * 12),
             "T3_lovol_ann": float(e[hivol.reindex(e.index) == False].mean() * 12),
-            "T4_quarterly": stats(portfolio(df, col, every=3)["excess"]),
-            "T5_mid": stats(portfolio(df, col, band="mid")["excess"]),
-            "T6_cost2": stats(portfolio(df, col, cost=2 * xs.COST_PER_TURNOVER)["excess"]),
-            "T6_lag1": stats(portfolio(df, col, lag=1)["excess"]),
+            "T4_quarterly": stats(portfolio(df, col, every=3, band=band)["excess"]),
+            "T5_mid": stats(portfolio(df, col, band=band2)["excess"]),
+            "T6_cost2": stats(portfolio(df, col, cost=2 * xs.COST_PER_TURNOVER, band=band)["excess"]),
+            "T6_lag1": stats(portfolio(df, col, lag=1, band=band)["excess"]),
         }
         p = res[tid]
         p["pass"] = bool(dsr > 0.95 and sum(t > 0 for t in thirds) >= 2
