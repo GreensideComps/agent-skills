@@ -1,4 +1,4 @@
-# Always-on demo market agent (agent-1.2)
+# Always-on demo market agent (agent-1.4)
 
 **Mandate:** the owner's 26 Oct 2026 handoff (`cmsg_01U4KMvkBYNknqm4HRVie8uvK9gRYqGXBK4bQP49dBz49i`), covering
 the demo account only. The Trading 212 client refuses any host but `demo.trading212.com`, and `load_credentials`
@@ -62,6 +62,19 @@ before buys.
    - Kill rule: after 30 closed trades, a strategy whose average net return (after FX fees) is at or below
      VWRP's over the same holding periods is switched off automatically (`state/strategies.json`).
    - Neither strategy is a proven edge. They exist to learn on forward data only.
+
+6. **Broker-side stops** (agent-1.4): the agent runs only while its host is awake, so each open active trade also
+   gets a resting stop sell at the broker, at the trade's own stop-loss price (`state/stops.json`).
+   - It is placed during the market's own hours, once per trade, and respects the kill switch. A refusal is
+     recorded once and alerted; the agent's own stop still applies while it runs.
+   - A broker stop that fills is recorded from the broker's history as the trade's exit (`why: broker_stop`),
+     so P&L and the kill rule count it like any other exit.
+   - Before the agent's own take-profit, time or stop exit, it cancels the broker stop, then sells on a later pass
+     once the broker no longer shows it pending.
+7. **Attention spike** (agent-1.4, logged forward only, owner 26 Oct 15:13Z): every 6 hours, each watchlist
+   name's English Wikipedia views for the last full day are compared with its own 28-day norm (z-score on log
+   views). A z of 3 or more is logged as an `attention_signal` with that day's price move; nothing trades on it
+   until it has a forward record. Requests are paced, and a rate-limited name is logged as an error (UNVERIFIED).
 
 Every other pass is recorded as a `decision` with `no_trade: true` and its reasons.
 

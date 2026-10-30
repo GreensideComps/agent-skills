@@ -1,5 +1,5 @@
 {
-  "version": "agent-1.3",
+  "version": "agent-1.4",
   "note": "Always-on demo market agent. Demo account only (the client refuses any other host). Owner mandate: cmsg_01U4KMvkBYNknqm4HRVie8uvK9gRYqGXBK4bQP49dBz49i (26 Oct 2026).",
   "intervals_s": {
     "loop": 15,
@@ -7,7 +7,8 @@
     "broker": 300,
     "calendar": 21600,
     "news": 1800,
-    "heartbeat": 60
+    "heartbeat": 60,
+    "attention": 21600
   },
   "benchmark": {
     "t212": "VWRPl_EQ",
@@ -135,6 +136,30 @@
         "stop_loss": 0.05,
         "take_profit": 0.1,
         "time_stop_days": 5
+      }
+    },
+    "attention": {
+      "enabled": true,
+      "trade": false,
+      "lookback_days": 28,
+      "z_threshold": 3.0,
+      "rationale": "attention_spike (owner 26 Oct 15:13Z, social arbitrage): a name's Wikipedia views far above their 28-day norm. Logged forward only until it has a record; no orders.",
+      "articles": {
+        "JPM_US_EQ": "JPMorgan_Chase",
+        "V_US_EQ": "Visa_Inc.",
+        "LLY_US_EQ": "Eli_Lilly_and_Company",
+        "COST_US_EQ": "Costco",
+        "NFLX_US_EQ": "Netflix",
+        "ORCL_US_EQ": "Oracle_Corporation",
+        "CRM_US_EQ": "Salesforce",
+        "AAPL_US_EQ": "Apple_Inc.",
+        "TSLA_US_EQ": "Tesla,_Inc.",
+        "UBER_US_EQ": "Uber",
+        "WMT_US_EQ": "Walmart",
+        "XOM_US_EQ": "ExxonMobil",
+        "UNH_US_EQ": "UnitedHealth_Group",
+        "MA_US_EQ": "Mastercard",
+        "ADBE_US_EQ": "Adobe_Inc."
       }
     }
   }

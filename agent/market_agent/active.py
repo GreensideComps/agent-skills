@@ -157,3 +157,34 @@ def kill_check(scores: dict, cfg: dict, disabled: dict, ts: str) -> dict:
             new[name] = {"ts": ts, "why": f"{d['n']} trades: average {d['avg_ret']:+.2%} vs VWRP "
                                            f"{d['avg_vwrp_ret']:+.2%} over the same holding periods", "score": d}
     return new
+
+
+# ------------------------------------------------------------ broker-side stops (agent-1.4)
+# The agent runs only while its host is awake, so every open trade also carries a resting stop order at the broker at
+# its own stop-loss level. stops.json maps entry id -> {order_id, ticker, qty, stop_px, ts} (or {failed: why}).
+
+def open_trades(records: list[dict]) -> list[dict]:
+    return [t["entry"] for t in trades(records) if not t["exit"]]
+
+
+def stops_needed(records: list[dict], positions: dict, stops: dict) -> list[dict]:
+    """Open trades still held with no stop on record: [{entry_id, ticker, qty, stop_px, strategy}]."""
+    out = []
+    for e in open_trades(records):
+        p = positions.get(e["ticker"])
+        if e["id"] in stops or not p or float(p.get("quantity") or 0) <= 0:
+            continue
+        sig = e["signal"]
+        out.append({"entry_id": e["id"], "ticker": e["ticker"], "qty": float(p["quantity"]),
+                    "stop_px": round(sig["entry_px"] * (1 - sig["stop"]), 2), "strategy": sig["strategy"]})
+    return out
+
+
+def stop_exit_record(entry: dict, stop: dict, hist: dict, vwrp_px) -> dict:
+    """The intent record for a broker stop that filled, so the trade closes like an agent exit."""
+    w = (hist.get("fill") or {}).get("walletImpact") or {}
+    return {"ticker": entry["ticker"], "quantity": -stop["qty"], "value_gbp": abs(float(w.get("netValue") or 0)),
+            "price": (hist.get("fill") or {}).get("price"), "status": "filled", "order_id": stop["order_id"],
+            "broker": hist, "reason": f"active exit (broker stop at {stop['stop_px']}): {entry['signal']['strategy']}",
+            "signal": {"type": "active_exit", "entry_id": entry["id"], "strategy": entry["signal"]["strategy"],
+                       "why": "broker_stop", "vwrp_px": vwrp_px}}

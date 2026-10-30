@@ -106,3 +106,32 @@ def fetch_news(query: str, get: Callable = http_get, count: int = 5) -> list[dic
                         "tickers": n.get("relatedTickers", [])})
     return out
 
+
+
+WIKI = "https://wikimedia.org/api/rest_v1/metrics/pageviews/per-article/en.wikipedia/all-access/user/{a}/daily/{s}/{e}"
+WIKI_UA = {"User-Agent": "market-agent/1.4 (demo research; github.com/GreensideComps/agent-skills)"}
+
+
+def wiki_get(url: str, params: dict, timeout: float = 20.0) -> dict:
+    r = requests.get(url, params=params, headers=WIKI_UA, timeout=timeout)
+    if r.status_code != 200:
+        raise FeedError(f"pageviews: HTTP {r.status_code}")
+    return r.json()
+
+
+def pageviews(article: str, start: str, end: str, get: Callable = wiki_get) -> list[tuple[str, int]]:
+    """Daily human (user-agent) views of one English Wikipedia article: [(YYYYMMDD, views)] oldest first."""
+    d = get(WIKI.format(a=article, s=start, e=end), {})
+    return [(i["timestamp"][:8], int(i["views"])) for i in d.get("items", [])]
+
+
+def attention_z(series: list[tuple[str, int]], lookback: int) -> dict | None:
+    """The last day's views against the `lookback` days before it, as a z-score on log views."""
+    if len(series) < lookback + 1:
+        return None
+    lv = [math.log1p(v) for _, v in series[-(lookback + 1):]]
+    base, last = lv[:-1], lv[-1]
+    mu = sum(base) / len(base)
+    sd = (sum((x - mu) ** 2 for x in base) / (len(base) - 1)) ** 0.5
+    return {"day": series[-1][0], "views": series[-1][1], "base_mean": round(math.expm1(mu)),
+            "z": round((last - mu) / sd, 2) if sd > 0 else None}

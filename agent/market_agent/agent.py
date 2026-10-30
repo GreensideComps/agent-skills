@@ -9,6 +9,7 @@ import json
 import math
 import time
 import traceback
+import uuid
 from pathlib import Path
 
 from . import active, execution, feeds
@@ -25,6 +26,7 @@ class Agent:
                  clock=time.time, sleep=time.sleep):
         self.s, self.c, self.cfg, self.get, self.clock, self.sleep = store, client, cfg, get, clock, sleep
         self.ex = execution.Executor(store, client, ambiguous_exc, api_exc)
+        self.wiki_get = feeds.wiki_get if get is feeds.http_get else get
         self.due: dict[str, float] = {}
         self.fail: dict[str, int] = {}
         self.quotes: dict[str, dict] = {}      # last validated quote per Yahoo symbol
@@ -80,6 +82,8 @@ class Agent:
             self.need_decide = False
             self._run_once("decide", self.decide)
         self._run("news", self.refresh_news)
+        if ((self.cfg.get("active") or {}).get("attention") or {}).get("enabled"):
+            self._run("attention", self.refresh_attention)
         self._run("heartbeat", self.write_heartbeat)
 
     def run_forever(self) -> None:
@@ -137,6 +141,7 @@ class Agent:
         rec = self.ex.reconcile(self.clock(), self.cfg["limits"]["fill_check_timeout_s"])
         for r in rec:
             self.s.event("order_outcome", intent=r["id"], status=r["status"], broker=r.get("broker"))
+        self._sync_stops()
         if rec and any(r["status"] == "filled" for r in rec):
             self.summary = self.c.account_summary()
             self.positions = {(p.get("instrument") or {}).get("ticker"): p for p in self.c.positions()}
@@ -182,6 +187,35 @@ class Agent:
             self.sleep(0.5)
         if fresh:
             self.s.event("news", items=fresh)
+
+    def refresh_attention(self) -> None:
+        """attention_spike, logged forward only: each watched name's Wikipedia views against its own 28-day norm,
+        with the day's price move, so the signal builds a record before it may trade."""
+        a = self.cfg["active"]["attention"]
+        now = self.clock()
+        end = time.strftime("%Y%m%d", time.gmtime(now - 86400))
+        start = time.strftime("%Y%m%d", time.gmtime(now - 86400 * (a["lookback_days"] + 12)))
+        rows = []
+        for t, art in sorted(a["articles"].items()):
+            z, err = None, None
+            for wait in (0, 15):  # one retry after a pause if Wikimedia rate-limits us (HTTP 429)
+                self.sleep(wait or 2.0)  # polite pacing for the Wikimedia API
+                try:
+                    z, err = feeds.attention_z(feeds.pageviews(art, start, end, get=self.wiki_get),
+                                               a["lookback_days"]), None
+                    break
+                except Exception as e:  # noqa: BLE001 - one missing article never stops the rest
+                    err = str(e)[:120]
+            if err:
+                rows.append({"ticker": t, "error": err})
+                continue
+            q = self.quotes.get(feeds.yahoo_symbol(t, self.cfg["yahoo_overrides"]) or "")
+            rows.append({"ticker": t, **(z or {}), "px": q and q["price"],
+                         "move": q and q.get("prev_close") and round(q["price"] / q["prev_close"] - 1, 4)})
+        self.s.event("attention", rows=rows)
+        for r in rows:
+            if (r.get("z") or 0) >= a["z_threshold"]:
+                self.s.event("attention_signal", strategy="attention_spike", traded=False, **r)
 
     # ------------------------------------------------------------ evaluation
     def snapshot(self) -> None:
@@ -245,6 +279,7 @@ class Agent:
         vw = self.quotes.get(self.cfg["benchmark"]["yahoo"])
         vwrp_px = vw["price"] if vw else None
         recs = self.s.intents()
+        self._place_stops(recs, notes)
         sells = self._exit_orders(notes) + self._active_exits(recs, vwrp_px) + self._rebalance_orders(notes)
         order = None
         if sells:
@@ -292,7 +327,78 @@ class Agent:
     def _active_exits(self, recs, vwrp_px) -> list[tuple]:
         if not self._watch():
             return []
-        return active.exit_orders(recs, self.positions, self._quote, self.clock(), vwrp_px)
+        stops = self.s.read("stops.json") or {}
+        resting = {v["ticker"]: (k, v) for k, v in stops.items() if v.get("order_id")}
+        # a resting sell stop holds the shares, so the trade's whole quantity counts as available to exit
+        pos = {t: ({**p, "quantityAvailableForTrading": p.get("quantity")} if t in resting else p)
+               for t, p in self.positions.items()}
+        out = []
+        for o in active.exit_orders(recs, pos, self._quote, self.clock(), vwrp_px):
+            if o[0] not in resting:
+                out.append(o)
+                continue
+            k, v = resting[o[0]]
+            if not self.market_open(o[0]) or self.s.control().get("trading_enabled") is not True:
+                continue  # keep the protection until the exit could actually be sent
+            try:  # cancel the broker stop first; the exit goes out on a later pass once the broker shows it gone
+                self.c.cancel_order(v["order_id"])
+                self.s._replace("stops.json", {**stops, k: {**v, "order_id": None, "cancelled": feeds_ts(self.clock()),
+                                                             "why": o[6]["why"]}})
+                self.s.event("stop_cancelled", entry=k, ticker=o[0], order_id=v["order_id"], for_exit=o[6]["why"])
+            except Exception as e:  # noqa: BLE001 - it may have just filled; the next sync reads the broker's record
+                self.s.event("stop_cancel_failed", entry=k, ticker=o[0], error=str(e)[:300])
+            self.due["broker"] = 0
+        return out
+
+    def _place_stops(self, recs, notes) -> None:
+        """Give every open active trade a resting broker stop at its own stop-loss level (kill switch respected)."""
+        if not self._watch() or self.s.control().get("trading_enabled") is not True:
+            return
+        stops = self.s.read("stops.json") or {}
+        for n in active.stops_needed(recs, self.positions, stops):
+            if not self.market_open(n["ticker"]):
+                continue  # placed during the market's own hours, when the broker accepts and works it
+            try:
+                ack = self.c.place_stop_order(n["ticker"], -n["qty"], n["stop_px"])
+                stops[n["entry_id"]] = {"order_id": (ack or {}).get("id"), "ticker": n["ticker"], "qty": n["qty"],
+                                        "stop_px": n["stop_px"], "ts": feeds_ts(self.clock()), "ack": ack}
+                self.s.event("stop_placed", entry=n["entry_id"], **{k: n[k] for k in ("ticker", "qty", "stop_px")},
+                             order_id=stops[n["entry_id"]]["order_id"])
+                notes.append(f"broker stop placed: {n['ticker']} {n['qty']} at {n['stop_px']}")
+            except Exception as e:  # noqa: BLE001 - recorded once; the agent's own stop still watches while it runs
+                stops[n["entry_id"]] = {"order_id": None, "ticker": n["ticker"], "failed": str(e)[:300],
+                                        "ts": feeds_ts(self.clock())}
+                self.s.event("stop_failed", entry=n["entry_id"], ticker=n["ticker"], error=str(e)[:300])
+                self.alert("warn", f"stop_failed:{n['ticker']}", f"broker stop for {n['ticker']} refused: {str(e)[:150]}")
+            self.s._replace("stops.json", stops)
+
+    def _sync_stops(self) -> None:
+        """Record a broker stop that filled as the trade's exit; forget one the broker cancelled or rejected."""
+        stops = self.s.read("stops.json") or {}
+        live = {execution._hid(p) for p in self.pending}
+        entries = {e["id"]: e for e in active.open_trades(self.s.intents())}
+        changed = False
+        for k, v in list(stops.items()):
+            oid = v.get("order_id")
+            if not oid or oid in live:
+                continue
+            h = next((x for x in self.c.history_orders(ticker=v["ticker"], limit=20, max_pages=1)
+                      if execution._hid(x) == oid), None)
+            st = execution._hist_status(h) if h else None
+            if st == "filled" and k in entries:
+                vw = self.quotes.get(self.cfg["benchmark"]["yahoo"])
+                rec = self.s.intent(id=uuid.uuid4().hex, **active.stop_exit_record(entries[k], v, h,
+                                                                                    vw["price"] if vw else None))
+                self.s.event("order_outcome", intent=rec["id"], status="filled", broker=h, via="broker_stop")
+                self.alert("info", f"stop_filled:{v['ticker']}", f"broker stop filled: {v['ticker']} at {v['stop_px']}")
+                stops[k] = {**v, "order_id": None, "filled": feeds_ts(self.clock())}
+                changed = True
+            elif st in ("cancelled", "rejected"):
+                stops[k] = {**v, "order_id": None, st: feeds_ts(self.clock())}
+                self.s.event(f"stop_{st}", entry=k, ticker=v["ticker"], order_id=oid)
+                changed = True
+        if changed:
+            self.s._replace("stops.json", stops)
 
     def _active_entry(self, recs, day, vwrp_px, notes) -> tuple | None:
         if not self._watch():

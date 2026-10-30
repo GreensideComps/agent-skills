@@ -83,8 +83,27 @@ class FakeBroker:
                                 "fill": {"quantity": abs(quantity), "price": 10.0}})
         return {"id": oid, "status": "NEW"}
 
+    def place_stop_order(self, ticker, quantity, stop_price):
+        oid = 5000 + len(self.pending) + len(self.history)
+        self.pending.append({"id": oid, "ticker": ticker, "type": "STOP", "quantity": quantity, "stopPrice": stop_price})
+        return {"id": oid, "status": "NEW"}
+
+    def cancel_order(self, oid):
+        self.pending = [p for p in self.pending if p["id"] != oid]
+        self.history.insert(0, {"order": {"id": oid, "ticker": "?", "status": "CANCELLED"}})
+
+    def fill_stop(self, oid, net):
+        p = next(p for p in self.pending if p["id"] == oid)
+        self.pending.remove(p)
+        self.pos = [x for x in self.pos if x["instrument"]["ticker"] != p["ticker"]]
+        self.cash += net
+        self.history.insert(0, {"order": {"id": oid, "ticker": p["ticker"], "status": "FILLED", "side": "SELL",
+                                          "createdAt": iso(self.clock())},
+                                "fill": {"quantity": -p["quantity"], "price": p["stopPrice"],
+                                         "walletImpact": {"netValue": net, "taxes": [{"quantity": -0.03}]}}})
+
     def history_orders(self, ticker=None, limit=50, max_pages=5):
-        return [h for h in self.history if ticker in (None, h["order"]["ticker"])]
+        return [h for h in self.history if ticker in (None, h["order"]["ticker"]) or h["order"]["ticker"] == "?"]
 
     def get_order(self, oid):
         raise ApiErr("404")
@@ -104,6 +123,10 @@ def fake_get(clock, prices=None):
         if url == feeds.SEARCH:
             return {"news": [{"uuid": f"n-{params['q']}", "title": "headline", "providerPublishTime": clock() - 60,
                               "relatedTickers": [params["q"]]}]}
+        if url.startswith("https://wikimedia.org/"):
+            spike = "Oracle" in url
+            return {"items": [{"timestamp": f"202610{d:02d}00", "views": 1000 + 13 * (d % 3) + (9000 if spike and d == 29 else 0)}
+                              for d in range(1, 30)]}
         raise AssertionError(url)
     return get
 
@@ -437,3 +460,62 @@ def test_target_zero_sells_every_passive_pick(tmp_path):
         _settle(b)
     assert {p["instrument"]["ticker"] for p in b.pos} == set()
     assert any(o[0] == "VWRPl_EQ" and o[1] > 0 for o in b.orders)
+
+
+def _jpm_entry(tmp_path):
+    prices = {"VWRP.L": 140.0, "GBPUSD=X": 1.25}
+    ag, b, st, clock = make(tmp_path, active_on=True, prices=prices)
+    _active_book(b)
+    get = fake_get(clock, prices)
+
+    def dropped(url, params):
+        d = get(url, params)
+        if url == feeds.SPARK and "JPM" in d:
+            d["JPM"]["close"] = [94.5, 94.5]
+            d["JPM"]["previousClose"] = 100.0
+        return d
+    ag.get = dropped
+    advance(ag, clock, 1, by=30)
+    q = next(o for o in b.orders if o[0] == "JPM_US_EQ")[1]
+    rec = next(r for r in execution.latest_intents(st.intents()).values() if r["ticker"] == "JPM_US_EQ")
+    b.pos.append(pos("JPM_US_EQ", q, q, 0, rec["value_gbp"], rec["value_gbp"]))
+    b.cash -= rec["value_gbp"]
+    advance(ag, clock, 1, by=301)
+    return ag, b, st, clock, rec, q
+
+
+def test_open_trade_gets_a_broker_stop_and_its_fill_closes_the_trade(tmp_path):
+    from market_agent import active
+    ag, b, st, clock, rec, q = _jpm_entry(tmp_path)
+    stops = [p for p in b.pending if p["type"] == "STOP"]
+    assert len(stops) == 1 and stops[0]["quantity"] == -q and stops[0]["stopPrice"] == round(94.5 * 0.92, 2)
+    advance(ag, clock, 1, by=301)
+    assert len([p for p in b.pending if p["type"] == "STOP"]) == 1           # placed once, not repeated
+    b.fill_stop(stops[0]["id"], net=rec["value_gbp"] * 0.9)
+    advance(ag, clock, 1, by=301)
+    t = active.trades(st.intents())
+    assert t[0]["exit"] and t[0]["exit"]["signal"]["why"] == "broker_stop"
+    assert active.closed_result(t[0])["pnl_gbp"] < 0
+    assert not [o for o in b.orders if o[0] == "JPM_US_EQ" and o[1] < 0]     # no market sell on top
+
+
+def test_agent_exit_cancels_the_broker_stop_first(tmp_path):
+    ag, b, st, clock, rec, q = _jpm_entry(tmp_path)
+    assert [p for p in b.pending if p["type"] == "STOP"]
+    clock.t = T0 + 11 * 86400                                                 # past the 10-day drop_rebound time stop
+    advance(ag, clock, 3, by=301)
+    assert not [p for p in b.pending if p["type"] == "STOP"]                 # cancelled
+    sells = [o for o in b.orders if o[0] == "JPM_US_EQ" and o[1] < 0]
+    assert sells == [("JPM_US_EQ", -q)]
+
+
+def test_attention_spike_is_logged_forward_without_trading(tmp_path):
+    ag, b, st, clock = make(tmp_path, active_on=True, prices={"VWRP.L": 140.0, "GBPUSD=X": 1.25})
+    _active_book(b)
+    advance(ag, clock, 1, by=30)
+    ev = st.events(iso(clock())[:10])
+    att = next(e for e in ev if e["kind"] == "attention")
+    assert len(att["rows"]) == 15 and not [r for r in att["rows"] if "error" in r]
+    sig = [e for e in ev if e["kind"] == "attention_signal"]
+    assert [e["ticker"] for e in sig] == ["ORCL_US_EQ"] and sig[0]["z"] > 3 and sig[0]["traded"] is False
+    assert not [o for o in b.orders if o[0] == "ORCL_US_EQ"]
