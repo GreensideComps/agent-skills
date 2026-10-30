@@ -1,5 +1,5 @@
 {
-  "version": "agent-1.4",
+  "version": "agent-1.5",
   "note": "Always-on demo market agent. Demo account only (the client refuses any other host). Owner mandate: cmsg_01U4KMvkBYNknqm4HRVie8uvK9gRYqGXBK4bQP49dBz49i (26 Oct 2026).",
   "intervals_s": {
     "loop": 15,
@@ -8,7 +8,8 @@
     "calendar": 21600,
     "news": 1800,
     "heartbeat": 60,
-    "attention": 21600
+    "attention": 21600,
+    "review": 7200
   },
   "benchmark": {
     "t212": "VWRPl_EQ",
@@ -161,6 +162,17 @@
         "MA_US_EQ": "Mastercard",
         "ADBE_US_EQ": "Adobe_Inc."
       }
+    },
+    "review": {
+      "enabled": true,
+      "max_age_s": 21600,
+      "entry_min": 0.25,
+      "rebound_min_long": 0.0,
+      "rebound_min_medium": -0.3,
+      "exit_max": -0.35,
+      "earnings_block_days": 3,
+      "earnings_refresh_s": 43200,
+      "rationale": "owner 30 Oct 08:05Z: review short, medium and long term trades on more than a single 5% move. Weights and thresholds are a stated prior, not a fitted edge; every score is logged and the kill rule still applies."
     }
   }
 }

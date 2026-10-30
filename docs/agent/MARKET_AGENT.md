@@ -1,4 +1,4 @@
-# Always-on demo market agent (agent-1.4)
+# Always-on demo market agent (agent-1.5)
 
 **Mandate:** the owner's 26 Oct 2026 handoff (`cmsg_01U4KMvkBYNknqm4HRVie8uvK9gRYqGXBK4bQP49dBz49i`), covering
 the demo account only. The Trading 212 client refuses any host but `demo.trading212.com`, and `load_credentials`
@@ -75,6 +75,19 @@ before buys.
    name's English Wikipedia views for the last full day are compared with its own 28-day norm (z-score on log
    views). A z of 3 or more is logged as an `attention_signal` with that day's price move; nothing trades on it
    until it has a forward record. Requests are paced, and a rate-limited name is logged as an error (UNVERIFIED).
+
+8. **Multi-horizon review** (agent-1.5, owner 30 Oct 08:05Z, `review.py`): every 2 hours, each watchlist name
+   and open trade is scored from a year of free daily data (Yahoo), the attention z, and Nasdaq's earnings
+   calendar.
+   - Short: trend vs the 20-day average, RSI(14), volume surge with the day's direction, attention z.
+   - Medium: 3- and 6-month momentum, distance from the 52-week high, 20-day volatility.
+   - Long: trend vs the 200-day average, 12-1 month momentum, 50-day vs 200-day average.
+   - Composite = 0.4 short + 0.35 medium + 0.25 long; components are clipped to [-1, 1]. The weights are a stated
+     prior, not fitted.
+   - Entries: a 5% move only nominates a name. `breakout_momentum` needs a composite of 0.25 or more;
+     `drop_rebound` needs long ≥ 0 and medium ≥ -0.3. No entry within 3 days of earnings, and none without a
+     review under 6 hours old (missing data is UNVERIFIED).
+   - Exits: an open trade whose composite falls to -0.35 or below exits early (`why: review`), on top of its stops.
 
 Every other pass is recorded as a `decision` with `no_trade: true` and its reasons.
 

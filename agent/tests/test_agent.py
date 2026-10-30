@@ -109,10 +109,18 @@ class FakeBroker:
         raise ApiErr("404")
 
 
-def fake_get(clock, prices=None):
+def fake_get(clock, prices=None, falling=()):
     prices = prices or {}
 
     def get(url, params):
+        if url.startswith("https://query1.finance.yahoo.com/v8/finance/chart/"):
+            sym = url.rsplit("/", 1)[-1]
+            p = prices.get(sym, 100.0) or 100.0
+            n = 260  # a year of daily bars: a steady rise to today's price, or a steady fall for `falling`
+            closes = [p * (1.6 - 0.6 * i / (n - 1)) if sym in falling else p * (0.7 + 0.3 * i / (n - 1)) for i in range(n)]
+            return {"chart": {"result": [{"indicators": {"quote": [{"close": closes, "volume": [1e6] * n}]}}]}}
+        if url.startswith("https://api.nasdaq.com/"):
+            return {"data": {"rows": [{"symbol": s} for s in getattr(get, "earnings", {}).get(params["date"], [])]}}
         if url == feeds.SPARK:
             out = {}
             for s in params["symbols"].split(","):
@@ -519,3 +527,51 @@ def test_attention_spike_is_logged_forward_without_trading(tmp_path):
     sig = [e for e in ev if e["kind"] == "attention_signal"]
     assert [e["ticker"] for e in sig] == ["ORCL_US_EQ"] and sig[0]["z"] > 3 and sig[0]["traded"] is False
     assert not [o for o in b.orders if o[0] == "ORCL_US_EQ"]
+
+
+def test_review_scores_and_gates_entries(tmp_path):
+    from market_agent import review
+    up = review.factors([70 + 0.12 * i for i in range(260)], [1e6] * 260)
+    down = review.factors([130 - 0.12 * i for i in range(260)], [1e6] * 260)
+    su, sd = review.score(up), review.score(down)
+    assert su["long"] > 0.5 and sd["long"] < -0.5 and su["composite"] > 0.25 > sd["composite"]
+    cfg = agent_mod.load_config()["active"]["review"]
+    now = 1000.0
+    ok = {"t": now, "scores": su, "factors": up, "earnings": None}
+    assert review.entry_ok("breakout_momentum", ok, cfg, now)[0]
+    assert not review.entry_ok("breakout_momentum", {**ok, "scores": sd}, cfg, now)[0]
+    assert not review.entry_ok("drop_rebound", {**ok, "scores": sd}, cfg, now)[0]     # no dip-buying in a downtrend
+    assert not review.entry_ok("breakout_momentum", {**ok, "earnings": "2026-11-02"}, cfg, now)[0]
+    assert not review.entry_ok("breakout_momentum", None, cfg, now)[0]                # no review: no entry
+    assert not review.entry_ok("breakout_momentum", ok, cfg, now + cfg["max_age_s"] + 1)[0]
+
+
+def test_drop_in_a_downtrend_is_not_bought(tmp_path):
+    prices = {"VWRP.L": 140.0, "GBPUSD=X": 1.25}
+    ag, b, st, clock = make(tmp_path, active_on=True, prices=prices)
+    _active_book(b)
+    get = fake_get(clock, prices, falling=("JPM",))
+
+    def dropped(url, params):
+        d = get(url, params)
+        if url == feeds.SPARK and "JPM" in d:
+            d["JPM"]["close"] = [94.5, 94.5]
+            d["JPM"]["previousClose"] = 100.0
+        return d
+    ag.get = dropped
+    advance(ag, clock, 1, by=30)
+    assert not [o for o in b.orders if o[0] == "JPM_US_EQ"]
+    dec = [e for e in st.events(iso(clock())[:10]) if e["kind"] == "decision"]
+    assert any("review blocks" in n for e in dec for n in e["notes"])
+
+
+def test_review_turning_against_an_open_trade_exits_it():
+    from market_agent import active
+    e = {"id": "e1", "ticker": "JPM_US_EQ", "status": "filled", "t": 0.0,
+         "signal": {"type": "active_entry", "strategy": "breakout_momentum", "entry_px": 100.0, "stop": 0.05,
+                    "take_profit": 0.10, "time_stop_s": 5 * 86400}}
+    positions = {"JPM_US_EQ": pos("JPM_US_EQ", 0.2, 0.2, 0, 20.0, 20.0)}
+    q = lambda t: {"price": 99.0}  # noqa: E731 - inside the stop and the take-profit
+    assert active.exit_orders([e], positions, q, 3600.0, 140.0) == []
+    out = active.exit_orders([e], positions, q, 3600.0, 140.0, lambda t: "review")
+    assert len(out) == 1 and out[0][6]["why"] == "review" and out[0][1] == -0.2

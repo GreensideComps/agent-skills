@@ -12,7 +12,7 @@ import traceback
 import uuid
 from pathlib import Path
 
-from . import active, execution, feeds
+from . import active, execution, feeds, review
 
 HERE = Path(__file__).resolve().parent
 
@@ -42,6 +42,10 @@ class Agent:
         self.started = clock()
         self.last_ok: dict[str, float] = {}
         self.need_decide = False
+        self.reviews: dict[str, dict] = {}   # agent-1.5 multi-horizon review per T212 ticker
+        self.attn: dict[str, float] = {}     # last Wikipedia attention z per T212 ticker
+        self.earn: dict[str, str] = {}
+        self.earn_t = 0.0
 
     # ------------------------------------------------------------ scheduling
     def _run(self, name: str, fn) -> None:
@@ -78,12 +82,14 @@ class Agent:
         self._run("calendar", self.refresh_calendar)
         self._run("broker", self.refresh_broker)
         self._run("prices", self.refresh_prices)
+        if ((self.cfg.get("active") or {}).get("attention") or {}).get("enabled"):
+            self._run("attention", self.refresh_attention)
+        if self._watch() and ((self.cfg.get("active") or {}).get("review") or {}).get("enabled"):
+            self._run("review", self.refresh_review)
         if self.need_decide:  # decisions use this pass's positions and the prices fetched after them
             self.need_decide = False
             self._run_once("decide", self.decide)
         self._run("news", self.refresh_news)
-        if ((self.cfg.get("active") or {}).get("attention") or {}).get("enabled"):
-            self._run("attention", self.refresh_attention)
         self._run("heartbeat", self.write_heartbeat)
 
     def run_forever(self) -> None:
@@ -212,10 +218,52 @@ class Agent:
             q = self.quotes.get(feeds.yahoo_symbol(t, self.cfg["yahoo_overrides"]) or "")
             rows.append({"ticker": t, **(z or {}), "px": q and q["price"],
                          "move": q and q.get("prev_close") and round(q["price"] / q["prev_close"] - 1, 4)})
+        self.attn = {r["ticker"]: r["z"] for r in rows if r.get("z") is not None}
         self.s.event("attention", rows=rows)
         for r in rows:
             if (r.get("z") or 0) >= a["z_threshold"]:
                 self.s.event("attention_signal", strategy="attention_spike", traded=False, **r)
+
+    def refresh_review(self) -> None:
+        """Score every watched name and open trade on short, medium and long horizons (review.py) and log it."""
+        rc = self.cfg["active"]["review"]
+        now = self.clock()
+        if now - self.earn_t > rc["earnings_refresh_s"]:
+            try:
+                self.earn, self.earn_t = review.earnings_soon(rc["earnings_block_days"], now, self.get), now
+            except Exception as e:  # noqa: BLE001 - unknown earnings dates block entries via the gate below
+                self.s.event("duty_failed", duty="earnings", error=str(e)[:300])
+        names = sorted(set(self._watch()) | {e["ticker"] for e in active.open_trades(self.s.intents())})
+        rows = []
+        for t in names:
+            sym = feeds.yahoo_symbol(t, self.cfg["yahoo_overrides"])
+            try:
+                closes, vols = review.history(sym, self.get)
+            except Exception as e:  # noqa: BLE001 - a name without history gets no review, so no entry
+                rows.append({"ticker": t, "error": str(e)[:120]})
+                self.reviews.pop(t, None)
+                continue
+            finally:
+                self.sleep(0.5)
+            q = self._quote(t)
+            f = review.factors(closes, vols, q["price"] if q else None)
+            rev = {"t": now, "ticker": t, "factors": f, "scores": review.score(f, self.attn.get(t)),
+                   "earnings": self.earn.get(sym) if self.earn_t else "UNVERIFIED (calendar unavailable)"}
+            self.reviews[t] = rev
+            rows.append({k: v for k, v in rev.items() if k != "t"})
+        self.s.event("review", rows=rows)
+
+    def _gate(self, strategy: str, ticker: str):
+        rev = self.reviews.get(ticker)
+        ok, why = review.entry_ok(strategy, rev, self.cfg["active"]["review"], self.clock())
+        return ok, why, rev
+
+    def _review_why(self, ticker: str) -> str | None:
+        rc = self.cfg["active"]["review"]
+        rev = self.reviews.get(ticker)
+        if not rev or self.clock() - rev["t"] > rc["max_age_s"] or rev["scores"]["composite"] is None:
+            return None
+        return "review" if rev["scores"]["composite"] <= rc["exit_max"] else None
 
     # ------------------------------------------------------------ evaluation
     def snapshot(self) -> None:
@@ -333,7 +381,8 @@ class Agent:
         pos = {t: ({**p, "quantityAvailableForTrading": p.get("quantity")} if t in resting else p)
                for t, p in self.positions.items()}
         out = []
-        for o in active.exit_orders(recs, pos, self._quote, self.clock(), vwrp_px):
+        rv = self._review_why if (self.cfg["active"].get("review") or {}).get("enabled") else None
+        for o in active.exit_orders(recs, pos, self._quote, self.clock(), vwrp_px, rv):
             if o[0] not in resting:
                 out.append(o)
                 continue
@@ -415,7 +464,8 @@ class Agent:
         cash = float(((self.summary or {}).get("cash") or {}).get("availableToTrade") or 0)
         fxq = self.quotes.get(self.cfg["benchmark"]["fx"])
         orders, n = active.entry_orders(self.cfg, recs, self.positions, self._quote, fxq["price"] if fxq else None,
-                                        total, cash, day, self.clock(), vwrp_px, disabled)
+                                        total, cash, day, self.clock(), vwrp_px, disabled,
+                                        self._gate if (self.cfg["active"].get("review") or {}).get("enabled") else None)
         notes += n
         if any("FROZEN" in x for x in n):
             self.alert("critical", "active_frozen", n[0])

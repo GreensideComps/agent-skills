@@ -57,8 +57,9 @@ def strategy_scores(records: list[dict]) -> dict[str, dict]:
     return out
 
 
-def exit_orders(records, positions, quote_of, now, vwrp_px) -> list[tuple]:
-    """Stop-loss, take-profit and time-stop exits for open trades whose price is validated."""
+def exit_orders(records, positions, quote_of, now, vwrp_px, review_why=None) -> list[tuple]:
+    """Stop-loss, take-profit and time-stop exits for open trades whose price is validated, plus an early exit when
+    `review_why(ticker)` names one (agent-1.5: the multi-horizon review turned against the trade)."""
     out = []
     for t in trades(records):
         if t["exit"]:
@@ -74,7 +75,8 @@ def exit_orders(records, positions, quote_of, now, vwrp_px) -> list[tuple]:
             continue
         ret = q["price"] / sig["entry_px"] - 1
         why = ("stop" if ret <= -sig["stop"] else "take_profit" if ret >= sig["take_profit"]
-               else "time" if now - e.get("t", now) >= sig["time_stop_s"] else None)
+               else "time" if now - e.get("t", now) >= sig["time_stop_s"]
+               else (review_why(tk) if review_why else None))
         if why:
             v = float((p.get("walletImpact") or {}).get("currentValue") or 0)
             out.append((tk, -avail, v, float(p.get("currentPrice") or 0), True,
@@ -103,9 +105,11 @@ def sleeve_pnl(records, positions, day: str) -> tuple[float, float]:
     return today, total
 
 
-def entry_orders(cfg, records, positions, quote_of, fx, total, cash, day, now, vwrp_px, disabled) -> tuple[list, list]:
-    """Candidate entries, at most one per ticker per day, sized at `entry_weight` of the book. Returns
-    (orders, notes)."""
+def entry_orders(cfg, records, positions, quote_of, fx, total, cash, day, now, vwrp_px, disabled,
+                 gate=None) -> tuple[list, list]:
+    """Candidate entries, at most one per ticker per day, sized at `entry_weight` of the book. `gate(strategy,
+    ticker)` -> (ok, why, review) is the multi-horizon review (agent-1.5); a trigger it rejects is noted, not
+    traded. Returns (orders, notes)."""
     a = cfg["active"]
     notes: list[str] = []
     today_pnl, cum_pnl = sleeve_pnl(records, positions, day)
@@ -132,6 +136,12 @@ def entry_orders(cfg, records, positions, quote_of, fx, total, cash, day, now, v
             hit = move <= s["trigger_move"] if s["trigger_move"] < 0 else move >= s["trigger_move"]
             if not hit:
                 continue
+            rev = None
+            if gate:
+                ok, why, rev = gate(name, tk)
+                if not ok:
+                    notes.append(f"active: {name} fired on {tk} ({move:+.1%}) but the review blocks it: {why}")
+                    continue
             if cash < size * reserve:
                 notes.append(f"active: {name} fired on {tk} ({move:+.1%}) but cash £{cash:.2f} < £{size * reserve:.2f}")
                 break
@@ -143,7 +153,8 @@ def entry_orders(cfg, records, positions, quote_of, fx, total, cash, day, now, v
                         f"active entry: {name} ({s['rule']}); day move {move:+.1%}",
                         {"type": "active_entry", "strategy": name, "rule": s["rule"], "move": round(move, 4),
                          "entry_px": q["price"], "stop": s["stop_loss"], "take_profit": s["take_profit"],
-                         "time_stop_s": s["time_stop_days"] * 86400, "quote": q, "vwrp_px": vwrp_px}))
+                         "time_stop_s": s["time_stop_days"] * 86400, "quote": q, "vwrp_px": vwrp_px,
+                         "review": rev and {"scores": rev["scores"], "factors": rev["factors"]}}))
             break
     return out, notes
 
