@@ -71,4 +71,4 @@ real step is deliberately small.
 The office thread confirmed the live trading tags: drop_rebound, breakout_momentum, social_trend,
 merger_arb, vol_squeeze, gap_go. drop_rebound is added to the count. attention_spike is logged
 forward only and never trades, but stays in the count (more conservative). k is now 7, so with 30
-trades the t-statistic needed is about 2.62.
+trades the t-statistic needed is about 2.61.
