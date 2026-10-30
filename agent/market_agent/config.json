@@ -1,5 +1,5 @@
 {
-  "version": "agent-1.8.2",
+  "version": "agent-1.9",
   "note": "Always-on demo market agent. Demo account only (the client refuses any other host). Owner mandate: cmsg_01U4KMvkBYNknqm4HRVie8uvK9gRYqGXBK4bQP49dBz49i (26 Oct 2026).",
   "intervals_s": {
     "loop": 15,
@@ -13,7 +13,8 @@
     "social": 3600,
     "merger": 21600,
     "gaps": 60,
-    "scoreboard": 300
+    "scoreboard": 300,
+    "value_timing": 3600
   },
   "benchmark": {
     "t212": "VWRPl_EQ",
@@ -107,7 +108,9 @@
       "BROS_US_EQ",
       "SG1_US_EQ",
       "PLNT_US_EQ",
-      "ANF_US_EQ"
+      "ANF_US_EQ",
+      "VRVAl_EQ",
+      "VUSAl_EQ"
     ],
     "max_order_gbp": 600.0,
     "max_orders_per_day": 60,
@@ -310,6 +313,25 @@
         "max_per_day": 2,
         "flat_before_close_s": 900
       }
+    },
+    "value_timing": {
+      "enabled": true,
+      "value_symbol": "IWD",
+      "growth_symbol": "IWF",
+      "value_ticker": "VRVAl_EQ",
+      "market_ticker": "VUSAl_EQ",
+      "currency": {
+        "VRVAl_EQ": "USD",
+        "VUSAl_EQ": "GBP"
+      },
+      "entry_weight": 0.02,
+      "stop_loss": 0.5,
+      "take_profit": 10.0,
+      "time_stop_days": 3650,
+      "kill_after_trades": 30,
+      "kill_after_days": 730,
+      "rule": "month-end: hold US value (VRVA) when Russell 1000 Value's 12-month total return (IWD) beats Growth's (IWF), else the S&P 500 (VUSA)",
+      "rationale": "Research loop Q48a passed its pre-registered test 30 Oct 2026 (results/Q44_Q48.md): +3.6%/yr vs the US market 1927-2022, t 4.23, both halves positive, survives costs x2 and a 1-month lag; only +1.3%/yr since 2007. The signal uses the Russell 1000 Value/Growth ETFs (IWD/IWF) as the nearest free proxy for the Ken French value/growth portfolios; Vanguard Russell 1000 US Value (VRVA, LSE, USD) tracks the same value index. The stop is a -50% disaster stop only: the tested rule has none. Demo only; kill after 30 closed trades or 730 days if it does not beat VWRP."
     }
   },
   "scoreboard": {

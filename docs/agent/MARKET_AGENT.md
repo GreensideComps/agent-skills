@@ -1,4 +1,4 @@
-# Always-on demo market agent (agent-1.8)
+# Always-on demo market agent (agent-1.9)
 
 **Mandate:** the owner's 26 Oct 2026 handoff (`cmsg_01U4KMvkBYNknqm4HRVie8uvK9gRYqGXBK4bQP49dBz49i`), covering
 the demo account only. The Trading 212 client refuses any host but `demo.trading212.com`, and `load_credentials`
@@ -128,6 +128,14 @@ before buys.
    open and the first-30-minute VWAP. Buy at market; stop at the first-30-minute low (broker stop), +6% target, sold
    15 minutes before the close or at the first run of a later day (`why: flat_by_close`); at most 2 a day. A window
    the agent slept through is logged as `gap_go_missed` and never traded late. Catalysts are not checked.
+13. **value_timing** (agent-1.9, research loop Q48a, passed its pre-registered test 30 Oct 2026,
+   `research/always-on/results/Q44_Q48.md`, `value_timing.py`): after each US month end (the month's last weekday,
+   read after 21:00 UTC), the 12-month total return of Russell 1000 Value (IWD) is compared with Russell 1000 Growth
+   (IWF) from Yahoo adjusted closes. Value ahead: hold Vanguard Russell 1000 US Value (`VRVAl_EQ`, USD); otherwise the
+   S&P 500 (`VUSAl_EQ`, GBP). One 2% position; a new month-end target exits the held ETF (`why: switch`) and buys the
+   other. Only a -50% disaster stop at the broker (the tested rule has none). Switched off after 30 closed trades or
+   730 days from its first entry, whichever comes first, if its compounded return has not beaten VWRP's
+   (`why: killed`). The edge has been much smaller since 2007 (+1.3%/yr).
 
 Every other pass is recorded as a `decision` with `no_trade: true` and its reasons.
 

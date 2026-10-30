@@ -14,7 +14,7 @@ import uuid
 from pathlib import Path
 from urllib.parse import quote
 
-from . import active, execution, feeds, merger, review, social, swing
+from . import active, execution, feeds, merger, review, social, swing, value_timing
 
 HERE = Path(__file__).resolve().parent
 
@@ -100,6 +100,8 @@ class Agent:
             self._run("merger", self.refresh_merger)
         if self._swing("gap"):
             self._run("gaps", self.refresh_gaps)
+        if self._vt():
+            self._run("value_timing", self.refresh_value_timing)
         if (self.cfg.get("scoreboard") or {}).get("enabled"):
             self._run("scoreboard", self.refresh_scoreboard)
         if self.need_decide:  # decisions use this pass's positions and the prices fetched after them
@@ -565,6 +567,26 @@ class Agent:
                 n += 1
         return out
 
+    def refresh_value_timing(self) -> None:
+        """value_timing (Q48a): after each US month end, record next month's target ETF in state/value_timing.json.
+        The last target stands until a new month end is read."""
+        vc = self._vt()
+        now = self.clock()
+        v = value_timing.month_ends(value_timing.adjusted(vc["value_symbol"], self.get), now)
+        g = value_timing.month_ends(value_timing.adjusted(vc["growth_symbol"], self.get), now)
+        sig = value_timing.signal(v, g, vc)
+        state = self.s.read("value_timing.json") or {}
+        if not sig or sig["month"] == state.get("month"):
+            return
+        self.s._replace("value_timing.json", {**sig, "ts": feeds_ts(now), "previous": state.get("target")})
+        self.s.event("value_timing_signal", strategy=value_timing.NAME, **sig, previous=state.get("target"))
+        self.need_decide = True
+
+    def _vt(self) -> dict | None:
+        a = self.cfg.get("active") or {}
+        vc = a.get("value_timing") or {}
+        return vc if a.get("enabled") and vc.get("enabled") else None
+
     def _merger(self) -> dict | None:
         a = self.cfg.get("active") or {}
         mc = a.get("merger") or {}
@@ -583,6 +605,10 @@ class Agent:
     def _review_why(self, ticker: str, strategy: str | None = None) -> str | None:
         if strategy in (swing.SQUEEZE, swing.GAP):  # C9 trades follow their own exits, not the price review
             return self._swing_why(ticker, strategy)
+        if strategy == value_timing.NAME:  # held until the month-end signal names the other ETF, or the kill rule
+            if value_timing.NAME in (self.s.read("strategies.json") or {}):
+                return "killed"
+            return value_timing.exit_why(self.s.read("value_timing.json"), ticker)
         if strategy == merger.NAME:  # a deal trade exits on a termination, its stop or the cash-out, not on price
             return "deal_terminated" if ticker in self.mstate.get("terminated", {}) else None
         if strategy == social.NAME:  # C8 trades exit on their own attention rule, not the price review
@@ -702,7 +728,8 @@ class Agent:
         if not a.get("enabled"):
             return []
         return (list(a.get("watchlist", [])) + sorted((self._social() or {}).get("universe", {}))
-                + (list(self.mstate.get("watch", [])) if self._merger() else []))
+                + (list(self.mstate.get("watch", [])) if self._merger() else [])
+                + ([self._vt()["value_ticker"], self._vt()["market_ticker"]] if self._vt() else []))
 
     def _active_exits(self, recs, vwrp_px) -> list[tuple]:
         if not self._watch():
@@ -792,6 +819,13 @@ class Agent:
             for k, v in new.items():
                 self.s.event("strategy_disabled", strategy=k, **v)
                 self.alert("warn", f"strategy_disabled:{k}", f"strategy {k} switched off: {v['why']}")
+        if self._vt() and value_timing.NAME not in disabled:
+            k = value_timing.kill(recs, self.positions, self.clock(), vwrp_px, self._vt(), feeds_ts(self.clock()))
+            if k:
+                disabled = {**disabled, value_timing.NAME: k}
+                self.s._replace("strategies.json", disabled)
+                self.s.event("strategy_disabled", strategy=value_timing.NAME, **k)
+                self.alert("warn", f"strategy_disabled:{value_timing.NAME}", f"strategy value_timing switched off: {k['why']}")
         total = float((self.summary or {}).get("totalValue") or 0)
         cash = float(((self.summary or {}).get("cash") or {}).get("availableToTrade") or 0)
         fxq = self.quotes.get(self.cfg["benchmark"]["fx"])
@@ -814,6 +848,12 @@ class Agent:
                                         total, cash, day, self.clock(), vwrp_px, disabled, self.mstate)
             notes += n
             orders += mo
+        if self._vt() and not active.sleeve_block(self.cfg, recs, self.positions, day, total):
+            vo, n = value_timing.entry_orders(self.cfg, recs, self.positions, self._quote, fxq["price"] if fxq else None,
+                                              total, cash, self.clock(), vwrp_px, disabled,
+                                              self.s.read("value_timing.json"))
+            notes += n
+            orders += vo
         return next((o for o in orders if self.market_open(o[0])), None)
 
     def _satellite(self) -> dict[str, dict]:

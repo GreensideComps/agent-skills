@@ -72,7 +72,8 @@ class FakeBroker:
         return [{"ticker": "INTC_US_EQ", "workingScheduleId": 71}, {"ticker": "MSFT_US_EQ", "workingScheduleId": 71},
                 {"ticker": "JPM_US_EQ", "workingScheduleId": 71},
                 {"ticker": "UBER_US_EQ", "workingScheduleId": 71}, {"ticker": "CROX_US_EQ", "workingScheduleId": 71},
-                {"ticker": "VWRPl_EQ", "workingScheduleId": 70}]
+                {"ticker": "VWRPl_EQ", "workingScheduleId": 70}, {"ticker": "VRVAl_EQ", "workingScheduleId": 70},
+                {"ticker": "VUSAl_EQ", "workingScheduleId": 70}]
 
     def place_market_order(self, ticker, quantity):
         if self.fail_next:
@@ -833,3 +834,85 @@ def test_scoreboard_runs_after_the_close_without_credentials(tmp_path, monkeypat
     advance(ag, clock, 2, by=301)
     sb = [e for e in st.events("2026-10-27") if e["kind"] == "scoreboard"]
     assert len(sb) == 1 and sb[0]["ok"] and "keys []" in sb[0]["out"]               # once a day, no credentials
+
+
+def _daily(end, n, f):
+    """n weekday bars ending on `end` (a date), adjusted close f(i) for i = 0..n-1, as a Yahoo chart reply."""
+    days, d = [], end
+    while len(days) < n:
+        if d.weekday() < 5:
+            days.append(d)
+        d -= dt.timedelta(days=1)
+    days.reverse()
+    ts = [dt.datetime(x.year, x.month, x.day, 20, 0, tzinfo=dt.timezone.utc).timestamp() for x in days]
+    c = [f(i) for i in range(n)]
+    return {"chart": {"result": [{"timestamp": ts, "indicators": {"quote": [{"close": c}], "adjclose": [{"adjclose": c}]}}]}}
+
+
+def test_value_timing_month_end_signal_rules():
+    from market_agent import value_timing as vt
+    vc = agent_mod.load_config()["active"]["value_timing"]
+    up = _daily(dt.date(2026, 10, 30), 500, lambda i: 100 + i)
+    flat = _daily(dt.date(2026, 10, 30), 500, lambda i: 100.0)
+    bars = lambda r: list(zip(r["chart"]["result"][0]["timestamp"], r["chart"]["result"][0]["indicators"]["adjclose"][0]["adjclose"]))  # noqa: E731
+    fri_eve = dt.datetime(2026, 10, 30, 21, 30, tzinfo=dt.timezone.utc).timestamp()
+    fri_day = dt.datetime(2026, 10, 30, 15, 0, tzinfo=dt.timezone.utc).timestamp()
+    assert max(vt.month_ends(bars(up), fri_eve)) == "2026-10"            # Oct 30 is October's last weekday
+    assert max(vt.month_ends(bars(up), fri_day)) == "2026-09"            # not before that session has closed
+    mid = _daily(dt.date(2026, 10, 28), 500, lambda i: 100 + i)
+    assert max(vt.month_ends(bars(mid), fri_eve)) == "2026-09"           # October is not over on the 28th
+    s = vt.signal(vt.month_ends(bars(up), fri_eve), vt.month_ends(bars(flat), fri_eve), vc)
+    assert s["month"] == "2026-10" and s["hold"] == "value" and s["target"] == "VRVAl_EQ" and s["value_12m"] > 0
+    s = vt.signal(vt.month_ends(bars(flat), fri_eve), vt.month_ends(bars(up), fri_eve), vc)
+    assert s["hold"] == "market" and s["target"] == "VUSAl_EQ"
+    short = _daily(dt.date(2026, 10, 30), 200, lambda i: 100 + i)
+    assert vt.signal(vt.month_ends(bars(short), fri_eve), vt.month_ends(bars(flat), fri_eve), vc) is None
+    assert vt.exit_why({"target": "VUSAl_EQ"}, "VRVAl_EQ") == "switch" and vt.exit_why({"target": "VRVAl_EQ"}, "VRVAl_EQ") is None
+
+
+def test_value_timing_buys_the_target_and_switches_on_a_new_signal(tmp_path):
+    ag, b, st, clock = make(tmp_path, active_on=True, prices={"VWRP.L": 140.0, "GBPUSD=X": 1.25, "VRVA.L": 100.0,
+                                                               "VUSA.L": 100.0})
+    _active_book(b)
+    base = ag.get
+
+    def get(url, params):
+        if url.endswith("/IWD"):
+            return _daily(dt.date(2026, 10, 30), 500, lambda i: 100 + i)
+        if url.endswith("/IWF"):
+            return _daily(dt.date(2026, 10, 30), 500, lambda i: 100.0)
+        return base(url, params)
+    ag.get = get
+    ag.cfg["active"]["social"]["enabled"] = False
+    clock.t = dt.datetime(2026, 10, 31, 17, 0, tzinfo=dt.timezone.utc).timestamp()   # Saturday, after LSE hours
+    advance(ag, clock, 2, by=150)
+    state = st.read("value_timing.json")
+    assert state["month"] == "2026-10" and state["target"] == "VRVAl_EQ"
+    assert not [o for o in b.orders if o[0] == "VRVAl_EQ"]                    # LSE shut
+    clock.t = dt.datetime(2026, 11, 2, 9, 0, tzinfo=dt.timezone.utc).timestamp()     # Monday, LSE open
+    advance(ag, clock, 1, by=30)
+    buys = [o for o in b.orders if o[0] == "VRVAl_EQ"]
+    assert len(buys) == 1 and buys[0][1] > 0
+    rec = next(r for r in execution.latest_intents(st.intents()).values() if r["ticker"] == "VRVAl_EQ")
+    assert rec["signal"]["strategy"] == "value_timing" and rec["signal"]["hold"] == "value"
+    assert abs(rec["value_gbp"] - 0.02 * float(b.account_summary()["totalValue"])) < 1.0   # 2% of the book, USD line
+    b.pos.append(pos("VRVAl_EQ", buys[0][1], buys[0][1], 0, rec["value_gbp"], rec["value_gbp"]))
+    b.cash -= rec["value_gbp"]
+    advance(ag, clock, 3, by=301)
+    assert len([o for o in b.orders if o[0] == "VRVAl_EQ"]) == 1              # held through the month
+    stop = [p for p in b.pending if p["ticker"] == "VRVAl_EQ"]
+    assert len(stop) == 1 and stop[0]["stopPrice"] == 50.0                    # the -50% disaster stop only
+    st._replace("value_timing.json", {**state, "month": "2026-11", "hold": "market", "target": "VUSAl_EQ"})
+    advance(ag, clock, 3, by=301)
+    sells = [o for o in b.orders if o[0] == "VRVAl_EQ" and o[1] < 0]
+    assert sells == [("VRVAl_EQ", -buys[0][1])]
+    ex = next(r for r in execution.latest_intents(st.intents()).values()
+              if (r.get("signal") or {}).get("type") == "active_exit")
+    assert ex["signal"]["why"] == "switch" and ex["signal"]["strategy"] == "value_timing"
+    b.pos = [p for p in b.pos if p["instrument"]["ticker"] != "VRVAl_EQ"]
+    b.cash += rec["value_gbp"]
+    advance(ag, clock, 2, by=301)
+    vusa = [o for o in b.orders if o[0] == "VUSAl_EQ"]
+    assert len(vusa) == 1 and vusa[0][1] > 0
+    r2 = next(r for r in execution.latest_intents(st.intents()).values() if r["ticker"] == "VUSAl_EQ")
+    assert abs(r2["value_gbp"] - vusa[0][1] * 100.0) < 0.01                   # a GBP line: no FX conversion
