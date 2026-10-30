@@ -1,0 +1,3946 @@
+{
+ "A-S1a-R1-on": {
+  "months": 95,
+  "ann": -0.03402579488964667,
+  "t": -1.9433193575298424,
+  "sr": {
+   "sr": -0.19756288202872344,
+   "skew": 0.5585088202237802,
+   "kurt": 6.004521490550026,
+   "n": 95
+  },
+  "thirds": [
+   false,
+   false,
+   true
+  ],
+  "alpha": {
+   "alpha_ann": -0.03327825636749651,
+   "alpha_t": -2.3893841734896273,
+   "betas": {
+    "Mkt-RF": -0.028104531644748285,
+    "SMB": 0.036947502616344705,
+    "HML": 0.12494891582165121,
+    "RMW": 0.07524600157792954,
+    "CMA": 0.12308544040706268,
+    "Mom": -0.10613941702626087
+   }
+  },
+  "on": 73,
+  "min_on": 30,
+  "p_one_sided": 0.9740112079706019,
+  "holm": false,
+  "dsr": 9.675375040041345e-07,
+  "checks": {
+   "t_ge_3_holm": false,
+   "dsr_ge_0.9": false,
+   "thirds_2_of_3": false,
+   "alpha_pos": false
+  },
+  "verdict": "fail",
+  "desc": "FCF yield, within SIC group, ex financials | trend: index above its 10-month average = ON",
+  "d10_d1_on_ann": -0.004257865704332869
+ },
+ "A-S1a-R1-off": {
+  "months": 95,
+  "ann": -0.024726188286586768,
+  "t": -1.582877977061869,
+  "sr": {
+   "sr": -0.18818487821125274,
+   "skew": -1.0651529507570152,
+   "kurt": 8.40593940351271,
+   "n": 95
+  },
+  "thirds": [
+   false,
+   false,
+   true
+  ],
+  "alpha": {
+   "alpha_ann": -0.036586032575378624,
+   "alpha_t": -2.4073057849423383,
+   "betas": {
+    "Mkt-RF": 0.041616670435075526,
+    "SMB": -0.003138917968397128,
+    "HML": 0.0756911434255267,
+    "RMW": 0.05189581725460683,
+    "CMA": 0.11086472261637721,
+    "Mom": 0.08883914622936456
+   }
+  },
+  "on": 22,
+  "min_on": 30,
+  "p_one_sided": 0.9432753603841274,
+  "holm": false,
+  "dsr": 3.1121682397827755e-08,
+  "checks": {
+   "t_ge_3_holm": false,
+   "dsr_ge_0.9": false,
+   "thirds_2_of_3": false,
+   "alpha_pos": false
+  },
+  "verdict": "inconclusive",
+  "desc": "FCF yield, within SIC group, ex financials | trend: index above its 10-month average = OFF",
+  "d10_d1_on_ann": 0.09235994807162698
+ },
+ "A-S1a-R2-on": {
+  "months": 95,
+  "ann": -0.06245659093492206,
+  "t": -4.5963303190941405,
+  "sr": {
+   "sr": -0.45060965515697127,
+   "skew": -2.0322622029470803,
+   "kurt": 8.607052284519739,
+   "n": 95
+  },
+  "thirds": [
+   false,
+   false,
+   false
+  ],
+  "alpha": {
+   "alpha_ann": -0.06753981800225677,
+   "alpha_t": -4.545656510247018,
+   "betas": {
+    "Mkt-RF": -0.004335499473030263,
+    "SMB": 0.07872764391944678,
+    "HML": -0.10728538301683944,
+    "RMW": 0.03004079425439644,
+    "CMA": 0.26246929295543986,
+    "Mom": -0.026949437375165197
+   }
+  },
+  "on": 41,
+  "min_on": 30,
+  "p_one_sided": 0.9999978500158226,
+  "holm": false,
+  "dsr": 0.0,
+  "checks": {
+   "t_ge_3_holm": false,
+   "dsr_ge_0.9": false,
+   "thirds_2_of_3": false,
+   "alpha_pos": false
+  },
+  "verdict": "fail",
+  "desc": "FCF yield, within SIC group, ex financials | volatility: last month's vol below its 60-month median = ON",
+  "d10_d1_on_ann": -0.06686746693090442
+ },
+ "A-S1a-R2-off": {
+  "months": 95,
+  "ann": -0.044406062068688315,
+  "t": -1.9033093026128827,
+  "sr": {
+   "sr": -0.22962462285783233,
+   "skew": 0.13037073690458897,
+   "kurt": 5.493386923648144,
+   "n": 95
+  },
+  "thirds": [
+   false,
+   false,
+   true
+  ],
+  "alpha": {
+   "alpha_ann": -0.05843017207049289,
+   "alpha_t": -3.3576981546185665,
+   "betas": {
+    "Mkt-RF": 0.04638968466558265,
+    "SMB": -0.062222798548524,
+    "HML": 0.19858880611732355,
+    "RMW": 0.12552190559719126,
+    "CMA": 0.11384464188424086,
+    "Mom": 0.02496801407524561
+   }
+  },
+  "on": 54,
+  "min_on": 30,
+  "p_one_sided": 0.9714999011443369,
+  "holm": false,
+  "dsr": 9.516718213475883e-08,
+  "checks": {
+   "t_ge_3_holm": false,
+   "dsr_ge_0.9": false,
+   "thirds_2_of_3": false,
+   "alpha_pos": false
+  },
+  "verdict": "fail",
+  "desc": "FCF yield, within SIC group, ex financials | volatility: last month's vol below its 60-month median = OFF",
+  "d10_d1_on_ann": 0.08264186676530695
+ },
+ "A-S1a-R3-on": {
+  "months": 95,
+  "ann": -0.021901006668194917,
+  "t": -1.1749395054871912,
+  "sr": {
+   "sr": -0.1401815932520811,
+   "skew": 0.5896195923213062,
+   "kurt": 8.02304184425043,
+   "n": 95
+  },
+  "thirds": [
+   false,
+   false,
+   true
+  ],
+  "alpha": {
+   "alpha_ann": -0.030779381398809258,
+   "alpha_t": -2.0841697317119428,
+   "betas": {
+    "Mkt-RF": -0.002136797721189408,
+    "SMB": 0.029606999790236385,
+    "HML": 0.07641572247591429,
+    "RMW": 0.11510389496412746,
+    "CMA": 0.15625120672455303,
+    "Mom": 0.025750077632123357
+   }
+  },
+  "on": 47,
+  "min_on": 30,
+  "p_one_sided": 0.8799905405070962,
+  "holm": false,
+  "dsr": 7.71614625855177e-06,
+  "checks": {
+   "t_ge_3_holm": false,
+   "dsr_ge_0.9": false,
+   "thirds_2_of_3": false,
+   "alpha_pos": false
+  },
+  "verdict": "fail",
+  "desc": "FCF yield, within SIC group, ex financials | calendar: return month in Nov-Apr = ON",
+  "d10_d1_on_ann": 0.09118383799444585
+ },
+ "A-S1a-R3-off": {
+  "months": 95,
+  "ann": -0.04483489473682356,
+  "t": -3.5480039660260507,
+  "sr": {
+   "sr": -0.3203646970541626,
+   "skew": -1.2666599524302364,
+   "kurt": 5.416498550189797,
+   "n": 95
+  },
+  "thirds": [
+   false,
+   false,
+   false
+  ],
+  "alpha": {
+   "alpha_ann": -0.04355484969858486,
+   "alpha_t": -3.4246210553793537,
+   "betas": {
+    "Mkt-RF": 0.00406678006137784,
+    "SMB": -0.034242627286088456,
+    "HML": 0.044723923403472754,
+    "RMW": -0.052970864938239735,
+    "CMA": 0.14594384660640236,
+    "Mom": -0.0759509531446406
+   }
+  },
+  "on": 48,
+  "min_on": 30,
+  "p_one_sided": 0.9998059188117355,
+  "holm": false,
+  "dsr": 2.9976021664879227e-14,
+  "checks": {
+   "t_ge_3_holm": false,
+   "dsr_ge_0.9": false,
+   "thirds_2_of_3": false,
+   "alpha_pos": false
+  },
+  "verdict": "fail",
+  "desc": "FCF yield, within SIC group, ex financials | calendar: return month in Nov-Apr = OFF",
+  "d10_d1_on_ann": -0.05342803592873878
+ },
+ "A-S1b-R1-on": {
+  "months": 95,
+  "ann": -0.03610623981797829,
+  "t": -1.7496507968687163,
+  "sr": {
+   "sr": -0.19526433406156443,
+   "skew": 0.3105057040490442,
+   "kurt": 3.695425268471031,
+   "n": 95
+  },
+  "thirds": [
+   false,
+   false,
+   true
+  ],
+  "alpha": {
+   "alpha_ann": -0.035858644642101846,
+   "alpha_t": -1.88757807116073,
+   "betas": {
+    "Mkt-RF": -0.015368775747219803,
+    "SMB": 0.031049686795795048,
+    "HML": 0.12631349068185344,
+    "RMW": 0.10975458578937101,
+    "CMA": 0.046144206864776195,
+    "Mom": -0.1332261095026926
+   }
+  },
+  "on": 73,
+  "min_on": 30,
+  "p_one_sided": 0.9599107056192393,
+  "holm": false,
+  "dsr": 4.897168299766719e-07,
+  "checks": {
+   "t_ge_3_holm": false,
+   "dsr_ge_0.9": false,
+   "thirds_2_of_3": false,
+   "alpha_pos": false
+  },
+  "verdict": "fail",
+  "desc": "EBIT / EV, within SIC group, ex financials | trend: index above its 10-month average = ON",
+  "d10_d1_on_ann": -0.057532050837525564
+ },
+ "A-S1b-R1-off": {
+  "months": 95,
+  "ann": -0.019372807724223715,
+  "t": -1.6566843654773564,
+  "sr": {
+   "sr": -0.18441482617406643,
+   "skew": -1.3362227670735278,
+   "kurt": 8.831034112457267,
+   "n": 95
+  },
+  "thirds": [
+   false,
+   false,
+   true
+  ],
+  "alpha": {
+   "alpha_ann": -0.029896104832955926,
+   "alpha_t": -2.5274987466494645,
+   "betas": {
+    "Mkt-RF": 0.03578138359068127,
+    "SMB": 0.004417798672627453,
+    "HML": 0.05952496790908617,
+    "RMW": 0.07815336205681535,
+    "CMA": 0.06352892967673539,
+    "Mom": 0.060147177506957465
+   }
+  },
+  "on": 22,
+  "min_on": 30,
+  "p_one_sided": 0.9512083472198045,
+  "holm": false,
+  "dsr": 1.7120638962087043e-08,
+  "checks": {
+   "t_ge_3_holm": false,
+   "dsr_ge_0.9": false,
+   "thirds_2_of_3": false,
+   "alpha_pos": false
+  },
+  "verdict": "inconclusive",
+  "desc": "EBIT / EV, within SIC group, ex financials | trend: index above its 10-month average = OFF",
+  "d10_d1_on_ann": 0.09350047403153003
+ },
+ "A-S1b-R2-on": {
+  "months": 95,
+  "ann": -0.05319007703792368,
+  "t": -3.9572218250824647,
+  "sr": {
+   "sr": -0.40581530540262517,
+   "skew": -1.1701045115874333,
+   "kurt": 6.107521950364637,
+   "n": 95
+  },
+  "thirds": [
+   false,
+   false,
+   false
+  ],
+  "alpha": {
+   "alpha_ann": -0.059140703071637366,
+   "alpha_t": -4.041295909020204,
+   "betas": {
+    "Mkt-RF": 0.008599080006553775,
+    "SMB": 0.05635835618997045,
+    "HML": -0.09470594166383207,
+    "RMW": 0.04142953701011641,
+    "CMA": 0.2204445890889207,
+    "Mom": -0.03568726810334955
+   }
+  },
+  "on": 41,
+  "min_on": 30,
+  "p_one_sided": 0.9999620867450346,
+  "holm": false,
+  "dsr": 5.551115123125783e-17,
+  "checks": {
+   "t_ge_3_holm": false,
+   "dsr_ge_0.9": false,
+   "thirds_2_of_3": false,
+   "alpha_pos": false
+  },
+  "verdict": "fail",
+  "desc": "EBIT / EV, within SIC group, ex financials | volatility: last month's vol below its 60-month median = ON",
+  "d10_d1_on_ann": -0.06374082656141628
+ },
+ "A-S1b-R2-off": {
+  "months": 95,
+  "ann": -0.05045531800464312,
+  "t": -2.344217956942289,
+  "sr": {
+   "sr": -0.271579318155009,
+   "skew": -0.504117253231997,
+   "kurt": 5.0266906600032435,
+   "n": 95
+  },
+  "thirds": [
+   false,
+   false,
+   true
+  ],
+  "alpha": {
+   "alpha_ann": -0.06255680967515248,
+   "alpha_t": -3.6860165132518348,
+   "betas": {
+    "Mkt-RF": 0.03924727808595264,
+    "SMB": -0.03946199097845062,
+    "HML": 0.1729154396348909,
+    "RMW": 0.17381196428988954,
+    "CMA": 0.029854590572678526,
+    "Mom": -0.022784410816946096
+   }
+  },
+  "on": 54,
+  "min_on": 30,
+  "p_one_sided": 0.9904664873125214,
+  "holm": false,
+  "dsr": 7.963479320416411e-10,
+  "checks": {
+   "t_ge_3_holm": false,
+   "dsr_ge_0.9": false,
+   "thirds_2_of_3": false,
+   "alpha_pos": false
+  },
+  "verdict": "fail",
+  "desc": "EBIT / EV, within SIC group, ex financials | volatility: last month's vol below its 60-month median = OFF",
+  "d10_d1_on_ann": 0.008713789010599273
+ },
+ "A-S1b-R3-on": {
+  "months": 95,
+  "ann": -0.01522597289769657,
+  "t": -1.0582459194780225,
+  "sr": {
+   "sr": -0.11232088655190547,
+   "skew": 0.6424395399738272,
+   "kurt": 6.711969573914212,
+   "n": 95
+  },
+  "thirds": [
+   false,
+   false,
+   true
+  ],
+  "alpha": {
+   "alpha_ann": -0.02150802335605923,
+   "alpha_t": -1.8807565436500018,
+   "betas": {
+    "Mkt-RF": -0.01463974571872148,
+    "SMB": 0.03456668839253519,
+    "HML": 0.06155459189260237,
+    "RMW": 0.14007045339841437,
+    "CMA": 0.08143642696284976,
+    "Mom": -0.0013870741987010494
+   }
+  },
+  "on": 47,
+  "min_on": 30,
+  "p_one_sided": 0.8550283293238886,
+  "holm": false,
+  "dsr": 1.9201730817208773e-05,
+  "checks": {
+   "t_ge_3_holm": false,
+   "dsr_ge_0.9": false,
+   "thirds_2_of_3": false,
+   "alpha_pos": false
+  },
+  "verdict": "fail",
+  "desc": "EBIT / EV, within SIC group, ex financials | calendar: return month in Nov-Apr = ON",
+  "d10_d1_on_ann": 0.0587950012343747
+ },
+ "A-S1b-R3-off": {
+  "months": 95,
+  "ann": -0.048411184537756585,
+  "t": -3.3588633750920436,
+  "sr": {
+   "sr": -0.32716848548229477,
+   "skew": -0.7502908198320543,
+   "kurt": 4.464505109297164,
+   "n": 95
+  },
+  "thirds": [
+   false,
+   false,
+   false
+  ],
+  "alpha": {
+   "alpha_ann": -0.048860003458358676,
+   "alpha_t": -3.163287669697466,
+   "betas": {
+    "Mkt-RF": 0.02310792427215267,
+    "SMB": -0.03718891274903077,
+    "HML": 0.045908950922631316,
+    "RMW": -0.017367119804008697,
+    "CMA": 0.09621249527601154,
+    "Mom": -0.10380528702719065
+   }
+  },
+  "on": 48,
+  "min_on": 30,
+  "p_one_sided": 0.9996086812466043,
+  "holm": false,
+  "dsr": 2.060018822191978e-12,
+  "checks": {
+   "t_ge_3_holm": false,
+   "dsr_ge_0.9": false,
+   "thirds_2_of_3": false,
+   "alpha_pos": false
+  },
+  "verdict": "fail",
+  "desc": "EBIT / EV, within SIC group, ex financials | calendar: return month in Nov-Apr = OFF",
+  "d10_d1_on_ann": -0.10221238209294412
+ },
+ "A-S2a-R1-on": {
+  "months": 95,
+  "ann": -0.028966079451968357,
+  "t": -2.120804193877048,
+  "sr": {
+   "sr": -0.22749373293951242,
+   "skew": -0.069393181588596,
+   "kurt": 3.928974408739782,
+   "n": 95
+  },
+  "thirds": [
+   false,
+   false,
+   false
+  ],
+  "alpha": {
+   "alpha_ann": -0.03642993229254711,
+   "alpha_t": -3.205676476852497,
+   "betas": {
+    "Mkt-RF": 0.003287397163227329,
+    "SMB": 0.048357501917535836,
+    "HML": -0.11765024231909485,
+    "RMW": 0.12236399403784615,
+    "CMA": -0.00691338023618527,
+    "Mom": 0.05537210371161719
+   }
+  },
+  "on": 73,
+  "min_on": 30,
+  "p_one_sided": 0.9830308581839818,
+  "holm": false,
+  "dsr": 4.248387752703309e-08,
+  "checks": {
+   "t_ge_3_holm": false,
+   "dsr_ge_0.9": false,
+   "thirds_2_of_3": false,
+   "alpha_pos": false
+  },
+  "verdict": "fail",
+  "desc": "Gross profit / assets, within SIC group, ex financials | trend: index above its 10-month average = ON",
+  "d10_d1_on_ann": 0.02042687356268505
+ },
+ "A-S2a-R1-off": {
+  "months": 95,
+  "ann": -0.024826976105390454,
+  "t": -2.6276847587333116,
+  "sr": {
+   "sr": -0.2761524752746787,
+   "skew": -1.6074752669357946,
+   "kurt": 7.420037483915769,
+   "n": 95
+  },
+  "thirds": [
+   false,
+   false,
+   false
+  ],
+  "alpha": {
+   "alpha_ann": -0.028112334499017014,
+   "alpha_t": -2.9176503281165096,
+   "betas": {
+    "Mkt-RF": -0.004560597364393572,
+    "SMB": 0.028293559708544733,
+    "HML": 0.04024658966253748,
+    "RMW": 0.09883626222012887,
+    "CMA": -0.07172048365842776,
+    "Mom": 0.028267703630487293
+   }
+  },
+  "on": 22,
+  "min_on": 30,
+  "p_one_sided": 0.9957015928601747,
+  "holm": false,
+  "dsr": 4.4392267639636884e-13,
+  "checks": {
+   "t_ge_3_holm": false,
+   "dsr_ge_0.9": false,
+   "thirds_2_of_3": false,
+   "alpha_pos": false
+  },
+  "verdict": "inconclusive",
+  "desc": "Gross profit / assets, within SIC group, ex financials | trend: index above its 10-month average = OFF",
+  "d10_d1_on_ann": 0.013159571185999551
+ },
+ "A-S2a-R2-on": {
+  "months": 95,
+  "ann": -0.04644642482230768,
+  "t": -3.595945859201644,
+  "sr": {
+   "sr": -0.37508695307271717,
+   "skew": -1.61126262299754,
+   "kurt": 5.840686242108482,
+   "n": 95
+  },
+  "thirds": [
+   false,
+   false,
+   false
+  ],
+  "alpha": {
+   "alpha_ann": -0.0554111520915493,
+   "alpha_t": -4.351432266164416,
+   "betas": {
+    "Mkt-RF": 0.00849881336369282,
+    "SMB": 0.0756463824550157,
+    "HML": -0.12277349469120649,
+    "RMW": 0.0686493501192799,
+    "CMA": 0.14566968071033642,
+    "Mom": 0.06975200945021859
+   }
+  },
+  "on": 41,
+  "min_on": 30,
+  "p_one_sided": 0.9998383924886807,
+  "holm": false,
+  "dsr": 0.0,
+  "checks": {
+   "t_ge_3_holm": false,
+   "dsr_ge_0.9": false,
+   "thirds_2_of_3": false,
+   "alpha_pos": false
+  },
+  "verdict": "fail",
+  "desc": "Gross profit / assets, within SIC group, ex financials | volatility: last month's vol below its 60-month median = ON",
+  "d10_d1_on_ann": 0.0016298644060222145
+ },
+ "A-S2a-R2-off": {
+  "months": 95,
+  "ann": -0.05660497369707472,
+  "t": -4.070754322013815,
+  "sr": {
+   "sr": -0.38750429510273343,
+   "skew": -0.5718735447922411,
+   "kurt": 3.942362135900988,
+   "n": 95
+  },
+  "thirds": [
+   false,
+   false,
+   false
+  ],
+  "alpha": {
+   "alpha_ann": -0.06659998052230777,
+   "alpha_t": -5.848331110378032,
+   "betas": {
+    "Mkt-RF": 0.01916414037512652,
+    "SMB": -0.016883148334557962,
+    "HML": -0.06531070465507915,
+    "RMW": 0.18276924498693822,
+    "CMA": -0.07998307820185878,
+    "Mom": 0.030594085762615887
+   }
+  },
+  "on": 54,
+  "min_on": 30,
+  "p_one_sided": 0.9999765694249003,
+  "holm": false,
+  "dsr": 7.382983113757291e-14,
+  "checks": {
+   "t_ge_3_holm": false,
+   "dsr_ge_0.9": false,
+   "thirds_2_of_3": false,
+   "alpha_pos": false
+  },
+  "verdict": "fail",
+  "desc": "Gross profit / assets, within SIC group, ex financials | volatility: last month's vol below its 60-month median = OFF",
+  "d10_d1_on_ann": 0.03173792399113126
+ },
+ "A-S2a-R3-on": {
+  "months": 95,
+  "ann": -0.03903530664691016,
+  "t": -3.1895806912796654,
+  "sr": {
+   "sr": -0.37334340435170843,
+   "skew": -1.0327421049270953,
+   "kurt": 4.195994168767113,
+   "n": 95
+  },
+  "thirds": [
+   false,
+   false,
+   false
+  ],
+  "alpha": {
+   "alpha_ann": -0.040288595726872406,
+   "alpha_t": -4.11484235147197,
+   "betas": {
+    "Mkt-RF": -0.03218344632161265,
+    "SMB": 0.02395711830116827,
+    "HML": -0.07310244228762304,
+    "RMW": 0.0834265666660679,
+    "CMA": -0.03632265748686617,
+    "Mom": 0.049118656288873255
+   }
+  },
+  "on": 47,
+  "min_on": 30,
+  "p_one_sided": 0.9992876032166885,
+  "holm": false,
+  "dsr": 5.551115123125783e-16,
+  "checks": {
+   "t_ge_3_holm": false,
+   "dsr_ge_0.9": false,
+   "thirds_2_of_3": false,
+   "alpha_pos": false
+  },
+  "verdict": "fail",
+  "desc": "Gross profit / assets, within SIC group, ex financials | calendar: return month in Nov-Apr = ON",
+  "d10_d1_on_ann": -0.01761987626395011
+ },
+ "A-S2a-R3-off": {
+  "months": 95,
+  "ann": -0.023521740312667842,
+  "t": -2.442513305870505,
+  "sr": {
+   "sr": -0.21582997914113294,
+   "skew": -0.4553297232466707,
+   "kurt": 5.428856520739423,
+   "n": 95
+  },
+  "thirds": [
+   false,
+   false,
+   false
+  ],
+  "alpha": {
+   "alpha_ann": -0.029574428490914004,
+   "alpha_t": -2.951086506240257,
+   "betas": {
+    "Mkt-RF": 0.019841816253814037,
+    "SMB": 0.012711088368325152,
+    "HML": -0.08391220164339348,
+    "RMW": 0.07186795733717649,
+    "CMA": 0.027273390332301462,
+    "Mom": 0.002239288321963857
+   }
+  },
+  "on": 48,
+  "min_on": 30,
+  "p_one_sided": 0.9927073040285972,
+  "holm": false,
+  "dsr": 2.8120445694224117e-08,
+  "checks": {
+   "t_ge_3_holm": false,
+   "dsr_ge_0.9": false,
+   "thirds_2_of_3": false,
+   "alpha_pos": false
+  },
+  "verdict": "fail",
+  "desc": "Gross profit / assets, within SIC group, ex financials | calendar: return month in Nov-Apr = OFF",
+  "d10_d1_on_ann": 0.05435013584528445
+ },
+ "A-S2b-R1-on": {
+  "months": 95,
+  "ann": -0.03310507417193263,
+  "t": -1.5414736561845441,
+  "sr": {
+   "sr": -0.1773902680732312,
+   "skew": -0.18390622407034427,
+   "kurt": 5.00479407915333,
+   "n": 95
+  },
+  "thirds": [
+   false,
+   false,
+   false
+  ],
+  "alpha": {
+   "alpha_ann": -0.027499312321250555,
+   "alpha_t": -1.5270719603548615,
+   "betas": {
+    "Mkt-RF": 0.03875068992707754,
+    "SMB": 0.17851846958689743,
+    "HML": -0.04485779449968615,
+    "RMW": -0.16279467231796285,
+    "CMA": -0.034670977715859655,
+    "Mom": -0.007071150530190409
+   }
+  },
+  "on": 73,
+  "min_on": 30,
+  "p_one_sided": 0.9383992251623801,
+  "holm": false,
+  "dsr": 4.0670165435408023e-07,
+  "checks": {
+   "t_ge_3_holm": false,
+   "dsr_ge_0.9": false,
+   "thirds_2_of_3": false,
+   "alpha_pos": false
+  },
+  "verdict": "fail",
+  "desc": "Low accruals (OCF - NI) / assets, ex financials | trend: index above its 10-month average = ON",
+  "d10_d1_on_ann": -0.015436998869848423
+ },
+ "A-S2b-R1-off": {
+  "months": 95,
+  "ann": -0.024599391609613767,
+  "t": -1.6135757834360047,
+  "sr": {
+   "sr": -0.1973744769931118,
+   "skew": -1.264793764785606,
+   "kurt": 8.745440582722683,
+   "n": 95
+  },
+  "thirds": [
+   false,
+   false,
+   false
+  ],
+  "alpha": {
+   "alpha_ann": -0.01862735397714697,
+   "alpha_t": -1.7058349223286435,
+   "betas": {
+    "Mkt-RF": 0.031704404724237197,
+    "SMB": -0.01569949140344171,
+    "HML": -0.02342672414485375,
+    "RMW": -0.13646343446950435,
+    "CMA": -0.06728169019451197,
+    "Mom": -0.05301255367951497
+   }
+  },
+  "on": 22,
+  "min_on": 30,
+  "p_one_sided": 0.9466902634599903,
+  "holm": false,
+  "dsr": 8.619345848170923e-09,
+  "checks": {
+   "t_ge_3_holm": false,
+   "dsr_ge_0.9": false,
+   "thirds_2_of_3": false,
+   "alpha_pos": false
+  },
+  "verdict": "inconclusive",
+  "desc": "Low accruals (OCF - NI) / assets, ex financials | trend: index above its 10-month average = OFF",
+  "d10_d1_on_ann": -0.026012731252969053
+ },
+ "A-S2b-R2-on": {
+  "months": 95,
+  "ann": -0.03838060823692303,
+  "t": -3.3334071607481683,
+  "sr": {
+   "sr": -0.34824033403801996,
+   "skew": -1.1615641909522503,
+   "kurt": 4.8805992491261865,
+   "n": 95
+  },
+  "thirds": [
+   false,
+   false,
+   false
+  ],
+  "alpha": {
+   "alpha_ann": -0.04394279932677055,
+   "alpha_t": -3.792991060904654,
+   "betas": {
+    "Mkt-RF": 0.011958272042901745,
+    "SMB": 0.0698272269732156,
+    "HML": -0.08456017584391404,
+    "RMW": 0.028619167534288666,
+    "CMA": 0.10748654573754664,
+    "Mom": 0.035278359091276516
+   }
+  },
+  "on": 41,
+  "min_on": 30,
+  "p_one_sided": 0.9995710535152651,
+  "holm": false,
+  "dsr": 3.1086244689504383e-15,
+  "checks": {
+   "t_ge_3_holm": false,
+   "dsr_ge_0.9": false,
+   "thirds_2_of_3": false,
+   "alpha_pos": false
+  },
+  "verdict": "fail",
+  "desc": "Low accruals (OCF - NI) / assets, ex financials | volatility: last month's vol below its 60-month median = ON",
+  "d10_d1_on_ann": -0.0019507477393989356
+ },
+ "A-S2b-R2-off": {
+  "months": 95,
+  "ann": -0.06745459058981605,
+  "t": -2.9789229222828775,
+  "sr": {
+   "sr": -0.3171610611628949,
+   "skew": -0.24987555151321975,
+   "kurt": 4.064370657638474,
+   "n": 95
+  },
+  "thirds": [
+   false,
+   false,
+   false
+  ],
+  "alpha": {
+   "alpha_ann": -0.058387882424165746,
+   "alpha_t": -3.239127188176108,
+   "betas": {
+    "Mkt-RF": 0.08696148951962575,
+    "SMB": 0.07487056989428449,
+    "HML": -0.09441007472689042,
+    "RMW": -0.2978380856412551,
+    "CMA": -0.0655914967326755,
+    "Mom": -0.08086306503746953
+   }
+  },
+  "on": 54,
+  "min_on": 30,
+  "p_one_sided": 0.9985536823372974,
+  "holm": false,
+  "dsr": 1.5732565250559105e-10,
+  "checks": {
+   "t_ge_3_holm": false,
+   "dsr_ge_0.9": false,
+   "thirds_2_of_3": false,
+   "alpha_pos": false
+  },
+  "verdict": "fail",
+  "desc": "Low accruals (OCF - NI) / assets, ex financials | volatility: last month's vol below its 60-month median = OFF",
+  "d10_d1_on_ann": -0.029985191624979576
+ },
+ "A-S2b-R3-on": {
+  "months": 95,
+  "ann": -0.030107964045349534,
+  "t": -1.602065858305194,
+  "sr": {
+   "sr": -0.18441354508640964,
+   "skew": -1.1127111948895037,
+   "kurt": 6.881595504289825,
+   "n": 95
+  },
+  "thirds": [
+   false,
+   true,
+   false
+  ],
+  "alpha": {
+   "alpha_ann": -0.020434556038832867,
+   "alpha_t": -1.7522969753310322,
+   "betas": {
+    "Mkt-RF": 0.05095291076208057,
+    "SMB": 0.06641988385895999,
+    "HML": -0.022310766039426503,
+    "RMW": -0.2593097357661197,
+    "CMA": -0.10621201903915457,
+    "Mom": -0.011450666463340841
+   }
+  },
+  "on": 47,
+  "min_on": 30,
+  "p_one_sided": 0.9454294765745723,
+  "holm": false,
+  "dsr": 2.7071301811343318e-08,
+  "checks": {
+   "t_ge_3_holm": false,
+   "dsr_ge_0.9": false,
+   "thirds_2_of_3": false,
+   "alpha_pos": false
+  },
+  "verdict": "fail",
+  "desc": "Low accruals (OCF - NI) / assets, ex financials | calendar: return month in Nov-Apr = ON",
+  "d10_d1_on_ann": 0.011888489295163552
+ },
+ "A-S2b-R3-off": {
+  "months": 95,
+  "ann": -0.03616242888968555,
+  "t": -2.6234379102923127,
+  "sr": {
+   "sr": -0.236657830167025,
+   "skew": -0.13213419370338733,
+   "kurt": 6.4304983436709495,
+   "n": 95
+  },
+  "thirds": [
+   false,
+   false,
+   false
+  ],
+  "alpha": {
+   "alpha_ann": -0.03081001337809923,
+   "alpha_t": -1.94152687668221,
+   "betas": {
+    "Mkt-RF": 0.008033698763990144,
+    "SMB": 0.05594437387166136,
+    "HML": -0.12612112049163834,
+    "RMW": -0.10438787620829339,
+    "CMA": 0.07454751922420119,
+    "Mom": -0.08243702725380253
+   }
+  },
+  "on": 48,
+  "min_on": 30,
+  "p_one_sided": 0.9956476345249607,
+  "holm": false,
+  "dsr": 3.626695771474786e-08,
+  "checks": {
+   "t_ge_3_holm": false,
+   "dsr_ge_0.9": false,
+   "thirds_2_of_3": false,
+   "alpha_pos": false
+  },
+  "verdict": "fail",
+  "desc": "Low accruals (OCF - NI) / assets, ex financials | calendar: return month in Nov-Apr = OFF",
+  "d10_d1_on_ann": -0.04704041670701961
+ },
+ "A-S3a-R1-on": {
+  "months": 95,
+  "ann": -0.03236880064386284,
+  "t": -1.3663414540064196,
+  "sr": {
+   "sr": -0.147776994826451,
+   "skew": -0.8669481007006494,
+   "kurt": 5.076872044351942,
+   "n": 95
+  },
+  "thirds": [
+   false,
+   false,
+   false
+  ],
+  "alpha": {
+   "alpha_ann": -0.036250735381093704,
+   "alpha_t": -2.3332876178119313,
+   "betas": {
+    "Mkt-RF": 0.10097906967632007,
+    "SMB": 0.11318353701198587,
+    "HML": -0.19490968026481267,
+    "RMW": -0.177121042688001,
+    "CMA": -0.0675959914368329,
+    "Mom": 0.10699586017796148
+   }
+  },
+  "on": 73,
+  "min_on": 30,
+  "p_one_sided": 0.9140840922705122,
+  "holm": false,
+  "dsr": 4.5685426952601915e-07,
+  "checks": {
+   "t_ge_3_holm": false,
+   "dsr_ge_0.9": false,
+   "thirds_2_of_3": false,
+   "alpha_pos": false
+  },
+  "verdict": "fail",
+  "desc": "TTM revenue growth, year on year | trend: index above its 10-month average = ON",
+  "d10_d1_on_ann": 0.004241083996867787
+ },
+ "A-S3a-R1-off": {
+  "months": 95,
+  "ann": -0.0404303199500476,
+  "t": -2.237118886033714,
+  "sr": {
+   "sr": -0.2846486346017361,
+   "skew": -1.528875487521875,
+   "kurt": 6.648345789706074,
+   "n": 95
+  },
+  "thirds": [
+   false,
+   false,
+   false
+  ],
+  "alpha": {
+   "alpha_ann": -0.03992427411519417,
+   "alpha_t": -2.533329464317756,
+   "betas": {
+    "Mkt-RF": 0.06389560260142038,
+    "SMB": -0.015236331502513276,
+    "HML": 0.022731953174832693,
+    "RMW": -0.11101030297266336,
+    "CMA": -0.1043378956171398,
+    "Mom": 0.0008756082867828669
+   }
+  },
+  "on": 22,
+  "min_on": 30,
+  "p_one_sided": 0.9873607145387651,
+  "holm": false,
+  "dsr": 2.1949109196839345e-13,
+  "checks": {
+   "t_ge_3_holm": false,
+   "dsr_ge_0.9": false,
+   "thirds_2_of_3": false,
+   "alpha_pos": false
+  },
+  "verdict": "inconclusive",
+  "desc": "TTM revenue growth, year on year | trend: index above its 10-month average = OFF",
+  "d10_d1_on_ann": -0.1492520829565206
+ },
+ "A-S3a-R2-on": {
+  "months": 95,
+  "ann": -0.03791022019480204,
+  "t": -2.262425959704333,
+  "sr": {
+   "sr": -0.2443514199242037,
+   "skew": -1.5554175004606345,
+   "kurt": 7.10088693962339,
+   "n": 95
+  },
+  "thirds": [
+   false,
+   false,
+   false
+  ],
+  "alpha": {
+   "alpha_ann": -0.048995908302941274,
+   "alpha_t": -2.7899491468826048,
+   "betas": {
+    "Mkt-RF": 0.05809169122809027,
+    "SMB": 0.040134986118480126,
+    "HML": -0.14854718818017057,
+    "RMW": -0.009874316510228678,
+    "CMA": 0.1280943639374645,
+    "Mom": 0.08997669307227614
+   }
+  },
+  "on": 41,
+  "min_on": 30,
+  "p_one_sided": 0.9881644507279211,
+  "holm": false,
+  "dsr": 1.846467423405329e-11,
+  "checks": {
+   "t_ge_3_holm": false,
+   "dsr_ge_0.9": false,
+   "thirds_2_of_3": false,
+   "alpha_pos": false
+  },
+  "verdict": "fail",
+  "desc": "TTM revenue growth, year on year | volatility: last month's vol below its 60-month median = ON",
+  "d10_d1_on_ann": 0.04417177754199893
+ },
+ "A-S3a-R2-off": {
+  "months": 95,
+  "ann": -0.08329784186907815,
+  "t": -3.223071339791891,
+  "sr": {
+   "sr": -0.3390489510697411,
+   "skew": -0.6423851655087037,
+   "kurt": 4.060011807046235,
+   "n": 95
+  },
+  "thirds": [
+   false,
+   false,
+   false
+  ],
+  "alpha": {
+   "alpha_ann": -0.08360992853862204,
+   "alpha_t": -4.356904640331361,
+   "betas": {
+    "Mkt-RF": 0.13484282141447496,
+    "SMB": 0.03985609063349069,
+    "HML": -0.1360656188257665,
+    "RMW": -0.24788034014116514,
+    "CMA": -0.15541757668016465,
+    "Mom": 0.031114831394392573
+   }
+  },
+  "on": 54,
+  "min_on": 30,
+  "p_one_sided": 0.999365880183481,
+  "holm": false,
+  "dsr": 1.6462387009141821e-12,
+  "checks": {
+   "t_ge_3_holm": false,
+   "dsr_ge_0.9": false,
+   "thirds_2_of_3": false,
+   "alpha_pos": false
+  },
+  "verdict": "fail",
+  "desc": "TTM revenue growth, year on year | volatility: last month's vol below its 60-month median = OFF",
+  "d10_d1_on_ann": -0.08861091800914928
+ },
+ "A-S3a-R3-on": {
+  "months": 95,
+  "ann": -0.05039914436491842,
+  "t": -2.1843276931557556,
+  "sr": {
+   "sr": -0.24578919919726727,
+   "skew": -1.4164479610033993,
+   "kurt": 5.686152459499922,
+   "n": 95
+  },
+  "thirds": [
+   false,
+   true,
+   false
+  ],
+  "alpha": {
+   "alpha_ann": -0.042119528595320435,
+   "alpha_t": -3.0083235119335177,
+   "betas": {
+    "Mkt-RF": 0.05538706708875876,
+    "SMB": 0.01948619616654359,
+    "HML": -0.10962579644284098,
+    "RMW": -0.270943410387148,
+    "CMA": -0.16195410750798098,
+    "Mom": 0.056375326668837204
+   }
+  },
+  "on": 47,
+  "min_on": 30,
+  "p_one_sided": 0.9855309113817408,
+  "holm": false,
+  "dsr": 2.37048713991328e-11,
+  "checks": {
+   "t_ge_3_holm": false,
+   "dsr_ge_0.9": false,
+   "thirds_2_of_3": false,
+   "alpha_pos": false
+  },
+  "verdict": "fail",
+  "desc": "TTM revenue growth, year on year | calendar: return month in Nov-Apr = ON",
+  "d10_d1_on_ann": -0.07954903262634166
+ },
+ "A-S3a-R3-off": {
+  "months": 95,
+  "ann": -0.030759529103812334,
+  "t": -1.9141460068782858,
+  "sr": {
+   "sr": -0.17988376175219484,
+   "skew": -0.8438179613537476,
+   "kurt": 7.797523628985436,
+   "n": 95
+  },
+  "thirds": [
+   false,
+   false,
+   false
+  ],
+  "alpha": {
+   "alpha_ann": -0.03890093988466902,
+   "alpha_t": -2.372733830355148,
+   "betas": {
+    "Mkt-RF": 0.09775079096986876,
+    "SMB": 0.038607105329829486,
+    "HML": -0.1424442077766018,
+    "RMW": -0.08089142071258366,
+    "CMA": 0.058027733631078555,
+    "Mom": 0.017061817239859965
+   }
+  },
+  "on": 48,
+  "min_on": 30,
+  "p_one_sided": 0.9721992487891239,
+  "holm": false,
+  "dsr": 9.329025513205025e-08,
+  "checks": {
+   "t_ge_3_holm": false,
+   "dsr_ge_0.9": false,
+   "thirds_2_of_3": false,
+   "alpha_pos": false
+  },
+  "verdict": "fail",
+  "desc": "TTM revenue growth, year on year | calendar: return month in Nov-Apr = OFF",
+  "d10_d1_on_ann": 0.015934538336790708
+ },
+ "A-S3b-R1-on": {
+  "months": 95,
+  "ann": -0.04249952920476178,
+  "t": -3.3837481740776583,
+  "sr": {
+   "sr": -0.3235481911898386,
+   "skew": -0.08923192664744987,
+   "kurt": 4.496988464637159,
+   "n": 95
+  },
+  "thirds": [
+   false,
+   false,
+   true
+  ],
+  "alpha": {
+   "alpha_ann": -0.043998435952255235,
+   "alpha_t": -3.5820952861187574,
+   "betas": {
+    "Mkt-RF": 0.012319154889914207,
+    "SMB": 0.06257500493298397,
+    "HML": 0.018005773235281877,
+    "RMW": -0.0828829879744752,
+    "CMA": 0.06326957154200198,
+    "Mom": 0.0985656015327488
+   }
+  },
+  "on": 73,
+  "min_on": 30,
+  "p_one_sided": 0.9996424822335817,
+  "holm": false,
+  "dsr": 3.7184799683842584e-10,
+  "checks": {
+   "t_ge_3_holm": false,
+   "dsr_ge_0.9": false,
+   "thirds_2_of_3": false,
+   "alpha_pos": false
+  },
+  "verdict": "fail",
+  "desc": "Revenue growth acceleration (vs 3 months earlier) | trend: index above its 10-month average = ON",
+  "d10_d1_on_ann": 0.04594882023614605
+ },
+ "A-S3b-R1-off": {
+  "months": 95,
+  "ann": -0.02466407853773927,
+  "t": -2.5371550120607482,
+  "sr": {
+   "sr": -0.23870806335847858,
+   "skew": -1.8320511919460736,
+   "kurt": 12.09577708868135,
+   "n": 95
+  },
+  "thirds": [
+   false,
+   false,
+   false
+  ],
+  "alpha": {
+   "alpha_ann": -0.022649035982344634,
+   "alpha_t": -2.3765762880182737,
+   "betas": {
+    "Mkt-RF": 0.00803345611669915,
+    "SMB": -0.023372420063842193,
+    "HML": 0.060898904149490514,
+    "RMW": -0.07518808696551829,
+    "CMA": -0.0043058070012661764,
+    "Mom": 0.01932214122168821
+   }
+  },
+  "on": 22,
+  "min_on": 30,
+  "p_one_sided": 0.9944121271513644,
+  "holm": false,
+  "dsr": 3.843508844525445e-11,
+  "checks": {
+   "t_ge_3_holm": false,
+   "dsr_ge_0.9": false,
+   "thirds_2_of_3": false,
+   "alpha_pos": false
+  },
+  "verdict": "inconclusive",
+  "desc": "Revenue growth acceleration (vs 3 months earlier) | trend: index above its 10-month average = OFF",
+  "d10_d1_on_ann": 0.059099786333181026
+ },
+ "A-S3b-R2-on": {
+  "months": 95,
+  "ann": -0.05942158745531843,
+  "t": -5.0570259474273405,
+  "sr": {
+   "sr": -0.4313045655179344,
+   "skew": -1.7468069057850624,
+   "kurt": 6.2178381257366375,
+   "n": 95
+  },
+  "thirds": [
+   false,
+   false,
+   false
+  ],
+  "alpha": {
+   "alpha_ann": -0.07195925183930776,
+   "alpha_t": -5.316127137430506,
+   "betas": {
+    "Mkt-RF": 0.03788268444879968,
+    "SMB": 0.09199854261470843,
+    "HML": -0.1391098950844925,
+    "RMW": 0.04811979281616271,
+    "CMA": 0.20666708107060308,
+    "Mom": 0.07836672286933143
+   }
+  },
+  "on": 41,
+  "min_on": 30,
+  "p_one_sided": 0.9999997870773418,
+  "holm": false,
+  "dsr": 0.0,
+  "checks": {
+   "t_ge_3_holm": false,
+   "dsr_ge_0.9": false,
+   "thirds_2_of_3": false,
+   "alpha_pos": false
+  },
+  "verdict": "fail",
+  "desc": "Revenue growth acceleration (vs 3 months earlier) | volatility: last month's vol below its 60-month median = ON",
+  "d10_d1_on_ann": -0.00994005046523725
+ },
+ "A-S3b-R2-off": {
+  "months": 95,
+  "ann": -0.05092479010209376,
+  "t": -3.359382136428246,
+  "sr": {
+   "sr": -0.3315400965124234,
+   "skew": -0.6619866434331624,
+   "kurt": 4.624713510263392,
+   "n": 95
+  },
+  "thirds": [
+   false,
+   false,
+   false
+  ],
+  "alpha": {
+   "alpha_ann": -0.044940808206660396,
+   "alpha_t": -3.152682845752032,
+   "betas": {
+    "Mkt-RF": 0.006045150731364868,
+    "SMB": -0.07257572449482175,
+    "HML": 0.11252230680720107,
+    "RMW": -0.17928239756998388,
+    "CMA": -0.009309588280862304,
+    "Mom": 0.04662887575624884
+   }
+  },
+  "on": 54,
+  "min_on": 30,
+  "p_one_sided": 0.99960941517241,
+  "holm": false,
+  "dsr": 3.760325384405405e-12,
+  "checks": {
+   "t_ge_3_holm": false,
+   "dsr_ge_0.9": false,
+   "thirds_2_of_3": false,
+   "alpha_pos": false
+  },
+  "verdict": "fail",
+  "desc": "Revenue growth acceleration (vs 3 months earlier) | volatility: last month's vol below its 60-month median = OFF",
+  "d10_d1_on_ann": 0.09374076380821059
+ },
+ "A-S3b-R3-on": {
+  "months": 95,
+  "ann": -0.0342400166846161,
+  "t": -3.1067450685209277,
+  "sr": {
+   "sr": -0.2801327554421303,
+   "skew": 0.001554530538480668,
+   "kurt": 5.4750558786937535,
+   "n": 95
+  },
+  "thirds": [
+   false,
+   false,
+   false
+  ],
+  "alpha": {
+   "alpha_ann": -0.03212346167149168,
+   "alpha_t": -3.09101498797279,
+   "betas": {
+    "Mkt-RF": -0.01374148435096828,
+    "SMB": 0.013750345062944435,
+    "HML": 0.03900935466134079,
+    "RMW": -0.09916668707723625,
+    "CMA": 0.06059246802098272,
+    "Mom": 0.08649376012344219
+   }
+  },
+  "on": 47,
+  "min_on": 30,
+  "p_one_sided": 0.9990542027660858,
+  "holm": false,
+  "dsr": 6.726653734023813e-09,
+  "checks": {
+   "t_ge_3_holm": false,
+   "dsr_ge_0.9": false,
+   "thirds_2_of_3": false,
+   "alpha_pos": false
+  },
+  "verdict": "fail",
+  "desc": "Revenue growth acceleration (vs 3 months earlier) | calendar: return month in Nov-Apr = ON",
+  "d10_d1_on_ann": 0.07258357121320706
+ },
+ "A-S3b-R3-off": {
+  "months": 95,
+  "ann": -0.04072382719098379,
+  "t": -3.8932414005975158,
+  "sr": {
+   "sr": -0.3235501314452678,
+   "skew": -1.4662863282521308,
+   "kurt": 7.05016616831305,
+   "n": 95
+  },
+  "thirds": [
+   false,
+   false,
+   false
+  ],
+  "alpha": {
+   "alpha_ann": -0.03910973958476559,
+   "alpha_t": -3.1646526936553063,
+   "betas": {
+    "Mkt-RF": 0.02468707485397289,
+    "SMB": -0.0071348118212786835,
+    "HML": -0.036300434385033366,
+    "RMW": -0.12155791031300608,
+    "CMA": 0.0656117637113919,
+    "Mom": -0.0006440820335108077
+   }
+  },
+  "on": 48,
+  "min_on": 30,
+  "p_one_sided": 0.9999505431822393,
+  "holm": false,
+  "dsr": 8.326672684688674e-15,
+  "checks": {
+   "t_ge_3_holm": false,
+   "dsr_ge_0.9": false,
+   "thirds_2_of_3": false,
+   "alpha_pos": false
+  },
+  "verdict": "fail",
+  "desc": "Revenue growth acceleration (vs 3 months earlier) | calendar: return month in Nov-Apr = OFF",
+  "d10_d1_on_ann": 0.025896486032248152
+ },
+ "A-S4-R1-on": {
+  "months": 93,
+  "ann": -0.09781503996355922,
+  "t": -6.2928816988638445,
+  "sr": {
+   "sr": -0.6302157888762007,
+   "skew": -1.5082801857205843,
+   "kurt": 6.790725569634107,
+   "n": 93
+  },
+  "thirds": [
+   false,
+   false,
+   false
+  ],
+  "alpha": {
+   "alpha_ann": -0.11368791603736969,
+   "alpha_t": -7.096455246359076,
+   "betas": {
+    "Mkt-RF": 0.06691336011839466,
+    "SMB": 0.07288718981186111,
+    "HML": -0.031795958479523954,
+    "RMW": 0.03878449268627121,
+    "CMA": 0.03849072878594815,
+    "Mom": 0.17474284585626593
+   }
+  },
+  "on": 72,
+  "min_on": 30,
+  "p_one_sided": 0.9999999998441871,
+  "holm": false,
+  "dsr": 0.0,
+  "checks": {
+   "t_ge_3_holm": false,
+   "dsr_ge_0.9": false,
+   "thirds_2_of_3": false,
+   "alpha_pos": false
+  },
+  "verdict": "fail",
+  "desc": "Standardised unexpected EPS, new quarter within 75 days | trend: index above its 10-month average = ON",
+  "d10_d1_on_ann": 0.008358252943401843
+ },
+ "A-S4-R1-off": {
+  "months": 93,
+  "ann": -0.036516381204073606,
+  "t": -2.7569839056340584,
+  "sr": {
+   "sr": -0.35187835938054174,
+   "skew": -2.1350362948445074,
+   "kurt": 8.034718291779978,
+   "n": 93
+  },
+  "thirds": [
+   false,
+   false,
+   false
+  ],
+  "alpha": {
+   "alpha_ann": -0.03486817208628855,
+   "alpha_t": -2.7645702707420057,
+   "betas": {
+    "Mkt-RF": 0.02605190370239395,
+    "SMB": -0.03963459705741304,
+    "HML": -0.01348369680168705,
+    "RMW": -0.05342733400319506,
+    "CMA": -0.04714078470691767,
+    "Mom": -0.028066567129363312
+   }
+  },
+  "on": 21,
+  "min_on": 30,
+  "p_one_sided": 0.9970831388593964,
+  "holm": false,
+  "dsr": 0.0,
+  "checks": {
+   "t_ge_3_holm": false,
+   "dsr_ge_0.9": false,
+   "thirds_2_of_3": false,
+   "alpha_pos": false
+  },
+  "verdict": "inconclusive",
+  "desc": "Standardised unexpected EPS, new quarter within 75 days | trend: index above its 10-month average = OFF",
+  "d10_d1_on_ann": 0.06640789214354256
+ },
+ "A-S4-R2-on": {
+  "months": 93,
+  "ann": -0.08298497718096381,
+  "t": -5.6183662076469485,
+  "sr": {
+   "sr": -0.5052631443327829,
+   "skew": -2.1587216823724003,
+   "kurt": 8.852444346544324,
+   "n": 93
+  },
+  "thirds": [
+   false,
+   false,
+   false
+  ],
+  "alpha": {
+   "alpha_ann": -0.10122425982903743,
+   "alpha_t": -5.956695009312078,
+   "betas": {
+    "Mkt-RF": 0.07307211112727957,
+    "SMB": 0.10633915283790585,
+    "HML": -0.12319475045555482,
+    "RMW": 0.04483731043338821,
+    "CMA": 0.21861438419985238,
+    "Mom": 0.13195930215160134
+   }
+  },
+  "on": 41,
+  "min_on": 30,
+  "p_one_sided": 0.999999990361421,
+  "holm": false,
+  "dsr": 0.0,
+  "checks": {
+   "t_ge_3_holm": false,
+   "dsr_ge_0.9": false,
+   "thirds_2_of_3": false,
+   "alpha_pos": false
+  },
+  "verdict": "fail",
+  "desc": "Standardised unexpected EPS, new quarter within 75 days | volatility: last month's vol below its 60-month median = ON",
+  "d10_d1_on_ann": -0.02710683956281649
+ },
+ "A-S4-R2-off": {
+  "months": 93,
+  "ann": -0.08264521338072814,
+  "t": -5.594381328257843,
+  "sr": {
+   "sr": -0.5479692879354289,
+   "skew": -1.3352426025902158,
+   "kurt": 4.53884682823062,
+   "n": 93
+  },
+  "thirds": [
+   false,
+   false,
+   false
+  ],
+  "alpha": {
+   "alpha_ann": -0.0827403021243214,
+   "alpha_t": -6.181667506143218,
+   "betas": {
+    "Mkt-RF": 0.0355962759791441,
+    "SMB": -0.1011656208633644,
+    "HML": 0.0003504795803384874,
+    "RMW": -0.05800315549342662,
+    "CMA": -0.11628999599896855,
+    "Mom": 0.016404840044200796
+   }
+  },
+  "on": 52,
+  "min_on": 30,
+  "p_one_sided": 0.9999999889295076,
+  "holm": false,
+  "dsr": 0.0,
+  "checks": {
+   "t_ge_3_holm": false,
+   "dsr_ge_0.9": false,
+   "thirds_2_of_3": false,
+   "alpha_pos": false
+  },
+  "verdict": "fail",
+  "desc": "Standardised unexpected EPS, new quarter within 75 days | volatility: last month's vol below its 60-month median = OFF",
+  "d10_d1_on_ann": 0.059764237865669305
+ },
+ "A-S4-R3-on": {
+  "months": 93,
+  "ann": -0.07406687645740068,
+  "t": -5.209083531547278,
+  "sr": {
+   "sr": -0.4715259228926951,
+   "skew": -1.8383960457337951,
+   "kurt": 6.828130805780297,
+   "n": 93
+  },
+  "thirds": [
+   false,
+   false,
+   false
+  ],
+  "alpha": {
+   "alpha_ann": -0.08225475858316297,
+   "alpha_t": -5.067245081696844,
+   "betas": {
+    "Mkt-RF": 0.05894215184527531,
+    "SMB": -0.0134692477711692,
+    "HML": -0.016329775423870412,
+    "RMW": -0.06974693015362714,
+    "CMA": 0.009984480307972096,
+    "Mom": 0.12158410539048625
+   }
+  },
+  "on": 45,
+  "min_on": 30,
+  "p_one_sided": 0.9999999051121662,
+  "holm": false,
+  "dsr": 0.0,
+  "checks": {
+   "t_ge_3_holm": false,
+   "dsr_ge_0.9": false,
+   "thirds_2_of_3": false,
+   "alpha_pos": false
+  },
+  "verdict": "fail",
+  "desc": "Standardised unexpected EPS, new quarter within 75 days | calendar: return month in Nov-Apr = ON",
+  "d10_d1_on_ann": 0.07435125550541301
+ },
+ "A-S4-R3-off": {
+  "months": 93,
+  "ann": -0.06248101400246292,
+  "t": -4.412225286889951,
+  "sr": {
+   "sr": -0.4432228960715014,
+   "skew": -2.8791105828682495,
+   "kurt": 15.613317901239009,
+   "n": 93
+  },
+  "thirds": [
+   false,
+   false,
+   false
+  ],
+  "alpha": {
+   "alpha_ann": -0.0658590986768177,
+   "alpha_t": -4.042099580934475,
+   "betas": {
+    "Mkt-RF": 0.017362385112742476,
+    "SMB": 0.0548213036965661,
+    "HML": -0.0972465517472179,
+    "RMW": 0.019229690777324646,
+    "CMA": 0.05127348233235842,
+    "Mom": 0.009128337942084177
+   }
+  },
+  "on": 48,
+  "min_on": 30,
+  "p_one_sided": 0.9999948843215052,
+  "holm": false,
+  "dsr": 0.0,
+  "checks": {
+   "t_ge_3_holm": false,
+   "dsr_ge_0.9": false,
+   "thirds_2_of_3": false,
+   "alpha_pos": false
+  },
+  "verdict": "fail",
+  "desc": "Standardised unexpected EPS, new quarter within 75 days | calendar: return month in Nov-Apr = OFF",
+  "d10_d1_on_ann": -0.02811346980842206
+ },
+ "A-S5a-R1-on": {
+  "months": 95,
+  "ann": -0.01937729793448375,
+  "t": -0.8437737522407223,
+  "sr": {
+   "sr": -0.09730276430874919,
+   "skew": -0.198868662484524,
+   "kurt": 5.503093238974232,
+   "n": 95
+  },
+  "thirds": [
+   false,
+   false,
+   true
+  ],
+  "alpha": {
+   "alpha_ann": -0.014836235633410296,
+   "alpha_t": -1.1617272256168303,
+   "betas": {
+    "Mkt-RF": 0.01397947417928133,
+    "SMB": 0.06547309346138837,
+    "HML": 0.2580424440692431,
+    "RMW": -0.0007004986658731529,
+    "CMA": -0.05041909982482924,
+    "Mom": -0.1288494059645259
+   }
+  },
+  "on": 73,
+  "min_on": 30,
+  "p_one_sided": 0.8006020772669221,
+  "holm": false,
+  "dsr": 1.5159627740624071e-05,
+  "checks": {
+   "t_ge_3_holm": false,
+   "dsr_ge_0.9": false,
+   "thirds_2_of_3": false,
+   "alpha_pos": false
+  },
+  "verdict": "fail",
+  "desc": "Low net issuance (12-month market cap change less return) | trend: index above its 10-month average = ON",
+  "d10_d1_on_ann": 0.04749054325120318
+ },
+ "A-S5a-R1-off": {
+  "months": 95,
+  "ann": -0.02002307180522008,
+  "t": -1.6225792907166372,
+  "sr": {
+   "sr": -0.16193447491314863,
+   "skew": -0.2463848096117716,
+   "kurt": 10.385913717089293,
+   "n": 95
+  },
+  "thirds": [
+   false,
+   false,
+   true
+  ],
+  "alpha": {
+   "alpha_ann": -0.03001902488020099,
+   "alpha_t": -2.4656314863437214,
+   "betas": {
+    "Mkt-RF": 0.02550856788962149,
+    "SMB": 0.039335985571058676,
+    "HML": 0.0785517252949178,
+    "RMW": 0.06552733345430661,
+    "CMA": 0.08164167058718201,
+    "Mom": 0.09168646964646147
+   }
+  },
+  "on": 22,
+  "min_on": 30,
+  "p_one_sided": 0.9476603147560322,
+  "holm": false,
+  "dsr": 1.1301299217558736e-06,
+  "checks": {
+   "t_ge_3_holm": false,
+   "dsr_ge_0.9": false,
+   "thirds_2_of_3": false,
+   "alpha_pos": false
+  },
+  "verdict": "inconclusive",
+  "desc": "Low net issuance (12-month market cap change less return) | trend: index above its 10-month average = OFF",
+  "d10_d1_on_ann": 0.014419536930608084
+ },
+ "A-S5a-R2-on": {
+  "months": 95,
+  "ann": -0.044307080689885384,
+  "t": -3.3203543127838917,
+  "sr": {
+   "sr": -0.374589143933701,
+   "skew": -2.120831858422595,
+   "kurt": 10.331406449118173,
+   "n": 95
+  },
+  "thirds": [
+   false,
+   false,
+   false
+  ],
+  "alpha": {
+   "alpha_ann": -0.048033503626845823,
+   "alpha_t": -3.44881135155441,
+   "betas": {
+    "Mkt-RF": 0.003565309158679112,
+    "SMB": 0.04493317305367553,
+    "HML": -0.020441665421149988,
+    "RMW": 0.03734512817146172,
+    "CMA": 0.1390625689417604,
+    "Mom": -0.029942058226582236
+   }
+  },
+  "on": 41,
+  "min_on": 30,
+  "p_one_sided": 0.9995504836563557,
+  "holm": false,
+  "dsr": 0.0,
+  "checks": {
+   "t_ge_3_holm": false,
+   "dsr_ge_0.9": false,
+   "thirds_2_of_3": false,
+   "alpha_pos": false
+  },
+  "verdict": "fail",
+  "desc": "Low net issuance (12-month market cap change less return) | volatility: last month's vol below its 60-month median = ON",
+  "d10_d1_on_ann": 0.0029541814949480224
+ },
+ "A-S5a-R2-off": {
+  "months": 95,
+  "ann": -0.04363006863409465,
+  "t": -2.038976534707883,
+  "sr": {
+   "sr": -0.22040607636370527,
+   "skew": -0.33012294458584057,
+   "kurt": 5.790284373138441,
+   "n": 95
+  },
+  "thirds": [
+   false,
+   false,
+   true
+  ],
+  "alpha": {
+   "alpha_ann": -0.05341441648767324,
+   "alpha_t": -3.2331047697461774,
+   "betas": {
+    "Mkt-RF": 0.064114614688545,
+    "SMB": 0.04279173029287217,
+    "HML": 0.2455441544794932,
+    "RMW": 0.05772517620764815,
+    "CMA": 0.03732308646518532,
+    "Mom": 0.006680229556588916
+   }
+  },
+  "on": 54,
+  "min_on": 30,
+  "p_one_sided": 0.979273815236502,
+  "holm": false,
+  "dsr": 3.6053855012596614e-08,
+  "checks": {
+   "t_ge_3_holm": false,
+   "dsr_ge_0.9": false,
+   "thirds_2_of_3": false,
+   "alpha_pos": false
+  },
+  "verdict": "fail",
+  "desc": "Low net issuance (12-month market cap change less return) | volatility: last month's vol below its 60-month median = OFF",
+  "d10_d1_on_ann": 0.06783181534293223
+ },
+ "A-S5a-R3-on": {
+  "months": 95,
+  "ann": -0.018876237328806885,
+  "t": -0.9730024893251159,
+  "sr": {
+   "sr": -0.11990721815866881,
+   "skew": 0.08557598139471534,
+   "kurt": 7.439145371246395,
+   "n": 95
+  },
+  "thirds": [
+   false,
+   false,
+   true
+  ],
+  "alpha": {
+   "alpha_ann": -0.022514075212653736,
+   "alpha_t": -1.6623678566254296,
+   "betas": {
+    "Mkt-RF": 0.016793901111670857,
+    "SMB": 0.09664420863540828,
+    "HML": 0.17879274571503062,
+    "RMW": 0.06169494100874402,
+    "CMA": -0.013872792151486308,
+    "Mom": 0.005877373918474233
+   }
+  },
+  "on": 47,
+  "min_on": 30,
+  "p_one_sided": 0.8347239675529707,
+  "holm": false,
+  "dsr": 8.509128434475155e-06,
+  "checks": {
+   "t_ge_3_holm": false,
+   "dsr_ge_0.9": false,
+   "thirds_2_of_3": false,
+   "alpha_pos": false
+  },
+  "verdict": "fail",
+  "desc": "Low net issuance (12-month market cap change less return) | calendar: return month in Nov-Apr = ON",
+  "d10_d1_on_ann": 0.03961133957703876
+ },
+ "A-S5a-R3-off": {
+  "months": 95,
+  "ann": -0.028584743332487367,
+  "t": -2.3479715148149682,
+  "sr": {
+   "sr": -0.2072571835103097,
+   "skew": -0.5933963092993314,
+   "kurt": 5.561714107291138,
+   "n": 95
+  },
+  "thirds": [
+   false,
+   false,
+   false
+  ],
+  "alpha": {
+   "alpha_ann": -0.026921402930824838,
+   "alpha_t": -2.2885485347199275,
+   "betas": {
+    "Mkt-RF": 0.011474652451741911,
+    "SMB": -0.031077909625815726,
+    "HML": 0.07822741370949181,
+    "RMW": -0.06173378906719266,
+    "CMA": 0.1142406339043313,
+    "Mom": -0.07702959972646141
+   }
+  },
+  "on": 48,
+  "min_on": 30,
+  "p_one_sided": 0.9905620175950075,
+  "holm": false,
+  "dsr": 2.9229055176216434e-08,
+  "checks": {
+   "t_ge_3_holm": false,
+   "dsr_ge_0.9": false,
+   "thirds_2_of_3": false,
+   "alpha_pos": false
+  },
+  "verdict": "fail",
+  "desc": "Low net issuance (12-month market cap change less return) | calendar: return month in Nov-Apr = OFF",
+  "d10_d1_on_ann": 0.04004805228521641
+ },
+ "A-S5b-R1-on": {
+  "months": 95,
+  "ann": -0.047046144511552174,
+  "t": -3.2697770454261907,
+  "sr": {
+   "sr": -0.3273199316484469,
+   "skew": 0.5570887364287291,
+   "kurt": 5.251752113967816,
+   "n": 95
+  },
+  "thirds": [
+   false,
+   false,
+   true
+  ],
+  "alpha": {
+   "alpha_ann": -0.040930516728250585,
+   "alpha_t": -3.6822065973186175,
+   "betas": {
+    "Mkt-RF": -0.048140503398170616,
+    "SMB": 0.09509169520378774,
+    "HML": 0.029531680952406863,
+    "RMW": 0.010571442932078685,
+    "CMA": 0.14367793397634576,
+    "Mom": -0.11898759721571318
+   }
+  },
+  "on": 73,
+  "min_on": 30,
+  "p_one_sided": 0.9994618385926366,
+  "holm": false,
+  "dsr": 1.0329466559877432e-08,
+  "checks": {
+   "t_ge_3_holm": false,
+   "dsr_ge_0.9": false,
+   "thirds_2_of_3": false,
+   "alpha_pos": false
+  },
+  "verdict": "fail",
+  "desc": "Low asset growth, year on year | trend: index above its 10-month average = ON",
+  "d10_d1_on_ann": -0.011091935615025321
+ },
+ "A-S5b-R1-off": {
+  "months": 95,
+  "ann": -0.0189471260408869,
+  "t": -1.6929633709197085,
+  "sr": {
+   "sr": -0.19301720367244435,
+   "skew": -0.8779345552043522,
+   "kurt": 6.313483979909833,
+   "n": 95
+  },
+  "thirds": [
+   false,
+   false,
+   true
+  ],
+  "alpha": {
+   "alpha_ann": -0.025669357443346336,
+   "alpha_t": -2.601521009485782,
+   "betas": {
+    "Mkt-RF": 0.021831851354005626,
+    "SMB": -0.010714647161579313,
+    "HML": 0.05350285934217324,
+    "RMW": 0.02271715191757512,
+    "CMA": 0.09116709044821315,
+    "Mom": 0.04597877151919427
+   }
+  },
+  "on": 22,
+  "min_on": 30,
+  "p_one_sided": 0.9547687802025925,
+  "holm": false,
+  "dsr": 3.045154806091688e-08,
+  "checks": {
+   "t_ge_3_holm": false,
+   "dsr_ge_0.9": false,
+   "thirds_2_of_3": false,
+   "alpha_pos": false
+  },
+  "verdict": "inconclusive",
+  "desc": "Low asset growth, year on year | trend: index above its 10-month average = OFF",
+  "d10_d1_on_ann": 0.13232704244513688
+ },
+ "A-S5b-R2-on": {
+  "months": 95,
+  "ann": -0.0682409380211632,
+  "t": -5.489398308695773,
+  "sr": {
+   "sr": -0.5531031757477964,
+   "skew": -1.8263855006439527,
+   "kurt": 6.150075763937938,
+   "n": 95
+  },
+  "thirds": [
+   false,
+   false,
+   false
+  ],
+  "alpha": {
+   "alpha_ann": -0.07190345053099023,
+   "alpha_t": -6.38196496036368,
+   "betas": {
+    "Mkt-RF": -0.029330458687457685,
+    "SMB": 0.14073786116008555,
+    "HML": -0.11066382065777079,
+    "RMW": 0.08319436746598399,
+    "CMA": 0.21068593717263745,
+    "Mom": -0.01983972579377463
+   }
+  },
+  "on": 41,
+  "min_on": 30,
+  "p_one_sided": 0.9999999798347385,
+  "holm": false,
+  "dsr": 0.0,
+  "checks": {
+   "t_ge_3_holm": false,
+   "dsr_ge_0.9": false,
+   "thirds_2_of_3": false,
+   "alpha_pos": false
+  },
+  "verdict": "fail",
+  "desc": "Low asset growth, year on year | volatility: last month's vol below its 60-month median = ON",
+  "d10_d1_on_ann": -0.09038580037809846
+ },
+ "A-S5b-R2-off": {
+  "months": 95,
+  "ann": -0.04482457935151868,
+  "t": -2.5467368311065,
+  "sr": {
+   "sr": -0.2892362646909916,
+   "skew": -0.11893397925161649,
+   "kurt": 4.4256568640867595,
+   "n": 95
+  },
+  "thirds": [
+   false,
+   false,
+   true
+  ],
+  "alpha": {
+   "alpha_ann": -0.04971750066590143,
+   "alpha_t": -3.473671190624066,
+   "betas": {
+    "Mkt-RF": 0.029921225189460027,
+    "SMB": -0.07125443181906022,
+    "HML": 0.08351301935090194,
+    "RMW": -0.017157139704163153,
+    "CMA": 0.1673889065433919,
+    "Mom": -0.040228445252052866
+   }
+  },
+  "on": 54,
+  "min_on": 30,
+  "p_one_sided": 0.9945632299752093,
+  "holm": false,
+  "dsr": 1.765434187728232e-09,
+  "checks": {
+   "t_ge_3_holm": false,
+   "dsr_ge_0.9": false,
+   "thirds_2_of_3": false,
+   "alpha_pos": false
+  },
+  "verdict": "fail",
+  "desc": "Low asset growth, year on year | volatility: last month's vol below its 60-month median = OFF",
+  "d10_d1_on_ann": 0.10754261943329999
+ },
+ "A-S5b-R3-on": {
+  "months": 95,
+  "ann": -0.02176976872039304,
+  "t": -1.623251172141326,
+  "sr": {
+   "sr": -0.18821535079859683,
+   "skew": 0.6579485123738898,
+   "kurt": 6.320577447352489,
+   "n": 95
+  },
+  "thirds": [
+   false,
+   false,
+   true
+  ],
+  "alpha": {
+   "alpha_ann": -0.019632970265114905,
+   "alpha_t": -1.639561189279652,
+   "betas": {
+    "Mkt-RF": -0.032790271197068364,
+    "SMB": 0.017351706894465913,
+    "HML": 0.026410604263992908,
+    "RMW": 0.00283634423762239,
+    "CMA": 0.11755894468787786,
+    "Mom": -0.03458762583304618
+   }
+  },
+  "on": 47,
+  "min_on": 30,
+  "p_one_sided": 0.9477321385954973,
+  "holm": false,
+  "dsr": 1.6410410684231103e-06,
+  "checks": {
+   "t_ge_3_holm": false,
+   "dsr_ge_0.9": false,
+   "thirds_2_of_3": false,
+   "alpha_pos": false
+  },
+  "verdict": "fail",
+  "desc": "Low asset growth, year on year | calendar: return month in Nov-Apr = ON",
+  "d10_d1_on_ann": 0.10018516142746045
+ },
+ "A-S5b-R3-off": {
+  "months": 95,
+  "ann": -0.05160858146190764,
+  "t": -4.544378151209416,
+  "sr": {
+   "sr": -0.4283083343236213,
+   "skew": -1.4555991026480706,
+   "kurt": 4.63405820846549,
+   "n": 95
+  },
+  "thirds": [
+   false,
+   false,
+   false
+  ],
+  "alpha": {
+   "alpha_ann": -0.05105285381766362,
+   "alpha_t": -4.658767387993797,
+   "betas": {
+    "Mkt-RF": -0.004850693580085847,
+    "SMB": 0.03160515167004968,
+    "HML": -0.023034364639463775,
+    "RMW": -0.03002242391952529,
+    "CMA": 0.18602230056300795,
+    "Mom": -0.07165272961758518
+   }
+  },
+  "on": 48,
+  "min_on": 30,
+  "p_one_sided": 0.9999972451166088,
+  "holm": false,
+  "dsr": 0.0,
+  "checks": {
+   "t_ge_3_holm": false,
+   "dsr_ge_0.9": false,
+   "thirds_2_of_3": false,
+   "alpha_pos": false
+  },
+  "verdict": "fail",
+  "desc": "Low asset growth, year on year | calendar: return month in Nov-Apr = OFF",
+  "d10_d1_on_ann": -0.054317061524884955
+ },
+ "A-S6a-R1-on": {
+  "months": 95,
+  "ann": -0.04943726128079273,
+  "t": -2.244595685598783,
+  "sr": {
+   "sr": -0.21133097965033618,
+   "skew": -0.4189222936731412,
+   "kurt": 3.9086360972863647,
+   "n": 95
+  },
+  "thirds": [
+   false,
+   false,
+   false
+  ],
+  "alpha": {
+   "alpha_ann": -0.06052036009776662,
+   "alpha_t": -4.000756341047872,
+   "betas": {
+    "Mkt-RF": 0.059746929956870705,
+    "SMB": 0.1775137162755913,
+    "HML": -0.0825754318051346,
+    "RMW": -0.10321469671442886,
+    "CMA": -0.06046256496652442,
+    "Mom": 0.3703938645275632
+   }
+  },
+  "on": 73,
+  "min_on": 30,
+  "p_one_sided": 0.9876029500064022,
+  "holm": false,
+  "dsr": 3.110731666700062e-08,
+  "checks": {
+   "t_ge_3_holm": false,
+   "dsr_ge_0.9": false,
+   "thirds_2_of_3": false,
+   "alpha_pos": false
+  },
+  "verdict": "fail",
+  "desc": "12-1 month price momentum | trend: index above its 10-month average = ON",
+  "d10_d1_on_ann": 0.03642550207949561
+ },
+ "A-S6a-R1-off": {
+  "months": 95,
+  "ann": -0.013423124503503761,
+  "t": -1.2699960937378914,
+  "sr": {
+   "sr": -0.12423207955584349,
+   "skew": -0.6882396100375268,
+   "kurt": 9.757770530366244,
+   "n": 95
+  },
+  "thirds": [
+   false,
+   false,
+   true
+  ],
+  "alpha": {
+   "alpha_ann": -0.015263794714474456,
+   "alpha_t": -1.4314503772274292,
+   "betas": {
+    "Mkt-RF": 0.017324949543334734,
+    "SMB": 0.020491496004968003,
+    "HML": 0.033834606877337255,
+    "RMW": -0.07001448553591043,
+    "CMA": 0.05036423054409752,
+    "Mom": 0.07439790927445485
+   }
+  },
+  "on": 22,
+  "min_on": 30,
+  "p_one_sided": 0.8979569892031771,
+  "holm": false,
+  "dsr": 2.9113380152212542e-06,
+  "checks": {
+   "t_ge_3_holm": false,
+   "dsr_ge_0.9": false,
+   "thirds_2_of_3": false,
+   "alpha_pos": false
+  },
+  "verdict": "inconclusive",
+  "desc": "12-1 month price momentum | trend: index above its 10-month average = OFF",
+  "d10_d1_on_ann": 0.19692596066621088
+ },
+ "A-S6a-R2-on": {
+  "months": 95,
+  "ann": -0.04771727497178074,
+  "t": -2.467623122552757,
+  "sr": {
+   "sr": -0.23485271528973575,
+   "skew": -1.1599645783684538,
+   "kurt": 7.094336042666786,
+   "n": 95
+  },
+  "thirds": [
+   false,
+   false,
+   false
+  ],
+  "alpha": {
+   "alpha_ann": -0.0668091600115585,
+   "alpha_t": -3.5360701749947654,
+   "betas": {
+    "Mkt-RF": 0.07189550371904967,
+    "SMB": 0.10281653597393045,
+    "HML": -0.10482890179464918,
+    "RMW": 0.05490303235038107,
+    "CMA": 0.10074299613810817,
+    "Mom": 0.23252661136166305
+   }
+  },
+  "on": 41,
+  "min_on": 30,
+  "p_one_sided": 0.9931993281367449,
+  "holm": false,
+  "dsr": 5.644443801244847e-10,
+  "checks": {
+   "t_ge_3_holm": false,
+   "dsr_ge_0.9": false,
+   "thirds_2_of_3": false,
+   "alpha_pos": false
+  },
+  "verdict": "fail",
+  "desc": "12-1 month price momentum | volatility: last month's vol below its 60-month median = ON",
+  "d10_d1_on_ann": 0.04454135546970644
+ },
+ "A-S6a-R2-off": {
+  "months": 95,
+  "ann": -0.06006519728245226,
+  "t": -2.939579381727973,
+  "sr": {
+   "sr": -0.27366509458344973,
+   "skew": -1.3695376509645076,
+   "kurt": 6.02920916935255,
+   "n": 95
+  },
+  "thirds": [
+   false,
+   false,
+   false
+  ],
+  "alpha": {
+   "alpha_ann": -0.06094377216950953,
+   "alpha_t": -3.7503026708289404,
+   "betas": {
+    "Mkt-RF": 0.030099769640978737,
+    "SMB": 0.07464508815576447,
+    "HML": -0.045860291967565484,
+    "RMW": -0.20613435205638064,
+    "CMA": 0.02261595744795296,
+    "Mom": 0.22444865357818425
+   }
+  },
+  "on": 54,
+  "min_on": 30,
+  "p_one_sided": 0.9983567096489053,
+  "holm": false,
+  "dsr": 2.382760655450511e-12,
+  "checks": {
+   "t_ge_3_holm": false,
+   "dsr_ge_0.9": false,
+   "thirds_2_of_3": false,
+   "alpha_pos": false
+  },
+  "verdict": "fail",
+  "desc": "12-1 month price momentum | volatility: last month's vol below its 60-month median = OFF",
+  "d10_d1_on_ann": 0.095652540966701
+ },
+ "A-S6a-R3-on": {
+  "months": 95,
+  "ann": -0.05589301694344015,
+  "t": -3.2321433679610787,
+  "sr": {
+   "sr": -0.28656200195765474,
+   "skew": -0.9217638980068905,
+   "kurt": 5.694476670737137,
+   "n": 95
+  },
+  "thirds": [
+   false,
+   false,
+   false
+  ],
+  "alpha": {
+   "alpha_ann": -0.05350142934974178,
+   "alpha_t": -4.821802170680358,
+   "betas": {
+    "Mkt-RF": 0.0021003198858783514,
+    "SMB": 0.06809731400592502,
+    "HML": -0.10182241874046014,
+    "RMW": -0.17489933291141813,
+    "CMA": -0.0092335163768622,
+    "Mom": 0.186188308531851
+   }
+  },
+  "on": 47,
+  "min_on": 30,
+  "p_one_sided": 0.999385673023889,
+  "holm": false,
+  "dsr": 2.624961359387612e-11,
+  "checks": {
+   "t_ge_3_holm": false,
+   "dsr_ge_0.9": false,
+   "thirds_2_of_3": false,
+   "alpha_pos": false
+  },
+  "verdict": "fail",
+  "desc": "12-1 month price momentum | calendar: return month in Nov-Apr = ON",
+  "d10_d1_on_ann": -0.027627894055377935
+ },
+ "A-S6a-R3-off": {
+  "months": 95,
+  "ann": -0.01497691330876013,
+  "t": -0.900887673040426,
+  "sr": {
+   "sr": -0.08153942557799373,
+   "skew": -0.7900835362805184,
+   "kurt": 5.468275041160615,
+   "n": 95
+  },
+  "thirds": [
+   false,
+   false,
+   false
+  ],
+  "alpha": {
+   "alpha_ann": -0.026842004145210825,
+   "alpha_t": -1.573210237816129,
+   "betas": {
+    "Mkt-RF": 0.06098073706340699,
+    "SMB": 0.0999781736067411,
+    "HML": -0.02431869171930074,
+    "RMW": -0.05648914150560381,
+    "CMA": 0.06586245095646225,
+    "Mom": 0.2285248075396936
+   }
+  },
+  "on": 48,
+  "min_on": 30,
+  "p_one_sided": 0.8161759770007002,
+  "holm": false,
+  "dsr": 1.9012210545010788e-05,
+  "checks": {
+   "t_ge_3_holm": false,
+   "dsr_ge_0.9": false,
+   "thirds_2_of_3": false,
+   "alpha_pos": false
+  },
+  "verdict": "fail",
+  "desc": "12-1 month price momentum | calendar: return month in Nov-Apr = OFF",
+  "d10_d1_on_ann": 0.17270716264713715
+ },
+ "A-S6b-R1-on": {
+  "months": 95,
+  "ann": -0.0593532023694668,
+  "t": -2.877494448636395,
+  "sr": {
+   "sr": -0.2900622673011263,
+   "skew": -0.9315623164727505,
+   "kurt": 5.918943965367168,
+   "n": 95
+  },
+  "thirds": [
+   false,
+   false,
+   false
+  ],
+  "alpha": {
+   "alpha_ann": -0.07168926214837647,
+   "alpha_t": -4.5617965965944896,
+   "betas": {
+    "Mkt-RF": -0.041039031269616215,
+    "SMB": 0.08912443664878987,
+    "HML": -0.14426549828259047,
+    "RMW": 0.17394261553664128,
+    "CMA": 0.051162236007871655,
+    "Mom": 0.24604195994481945
+   }
+  },
+  "on": 73,
+  "min_on": 30,
+  "p_one_sided": 0.9979957651845281,
+  "holm": false,
+  "dsr": 2.100319917985871e-11,
+  "checks": {
+   "t_ge_3_holm": false,
+   "dsr_ge_0.9": false,
+   "thirds_2_of_3": false,
+   "alpha_pos": false
+  },
+  "verdict": "fail",
+  "desc": "Close / 12-month high | trend: index above its 10-month average = ON",
+  "d10_d1_on_ann": 0.06485623422494799
+ },
+ "A-S6b-R1-off": {
+  "months": 95,
+  "ann": -0.021991212392291074,
+  "t": -1.9550695077040154,
+  "sr": {
+   "sr": -0.17577632428781367,
+   "skew": -2.8272681603129093,
+   "kurt": 14.922551048168131,
+   "n": 95
+  },
+  "thirds": [
+   false,
+   false,
+   false
+  ],
+  "alpha": {
+   "alpha_ann": -0.02013152794150392,
+   "alpha_t": -1.7473406052459008,
+   "betas": {
+    "Mkt-RF": -0.04259571297657288,
+    "SMB": 0.01982380308406771,
+    "HML": 0.0414645613266718,
+    "RMW": -0.022264150899236453,
+    "CMA": 0.06270270247481524,
+    "Mom": 0.07776358779402472
+   }
+  },
+  "on": 22,
+  "min_on": 30,
+  "p_one_sided": 0.9747125666348957,
+  "holm": false,
+  "dsr": 1.6037210448516248e-10,
+  "checks": {
+   "t_ge_3_holm": false,
+   "dsr_ge_0.9": false,
+   "thirds_2_of_3": false,
+   "alpha_pos": false
+  },
+  "verdict": "inconclusive",
+  "desc": "Close / 12-month high | trend: index above its 10-month average = OFF",
+  "d10_d1_on_ann": 0.18445133299680602
+ },
+ "A-S6b-R2-on": {
+  "months": 95,
+  "ann": -0.06653954575640861,
+  "t": -4.178333204689775,
+  "sr": {
+   "sr": -0.41000620830359036,
+   "skew": -2.0308817474071654,
+   "kurt": 7.396601777818532,
+   "n": 95
+  },
+  "thirds": [
+   false,
+   false,
+   false
+  ],
+  "alpha": {
+   "alpha_ann": -0.08089902908280651,
+   "alpha_t": -4.9459218807879894,
+   "betas": {
+    "Mkt-RF": 0.017230390210462267,
+    "SMB": 0.12994677368823407,
+    "HML": -0.12015778045000458,
+    "RMW": 0.11833368844754777,
+    "CMA": 0.14197311016746547,
+    "Mom": 0.1511740275017578
+   }
+  },
+  "on": 41,
+  "min_on": 30,
+  "p_one_sided": 0.9999853173383755,
+  "holm": false,
+  "dsr": 0.0,
+  "checks": {
+   "t_ge_3_holm": false,
+   "dsr_ge_0.9": false,
+   "thirds_2_of_3": false,
+   "alpha_pos": false
+  },
+  "verdict": "fail",
+  "desc": "Close / 12-month high | volatility: last month's vol below its 60-month median = ON",
+  "d10_d1_on_ann": -0.010181949167504239
+ },
+ "A-S6b-R2-off": {
+  "months": 95,
+  "ann": -0.051357368431518675,
+  "t": -2.654113090122318,
+  "sr": {
+   "sr": -0.23857257172770485,
+   "skew": -0.786068434320605,
+   "kurt": 4.780009065114948,
+   "n": 95
+  },
+  "thirds": [
+   false,
+   false,
+   false
+  ],
+  "alpha": {
+   "alpha_ann": -0.053849715909633666,
+   "alpha_t": -3.8434547072003786,
+   "betas": {
+    "Mkt-RF": -0.07755195172676069,
+    "SMB": -0.03804577127868388,
+    "HML": -0.07313050023900029,
+    "RMW": 0.05369549488227501,
+    "CMA": 0.09266087044477526,
+    "Mom": 0.18091973010551946
+   }
+  },
+  "on": 54,
+  "min_on": 30,
+  "p_one_sided": 0.9960241413979531,
+  "holm": false,
+  "dsr": 1.4819133142829344e-09,
+  "checks": {
+   "t_ge_3_holm": false,
+   "dsr_ge_0.9": false,
+   "thirds_2_of_3": false,
+   "alpha_pos": false
+  },
+  "verdict": "fail",
+  "desc": "Close / 12-month high | volatility: last month's vol below its 60-month median = OFF",
+  "d10_d1_on_ann": 0.17055359889293728
+ },
+ "A-S6b-R3-on": {
+  "months": 95,
+  "ann": -0.06156113810657487,
+  "t": -3.4516055377812,
+  "sr": {
+   "sr": -0.31434602423841607,
+   "skew": -0.6841521632159924,
+   "kurt": 5.68046601105841,
+   "n": 95
+  },
+  "thirds": [
+   false,
+   false,
+   false
+  ],
+  "alpha": {
+   "alpha_ann": -0.0580101834337826,
+   "alpha_t": -4.2444202325252816,
+   "betas": {
+    "Mkt-RF": -0.11361993444890492,
+    "SMB": 0.06519277955380766,
+    "HML": -0.11260773213979805,
+    "RMW": 0.03460386933921886,
+    "CMA": 0.0732455673868527,
+    "Mom": 0.1711012399373848
+   }
+  },
+  "on": 47,
+  "min_on": 30,
+  "p_one_sided": 0.999721369113987,
+  "holm": false,
+  "dsr": 2.1463220090112145e-11,
+  "checks": {
+   "t_ge_3_holm": false,
+   "dsr_ge_0.9": false,
+   "thirds_2_of_3": false,
+   "alpha_pos": false
+  },
+  "verdict": "fail",
+  "desc": "Close / 12-month high | calendar: return month in Nov-Apr = ON",
+  "d10_d1_on_ann": 0.008013439112749914
+ },
+ "A-S6b-R3-off": {
+  "months": 95,
+  "ann": -0.02556614461689019,
+  "t": -1.9060996961054497,
+  "sr": {
+   "sr": -0.16336505146256577,
+   "skew": -1.0725300710892083,
+   "kurt": 7.636460972110948,
+   "n": 95
+  },
+  "thirds": [
+   false,
+   false,
+   false
+  ],
+  "alpha": {
+   "alpha_ann": -0.036192416084336224,
+   "alpha_t": -2.777596105717404,
+   "betas": {
+    "Mkt-RF": 0.016905449774531733,
+    "SMB": 0.023812144564223755,
+    "HML": -0.062350534669076564,
+    "RMW": 0.056565431370847685,
+    "CMA": 0.10852403266871535,
+    "Mom": 0.12612885438944296
+   }
+  },
+  "on": 48,
+  "min_on": 30,
+  "p_one_sided": 0.9716813639320037,
+  "holm": false,
+  "dsr": 1.360494215063568e-07,
+  "checks": {
+   "t_ge_3_holm": false,
+   "dsr_ge_0.9": false,
+   "thirds_2_of_3": false,
+   "alpha_pos": false
+  },
+  "verdict": "fail",
+  "desc": "Close / 12-month high | calendar: return month in Nov-Apr = OFF",
+  "d10_d1_on_ann": 0.17532922470941023
+ },
+ "A-S6c-R1-on": {
+  "months": 95,
+  "ann": -0.07295334251352607,
+  "t": -4.748693829077347,
+  "sr": {
+   "sr": -0.4668738322312999,
+   "skew": -0.5726555310202706,
+   "kurt": 4.435220438570331,
+   "n": 95
+  },
+  "thirds": [
+   false,
+   false,
+   false
+  ],
+  "alpha": {
+   "alpha_ann": -0.08405184446054184,
+   "alpha_t": -5.793328089993554,
+   "betas": {
+    "Mkt-RF": 0.01439543270372679,
+    "SMB": 0.17533194622823145,
+    "HML": -0.01946136324244366,
+    "RMW": 0.09668380438243789,
+    "CMA": 0.011669337938265311,
+    "Mom": 0.18727358733087518
+   }
+  },
+  "on": 73,
+  "min_on": 30,
+  "p_one_sided": 0.9999989763269417,
+  "holm": false,
+  "dsr": 3.885780586188048e-16,
+  "checks": {
+   "t_ge_3_holm": false,
+   "dsr_ge_0.9": false,
+   "thirds_2_of_3": false,
+   "alpha_pos": false
+  },
+  "verdict": "fail",
+  "desc": "FF3 residual momentum, 12-2 months | trend: index above its 10-month average = ON",
+  "d10_d1_on_ann": -0.0010270418400918605
+ },
+ "A-S6c-R1-off": {
+  "months": 95,
+  "ann": -0.022045195441015818,
+  "t": -2.2885780103833393,
+  "sr": {
+   "sr": -0.24691072113874477,
+   "skew": -1.6525710948230694,
+   "kurt": 8.641618817367043,
+   "n": 95
+  },
+  "thirds": [
+   false,
+   false,
+   true
+  ],
+  "alpha": {
+   "alpha_ann": -0.018875137164762044,
+   "alpha_t": -1.8354756896091122,
+   "betas": {
+    "Mkt-RF": -0.002688873821055991,
+    "SMB": 0.002564497316690876,
+    "HML": 0.036152792296676305,
+    "RMW": -0.07196735824797759,
+    "CMA": -0.03756091549650727,
+    "Mom": 0.0395923728437772
+   }
+  },
+  "on": 22,
+  "min_on": 30,
+  "p_one_sided": 0.9889480586233693,
+  "holm": false,
+  "dsr": 1.3938905585320072e-11,
+  "checks": {
+   "t_ge_3_holm": false,
+   "dsr_ge_0.9": false,
+   "thirds_2_of_3": false,
+   "alpha_pos": false
+  },
+  "verdict": "inconclusive",
+  "desc": "FF3 residual momentum, 12-2 months | trend: index above its 10-month average = OFF",
+  "d10_d1_on_ann": 0.019409790063722763
+ },
+ "A-S6c-R2-on": {
+  "months": 95,
+  "ann": -0.06337206061900316,
+  "t": -3.8986718196027006,
+  "sr": {
+   "sr": -0.39382012320290216,
+   "skew": -1.6580238829937417,
+   "kurt": 6.3761140395584786,
+   "n": 95
+  },
+  "thirds": [
+   false,
+   false,
+   false
+  ],
+  "alpha": {
+   "alpha_ann": -0.07919651882514116,
+   "alpha_t": -4.601927378217809,
+   "betas": {
+    "Mkt-RF": 0.035746288760498006,
+    "SMB": 0.12477531026631179,
+    "HML": -0.10829109245189977,
+    "RMW": 0.11044190041351579,
+    "CMA": 0.1650950174406872,
+    "Mom": 0.13239627779831042
+   }
+  },
+  "on": 41,
+  "min_on": 30,
+  "p_one_sided": 0.9999516391212164,
+  "holm": false,
+  "dsr": 0.0,
+  "checks": {
+   "t_ge_3_holm": false,
+   "dsr_ge_0.9": false,
+   "thirds_2_of_3": false,
+   "alpha_pos": false
+  },
+  "verdict": "fail",
+  "desc": "FF3 residual momentum, 12-2 months | volatility: last month's vol below its 60-month median = ON",
+  "d10_d1_on_ann": 0.0007121410666165221
+ },
+ "A-S6c-R2-off": {
+  "months": 95,
+  "ann": -0.07544570383450203,
+  "t": -5.028220056045473,
+  "sr": {
+   "sr": -0.4780390975484099,
+   "skew": -1.0345524337634717,
+   "kurt": 4.654841006794317,
+   "n": 95
+  },
+  "thirds": [
+   false,
+   false,
+   false
+  ],
+  "alpha": {
+   "alpha_ann": -0.0747552689914282,
+   "alpha_t": -4.82220432800371,
+   "betas": {
+    "Mkt-RF": 0.0015417435567479849,
+    "SMB": 0.032366555109455734,
+    "HML": 0.02627647810546141,
+    "RMW": -0.0633303605283765,
+    "CMA": -0.059109564795717336,
+    "Mom": 0.10995148541139019
+   }
+  },
+  "on": 54,
+  "min_on": 30,
+  "p_one_sided": 0.9999997524732138,
+  "holm": false,
+  "dsr": 0.0,
+  "checks": {
+   "t_ge_3_holm": false,
+   "dsr_ge_0.9": false,
+   "thirds_2_of_3": false,
+   "alpha_pos": false
+  },
+  "verdict": "fail",
+  "desc": "FF3 residual momentum, 12-2 months | volatility: last month's vol below its 60-month median = OFF",
+  "d10_d1_on_ann": 0.005978584135998481
+ },
+ "A-S6c-R3-on": {
+  "months": 95,
+  "ann": -0.0629006617962143,
+  "t": -4.969713192060161,
+  "sr": {
+   "sr": -0.41923283227883096,
+   "skew": -1.213134126796883,
+   "kurt": 5.731053483957785,
+   "n": 95
+  },
+  "thirds": [
+   false,
+   false,
+   false
+  ],
+  "alpha": {
+   "alpha_ann": -0.06640276213846792,
+   "alpha_t": -5.213132727881241,
+   "betas": {
+    "Mkt-RF": 0.002952977958839668,
+    "SMB": 0.08852091574769345,
+    "HML": -0.03309771800823854,
+    "RMW": -0.03100730063959524,
+    "CMA": 0.026800060275555527,
+    "Mom": 0.14352922739942137
+   }
+  },
+  "on": 47,
+  "min_on": 30,
+  "p_one_sided": 0.9999996647399519,
+  "holm": false,
+  "dsr": 0.0,
+  "checks": {
+   "t_ge_3_holm": false,
+   "dsr_ge_0.9": false,
+   "thirds_2_of_3": false,
+   "alpha_pos": false
+  },
+  "verdict": "fail",
+  "desc": "FF3 residual momentum, 12-2 months | calendar: return month in Nov-Apr = ON",
+  "d10_d1_on_ann": -0.04085797472749571
+ },
+ "A-S6c-R3-off": {
+  "months": 95,
+  "ann": -0.039627363386572634,
+  "t": -3.1889237511564548,
+  "sr": {
+   "sr": -0.33291977927196237,
+   "skew": -0.7406802395000244,
+   "kurt": 5.031503499023001,
+   "n": 95
+  },
+  "thirds": [
+   false,
+   false,
+   false
+  ],
+  "alpha": {
+   "alpha_ann": -0.040707287079137344,
+   "alpha_t": -2.8694923363460614,
+   "betas": {
+    "Mkt-RF": -0.005157535585782193,
+    "SMB": 0.06178373488433843,
+    "HML": -0.024946858799639912,
+    "RMW": -0.002418004747810534,
+    "CMA": 0.013155470834902865,
+    "Mom": 0.05734317975991079
+   }
+  },
+  "on": 48,
+  "min_on": 30,
+  "p_one_sided": 0.9992859823035696,
+  "holm": false,
+  "dsr": 2.2435941993137476e-12,
+  "checks": {
+   "t_ge_3_holm": false,
+   "dsr_ge_0.9": false,
+   "thirds_2_of_3": false,
+   "alpha_pos": false
+  },
+  "verdict": "fail",
+  "desc": "FF3 residual momentum, 12-2 months | calendar: return month in Nov-Apr = OFF",
+  "d10_d1_on_ann": 0.04734096123473945
+ },
+ "A-S7a-R1-on": {
+  "months": 95,
+  "ann": -0.03846017972541171,
+  "t": -2.3650437710294367,
+  "sr": {
+   "sr": -0.2370922166805244,
+   "skew": -0.9654685001596132,
+   "kurt": 8.763862689729894,
+   "n": 95
+  },
+  "thirds": [
+   false,
+   false,
+   true
+  ],
+  "alpha": {
+   "alpha_ann": -0.035635099438760615,
+   "alpha_t": -3.058882800046246,
+   "betas": {
+    "Mkt-RF": 0.009539029494845728,
+    "SMB": 0.026336798105181664,
+    "HML": 0.1609421337332134,
+    "RMW": 0.036612964969016185,
+    "CMA": -0.03803511228603,
+    "Mom": -0.13466883839299784
+   }
+  },
+  "on": 73,
+  "min_on": 30,
+  "p_one_sided": 0.9909860299548313,
+  "holm": false,
+  "dsr": 2.1647637571398093e-09,
+  "checks": {
+   "t_ge_3_holm": false,
+   "dsr_ge_0.9": false,
+   "thirds_2_of_3": false,
+   "alpha_pos": false
+  },
+  "verdict": "fail",
+  "desc": "Insider net buyers ratio, 6 months | trend: index above its 10-month average = ON",
+  "d10_d1_on_ann": -0.02139513240176875
+ },
+ "A-S7a-R1-off": {
+  "months": 95,
+  "ann": -0.020453348059905417,
+  "t": -2.3032628334695304,
+  "sr": {
+   "sr": -0.2284176331790276,
+   "skew": -1.789541662085003,
+   "kurt": 10.40366516321911,
+   "n": 95
+  },
+  "thirds": [
+   false,
+   false,
+   true
+  ],
+  "alpha": {
+   "alpha_ann": -0.023126080934933006,
+   "alpha_t": -2.474558836484316,
+   "betas": {
+    "Mkt-RF": 0.03454247205778555,
+    "SMB": -0.03282836480402715,
+    "HML": 0.062258812850173664,
+    "RMW": -0.02397816142911892,
+    "CMA": -0.02169821168771794,
+    "Mom": 0.014355325303053838
+   }
+  },
+  "on": 22,
+  "min_on": 30,
+  "p_one_sided": 0.9893679702802308,
+  "holm": false,
+  "dsr": 6.830314092098888e-11,
+  "checks": {
+   "t_ge_3_holm": false,
+   "dsr_ge_0.9": false,
+   "thirds_2_of_3": false,
+   "alpha_pos": false
+  },
+  "verdict": "inconclusive",
+  "desc": "Insider net buyers ratio, 6 months | trend: index above its 10-month average = OFF",
+  "d10_d1_on_ann": 0.04390662264643352
+ },
+ "A-S7a-R2-on": {
+  "months": 95,
+  "ann": -0.055435126277800964,
+  "t": -5.384723312677474,
+  "sr": {
+   "sr": -0.5174434884886867,
+   "skew": -1.5564335241100864,
+   "kurt": 4.945182032939359,
+   "n": 95
+  },
+  "thirds": [
+   false,
+   false,
+   false
+  ],
+  "alpha": {
+   "alpha_ann": -0.0585973786515152,
+   "alpha_t": -5.035555861519731,
+   "betas": {
+    "Mkt-RF": -0.002863925608974726,
+    "SMB": 0.02168059475063673,
+    "HML": -0.06973473069701033,
+    "RMW": 0.02244923910730947,
+    "CMA": 0.19212448324543815,
+    "Mom": -0.045984912592959455
+   }
+  },
+  "on": 41,
+  "min_on": 30,
+  "p_one_sided": 0.9999999637219138,
+  "holm": false,
+  "dsr": 0.0,
+  "checks": {
+   "t_ge_3_holm": false,
+   "dsr_ge_0.9": false,
+   "thirds_2_of_3": false,
+   "alpha_pos": false
+  },
+  "verdict": "fail",
+  "desc": "Insider net buyers ratio, 6 months | volatility: last month's vol below its 60-month median = ON",
+  "d10_d1_on_ann": -0.019243608667686225
+ },
+ "A-S7a-R2-off": {
+  "months": 95,
+  "ann": -0.050088235073029244,
+  "t": -3.163192182832095,
+  "sr": {
+   "sr": -0.32589213755147783,
+   "skew": -1.3676771764895983,
+   "kurt": 8.615650041420961,
+   "n": 95
+  },
+  "thirds": [
+   false,
+   false,
+   false
+  ],
+  "alpha": {
+   "alpha_ann": -0.054133078999444736,
+   "alpha_t": -3.6840927394302643,
+   "betas": {
+    "Mkt-RF": 0.07174388598610541,
+    "SMB": -0.04783144914222976,
+    "HML": 0.18658263974966535,
+    "RMW": 0.015786903743780067,
+    "CMA": -0.11276305416742304,
+    "Mom": -0.06081141455475916
+   }
+  },
+  "on": 54,
+  "min_on": 30,
+  "p_one_sided": 0.9992197536038543,
+  "holm": false,
+  "dsr": 1.2140288774276087e-13,
+  "checks": {
+   "t_ge_3_holm": false,
+   "dsr_ge_0.9": false,
+   "thirds_2_of_3": false,
+   "alpha_pos": false
+  },
+  "verdict": "fail",
+  "desc": "Insider net buyers ratio, 6 months | volatility: last month's vol below its 60-month median = OFF",
+  "d10_d1_on_ann": 0.0035757220049547024
+ },
+ "A-S7a-R3-on": {
+  "months": 95,
+  "ann": -0.027252285290960854,
+  "t": -2.0131303248928343,
+  "sr": {
+   "sr": -0.22528550645453554,
+   "skew": -1.3788140886756004,
+   "kurt": 12.47039428611533,
+   "n": 95
+  },
+  "thirds": [
+   false,
+   false,
+   true
+  ],
+  "alpha": {
+   "alpha_ann": -0.02741481708559555,
+   "alpha_t": -2.636258707335384,
+   "betas": {
+    "Mkt-RF": 0.039926728249752255,
+    "SMB": -0.024952669323169283,
+    "HML": 0.15920095426074157,
+    "RMW": -0.03028072230795911,
+    "CMA": -0.07343808839097435,
+    "Mom": -0.033271364855197424
+   }
+  },
+  "on": 47,
+  "min_on": 30,
+  "p_one_sided": 0.9779495396236548,
+  "holm": false,
+  "dsr": 1.7854401290762212e-09,
+  "checks": {
+   "t_ge_3_holm": false,
+   "dsr_ge_0.9": false,
+   "thirds_2_of_3": false,
+   "alpha_pos": false
+  },
+  "verdict": "fail",
+  "desc": "Insider net buyers ratio, 6 months | calendar: return month in Nov-Apr = ON",
+  "d10_d1_on_ann": 0.0008095904526600293
+ },
+ "A-S7a-R3-off": {
+  "months": 95,
+  "ann": -0.041582194451691326,
+  "t": -4.8119220466298644,
+  "sr": {
+   "sr": -0.37707907897495213,
+   "skew": -0.5474398251681444,
+   "kurt": 4.513867551028209,
+   "n": 95
+  },
+  "thirds": [
+   false,
+   false,
+   false
+  ],
+  "alpha": {
+   "alpha_ann": -0.037610682861790985,
+   "alpha_t": -4.2511312791411955,
+   "betas": {
+    "Mkt-RF": -0.009153278311142545,
+    "SMB": -0.01935682669371477,
+    "HML": -0.013456723717229845,
+    "RMW": -0.021883072084115225,
+    "CMA": 0.08138795452381924,
+    "Mom": -0.11850256872483707
+   }
+  },
+  "on": 48,
+  "min_on": 30,
+  "p_one_sided": 0.9999992525716843,
+  "holm": false,
+  "dsr": 3.929079284148429e-13,
+  "checks": {
+   "t_ge_3_holm": false,
+   "dsr_ge_0.9": false,
+   "thirds_2_of_3": false,
+   "alpha_pos": false
+  },
+  "verdict": "fail",
+  "desc": "Insider net buyers ratio, 6 months | calendar: return month in Nov-Apr = OFF",
+  "d10_d1_on_ann": -0.013207285799637564
+ },
+ "A-S7b-R1-on": {
+  "months": 95,
+  "ann": -0.03646192939565463,
+  "t": -2.528715393997724,
+  "sr": {
+   "sr": -0.25900472155668625,
+   "skew": -1.381284744741318,
+   "kurt": 10.410545518039802,
+   "n": 95
+  },
+  "thirds": [
+   false,
+   false,
+   false
+  ],
+  "alpha": {
+   "alpha_ann": -0.03589681064475894,
+   "alpha_t": -2.874608539761977,
+   "betas": {
+    "Mkt-RF": 0.02063581831397806,
+    "SMB": 0.03548322456993887,
+    "HML": 0.14289908205646887,
+    "RMW": 0.03756898826930103,
+    "CMA": -0.06958105682257318,
+    "Mom": -0.08061942156782147
+   }
+  },
+  "on": 73,
+  "min_on": 30,
+  "p_one_sided": 0.9942759591399184,
+  "holm": false,
+  "dsr": 7.994688244750137e-11,
+  "checks": {
+   "t_ge_3_holm": false,
+   "dsr_ge_0.9": false,
+   "thirds_2_of_3": false,
+   "alpha_pos": false
+  },
+  "verdict": "fail",
+  "desc": "Insider purchase value / market cap, 6 months | trend: index above its 10-month average = ON",
+  "d10_d1_on_ann": -0.005836130928291127
+ },
+ "A-S7b-R1-off": {
+  "months": 95,
+  "ann": -0.022115219515538985,
+  "t": -2.6000729113833523,
+  "sr": {
+   "sr": -0.259437467121886,
+   "skew": -1.955234113841222,
+   "kurt": 8.827657668534055,
+   "n": 95
+  },
+  "thirds": [
+   false,
+   false,
+   false
+  ],
+  "alpha": {
+   "alpha_ann": -0.02397348256692407,
+   "alpha_t": -2.680728247299006,
+   "betas": {
+    "Mkt-RF": 0.03670610245361274,
+    "SMB": -0.02551307599693553,
+    "HML": 0.053827829914392784,
+    "RMW": -0.027166434179808418,
+    "CMA": -0.051485322906957974,
+    "Mom": 0.007057585781013463
+   }
+  },
+  "on": 22,
+  "min_on": 30,
+  "p_one_sided": 0.9953398022354927,
+  "holm": false,
+  "dsr": 2.1688206786052433e-13,
+  "checks": {
+   "t_ge_3_holm": false,
+   "dsr_ge_0.9": false,
+   "thirds_2_of_3": false,
+   "alpha_pos": false
+  },
+  "verdict": "inconclusive",
+  "desc": "Insider purchase value / market cap, 6 months | trend: index above its 10-month average = OFF",
+  "d10_d1_on_ann": 0.00021056371682224244
+ },
+ "A-S7b-R2-on": {
+  "months": 95,
+  "ann": -0.05391619114431323,
+  "t": -5.7305279961064475,
+  "sr": {
+   "sr": -0.5662352325598319,
+   "skew": -1.5530197006915927,
+   "kurt": 5.283967515601033,
+   "n": 95
+  },
+  "thirds": [
+   false,
+   false,
+   false
+  ],
+  "alpha": {
+   "alpha_ann": -0.05875417509597108,
+   "alpha_t": -5.339957094471837,
+   "betas": {
+    "Mkt-RF": 0.011508347768641456,
+    "SMB": 0.03192021075241724,
+    "HML": -0.074703060092446,
+    "RMW": 0.020914389434919616,
+    "CMA": 0.17466529266109268,
+    "Mom": -0.02531651169086228
+   }
+  },
+  "on": 41,
+  "min_on": 30,
+  "p_one_sided": 0.999999994994075,
+  "holm": false,
+  "dsr": 0.0,
+  "checks": {
+   "t_ge_3_holm": false,
+   "dsr_ge_0.9": false,
+   "thirds_2_of_3": false,
+   "alpha_pos": false
+  },
+  "verdict": "fail",
+  "desc": "Insider purchase value / market cap, 6 months | volatility: last month's vol below its 60-month median = ON",
+  "d10_d1_on_ann": -0.01454436406889761
+ },
+ "A-S7b-R2-off": {
+  "months": 95,
+  "ann": -0.05138972213802423,
+  "t": -4.2499530397790855,
+  "sr": {
+   "sr": -0.3902483317763917,
+   "skew": -1.6599298896417212,
+   "kurt": 9.946684600002566,
+   "n": 95
+  },
+  "thirds": [
+   false,
+   false,
+   false
+  ],
+  "alpha": {
+   "alpha_ann": -0.05527444628664685,
+   "alpha_t": -4.386240013595862,
+   "betas": {
+    "Mkt-RF": 0.07036594307964,
+    "SMB": -0.04008472455579907,
+    "HML": 0.163268898040093,
+    "RMW": 0.015949102800895315,
+    "CMA": -0.15472189147425955,
+    "Mom": -0.03389712782179583
+   }
+  },
+  "on": 54,
+  "min_on": 30,
+  "p_one_sided": 0.9999893092331238,
+  "holm": false,
+  "dsr": 0.0,
+  "checks": {
+   "t_ge_3_holm": false,
+   "dsr_ge_0.9": false,
+   "thirds_2_of_3": false,
+   "alpha_pos": false
+  },
+  "verdict": "fail",
+  "desc": "Insider purchase value / market cap, 6 months | volatility: last month's vol below its 60-month median = OFF",
+  "d10_d1_on_ann": 0.0032391439042525694
+ },
+ "A-S7b-R3-on": {
+  "months": 95,
+  "ann": -0.035761551016102205,
+  "t": -3.1461011289296708,
+  "sr": {
+   "sr": -0.3297622339045218,
+   "skew": -1.9276608487375362,
+   "kurt": 12.44339086871098,
+   "n": 95
+  },
+  "thirds": [
+   false,
+   false,
+   false
+  ],
+  "alpha": {
+   "alpha_ann": -0.03563191486909261,
+   "alpha_t": -3.598533472051182,
+   "betas": {
+    "Mkt-RF": 0.03997142752580874,
+    "SMB": -0.024882273608578937,
+    "HML": 0.14587548845129586,
+    "RMW": -0.0358206130604564,
+    "CMA": -0.10752244032805064,
+    "Mom": -0.013188031850564625
+   }
+  },
+  "on": 47,
+  "min_on": 30,
+  "p_one_sided": 0.9991726860872048,
+  "holm": false,
+  "dsr": 3.219646771412954e-15,
+  "checks": {
+   "t_ge_3_holm": false,
+   "dsr_ge_0.9": false,
+   "thirds_2_of_3": false,
+   "alpha_pos": false
+  },
+  "verdict": "fail",
+  "desc": "Insider purchase value / market cap, 6 months | calendar: return month in Nov-Apr = ON",
+  "d10_d1_on_ann": -0.03558249925760067
+ },
+ "A-S7b-R3-off": {
+  "months": 95,
+  "ann": -0.03255092085170759,
+  "t": -4.430021249867543,
+  "sr": {
+   "sr": -0.3449256381430743,
+   "skew": -0.45808509237784406,
+   "kurt": 4.649052822801881,
+   "n": 95
+  },
+  "thirds": [
+   false,
+   false,
+   false
+  ],
+  "alpha": {
+   "alpha_ann": -0.030277719559481962,
+   "alpha_t": -3.817015035374933,
+   "betas": {
+    "Mkt-RF": 0.0040439981247813814,
+    "SMB": -0.004004269796288057,
+    "HML": -0.026864720157671926,
+    "RMW": -0.019299495181682284,
+    "CMA": 0.05417505977755776,
+    "Mom": -0.0922085017836787
+   }
+  },
+  "on": 48,
+  "min_on": 30,
+  "p_one_sided": 0.9999952888098392,
+  "holm": false,
+  "dsr": 8.958667141456544e-12,
+  "checks": {
+   "t_ge_3_holm": false,
+   "dsr_ge_0.9": false,
+   "thirds_2_of_3": false,
+   "alpha_pos": false
+  },
+  "verdict": "fail",
+  "desc": "Insider purchase value / market cap, 6 months | calendar: return month in Nov-Apr = OFF",
+  "d10_d1_on_ann": 0.026061923106501426
+ },
+ "A-S9-R1-on": {
+  "months": 95,
+  "ann": -0.050477014964706045,
+  "t": -2.223911335089947,
+  "sr": {
+   "sr": -0.2429664515418201,
+   "skew": 0.8255735897458136,
+   "kurt": 6.660777976063793,
+   "n": 95
+  },
+  "thirds": [
+   false,
+   false,
+   true
+  ],
+  "alpha": {
+   "alpha_ann": -0.04867602558168024,
+   "alpha_t": -2.7784327804437075,
+   "betas": {
+    "Mkt-RF": -0.023196452817455984,
+    "SMB": 0.05377919098878476,
+    "HML": 0.18291892169136678,
+    "RMW": 0.05195602408554068,
+    "CMA": 0.11599697194479847,
+    "Mom": -0.110997565548662
+   }
+  },
+  "on": 73,
+  "min_on": 30,
+  "p_one_sided": 0.986922794858005,
+  "holm": false,
+  "dsr": 4.5299847400981363e-07,
+  "checks": {
+   "t_ge_3_holm": false,
+   "dsr_ge_0.9": false,
+   "thirds_2_of_3": false,
+   "alpha_pos": false
+  },
+  "verdict": "fail",
+  "desc": "Expectations gap: base-rate DCF value / market cap, ex financials | trend: index above its 10-month average = ON",
+  "d10_d1_on_ann": -0.01355590478610157
+ },
+ "A-S9-R1-off": {
+  "months": 95,
+  "ann": -0.022462264373277828,
+  "t": -1.382963987152461,
+  "sr": {
+   "sr": -0.15145855769161068,
+   "skew": -0.5620827057073603,
+   "kurt": 8.326585406807448,
+   "n": 95
+  },
+  "thirds": [
+   false,
+   false,
+   true
+  ],
+  "alpha": {
+   "alpha_ann": -0.03597370977705319,
+   "alpha_t": -2.2868621039674757,
+   "betas": {
+    "Mkt-RF": 0.05322360078749032,
+    "SMB": 0.00653150727970154,
+    "HML": 0.06516253678871001,
+    "RMW": 0.04527394900892087,
+    "CMA": 0.1534576967516011,
+    "Mom": 0.08623881939128958
+   }
+  },
+  "on": 22,
+  "min_on": 30,
+  "p_one_sided": 0.9166620457301009,
+  "holm": false,
+  "dsr": 8.670409348265906e-07,
+  "checks": {
+   "t_ge_3_holm": false,
+   "dsr_ge_0.9": false,
+   "thirds_2_of_3": false,
+   "alpha_pos": false
+  },
+  "verdict": "inconclusive",
+  "desc": "Expectations gap: base-rate DCF value / market cap, ex financials | trend: index above its 10-month average = OFF",
+  "d10_d1_on_ann": 0.026580746095603895
+ },
+ "A-S9-R2-on": {
+  "months": 95,
+  "ann": -0.0679362447335095,
+  "t": -4.486403333299571,
+  "sr": {
+   "sr": -0.4567638554158562,
+   "skew": -1.5010221504144974,
+   "kurt": 5.051170670834722,
+   "n": 95
+  },
+  "thirds": [
+   false,
+   false,
+   false
+  ],
+  "alpha": {
+   "alpha_ann": -0.0733488924789267,
+   "alpha_t": -4.309317688840339,
+   "betas": {
+    "Mkt-RF": 0.0017554513047073074,
+    "SMB": 0.07146601660376505,
+    "HML": -0.09942866039902844,
+    "RMW": 0.02619207667920177,
+    "CMA": 0.27740355136371125,
+    "Mom": -0.04177473260742077
+   }
+  },
+  "on": 41,
+  "min_on": 30,
+  "p_one_sided": 0.9999963782220556,
+  "holm": false,
+  "dsr": 0.0,
+  "checks": {
+   "t_ge_3_holm": false,
+   "dsr_ge_0.9": false,
+   "thirds_2_of_3": false,
+   "alpha_pos": false
+  },
+  "verdict": "fail",
+  "desc": "Expectations gap: base-rate DCF value / market cap, ex financials | volatility: last month's vol below its 60-month median = ON",
+  "d10_d1_on_ann": -0.09392270758357993
+ },
+ "A-S9-R2-off": {
+  "months": 95,
+  "ann": -0.05275824093660669,
+  "t": -1.939047765981937,
+  "sr": {
+   "sr": -0.22659802636383408,
+   "skew": 0.38982976666653385,
+   "kurt": 5.198119057950629,
+   "n": 95
+  },
+  "thirds": [
+   false,
+   false,
+   true
+  ],
+  "alpha": {
+   "alpha_ann": -0.06693981274888638,
+   "alpha_t": -3.2012966707932224,
+   "betas": {
+    "Mkt-RF": 0.05665606455098891,
+    "SMB": -0.029057788766682288,
+    "HML": 0.24046660630630667,
+    "RMW": 0.09788985237241939,
+    "CMA": 0.13218651709676466,
+    "Mom": 0.033033009963672866
+   }
+  },
+  "on": 54,
+  "min_on": 30,
+  "p_one_sided": 0.9737522389285558,
+  "holm": false,
+  "dsr": 2.1109143094610872e-07,
+  "checks": {
+   "t_ge_3_holm": false,
+   "dsr_ge_0.9": false,
+   "thirds_2_of_3": false,
+   "alpha_pos": false
+  },
+  "verdict": "fail",
+  "desc": "Expectations gap: base-rate DCF value / market cap, ex financials | volatility: last month's vol below its 60-month median = OFF",
+  "d10_d1_on_ann": 0.06381530325267866
+ },
+ "A-S9-R3-on": {
+  "months": 95,
+  "ann": -0.02055722146265319,
+  "t": -0.9361102071414402,
+  "sr": {
+   "sr": -0.11132829481660939,
+   "skew": 1.1093926801952712,
+   "kurt": 8.637441341080532,
+   "n": 95
+  },
+  "thirds": [
+   false,
+   false,
+   true
+  ],
+  "alpha": {
+   "alpha_ann": -0.030142485221254848,
+   "alpha_t": -1.6927468912309664,
+   "betas": {
+    "Mkt-RF": 0.0076443372697695645,
+    "SMB": 0.029647703946336246,
+    "HML": 0.12726375275050034,
+    "RMW": 0.12813689004059273,
+    "CMA": 0.12034151871992252,
+    "Mom": 0.022165899508901077
+   }
+  },
+  "on": 47,
+  "min_on": 30,
+  "p_one_sided": 0.8253917758976916,
+  "holm": false,
+  "dsr": 3.1097996509910075e-05,
+  "checks": {
+   "t_ge_3_holm": false,
+   "dsr_ge_0.9": false,
+   "thirds_2_of_3": false,
+   "alpha_pos": false
+  },
+  "verdict": "fail",
+  "desc": "Expectations gap: base-rate DCF value / market cap, ex financials | calendar: return month in Nov-Apr = ON",
+  "d10_d1_on_ann": 0.12534109362620527
+ },
+ "A-S9-R3-off": {
+  "months": 95,
+  "ann": -0.060253136643254185,
+  "t": -3.915353885288872,
+  "sr": {
+   "sr": -0.36678845767299056,
+   "skew": -0.6991674524219681,
+   "kurt": 4.328400366972328,
+   "n": 95
+  },
+  "thirds": [
+   false,
+   false,
+   false
+  ],
+  "alpha": {
+   "alpha_ann": -0.05884334317259708,
+   "alpha_t": -3.7497720773418455,
+   "betas": {
+    "Mkt-RF": 0.011050380654513537,
+    "SMB": -0.00836620786721338,
+    "HML": 0.04219397839604932,
+    "RMW": -0.0975324337641871,
+    "CMA": 0.2166071261250544,
+    "Mom": -0.0785813735294489
+   }
+  },
+  "on": 48,
+  "min_on": 30,
+  "p_one_sided": 0.9999548641493092,
+  "holm": false,
+  "dsr": 1.2895240431021193e-13,
+  "checks": {
+   "t_ge_3_holm": false,
+   "dsr_ge_0.9": false,
+   "thirds_2_of_3": false,
+   "alpha_pos": false
+  },
+  "verdict": "fail",
+  "desc": "Expectations gap: base-rate DCF value / market cap, ex financials | calendar: return month in Nov-Apr = OFF",
+  "d10_d1_on_ann": -0.131163250744037
+ },
+ "B1": {
+  "months": 96,
+  "ann": -0.06118749999999999,
+  "t": -2.062780611354489,
+  "sr": {
+   "sr": -0.167430370756742,
+   "skew": 0.19463363924023905,
+   "kurt": 5.82882135035435,
+   "n": 96
+  },
+  "thirds": [
+   false,
+   false,
+   false
+  ],
+  "alpha": {
+   "alpha_ann": 0.002947091628605826,
+   "alpha_t": 0.11080124613679229,
+   "betas": {
+    "Mkt-RF": -0.4872110734863785,
+    "SMB": 0.02049236988607599,
+    "HML": 0.07251811647596221,
+    "RMW": -0.12129807375919806,
+    "CMA": -0.13243632712799058,
+    "Mom": -0.18422531461715855
+   }
+  },
+  "on": 989,
+  "min_on": 200,
+  "p_one_sided": 0.9804332615224906,
+  "holm": false,
+  "dsr": 1.2712755207977544e-06,
+  "checks": {
+   "t_ge_3_holm": false,
+   "dsr_ge_0.9": false,
+   "thirds_2_of_3": false,
+   "alpha_pos": true
+  },
+  "verdict": "fail",
+  "desc": "Nov-Apr only (sell in May)"
+ },
+ "B2": {
+  "months": 96,
+  "ann": -0.22428749999999997,
+  "t": -5.315903543456771,
+  "sr": {
+   "sr": -0.4226207367354379,
+   "skew": 0.23074873067411258,
+   "kurt": 6.464396774524902,
+   "n": 96
+  },
+  "thirds": [
+   false,
+   false,
+   false
+  ],
+  "alpha": {
+   "alpha_ann": -0.12920240446746883,
+   "alpha_t": -6.343057611456524,
+   "betas": {
+    "Mkt-RF": -0.8369172114248555,
+    "SMB": -0.14485020463576592,
+    "HML": 0.04862089245698968,
+    "RMW": -0.18030279446539685,
+    "CMA": -0.01317672915268776,
+    "Mom": -0.10026627547457743
+   }
+  },
+  "on": 382,
+  "min_on": 200,
+  "p_one_sided": 0.9999999469353191,
+  "holm": false,
+  "dsr": 1.1328615823202881e-10,
+  "checks": {
+   "t_ge_3_holm": false,
+   "dsr_ge_0.9": false,
+   "thirds_2_of_3": false,
+   "alpha_pos": false
+  },
+  "verdict": "fail",
+  "desc": "Turn of month (last day to day +3)"
+ },
+ "B3": {
+  "months": 96,
+  "ann": -0.20155000000000006,
+  "t": -4.399856301253021,
+  "sr": {
+   "sr": -0.3793849717179933,
+   "skew": 0.2896788405427397,
+   "kurt": 3.509184428157632,
+   "n": 96
+  },
+  "thirds": [
+   false,
+   false,
+   false
+  ],
+  "alpha": {
+   "alpha_ann": -0.110777326972479,
+   "alpha_t": -7.755491632062459,
+   "betas": {
+    "Mkt-RF": -0.9162960458127104,
+    "SMB": 0.026034248540765078,
+    "HML": 0.029848102440648436,
+    "RMW": 0.040841324178555204,
+    "CMA": -0.046711476919647485,
+    "Mom": -0.003678500369716024
+   }
+  },
+  "on": 72,
+  "min_on": 200,
+  "p_one_sided": 0.9999945838707571,
+  "holm": false,
+  "dsr": 1.303492869197953e-10,
+  "checks": {
+   "t_ge_3_holm": false,
+   "dsr_ge_0.9": false,
+   "thirds_2_of_3": false,
+   "alpha_pos": false
+  },
+  "verdict": "inconclusive",
+  "desc": "Pre-holiday day"
+ },
+ "B4": {
+  "months": 95,
+  "ann": -0.0070651839358125195,
+  "t": -0.8164123006880618,
+  "sr": {
+   "sr": -0.0824419398998313,
+   "skew": -1.7095804156875065,
+   "kurt": 31.75136983285801,
+   "n": 95
+  },
+  "thirds": [
+   false,
+   false,
+   false
+  ],
+  "alpha": {
+   "alpha_ann": -0.005676780550779663,
+   "alpha_t": -0.6645155843745608,
+   "betas": {
+    "Mkt-RF": -0.019086475526809737,
+    "SMB": 0.06778509477014545,
+    "HML": -0.020868083231368045,
+    "RMW": 0.048574612956754255,
+    "CMA": 0.009180679306705838,
+    "Mom": -0.04286020538312801
+   }
+  },
+  "on": 319,
+  "min_on": 200,
+  "p_one_sided": 0.792867818152662,
+  "holm": false,
+  "dsr": 1.3384170729380251e-05,
+  "checks": {
+   "t_ge_3_holm": false,
+   "dsr_ge_0.9": false,
+   "thirds_2_of_3": false,
+   "alpha_pos": false
+  },
+  "verdict": "fail",
+  "desc": "January large-cap reversal (prior-year losers)"
+ }
+}
