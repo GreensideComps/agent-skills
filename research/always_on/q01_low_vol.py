@@ -13,7 +13,8 @@ import edge_registry as reg  # noqa: E402
 import xsection as xs  # noqa: E402
 
 START, END = "2015-01-31", "2022-11-30"
-N_EXTRA = 94  # regime track C7 trials (PR #39), not yet in the registry
+N_EXTRA = 94
+MIN_FLAGGED = 5  # event portfolios: months with fewer flagged names are skipped  # regime track C7 trials (PR #39), not yet in the registry
 
 
 def features(df: pd.DataFrame) -> pd.DataFrame:
@@ -42,10 +43,11 @@ def portfolio(df, col, band="large", lag=0, every=1, cost=xs.COST_PER_TURNOVER):
     rows, held = [], set()
     for i, (mo, g) in enumerate(d.groupby("month")):
         s = g.dropna(subset=[col])
-        if len(s) < 30:
+        flag = s[col].nunique() == 1
+        if len(g) < 30 or len(s) < (MIN_FLAGGED if flag else 30):
             continue
         if i % every == 0 or not held:
-            if s[col].nunique() == 1:  # a membership flag: hold every flagged name
+            if flag:  # a membership flag: hold every flagged name
                 new = set(s["cik"])
             else:
                 q = pd.qcut((-s[col]).rank(method="first"), 5, labels=False)
