@@ -101,7 +101,7 @@ class Agent:
         if self._swing("gap"):
             self._run("gaps", self.refresh_gaps)
         if self._vt():
-            self._run("value_timing", self.refresh_value_timing)
+            self._run("timing", self.refresh_value_timing)
         if (self.cfg.get("scoreboard") or {}).get("enabled"):
             self._run("scoreboard", self.refresh_scoreboard)
         if self.need_decide:  # decisions use this pass's positions and the prices fetched after them
@@ -568,24 +568,26 @@ class Agent:
         return out
 
     def refresh_value_timing(self) -> None:
-        """value_timing (Q48a): after each US month end, record next month's target ETF in state/value_timing.json.
-        The last target stands until a new month end is read."""
-        vc = self._vt()
+        """Month-end timing (value_timing Q48a, momentum_timing Q50a): after each US month end, record next month's
+        target ETF in state/<name>.json. The last target stands until a new month end is read."""
         now = self.clock()
-        v = value_timing.month_ends(value_timing.adjusted(vc["value_symbol"], self.get), now)
-        g = value_timing.month_ends(value_timing.adjusted(vc["growth_symbol"], self.get), now)
-        sig = value_timing.signal(v, g, vc)
-        state = self.s.read("value_timing.json") or {}
-        if not sig or sig["month"] == state.get("month"):
-            return
-        self.s._replace("value_timing.json", {**sig, "ts": feeds_ts(now), "previous": state.get("target")})
-        self.s.event("value_timing_signal", strategy=value_timing.NAME, **sig, previous=state.get("target"))
-        self.need_decide = True
+        for vc in self._vt():
+            f = value_timing.month_ends(value_timing.adjusted(vc["factor_symbol"], self.get), now)
+            b = value_timing.month_ends(value_timing.adjusted(vc["versus_symbol"], self.get), now)
+            sig = value_timing.signal(f, b, vc)
+            state = self.s.read(f"{vc['name']}.json") or {}
+            if not sig or (sig["month"] == state.get("month") and "factor_12m" in state):
+                continue
+            self.s._replace(f"{vc['name']}.json", {**sig, "ts": feeds_ts(now), "previous": state.get("target")})
+            self.s.event("timing_signal", strategy=vc["name"], **sig, previous=state.get("target"))
+            self.need_decide = True
 
-    def _vt(self) -> dict | None:
+    def _vt(self) -> list[dict]:
+        """The enabled month-end timing strategies, each with its name."""
         a = self.cfg.get("active") or {}
-        vc = a.get("value_timing") or {}
-        return vc if a.get("enabled") and vc.get("enabled") else None
+        if not a.get("enabled"):
+            return []
+        return [{**v, "name": k} for k, v in (a.get("timing") or {}).items() if v.get("enabled")]
 
     def _merger(self) -> dict | None:
         a = self.cfg.get("active") or {}
@@ -605,10 +607,10 @@ class Agent:
     def _review_why(self, ticker: str, strategy: str | None = None) -> str | None:
         if strategy in (swing.SQUEEZE, swing.GAP):  # C9 trades follow their own exits, not the price review
             return self._swing_why(ticker, strategy)
-        if strategy == value_timing.NAME:  # held until the month-end signal names the other ETF, or the kill rule
-            if value_timing.NAME in (self.s.read("strategies.json") or {}):
+        if strategy in value_timing.NAMES:  # held until the month-end signal names the other ETF, or the kill rule
+            if strategy in (self.s.read("strategies.json") or {}):
                 return "killed"
-            return value_timing.exit_why(self.s.read("value_timing.json"), ticker)
+            return value_timing.exit_why(self.s.read(f"{strategy}.json"), ticker)
         if strategy == merger.NAME:  # a deal trade exits on a termination, its stop or the cash-out, not on price
             return "deal_terminated" if ticker in self.mstate.get("terminated", {}) else None
         if strategy == social.NAME:  # C8 trades exit on their own attention rule, not the price review
@@ -729,7 +731,7 @@ class Agent:
             return []
         return (list(a.get("watchlist", [])) + sorted((self._social() or {}).get("universe", {}))
                 + (list(self.mstate.get("watch", [])) if self._merger() else [])
-                + ([self._vt()["value_ticker"], self._vt()["market_ticker"]] if self._vt() else []))
+                + [t for vc in self._vt() for t in (vc["factor_ticker"], vc["market_ticker"])])
 
     def _active_exits(self, recs, vwrp_px) -> list[tuple]:
         if not self._watch():
@@ -819,13 +821,15 @@ class Agent:
             for k, v in new.items():
                 self.s.event("strategy_disabled", strategy=k, **v)
                 self.alert("warn", f"strategy_disabled:{k}", f"strategy {k} switched off: {v['why']}")
-        if self._vt() and value_timing.NAME not in disabled:
-            k = value_timing.kill(recs, self.positions, self.clock(), vwrp_px, self._vt(), feeds_ts(self.clock()))
+        for vc in self._vt():
+            if vc["name"] in disabled:
+                continue
+            k = value_timing.kill(recs, self.positions, self.clock(), vwrp_px, vc, feeds_ts(self.clock()))
             if k:
-                disabled = {**disabled, value_timing.NAME: k}
+                disabled = {**disabled, vc["name"]: k}
                 self.s._replace("strategies.json", disabled)
-                self.s.event("strategy_disabled", strategy=value_timing.NAME, **k)
-                self.alert("warn", f"strategy_disabled:{value_timing.NAME}", f"strategy value_timing switched off: {k['why']}")
+                self.s.event("strategy_disabled", strategy=vc["name"], **k)
+                self.alert("warn", f"strategy_disabled:{vc['name']}", f"strategy {vc['name']} switched off: {k['why']}")
         total = float((self.summary or {}).get("totalValue") or 0)
         cash = float(((self.summary or {}).get("cash") or {}).get("availableToTrade") or 0)
         fxq = self.quotes.get(self.cfg["benchmark"]["fx"])
@@ -848,10 +852,10 @@ class Agent:
                                         total, cash, day, self.clock(), vwrp_px, disabled, self.mstate)
             notes += n
             orders += mo
-        if self._vt() and not active.sleeve_block(self.cfg, recs, self.positions, day, total):
-            vo, n = value_timing.entry_orders(self.cfg, recs, self.positions, self._quote, fxq["price"] if fxq else None,
-                                              total, cash, self.clock(), vwrp_px, disabled,
-                                              self.s.read("value_timing.json"))
+        for vc in (self._vt() if not active.sleeve_block(self.cfg, recs, self.positions, day, total) else []):
+            vo, n = value_timing.entry_orders({**vc, "_cfg": self.cfg}, recs, self.positions, self._quote,
+                                              fxq["price"] if fxq else None, total, cash, self.clock(), vwrp_px,
+                                              disabled, self.s.read(f"{vc['name']}.json"))
             notes += n
             orders += vo
         return next((o for o in orders if self.market_open(o[0])), None)

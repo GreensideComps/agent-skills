@@ -73,7 +73,8 @@ class FakeBroker:
                 {"ticker": "JPM_US_EQ", "workingScheduleId": 71},
                 {"ticker": "UBER_US_EQ", "workingScheduleId": 71}, {"ticker": "CROX_US_EQ", "workingScheduleId": 71},
                 {"ticker": "VWRPl_EQ", "workingScheduleId": 70}, {"ticker": "VRVAl_EQ", "workingScheduleId": 70},
-                {"ticker": "VUSAl_EQ", "workingScheduleId": 70}]
+                {"ticker": "VUSAl_EQ", "workingScheduleId": 70}, {"ticker": "IUMOl_EQ", "workingScheduleId": 70},
+                {"ticker": "VUAGl_EQ", "workingScheduleId": 70}]
 
     def place_market_order(self, ticker, quantity):
         if self.fail_next:
@@ -695,7 +696,6 @@ def test_merger_arb_buys_an_agreed_deal_and_exits_on_termination(tmp_path):
     from market_agent import merger
     ag, b, st, clock = make(tmp_path, active_on=True, prices={"VWRP.L": 140.0, "GBPUSD=X": 1.25, "ACME": 19.0})
     _active_book(b)
-    b.instruments_extra = True
     name = "Acme Corp  (ACME)  (CIK 0000000123)"
     term = []
 
@@ -851,7 +851,7 @@ def _daily(end, n, f):
 
 def test_value_timing_month_end_signal_rules():
     from market_agent import value_timing as vt
-    vc = agent_mod.load_config()["active"]["value_timing"]
+    vc = agent_mod.load_config()["active"]["timing"]["value_timing"]
     up = _daily(dt.date(2026, 10, 30), 500, lambda i: 100 + i)
     flat = _daily(dt.date(2026, 10, 30), 500, lambda i: 100.0)
     bars = lambda r: list(zip(r["chart"]["result"][0]["timestamp"], r["chart"]["result"][0]["indicators"]["adjclose"][0]["adjclose"]))  # noqa: E731
@@ -862,7 +862,7 @@ def test_value_timing_month_end_signal_rules():
     mid = _daily(dt.date(2026, 10, 28), 500, lambda i: 100 + i)
     assert max(vt.month_ends(bars(mid), fri_eve)) == "2026-09"           # October is not over on the 28th
     s = vt.signal(vt.month_ends(bars(up), fri_eve), vt.month_ends(bars(flat), fri_eve), vc)
-    assert s["month"] == "2026-10" and s["hold"] == "value" and s["target"] == "VRVAl_EQ" and s["value_12m"] > 0
+    assert s["month"] == "2026-10" and s["hold"] == "value" and s["target"] == "VRVAl_EQ" and s["factor_12m"] > 0
     s = vt.signal(vt.month_ends(bars(flat), fri_eve), vt.month_ends(bars(up), fri_eve), vc)
     assert s["hold"] == "market" and s["target"] == "VUSAl_EQ"
     short = _daily(dt.date(2026, 10, 30), 200, lambda i: 100 + i)
@@ -916,3 +916,30 @@ def test_value_timing_buys_the_target_and_switches_on_a_new_signal(tmp_path):
     assert len(vusa) == 1 and vusa[0][1] > 0
     r2 = next(r for r in execution.latest_intents(st.intents()).values() if r["ticker"] == "VUSAl_EQ")
     assert abs(r2["value_gbp"] - vusa[0][1] * 100.0) < 0.01                   # a GBP line: no FX conversion
+
+
+def test_momentum_timing_runs_beside_value_timing_on_its_own_etfs(tmp_path):
+    ag, b, st, clock = make(tmp_path, active_on=True, prices={"VWRP.L": 140.0, "GBPUSD=X": 1.25, "VRVA.L": 100.0,
+                                                               "VUSA.L": 100.0, "IUMO.L": 20.0, "VUAG.L": 100.0})
+    _active_book(b)
+    base = ag.get
+
+    def get(url, params):
+        up, flat = (lambda i: 100 + i), (lambda i: 100.0)
+        for sym, f in (("IWD", up), ("IWF", flat), ("MTUM", flat), ("IWB", up)):
+            if url.endswith("/" + sym):
+                return _daily(dt.date(2026, 10, 30), 500, f)
+        return base(url, params)
+    ag.get = get
+    ag.cfg["active"]["social"]["enabled"] = False
+    clock.t = dt.datetime(2026, 10, 31, 17, 0, tzinfo=dt.timezone.utc).timestamp()
+    advance(ag, clock, 2, by=150)
+    assert st.read("value_timing.json")["target"] == "VRVAl_EQ"
+    m = st.read("momentum_timing.json")
+    assert m["hold"] == "market" and m["target"] == "VUAGl_EQ" and "momentum" in m["why"]
+    clock.t = dt.datetime(2026, 11, 2, 9, 0, tzinfo=dt.timezone.utc).timestamp()
+    advance(ag, clock, 3, by=30)
+    bought = {o[0]: o[1] for o in b.orders if o[1] > 0}
+    assert "VRVAl_EQ" in bought and "VUAGl_EQ" in bought
+    rec = next(r for r in execution.latest_intents(st.intents()).values() if r["ticker"] == "VUAGl_EQ")
+    assert rec["signal"]["strategy"] == "momentum_timing" and "losers" in rec["signal"]["approximation"]

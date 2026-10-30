@@ -1,4 +1,4 @@
-# Always-on demo market agent (agent-1.9)
+# Always-on demo market agent (agent-1.10)
 
 **Mandate:** the owner's 26 Oct 2026 handoff (`cmsg_01U4KMvkBYNknqm4HRVie8uvK9gRYqGXBK4bQP49dBz49i`), covering
 the demo account only. The Trading 212 client refuses any host but `demo.trading212.com`, and `load_credentials`
@@ -136,6 +136,14 @@ before buys.
    other. Only a -50% disaster stop at the broker (the tested rule has none). Switched off after 30 closed trades or
    730 days from its first entry, whichever comes first, if its compounded return has not beaten VWRP's
    (`why: killed`). The edge has been much smaller since 2007 (+1.3%/yr).
+   Low confidence: the same rule outside the US is weak (Q49-Q52: t 1.74 developed ex-US, t 1.56 EM).
+14. **momentum_timing** (agent-1.10, research loop Q50a, `results/Q49_Q52.md`; same code as value_timing, config
+   `active.timing`): month-end MTUM (MSCI USA Momentum) vs IWB (Russell 1000) 12-month total return; momentum ahead:
+   hold iShares Edge MSCI USA Momentum Factor (`IUMOl_EQ`, USD), else Vanguard S&P 500 Acc (`VUAGl_EQ`, GBP, a
+   different line from value_timing's VUSA so the two never share a position). Same 2% size, -50% disaster stop and
+   kill rule. Deliberate approximation: the test compared the winners decile with the losers decile, which has no
+   ETF. Low confidence: the exact traded signal (Q55a) has earned +0.2%/yr since 2007 and fails outside the US
+   (t 0.64); it runs as a cheap forward test.
 
 Every other pass is recorded as a `decision` with `no_trade: true` and its reasons.
 

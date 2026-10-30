@@ -1,7 +1,13 @@
-"""value_timing (research loop Q48a, passed its pre-registered test 30 Oct 2026; results/Q44_Q48.md): on the last US
-trading day of each month, compare the 12-month total return of US value (Russell 1000 Value, IWD) with US growth
-(Russell 1000 Growth, IWF), both from Yahoo adjusted closes. If value is ahead, hold a US value ETF for the next month;
-otherwise hold a US market ETF. One position of `entry_weight` of the book; it switches about once a year.
+"""Month-end factor timing, one tagged strategy per entry in `active.timing`. After each US month end, compare the
+12-month total return of a factor signal ETF with its comparison ETF, both from Yahoo adjusted closes. If the factor
+is ahead, hold the factor's UCITS ETF for the next month; otherwise hold a US market ETF. One position of
+`entry_weight` of the book; each switches about once a year. Each strategy holds its own market ETF line, so two of
+them never share a position.
+
+- value_timing (research loop Q48a, results/Q44_Q48.md): Russell 1000 Value (IWD) vs Growth (IWF); VRVA or VUSA.
+- momentum_timing (Q50a, results/Q49_Q52.md): MSCI USA Momentum (MTUM) vs Russell 1000 (IWB); IUMO or VUAG. The test
+  compared the winners decile with the losers decile, which has no ETF: momentum vs the market is a deliberate
+  approximation.
 
 Kill rule: off after `kill_after_trades` closed trades or `kill_after_days` from the first entry, whichever comes
 first, if its compounded return has not beaten VWRP's over the same time. Missing or short data means no new signal:
@@ -17,6 +23,7 @@ from typing import Callable
 from . import active, execution, review
 
 NAME = "value_timing"
+NAMES = ("value_timing", "momentum_timing")
 
 
 def adjusted(sym: str, get: Callable) -> list[tuple[float, float]]:
@@ -45,6 +52,7 @@ def month_ends(bars: list[tuple[float, float]], now: float) -> dict[str, float]:
 
 
 def signal(value: dict[str, float], growth: dict[str, float], vc: dict) -> dict | None:
+    # `value` is the factor's month ends, `growth` the comparison's (named after the first strategy, value_timing)
     """The target for the month after the latest month end both series share, or None without 12 months' history."""
     common = sorted(set(value) & set(growth))
     if not common:
@@ -55,10 +63,11 @@ def signal(value: dict[str, float], growth: dict[str, float], vc: dict) -> dict 
     if back not in value or back not in growth:
         return None
     rv, rg = value[m] / value[back] - 1, growth[m] / growth[back] - 1
-    hold = "value" if rv > rg else "market"
-    return {"month": m, "value_12m": round(rv, 4), "growth_12m": round(rg, 4), "hold": hold,
-            "target": vc["value_ticker"] if hold == "value" else vc["market_ticker"],
-            "why": f"{m}: value {rv:+.1%} vs growth {rg:+.1%} over 12 months, so hold {hold}"}
+    f, b = vc["factor"], vc["versus"]
+    hold = f if rv > rg else "market"
+    return {"month": m, "factor_12m": round(rv, 4), "versus_12m": round(rg, 4), "hold": hold,
+            "target": vc["factor_ticker"] if hold == f else vc["market_ticker"],
+            "why": f"{m}: {f} {rv:+.1%} vs {b} {rg:+.1%} over 12 months, so hold {hold}"}
 
 
 def exit_why(state: dict | None, ticker: str) -> str | None:
@@ -69,7 +78,7 @@ def exit_why(state: dict | None, ticker: str) -> str | None:
 
 def kill(records, positions, now: float, vwrp_px, vc: dict, ts: str) -> dict | None:
     """A strategies.json entry when the kill rule is met, else None."""
-    ts_ = [t for t in active.trades(records) if t["entry"]["signal"].get("strategy") == NAME]
+    ts_ = [t for t in active.trades(records) if t["entry"]["signal"].get("strategy") == vc["name"]]
     if not ts_:
         return None
     closed = [t for t in ts_ if t["exit"]]
@@ -95,8 +104,9 @@ def kill(records, positions, now: float, vwrp_px, vc: dict, ts: str) -> dict | N
 
 
 def entry_orders(cfg, records, positions, quote_of, fx, total, cash, now, vwrp_px, disabled, state) -> tuple[list, list]:
-    """One entry into the current target when no value_timing trade is open."""
-    vc = cfg["active"]["value_timing"]
+    """One entry into the current target when no trade of this strategy is open. `cfg` is the strategy's own entry."""
+    vc, cfg = cfg, cfg["_cfg"]
+    NAME = vc["name"]  # noqa: N806
     notes: list[str] = []
     if NAME in disabled or not state or not state.get("target"):
         return [], notes
@@ -122,6 +132,7 @@ def entry_orders(cfg, records, positions, quote_of, fx, total, cash, now, vwrp_p
         return [], notes
     return [(tk, qty, qty * px_gbp, q["price"], True, f"active entry: {NAME} ({vc['rule']}); {state['why']}",
              {"type": "active_entry", "strategy": NAME, "rule": vc["rule"], "month": state["month"],
-              "value_12m": state["value_12m"], "growth_12m": state["growth_12m"], "hold": state["hold"],
+              "factor_12m": state["factor_12m"], "versus_12m": state["versus_12m"], "hold": state["hold"],
+              "approximation": vc.get("approximation"),
               "entry_px": q["price"], "stop": vc["stop_loss"], "take_profit": vc["take_profit"],
               "time_stop_s": vc["time_stop_days"] * 86400, "quote": q, "vwrp_px": vwrp_px})], notes
