@@ -411,6 +411,7 @@ class Agent:
         now = self.clock()
         day = feeds_ts(now)[:10]
         self.gaps = {t: g for t, g in self.gaps.items() if g["day"] == day}
+        rows = []  # one gap_scan event per run that checked anything: [{ticker, gap, held, signal, why}]
         for t in self.cfg["active"]["watchlist"]:
             if self.gap_done.get(t) == day:
                 continue
@@ -420,21 +421,31 @@ class Agent:
             self.gap_done[t] = day
             if now > open_t + gc["check_to_s"]:
                 self.s.event("gap_go_missed", strategy=swing.GAP, ticker=t, why="the agent was not running in the check window")
+                rows.append({"ticker": t, "gap": None, "held": None, "signal": False, "why": "missed: agent not running"})
                 continue
             q = self._quote(t)
-            if not q or not q.get("prev_close") or q["price"] / q["prev_close"] - 1 < gc["min_gap"] * gc["min_held"]:
-                continue  # cannot be a held gap; no intraday fetch
+            if not q or not q.get("prev_close"):
+                rows.append({"ticker": t, "gap": None, "held": None, "signal": False, "why": "no validated quote"})
+                continue
+            if q["price"] / q["prev_close"] - 1 < gc["min_gap"] * gc["min_held"]:
+                rows.append({"ticker": t, "gap": None, "held": None, "signal": False,
+                             "why": f"up {q['price'] / q['prev_close'] - 1:+.1%}: cannot be a held gap"})
+                continue  # no intraday fetch
             try:
                 bars = swing.ohlcv(feeds.yahoo_symbol(t, self.cfg["yahoo_overrides"]), self.get, "1d", "1m")
             except Exception as e:  # noqa: BLE001 - no bars, no signal
                 self.s.event("gap_check", strategy=swing.GAP, ticker=t, signal=False, why=f"no data: {str(e)[:100]}")
+                rows.append({"ticker": t, "gap": None, "held": None, "signal": False, "why": f"no data: {str(e)[:100]}"})
                 continue
             finally:
                 self.sleep(0.5)
             g = swing.gap_check(bars, q["prev_close"], open_t, now, gc)
             self.s.event("gap_check", strategy=swing.GAP, ticker=t, **g)
+            rows.append({"ticker": t, "gap": g.get("gap"), "held": g.get("held"), "signal": g["signal"], "why": g["why"]})
             if g["signal"]:
                 self.gaps[t] = {**g, "day": day}
+        if rows:
+            self.s.event("gap_scan", strategy=swing.GAP, rows=rows)
 
     def refresh_scoreboard(self) -> None:
         """Run the research scoreboard (a separate script) once a day after the US close and after each new active

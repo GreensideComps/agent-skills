@@ -787,6 +787,9 @@ def test_gap_go_buys_after_the_open_and_is_flat_by_the_close(tmp_path):
     advance(ag, clock, 2, by=30)
     chk = [e for e in st.events("2026-10-27") if e["kind"] == "gap_check"]
     assert [e["ticker"] for e in chk] == ["JPM_US_EQ"] and chk[0]["signal"]
+    scan = next(e for e in st.events("2026-10-27") if e["kind"] == "gap_scan")
+    jpm = next(r for r in scan["rows"] if r["ticker"] == "JPM_US_EQ")
+    assert jpm["signal"] and jpm["gap"] == 0.04 and set(jpm) == {"ticker", "gap", "held", "signal", "why"}
     buys = [o for o in b.orders if o[0] == "JPM_US_EQ"]
     assert len(buys) == 1
     rec = next(r for r in execution.latest_intents(st.intents()).values() if r["ticker"] == "JPM_US_EQ")
@@ -813,6 +816,8 @@ def test_gap_check_slept_through_is_missed_not_traded(tmp_path):
     assert sorted(missed) == ["JPM_US_EQ", "UBER_US_EQ"]                         # the names with a known calendar
     advance(ag, clock, 2, by=30)
     assert len([e for e in st.events("2026-10-27") if e["kind"] == "gap_go_missed"]) == 2   # logged once a day
+    scans = [e for e in st.events("2026-10-27") if e["kind"] == "gap_scan"]
+    assert len(scans) == 1 and {r["ticker"] for r in scans[0]["rows"]} == {"JPM_US_EQ", "UBER_US_EQ"}
     assert not [e for e in st.events("2026-10-27") if e["kind"] == "gap_check"]
 
 

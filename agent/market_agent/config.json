@@ -1,5 +1,5 @@
 {
-  "version": "agent-1.8.1",
+  "version": "agent-1.8.2",
   "note": "Always-on demo market agent. Demo account only (the client refuses any other host). Owner mandate: cmsg_01U4KMvkBYNknqm4HRVie8uvK9gRYqGXBK4bQP49dBz49i (26 Oct 2026).",
   "intervals_s": {
     "loop": 15,
