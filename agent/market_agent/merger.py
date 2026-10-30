@@ -256,7 +256,7 @@ def closed_exit_record(entry: dict, fx: float | None, vwrp_px) -> dict:
     return {"ticker": entry["ticker"], "quantity": -qty, "value_gbp": round(val, 2), "price": entry["signal"]["offer"],
             "status": "filled", "order_id": None, "broker": {"estimated": True},
             "reason": f"active exit (deal closed): {NAME} cashed out at ${entry['signal']['offer']}",
-            "signal": {"type": "active_exit", "entry_id": entry["id"], "strategy": NAME, "why": "deal_closed",
+            "signal": {"type": "active_exit", "entry_id": entry["id"], "strategy": NAME, "why": "deal_closed", "exit_reason": "deal_closed",
                        "vwrp_px": vwrp_px}}
 
 

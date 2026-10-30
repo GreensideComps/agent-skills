@@ -100,6 +100,8 @@ class Agent:
             self._run("merger", self.refresh_merger)
         if self._swing("gap"):
             self._run("gaps", self.refresh_gaps)
+        if (self.cfg.get("scoreboard") or {}).get("enabled"):
+            self._run("scoreboard", self.refresh_scoreboard)
         if self.need_decide:  # decisions use this pass's positions and the prices fetched after them
             self.need_decide = False
             self._run_once("decide", self.decide)
@@ -433,6 +435,32 @@ class Agent:
             self.s.event("gap_check", strategy=swing.GAP, ticker=t, **g)
             if g["signal"]:
                 self.gaps[t] = {**g, "day": day}
+
+    def refresh_scoreboard(self) -> None:
+        """Run the research scoreboard (a separate script) once a day after the US close and after each new active
+        exit fill. It runs in its own process with no credentials in its environment; a failure is only logged."""
+        import subprocess
+        sb = self.cfg["scoreboard"]
+        now = self.clock()
+        day = feeds_ts(now)[:10]
+        exits = sum(1 for r in execution.latest_intents(self.s.intents()).values()
+                    if (r.get("signal") or {}).get("type") == "active_exit" and r["status"] == "filled")
+        last = getattr(self, "_sb", {"day": None, "exits": None})
+        after_close = time.gmtime(now).tm_hour >= sb["after_hour_utc"] and last["day"] != day
+        if not (after_close or (last["exits"] is not None and exits > last["exits"])):
+            if last["exits"] is None:
+                self._sb = {"day": last["day"], "exits": exits}
+            return
+        self._sb = {"day": day if after_close else last["day"], "exits": exits}
+        if not Path(sb["path"]).exists():
+            self.s.event("scoreboard", ok=False, why="script not found")
+            return
+        try:
+            r = subprocess.run(["python3", "-I", sb["path"], "--state", str(self.s.root)], capture_output=True,
+                               text=True, timeout=sb["timeout_s"], env={"PATH": "/usr/bin:/bin", "HOME": "/tmp"})
+            self.s.event("scoreboard", ok=r.returncode == 0, out=(r.stdout or r.stderr)[-300:])
+        except Exception as e:  # noqa: BLE001 - the scoreboard never affects trading
+            self.s.event("scoreboard", ok=False, why=str(e)[:200])
 
     def _session_open(self, t212: str) -> float | None:
         """When today's regular session opened for this instrument, while it is open; None otherwise."""

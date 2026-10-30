@@ -1,5 +1,5 @@
 {
-  "version": "agent-1.8",
+  "version": "agent-1.8.1",
   "note": "Always-on demo market agent. Demo account only (the client refuses any other host). Owner mandate: cmsg_01U4KMvkBYNknqm4HRVie8uvK9gRYqGXBK4bQP49dBz49i (26 Oct 2026).",
   "intervals_s": {
     "loop": 15,
@@ -12,7 +12,8 @@
     "review": 7200,
     "social": 3600,
     "merger": 21600,
-    "gaps": 60
+    "gaps": 60,
+    "scoreboard": 300
   },
   "benchmark": {
     "t212": "VWRPl_EQ",
@@ -310,5 +311,12 @@
         "flat_before_close_s": 900
       }
     }
+  },
+  "scoreboard": {
+    "enabled": true,
+    "path": "/mnt/project-files/research/always-on/scoreboard.py",
+    "after_hour_utc": 21,
+    "timeout_s": 120,
+    "rationale": "research scoreboard thread, 30 Oct 11:50Z: run once a day after the US close and after active exit fills. Runs in a separate process with an empty environment (no broker credentials)."
   }
 }

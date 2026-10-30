@@ -83,6 +83,7 @@ def exit_orders(records, positions, quote_of, now, vwrp_px, review_why=None) -> 
             out.append((tk, -avail, v, float(p.get("currentPrice") or 0), True,
                         f"active exit ({why}): {sig['strategy']} {ret:+.1%} since entry",
                         {"type": "active_exit", "entry_id": e["id"], "strategy": sig["strategy"], "why": why,
+                         "exit_reason": why,
                          "ret": round(ret, 4), "quote": q, "vwrp_px": vwrp_px}))
     return out
 
@@ -208,4 +209,4 @@ def stop_exit_record(entry: dict, stop: dict, hist: dict, vwrp_px) -> dict:
             "price": (hist.get("fill") or {}).get("price"), "status": "filled", "order_id": stop["order_id"],
             "broker": hist, "reason": f"active exit (broker stop at {stop['stop_px']}): {entry['signal']['strategy']}",
             "signal": {"type": "active_exit", "entry_id": entry["id"], "strategy": entry["signal"]["strategy"],
-                       "why": "broker_stop", "vwrp_px": vwrp_px}}
+                       "why": "broker_stop", "exit_reason": "broker_stop", "vwrp_px": vwrp_px}}

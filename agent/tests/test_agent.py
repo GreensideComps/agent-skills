@@ -162,6 +162,7 @@ def make(tmp_path, enabled=True, prices=None, satellite=False, active_on=False):
     cfg = agent_mod.load_config()
     cfg["satellite"]["enabled"] = satellite  # the older tests hold a 90% single-stock book on purpose
     cfg["active"]["enabled"] = active_on
+    cfg["scoreboard"]["enabled"] = False  # the real scoreboard must never read a test's state
     ag = agent_mod.Agent(st, b, cfg, ambiguous_exc=Ambiguous, api_exc=ApiErr,
                          get=fake_get(clock, prices), clock=clock, sleep=lambda s: None)
     st.acquire_lease()
@@ -813,3 +814,17 @@ def test_gap_check_slept_through_is_missed_not_traded(tmp_path):
     advance(ag, clock, 2, by=30)
     assert len([e for e in st.events("2026-10-27") if e["kind"] == "gap_go_missed"]) == 2   # logged once a day
     assert not [e for e in st.events("2026-10-27") if e["kind"] == "gap_check"]
+
+
+def test_scoreboard_runs_after_the_close_without_credentials(tmp_path, monkeypatch):
+    ag, b, st, clock = make(tmp_path / "s")
+    script = tmp_path / "sb.py"
+    script.write_text("import os, sys\nprint('keys', sorted(k for k in os.environ if 'T212' in k), sys.argv[2])\n")
+    ag.cfg["scoreboard"] = {**ag.cfg["scoreboard"], "enabled": True, "path": str(script)}
+    monkeypatch.setenv("T212_API_KEY", "secret")
+    advance(ag, clock, 1, by=30)                                                   # 15:00: before the close
+    assert not [e for e in st.events("2026-10-27") if e["kind"] == "scoreboard"]
+    clock.t = T0 + 6.5 * 3600                                                      # 21:30
+    advance(ag, clock, 2, by=301)
+    sb = [e for e in st.events("2026-10-27") if e["kind"] == "scoreboard"]
+    assert len(sb) == 1 and sb[0]["ok"] and "keys []" in sb[0]["out"]               # once a day, no credentials
