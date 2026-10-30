@@ -215,7 +215,7 @@
       "rule": "brand attention: the 28-day mean of Wikipedia views >= 3 SD above its 52-week baseline and rising week on week, stock not up >15% in 20 trading days: buy 2% of the book at the next US session",
       "universe": {
         "CELH_US_EQ": "Celsius_Holdings",
-        "ELF_EQ_US": "E.l.f._Cosmetics",
+        "ELF_EQ_US": "E.l.f.",
         "ONON_US_EQ": "On_(company)",
         "DECK_US_EQ": "Hoka_(brand)",
         "CROX_US_EQ": "Crocs",
@@ -242,7 +242,7 @@
         "MNST_US_EQ": "Monster_Beverage",
         "TXRH_US_EQ": "Texas_Roadhouse",
         "WRBY_US_EQ": "Warby_Parker",
-        "BROS_US_EQ": "Dutch_Bros",
+        "BROS_US_EQ": "Dutch_Bros_Coffee",
         "SG1_US_EQ": "Sweetgreen",
         "PLNT_US_EQ": "Planet_Fitness",
         "ANF_US_EQ": "Abercrombie_&_Fitch"
