@@ -14,7 +14,7 @@ import uuid
 from pathlib import Path
 from urllib.parse import quote
 
-from . import active, execution, feeds, merger, review, social
+from . import active, execution, feeds, merger, review, social, swing
 
 HERE = Path(__file__).resolve().parent
 
@@ -49,7 +49,11 @@ class Agent:
         self.attn: dict[str, float] = {}     # last Wikipedia attention z per T212 ticker
         self.earn: dict[str, str] = {}
         self.earn_t = 0.0
-        self.mstate: dict = store.read("merger.json") or {}  # merger_arb deals, terminations, watch list
+        self.mstate: dict = store.read("merger.json") or {}
+        self.bars: dict[str, dict] = {}      # daily bars per T212 ticker, from the review pass
+        self.squeezes: dict[str, dict] = {}  # vol_squeeze readings on the last finished session
+        self.gaps: dict[str, dict] = {}      # gap_go candidates found at today's check
+        self.gap_done: dict[str, str] = {}   # ticker -> day its gap check ran  # merger_arb deals, terminations, watch list
 
     # ------------------------------------------------------------ scheduling
     def _run(self, name: str, fn) -> None:
@@ -94,6 +98,8 @@ class Agent:
             self._run("social", self.refresh_social)
         if self._merger():
             self._run("merger", self.refresh_merger)
+        if self._swing("gap"):
+            self._run("gaps", self.refresh_gaps)
         if self.need_decide:  # decisions use this pass's positions and the prices fetched after them
             self.need_decide = False
             self._run_once("decide", self.decide)
@@ -246,13 +252,20 @@ class Agent:
         for t in names:
             sym = feeds.yahoo_symbol(t, self.cfg["yahoo_overrides"])
             try:
-                closes, vols = review.history(sym, self.get)
+                bars = swing.ohlcv(sym, self.get)
+                closes, vols = bars["c"], bars["v"]
             except Exception as e:  # noqa: BLE001 - a name without history gets no review, so no entry
                 rows.append({"ticker": t, "error": str(e)[:120]})
                 self.reviews.pop(t, None)
+                self.bars.pop(t, None)
+                self.squeezes.pop(t, None)
                 continue
             finally:
                 self.sleep(0.5)
+            self.bars[t] = {**bars, "fetched": now}
+            sq = self._swing("squeeze")
+            if sq and t in self.cfg["active"]["watchlist"]:
+                self.squeezes[t] = {**swing.squeeze(swing.completed(bars, now), sq), "t": now}
             q = self._quote(t)
             f = review.factors(closes, vols, q["price"] if q else None)
             rev = {"t": now, "ticker": t, "factors": f, "scores": review.score(f, self.attn.get(t)),
@@ -260,6 +273,9 @@ class Agent:
             self.reviews[t] = rev
             rows.append({k: v for k, v in rev.items() if k != "t"})
         self.s.event("review", rows=rows)
+        if self.squeezes:
+            self.s.event("squeeze_scan", strategy=swing.SQUEEZE,
+                         rows=[{"ticker": t, **{k: v for k, v in r.items() if k != "t"}} for t, r in sorted(self.squeezes.items())])
 
     def refresh_social(self) -> float | None:
         """social_trend (C8): once per Friday close, score every brand's Wikipedia attention and 20-day run-up and
@@ -386,6 +402,130 @@ class Agent:
                      skipped={t: d["why"] for t, d in deals.items() if not d["eligible"]})
         return mc["resume_s"] if len(todo) > mc["docs_per_run"] else None
 
+    def refresh_gaps(self) -> None:
+        """gap_go: once per name per day, 30-60 minutes after its US open, read today's 1-minute bars for a name that
+        opened up; a check the agent slept through is logged as missed."""
+        gc = self._swing("gap")
+        now = self.clock()
+        day = feeds_ts(now)[:10]
+        self.gaps = {t: g for t, g in self.gaps.items() if g["day"] == day}
+        for t in self.cfg["active"]["watchlist"]:
+            if self.gap_done.get(t) == day:
+                continue
+            open_t = self._session_open(t)
+            if open_t is None or now < open_t + gc["check_from_s"]:
+                continue
+            self.gap_done[t] = day
+            if now > open_t + gc["check_to_s"]:
+                self.s.event("gap_go_missed", strategy=swing.GAP, ticker=t, why="the agent was not running in the check window")
+                continue
+            q = self._quote(t)
+            if not q or not q.get("prev_close") or q["price"] / q["prev_close"] - 1 < gc["min_gap"] * gc["min_held"]:
+                continue  # cannot be a held gap; no intraday fetch
+            try:
+                bars = swing.ohlcv(feeds.yahoo_symbol(t, self.cfg["yahoo_overrides"]), self.get, "1d", "1m")
+            except Exception as e:  # noqa: BLE001 - no bars, no signal
+                self.s.event("gap_check", strategy=swing.GAP, ticker=t, signal=False, why=f"no data: {str(e)[:100]}")
+                continue
+            finally:
+                self.sleep(0.5)
+            g = swing.gap_check(bars, q["prev_close"], open_t, now, gc)
+            self.s.event("gap_check", strategy=swing.GAP, ticker=t, **g)
+            if g["signal"]:
+                self.gaps[t] = {**g, "day": day}
+
+    def _session_open(self, t212: str) -> float | None:
+        """When today's regular session opened for this instrument, while it is open; None otherwise."""
+        sid = self.schedule_of.get(t212)
+        if sid is None or sid not in self.sessions:
+            return None
+        st = feeds.session_state(self.sessions[sid], self.clock())
+        return st["last_event"][0] if st["open"] and st["last_event"] else None
+
+    def _session_close(self, t212: str) -> float | None:
+        sid = self.schedule_of.get(t212)
+        if sid is None or sid not in self.sessions:
+            return None
+        return feeds.session_state(self.sessions[sid], self.clock())["next_close"]
+
+    def _swing(self, which: str) -> dict | None:
+        a = self.cfg.get("active") or {}
+        c = (a.get("swing") or {}).get(which) or {}
+        return c if a.get("enabled") and c.get("enabled") else None
+
+    def _swing_why(self, ticker: str, strategy: str) -> str | None:
+        e = next((x for x in active.open_trades(self.s.intents()) if x["ticker"] == ticker), None)
+        q = self._quote(ticker)
+        if not e:
+            return None
+        if strategy == swing.GAP:
+            close = self._session_close(ticker)
+            late = close is not None and self.clock() >= close - self.cfg["active"]["swing"]["gap"]["flat_before_close_s"]
+            overnight = feeds_ts(e.get("t", 0))[:10] != feeds_ts(self.clock())[:10]
+            return "flat_by_close" if late or overnight else None
+        sc = self.cfg["active"]["swing"]["squeeze"]
+        b = self.bars.get(ticker)
+        if not b or not q:
+            return None
+        done = swing.completed(b, self.clock())
+        return "trailing" if done["l"] and swing.squeeze_trailing(done, e.get("t", 0), e["signal"]["entry_px"],
+                                                                  q["price"], sc) else None
+
+    def _swing_entries(self, recs, day, total, cash, fx, vwrp_px, disabled, notes) -> list[tuple]:
+        """vol_squeeze and gap_go entries, sized like every C6 entry; no name held by any strategy is doubled."""
+        a = self.cfg["active"]
+        now = self.clock()
+        li = execution.latest_intents(recs).values()
+        busy = {e["ticker"] for e in active.open_trades(recs)} | set(self.positions) | {
+            r["ticker"] for r in li if (r.get("signal") or {}).get("type") == "active_entry" and r.get("ts", "").startswith(day)}
+        size = a["entry_weight"] * total
+        reserve = 1 + self.cfg["core"].get("buy_reserve", 0)
+        out = []
+
+        def order(tk, q, name, rule, stop_px, extra, tp, days):
+            qty = merger.math_floor(size / (q["price"] / fx), a["qty_decimals"])
+            if qty <= 0:
+                return
+            out.append((tk, qty, qty * q["price"] / fx, q["price"], True, f"active entry: {name} ({rule})",
+                        {"type": "active_entry", "strategy": name, "rule": rule, "entry_px": q["price"],
+                         "stop": round(1 - stop_px / q["price"], 4), "take_profit": tp,
+                         "time_stop_s": days * 86400, "quote": q, "vwrp_px": vwrp_px, **extra}))
+        sq = self._swing("squeeze")
+        if sq and swing.SQUEEZE not in disabled and fx:
+            for tk, r in sorted(self.squeezes.items(), key=lambda kv: kv[1].get("pct", 1)):
+                q = self._quote(tk)
+                if not r.get("signal") or tk in busy or not q or now - r["t"] > self.cfg["active"]["review"]["max_age_s"]:
+                    continue
+                if not self.market_open(tk) or r["day"] >= day:
+                    continue  # bought in the session after the trigger close
+                if q["price"] > r["close"] * (1 + sq["max_chase"]):
+                    notes.append(f"{swing.SQUEEZE}: {tk} already {q['price'] / r['close'] - 1:+.1%} above the trigger close")
+                    continue
+                if cash < size * reserve:
+                    notes.append(f"{swing.SQUEEZE}: {tk} qualifies but cash £{cash:.2f} < £{size * reserve:.2f}")
+                    break
+                stop_px = max(r["low20"], q["price"] * (1 - sq["stop_loss"]))
+                order(tk, q, swing.SQUEEZE, sq["rule"], stop_px, {"squeeze": {k: r[k] for k in ("day", "pct", "close", "low20", "vol_x")}},
+                      sq["take_profit"], sq["time_stop_days"])
+                busy.add(tk)
+        gc = self._swing("gap")
+        if gc and swing.GAP not in disabled and fx:
+            n = sum(1 for r in li if (r.get("signal") or {}).get("strategy") == swing.GAP and r.get("ts", "").startswith(day))
+            for tk, g in sorted(self.gaps.items(), key=lambda kv: -kv[1]["held"]):
+                q = self._quote(tk)
+                if n >= gc["max_per_day"] or tk in busy or not q:
+                    continue
+                if q["price"] <= g["low30"]:
+                    continue
+                if cash < size * reserve:
+                    notes.append(f"{swing.GAP}: {tk} qualifies but cash £{cash:.2f} < £{size * reserve:.2f}")
+                    break
+                order(tk, q, swing.GAP, gc["rule"], g["low30"], {"gap": {k: g[k] for k in ("gap", "held", "open", "vwap30", "low30")}},
+                      gc["take_profit"], 1)
+                busy.add(tk)
+                n += 1
+        return out
+
     def _merger(self) -> dict | None:
         a = self.cfg.get("active") or {}
         mc = a.get("merger") or {}
@@ -402,6 +542,8 @@ class Agent:
         return ok, why, rev
 
     def _review_why(self, ticker: str, strategy: str | None = None) -> str | None:
+        if strategy in (swing.SQUEEZE, swing.GAP):  # C9 trades follow their own exits, not the price review
+            return self._swing_why(ticker, strategy)
         if strategy == merger.NAME:  # a deal trade exits on a termination, its stop or the cash-out, not on price
             return "deal_terminated" if ticker in self.mstate.get("terminated", {}) else None
         if strategy == social.NAME:  # C8 trades exit on their own attention rule, not the price review
@@ -626,6 +768,8 @@ class Agent:
                                         self.reviews)
             notes += n
             orders += so
+        if (self._swing("squeeze") or self._swing("gap")) and not active.sleeve_block(self.cfg, recs, self.positions, day, total):
+            orders += self._swing_entries(recs, day, total, cash, fxq["price"] if fxq else None, vwrp_px, disabled, notes)
         if self._merger() and not active.sleeve_block(self.cfg, recs, self.positions, day, total):
             mo, n = merger.entry_orders(self.cfg, recs, self.positions, self._quote, fxq["price"] if fxq else None,
                                         total, cash, day, self.clock(), vwrp_px, disabled, self.mstate)

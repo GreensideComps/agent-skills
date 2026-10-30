@@ -1,5 +1,5 @@
 {
-  "version": "agent-1.7",
+  "version": "agent-1.8",
   "note": "Always-on demo market agent. Demo account only (the client refuses any other host). Owner mandate: cmsg_01U4KMvkBYNknqm4HRVie8uvK9gRYqGXBK4bQP49dBz49i (26 Oct 2026).",
   "intervals_s": {
     "loop": 15,
@@ -11,7 +11,8 @@
     "attention": 21600,
     "review": 7200,
     "social": 3600,
-    "merger": 21600
+    "merger": 21600,
+    "gaps": 60
   },
   "benchmark": {
     "t212": "VWRPl_EQ",
@@ -279,6 +280,35 @@
       "closed_after_s": 86400,
       "interim_review_deals": 10,
       "rationale": "Decision C8 (owner 30 Oct 08:15Z), spec research/strategies/C8_SOCIAL_AND_MERGER_ARB.md. SEC contact User-Agent supplied by the owner 30 Oct 09:47Z (cmsg_01U4KMvkBYNknqm4HRVie8uv8SMXsSAo8xSxvTFFJVeEL3), read at run time from state/sec_user_agent.txt, never committed. Targets come only from target filings (DEFM14A, PREM14A, SC 14D9, SC TO-T). Exits: deal closes, termination 8-K, or -10% (broker stop). take_profit 1.0 and time_stop_days 400 are placeholders so only those exits fire. Interim review at 10 deals is information only."
+    },
+    "swing": {
+      "rationale": "Decision C9 (owner 30 Oct 11:35Z, cmsg_01U4KMvkBYNknqm4HRVie8uvRPwS2yiiKExfRMKcoE5PHU), spec research/strategies/C9_SQUEEZE_AND_GAP.md. Forward-only on the C6 watchlist; C6 sizing, sleeve stops and the 30-trade kill rule apply. Missing data means no signal.",
+      "squeeze": {
+        "enabled": true,
+        "rule": "20-day Bollinger bandwidth in the lowest 10% of 250 days, then a close above the 20-day high on >=1.5x volume above the 200-day average: buy next session",
+        "squeeze_pct": 0.1,
+        "volume_x": 1.5,
+        "min_price": 10.0,
+        "min_dollar_volume": 50000000.0,
+        "max_chase": 0.03,
+        "stop_loss": 0.08,
+        "trail_after": 0.1,
+        "trail_days": 10,
+        "take_profit": 10.0,
+        "time_stop_days": 28
+      },
+      "gap": {
+        "enabled": true,
+        "rule": "3-12% gap up still holding >=20% of the gap 30-60 min after the US open, above the open and the first-30-minute VWAP: buy, stop at the first-30-minute low, +6% target, flat by the close",
+        "min_gap": 0.03,
+        "max_gap": 0.12,
+        "min_held": 0.2,
+        "check_from_s": 1800,
+        "check_to_s": 3600,
+        "take_profit": 0.06,
+        "max_per_day": 2,
+        "flat_before_close_s": 900
+      }
     }
   }
 }

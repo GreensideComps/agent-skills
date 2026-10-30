@@ -723,3 +723,93 @@ def test_merger_arb_buys_an_agreed_deal_and_exits_on_termination(tmp_path):
     ex = next(r for r in execution.latest_intents(st.intents()).values()
               if (r.get("signal") or {}).get("type") == "active_exit")
     assert ex["signal"]["why"] == "deal_terminated"
+
+
+def _bars(c, h=None, l=None, v=None, t=None, o=None):
+    n = len(c)
+    return {"t": t or [None] * n, "o": o or list(c), "h": h or list(c), "l": l or list(c), "c": list(c),
+            "v": v or [1e6] * n}
+
+
+def test_vol_squeeze_and_gap_go_rules():
+    from market_agent import swing
+    sc = agent_mod.load_config()["active"]["swing"]["squeeze"]
+    gc = agent_mod.load_config()["active"]["swing"]["gap"]
+    c = [100 + 0.02 * i + (4 if i % 2 else -4) for i in range(270)] + [106 + 0.02 * i + (0.2 if i % 2 else -0.2)
+                                                                       for i in range(29)]
+    v = [1e6] * len(c)
+    quiet = _bars(c, v=v)
+    assert not swing.squeeze(quiet, sc)["signal"]                                   # no breakout yet
+    brk = _bars(c + [109.0], v=v + [3e6])
+    r = swing.squeeze(brk, sc)
+    assert r["signal"] and r["pct"] <= 0.10 and r["vol_x"] >= 1.5, r
+    assert not swing.squeeze(_bars(c + [109.0], v=v + [1.2e6]), sc)["signal"]       # weak volume
+    assert not swing.squeeze(_bars(c[-200:] + [109.0], v=v[-200:] + [3e6]), sc)["signal"]   # too little history
+    tb = _bars([100.0] * 20, h=[100.0] * 19 + [111.0], l=[99.0] * 10 + [104.0] * 10, t=[float(i) for i in range(20)])
+    assert swing.squeeze_trailing(tb, 0.0, 100.0, 103.0, sc)                        # was up 11%, now under the 10-day low
+    assert not swing.squeeze_trailing(tb, 0.0, 100.0, 105.0, sc)
+    assert not swing.squeeze_trailing(_bars([100.0] * 20, t=[float(i) for i in range(20)]), 0.0, 100.0, 95.0, sc)
+    o = 1_000_000.0
+    mins = [o + 60 * i for i in range(40)]
+    g = _bars([104.0 + 0.02 * i for i in range(40)], t=mins, o=[104.0] * 40,
+              h=[104.1 + 0.02 * i for i in range(40)], l=[103.6] + [103.9 + 0.02 * i for i in range(39)])
+    ok = swing.gap_check(g, 100.0, o, o + 2100, gc)
+    assert ok["signal"] and ok["low30"] == 103.6 and 0.039 < ok["gap"] < 0.041
+    assert not swing.gap_check(g, 100.0, o, o + 1200, gc)["signal"]                 # before the check window
+    assert not swing.gap_check(g, 90.0, o, o + 2100, gc)["signal"]                  # a 15% gap is too big
+    fade = _bars([104.0] + [100.5] * 39, t=mins, o=[104.0] * 40)
+    assert "held" in swing.gap_check(fade, 100.0, o, o + 2100, gc)["why"]
+
+
+def test_gap_go_buys_after_the_open_and_is_flat_by_the_close(tmp_path):
+    prices = {"VWRP.L": 140.0, "GBPUSD=X": 1.25}
+    ag, b, st, clock = make(tmp_path, active_on=True, prices=prices)
+    _active_book(b)
+    day0 = dt.datetime(2026, 10, 27, tzinfo=dt.timezone.utc).timestamp()
+    open_t = day0 + 13.5 * 3600
+    clock.t = open_t + 35 * 60
+    base = fake_get(clock, prices)
+
+    def get(url, params):
+        if "JPM" in url and params.get("interval") == "1m":
+            n = int((clock() - open_t) // 60)
+            return {"chart": {"result": [{"timestamp": [open_t + 60 * i for i in range(n)], "indicators": {"quote": [{
+                "open": [104.0] * n, "high": [104.2 + 0.01 * i for i in range(n)],
+                "low": [103.5] + [103.9] * (n - 1), "close": [104.0 + 0.015 * i for i in range(n)],
+                "volume": [1e4] * n}]}}]}}
+        d = base(url, params)
+        if url == feeds.SPARK and "JPM" in d:
+            d["JPM"]["close"] = [104.5, 104.5]
+            d["JPM"]["previousClose"] = 100.0
+        return d
+    ag.get = get
+    advance(ag, clock, 2, by=30)
+    chk = [e for e in st.events("2026-10-27") if e["kind"] == "gap_check"]
+    assert [e["ticker"] for e in chk] == ["JPM_US_EQ"] and chk[0]["signal"]
+    buys = [o for o in b.orders if o[0] == "JPM_US_EQ"]
+    assert len(buys) == 1
+    rec = next(r for r in execution.latest_intents(st.intents()).values() if r["ticker"] == "JPM_US_EQ")
+    assert rec["signal"]["strategy"] == "gap_go" and rec["signal"]["take_profit"] == 0.06
+    assert abs(104.5 * (1 - rec["signal"]["stop"]) - 103.5) < 0.01               # stop at the first-30-minute low
+    b.pos.append(pos("JPM_US_EQ", buys[0][1], buys[0][1], 0, rec["value_gbp"], rec["value_gbp"]))
+    b.cash -= rec["value_gbp"]
+    advance(ag, clock, 2, by=301)
+    assert len([o for o in b.orders if o[0] == "JPM_US_EQ"]) == 1                 # held through the day
+    clock.t = day0 + 19.8 * 3600                                                  # 12 minutes before the close
+    advance(ag, clock, 3, by=30)
+    sells = [o for o in b.orders if o[0] == "JPM_US_EQ" and o[1] < 0]
+    assert sells == [("JPM_US_EQ", -buys[0][1])]
+    ex = next(r for r in execution.latest_intents(st.intents()).values()
+              if (r.get("signal") or {}).get("type") == "active_exit")
+    assert ex["signal"]["why"] == "flat_by_close"
+
+
+def test_gap_check_slept_through_is_missed_not_traded(tmp_path):
+    ag, b, st, clock = make(tmp_path, active_on=True, prices={"VWRP.L": 140.0, "GBPUSD=X": 1.25})
+    _active_book(b)
+    advance(ag, clock, 1, by=30)                                                  # T0 is 90 minutes after the open
+    missed = [e["ticker"] for e in st.events("2026-10-27") if e["kind"] == "gap_go_missed"]
+    assert sorted(missed) == ["JPM_US_EQ", "UBER_US_EQ"]                         # the names with a known calendar
+    advance(ag, clock, 2, by=30)
+    assert len([e for e in st.events("2026-10-27") if e["kind"] == "gap_go_missed"]) == 2   # logged once a day
+    assert not [e for e in st.events("2026-10-27") if e["kind"] == "gap_check"]

@@ -1,4 +1,4 @@
-# Always-on demo market agent (agent-1.7)
+# Always-on demo market agent (agent-1.8)
 
 **Mandate:** the owner's 26 Oct 2026 handoff (`cmsg_01U4KMvkBYNknqm4HRVie8uvK9gRYqGXBK4bQP49dBz49i`), covering
 the demo account only. The Trading 212 client refuses any host but `demo.trading212.com`, and `load_credentials`
@@ -115,6 +115,19 @@ before buys.
    - Exits: a target 8-K with item 1.02 and no 2.01 (`why: deal_terminated`), -10% (broker stop), or the cash-out:
      shares gone from the account for a day are recorded as sold at the offer, marked `estimated`.
    - Interim review at 10 deals is information only; the kill rule after 30 trades still applies.
+11. **vol_squeeze** (agent-1.8, decision C9, owner 30 Oct 11:35Z, `swing.py`, spec
+   `research/strategies/C9_SQUEEZE_AND_GAP.md`): on the watchlist, from two years of Yahoo daily bars read in the
+   review pass. Signal on the last finished session: 20-day Bollinger bandwidth (4 SD / mean) on the previous close in
+   the lowest 10% of 250 days, a close above the prior 20-day high on ≥ 1.5x 20-day volume, above the 200-day average,
+   price > $10 and 20-day dollar volume > $50m. Bought in the next session unless already > 3% above the trigger
+   close; tightest squeeze first. Stop at the 20-day low or -8% (the tighter; held at the broker, so it acts
+   intraday rather than on the close), trailing exit at the 10-day low once the trade has been up 10%
+   (`why: trailing`), 28 calendar days (20 trading days).
+12. **gap_go** (agent-1.8, C9): once per name per day, 30–60 minutes after its US open, a name up at least 0.6% has
+   its 1-minute bars read. It qualifies with a 3–12% opening gap, ≥ 20% of the gap still held, and a price above the
+   open and the first-30-minute VWAP. Buy at market; stop at the first-30-minute low (broker stop), +6% target, sold
+   15 minutes before the close or at the first run of a later day (`why: flat_by_close`); at most 2 a day. A window
+   the agent slept through is logged as `gap_go_missed` and never traded late. Catalysts are not checked.
 
 Every other pass is recorded as a `decision` with `no_trade: true` and its reasons.
 
