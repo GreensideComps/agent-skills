@@ -62,9 +62,8 @@ def stats(x: pd.Series) -> dict:
             "sr_m": float(x.mean() / x.std()), "skew": float(x.skew()), "kurt": float(x.kurt() + 3)}
 
 
-def main(out: Path):
-    df = xs.load()
-    df = features(df)
+def main(out: Path, trials=(("Q01a", "vol12"), ("Q01b", "vol24"), ("Q01c", "beta24")), df=None):
+    df = features(xs.load()) if df is None else df
     ev = reg.load()
     n = reg.n_trials(ev) + N_EXTRA
     res = {}
@@ -73,7 +72,7 @@ def main(out: Path):
     bull = (idx > idx.rolling(10).mean()).shift(1)
     mvol = lc.rolling(12).std().shift(1)
     hivol = mvol > mvol[(mvol.index >= START) & (mvol.index <= END)].median()
-    for tid, col in [("Q01a", "vol12"), ("Q01b", "vol24"), ("Q01c", "beta24")]:
+    for tid, col in trials:
         r = portfolio(df, col)
         s = stats(r["excess"])
         d = reg.deflated_sharpe(s["sr_m"], s["months"], s["skew"], s["kurt"], reg.LEGACY_STAT, ev)
