@@ -21,6 +21,9 @@ SPEC = {  # trial: (portfolio file, style col, opposite col, market factors file
     # Q54-Q55 (prereg/Q54_Q55.md): checks of the Q50a pass; "MKT" = compare with the region market itself
     "Q54a": ("Developed_ex_US_6_Portfolios_ME_Prior_12_2.csv", "BIG HiPRIOR", "BIG LoPRIOR", "Developed_ex_US_3_Factors.csv"),
     "Q55a": ("10_Portfolios_Prior_12_2.csv", "Hi PRIOR", "MKT", "F-F_Research_Data_Factors.csv"),
+    # Q61-Q62 (prereg/Q61_Q65.md)
+    "Q61a": ("Portfolios_Formed_on_VAR.csv", "Lo 20", "Hi 20", "F-F_Research_Data_Factors.csv"),
+    "Q62a": ("Portfolios_Formed_on_D-P.csv", "Hi 30", "Lo 30", "F-F_Research_Data_Factors.csv"),
 }
 
 
