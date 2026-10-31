@@ -572,12 +572,17 @@ class Agent:
         target ETF in state/<name>.json. The last target stands until a new month end is read."""
         now = self.clock()
         for vc in self._vt():
-            f = value_timing.month_ends(value_timing.adjusted(vc["factor_symbol"], self.get), now)
-            b = value_timing.month_ends(value_timing.adjusted(vc["versus_symbol"], self.get), now)
-            sig = value_timing.signal(f, b, vc)
             state = self.s.read(f"{vc['name']}.json") or {}
-            if not sig or (sig["month"] == state.get("month") and "factor_12m" in state):
-                continue
+            if vc.get("months"):  # a calendar entry (january_small): no prices needed
+                sig = value_timing.calendar_signal(now, vc)
+                if sig["month"] == state.get("month"):
+                    continue
+            else:
+                f = value_timing.month_ends(value_timing.adjusted(vc["factor_symbol"], self.get), now)
+                b = value_timing.month_ends(value_timing.adjusted(vc["versus_symbol"], self.get), now)
+                sig = value_timing.signal(f, b, vc)
+                if not sig or (sig["month"] == state.get("month") and "factor_12m" in state):
+                    continue
             self.s._replace(f"{vc['name']}.json", {**sig, "ts": feeds_ts(now), "previous": state.get("target")})
             self.s.event("timing_signal", strategy=vc["name"], **sig, previous=state.get("target"))
             self.need_decide = True
@@ -731,7 +736,7 @@ class Agent:
             return []
         return (list(a.get("watchlist", [])) + sorted((self._social() or {}).get("universe", {}))
                 + (list(self.mstate.get("watch", [])) if self._merger() else [])
-                + [t for vc in self._vt() for t in (vc["factor_ticker"], vc["market_ticker"])])
+                + [t for vc in self._vt() for t in (vc["factor_ticker"], vc.get("market_ticker")) if t])
 
     def _active_exits(self, recs, vwrp_px) -> list[tuple]:
         if not self._watch():

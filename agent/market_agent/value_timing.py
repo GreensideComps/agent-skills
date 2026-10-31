@@ -5,6 +5,8 @@ is ahead, hold the factor's UCITS ETF for the next month; otherwise hold a US ma
 them never share a position.
 
 - value_timing (research loop Q48a, results/Q44_Q48.md): Russell 1000 Value (IWD) vs Growth (IWF); VRVA or VUSA.
+- january_small (Q65a, results/Q61_Q65.md): a calendar entry (`months`), no price signal: hold a US small-cap ETF
+  (Vanguard Russell 2000, VRSG) from the first LSE open of January to the first open of February, nothing otherwise.
 - momentum_timing (Q50a, results/Q49_Q52.md): MSCI USA Momentum (MTUM) vs Russell 1000 (IWB); IUMO or VUAG. The test
   compared the winners decile with the losers decile, which has no ETF: momentum vs the market is a deliberate
   approximation.
@@ -23,7 +25,7 @@ from typing import Callable
 from . import active, execution, review
 
 NAME = "value_timing"
-NAMES = ("value_timing", "momentum_timing")
+NAMES = ("value_timing", "momentum_timing", "january_small")
 
 
 def adjusted(sym: str, get: Callable) -> list[tuple[float, float]]:
@@ -70,10 +72,19 @@ def signal(value: dict[str, float], growth: dict[str, float], vc: dict) -> dict 
             "why": f"{m}: {f} {rv:+.1%} vs {b} {rg:+.1%} over 12 months, so hold {hold}"}
 
 
+def calendar_signal(now: float, vc: dict) -> dict:
+    """A calendar entry's target for the current UTC month: its ETF in the listed months, else nothing."""
+    m = time.strftime("%Y-%m", time.gmtime(now))
+    on = int(m[5:]) in vc["months"]
+    return {"month": m, "hold": vc["factor"] if on else "none", "target": vc["factor_ticker"] if on else None,
+            "why": f"{m}: {'inside' if on else 'outside'} the {vc['factor']} season (months {vc['months']})"}
+
+
 def exit_why(state: dict | None, ticker: str) -> str | None:
     """'switch' once the latest signal names another ETF than the one held."""
-    tgt = (state or {}).get("target")
-    return "switch" if tgt and tgt != ticker else None
+    if not state:
+        return None
+    return "switch" if state.get("target") != ticker else None
 
 
 def kill(records, positions, now: float, vwrp_px, vc: dict, ts: str) -> dict | None:
@@ -132,7 +143,7 @@ def entry_orders(cfg, records, positions, quote_of, fx, total, cash, now, vwrp_p
         return [], notes
     return [(tk, qty, qty * px_gbp, q["price"], True, f"active entry: {NAME} ({vc['rule']}); {state['why']}",
              {"type": "active_entry", "strategy": NAME, "rule": vc["rule"], "month": state["month"],
-              "factor_12m": state["factor_12m"], "versus_12m": state["versus_12m"], "hold": state["hold"],
+              "factor_12m": state.get("factor_12m"), "versus_12m": state.get("versus_12m"), "hold": state["hold"],
               "approximation": vc.get("approximation"),
               "entry_px": q["price"], "stop": vc["stop_loss"], "take_profit": vc["take_profit"],
               "time_stop_s": vc["time_stop_days"] * 86400, "quote": q, "vwrp_px": vwrp_px})], notes

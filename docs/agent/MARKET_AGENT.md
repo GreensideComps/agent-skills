@@ -1,4 +1,4 @@
-# Always-on demo market agent (agent-1.10)
+# Always-on demo market agent (agent-1.11)
 
 **Mandate:** the owner's 26 Oct 2026 handoff (`cmsg_01U4KMvkBYNknqm4HRVie8uvK9gRYqGXBK4bQP49dBz49i`), covering
 the demo account only. The Trading 212 client refuses any host but `demo.trading212.com`, and `load_credentials`
@@ -144,6 +144,10 @@ before buys.
    kill rule. Deliberate approximation: the test compared the winners decile with the losers decile, which has no
    ETF. Low confidence: the exact traded signal (Q55a) has earned +0.2%/yr since 2007 and fails outside the US
    (t 0.64); it runs as a cheap forward test.
+15. **january_small** (agent-1.11, research loop Q65a, `results/Q61_Q65.md`; a calendar entry in `active.timing`):
+   holds Vanguard Russell 2000 US Small-Cap (`VRSGl_EQ`, GBP) from the first LSE open of January to the first open of
+   February (`why: switch`), nothing otherwise. Same 2% size, -50% disaster stop and kill rule (the 730 days binds
+   first). Low confidence: the classic January effect, +3.0%/yr 1926-2022 (t 5.07) but -0.8%/yr since 2007.
 
 Every other pass is recorded as a `decision` with `no_trade: true` and its reasons.
 

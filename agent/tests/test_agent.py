@@ -74,7 +74,7 @@ class FakeBroker:
                 {"ticker": "UBER_US_EQ", "workingScheduleId": 71}, {"ticker": "CROX_US_EQ", "workingScheduleId": 71},
                 {"ticker": "VWRPl_EQ", "workingScheduleId": 70}, {"ticker": "VRVAl_EQ", "workingScheduleId": 70},
                 {"ticker": "VUSAl_EQ", "workingScheduleId": 70}, {"ticker": "IUMOl_EQ", "workingScheduleId": 70},
-                {"ticker": "VUAGl_EQ", "workingScheduleId": 70}]
+                {"ticker": "VUAGl_EQ", "workingScheduleId": 70}, {"ticker": "VRSGl_EQ", "workingScheduleId": 70}]
 
     def place_market_order(self, ticker, quantity):
         if self.fail_next:
@@ -868,6 +868,7 @@ def test_value_timing_month_end_signal_rules():
     short = _daily(dt.date(2026, 10, 30), 200, lambda i: 100 + i)
     assert vt.signal(vt.month_ends(bars(short), fri_eve), vt.month_ends(bars(flat), fri_eve), vc) is None
     assert vt.exit_why({"target": "VUSAl_EQ"}, "VRVAl_EQ") == "switch" and vt.exit_why({"target": "VRVAl_EQ"}, "VRVAl_EQ") is None
+    assert vt.exit_why(None, "VRVAl_EQ") is None and vt.exit_why({"target": None}, "VRSGl_EQ") == "switch"
 
 
 def test_value_timing_buys_the_target_and_switches_on_a_new_signal(tmp_path):
@@ -943,3 +944,30 @@ def test_momentum_timing_runs_beside_value_timing_on_its_own_etfs(tmp_path):
     assert "VRVAl_EQ" in bought and "VUAGl_EQ" in bought
     rec = next(r for r in execution.latest_intents(st.intents()).values() if r["ticker"] == "VUAGl_EQ")
     assert rec["signal"]["strategy"] == "momentum_timing" and "losers" in rec["signal"]["approximation"]
+
+
+def test_january_small_holds_small_caps_through_january_only(tmp_path):
+    from market_agent import value_timing as vt
+    jc = agent_mod.load_config()["active"]["timing"]["january_small"]
+    jan = dt.datetime(2027, 1, 4, 9, 0, tzinfo=dt.timezone.utc).timestamp()
+    feb = dt.datetime(2027, 2, 1, 9, 0, tzinfo=dt.timezone.utc).timestamp()
+    assert vt.calendar_signal(jan, jc)["target"] == "VRSGl_EQ" and vt.calendar_signal(feb, jc)["target"] is None
+    ag, b, st, clock = make(tmp_path, active_on=True, prices={"VWRP.L": 140.0, "GBPUSD=X": 1.25, "VRSG.L": 50.0})
+    _active_book(b)
+    for k in ("value_timing", "momentum_timing"):
+        ag.cfg["active"]["timing"][k]["enabled"] = False
+    ag.cfg["active"]["social"]["enabled"] = False
+    advance(ag, clock, 2, by=150)                                              # October: nothing held
+    assert st.read("january_small.json")["target"] is None and not [o for o in b.orders if o[0] == "VRSGl_EQ"]
+    clock.t = jan
+    advance(ag, clock, 2, by=30)
+    buys = [o for o in b.orders if o[0] == "VRSGl_EQ"]
+    assert len(buys) == 1 and buys[0][1] > 0
+    rec = next(r for r in execution.latest_intents(st.intents()).values() if r["ticker"] == "VRSGl_EQ")
+    assert rec["signal"]["strategy"] == "january_small"
+    b.pos.append(pos("VRSGl_EQ", buys[0][1], buys[0][1], 0, rec["value_gbp"], rec["value_gbp"], ccy="GBP"))
+    advance(ag, clock, 2, by=301)
+    assert len([o for o in b.orders if o[0] == "VRSGl_EQ"]) == 1               # held through January
+    clock.t = feb
+    advance(ag, clock, 3, by=301)
+    assert [o for o in b.orders if o[0] == "VRSGl_EQ" and o[1] < 0] == [("VRSGl_EQ", -buys[0][1])]
