@@ -138,7 +138,8 @@ def entry_orders(cfg, records, positions, quote_of, fx, total, cash, now, vwrp_p
         notes.append(f"{NAME}: {tk} is the target but cash £{cash:.2f} < £{size:.2f}")
         return [], notes
     px_gbp = q["price"] / rate
-    qty = math.floor(size / px_gbp * 10 ** cfg["active"]["qty_decimals"]) / 10 ** cfg["active"]["qty_decimals"]
+    d = 10 ** vc.get("qty_decimals", cfg["active"]["qty_decimals"])  # London ETF lines take fewer decimals
+    qty = math.floor(size / px_gbp * d) / d
     if qty <= 0:
         return [], notes
     return [(tk, qty, qty * px_gbp, q["price"], True, f"active entry: {NAME} ({vc['rule']}); {state['why']}",

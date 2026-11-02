@@ -1,5 +1,5 @@
 {
-  "version": "agent-1.11",
+  "version": "agent-1.11.1",
   "note": "Always-on demo market agent. Demo account only (the client refuses any other host). Owner mandate: cmsg_01U4KMvkBYNknqm4HRVie8uvK9gRYqGXBK4bQP49dBz49i (26 Oct 2026).",
   "intervals_s": {
     "loop": 15,
@@ -337,7 +337,8 @@
         "kill_after_trades": 30,
         "kill_after_days": 730,
         "rule": "month-end: hold US value (VRVA) when Russell 1000 Value's 12-month total return (IWD) beats Growth's (IWF), else the S&P 500 (VUSA)",
-        "rationale": "Research loop Q48a passed its pre-registered test 30 Oct 2026 (results/Q44_Q48.md): +3.6%/yr vs the US market 1927-2022, t 4.23, both halves positive, survives costs x2 and a 1-month lag; only +1.3%/yr since 2007. The signal uses the Russell 1000 Value/Growth ETFs (IWD/IWF) as the nearest free proxy for the Ken French value/growth portfolios; Vanguard Russell 1000 US Value (VRVA, LSE, USD) tracks the same value index. The stop is a -50% disaster stop only: the tested rule has none. Demo only; kill after 30 closed trades or 730 days if it does not beat VWRP. Follow-up Q49-Q52: the same rule outside the US is weak (t 1.74 developed ex-US, t 1.56 EM, flat since 2007): low confidence."
+        "rationale": "Research loop Q48a passed its pre-registered test 30 Oct 2026 (results/Q44_Q48.md): +3.6%/yr vs the US market 1927-2022, t 4.23, both halves positive, survives costs x2 and a 1-month lag; only +1.3%/yr since 2007. The signal uses the Russell 1000 Value/Growth ETFs (IWD/IWF) as the nearest free proxy for the Ken French value/growth portfolios; Vanguard Russell 1000 US Value (VRVA, LSE, USD) tracks the same value index. The stop is a -50% disaster stop only: the tested rule has none. Demo only; kill after 30 closed trades or 730 days if it does not beat VWRP. Follow-up Q49-Q52: the same rule outside the US is weak (t 1.74 developed ex-US, t 1.56 EM, flat since 2007): low confidence.",
+        "qty_decimals": 2
       },
       "momentum_timing": {
         "enabled": true,
@@ -359,7 +360,8 @@
         "kill_after_days": 730,
         "approximation": "the tested rule (Q50a) compared the KF winners decile with the losers decile; no ETF holds the losers, so the signal is US momentum (MTUM) vs the US market (IWB)",
         "rule": "month-end: hold US momentum (IUMO) when MSCI USA Momentum's 12-month total return (MTUM) beats the Russell 1000's (IWB), else the S&P 500 (VUAG)",
-        "rationale": "Research loop Q50a passed its pre-registered test 30 Oct 2026 (results/Q49_Q52.md): +5.4%/yr vs the US market 1928-2022, t 4.71, both halves positive, survives costs x2 and a 1-month lag, +2.2%/yr since 2007. Deliberate approximation: momentum vs market replaces winners vs losers. iShares Edge MSCI USA Momentum Factor (IUMO, LSE, USD) is a looser match than the paper decile. VUAG (Vanguard S&P 500 Acc) is the market leg so this never shares value_timing's VUSA line. -50% disaster stop only. Demo only; kill after 30 closed trades or 730 days if it does not beat VWRP. Follow-up Q55a (results/Q54_Q55.md) tested this exact signal: t 4.68 over 1928-2022 but only +0.2%/yr since 2007 and t 0.64 outside the US: low confidence, a cheap forward test."
+        "rationale": "Research loop Q50a passed its pre-registered test 30 Oct 2026 (results/Q49_Q52.md): +5.4%/yr vs the US market 1928-2022, t 4.71, both halves positive, survives costs x2 and a 1-month lag, +2.2%/yr since 2007. Deliberate approximation: momentum vs market replaces winners vs losers. iShares Edge MSCI USA Momentum Factor (IUMO, LSE, USD) is a looser match than the paper decile. VUAG (Vanguard S&P 500 Acc) is the market leg so this never shares value_timing's VUSA line. -50% disaster stop only. Demo only; kill after 30 closed trades or 730 days if it does not beat VWRP. Follow-up Q55a (results/Q54_Q55.md) tested this exact signal: t 4.68 over 1928-2022 but only +0.2%/yr since 2007 and t 0.64 outside the US: low confidence, a cheap forward test.",
+        "qty_decimals": 2
       },
       "january_small": {
         "enabled": true,
@@ -378,7 +380,8 @@
         "kill_after_trades": 30,
         "kill_after_days": 730,
         "rule": "calendar: hold US small caps (Vanguard Russell 2000, VRSG) from the first LSE open of January to the first open of February; no position otherwise",
-        "rationale": "Research loop Q65a passed its pre-registered test 31 Oct 2026 (results/Q61_Q65.md): +3.0%/yr vs the US market 1926-2022, t 5.07. LOW confidence: the classic January effect, -0.8%/yr since 2007 after publication. -50% disaster stop only. Demo only; first trade January 2027; kill after 30 closed trades or 730 days if it does not beat VWRP (the 730 days binds first)."
+        "rationale": "Research loop Q65a passed its pre-registered test 31 Oct 2026 (results/Q61_Q65.md): +3.0%/yr vs the US market 1926-2022, t 5.07. LOW confidence: the classic January effect, -0.8%/yr since 2007 after publication. -50% disaster stop only. Demo only; first trade January 2027; kill after 30 closed trades or 730 days if it does not beat VWRP (the 730 days binds first).",
+        "qty_decimals": 2
       }
     }
   },
