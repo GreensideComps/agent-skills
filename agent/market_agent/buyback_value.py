@@ -1,6 +1,6 @@
 """buyback_value (research loop Q206, results/Q206.md): a monthly basket of US stocks buying back a lot of stock
-while cheap on cash flow. NEAR MISS, UNPROVEN: +2.2%/trade vs its universe 2015-22, DSR 0.78 < 0.95; a one-month-late
-entry and double costs stayed positive; nothing in mega caps. Judged only on trades after 3 Nov 2026.
+while cheap on cash flow. UNPROVEN: +3.0%/yr vs its universe 2015-22, not significant (DSR 0.02 once rebuilt from real
+monthly holdings in Q207; the first 0.78 came from smoothed returns); nothing in mega caps. Judged only on trades after 3 Nov 2026.
 
 Picks come from the research loop, which runs the point-in-time screen at each month-end and writes
 `picks_dir/Q206_picks_YYYY-MM.csv` (US $2bn+, ex financials and utilities; TTM buybacks / market cap in the top 10%,
