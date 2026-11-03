@@ -74,7 +74,8 @@ class FakeBroker:
                 {"ticker": "UBER_US_EQ", "workingScheduleId": 71}, {"ticker": "CROX_US_EQ", "workingScheduleId": 71},
                 {"ticker": "VWRPl_EQ", "workingScheduleId": 70}, {"ticker": "VRVAl_EQ", "workingScheduleId": 70},
                 {"ticker": "VUSAl_EQ", "workingScheduleId": 70}, {"ticker": "IUMOl_EQ", "workingScheduleId": 70},
-                {"ticker": "VUAGl_EQ", "workingScheduleId": 70}, {"ticker": "VRSGl_EQ", "workingScheduleId": 70}]
+                {"ticker": "VUAGl_EQ", "workingScheduleId": 70}, {"ticker": "VRSGl_EQ", "workingScheduleId": 70},
+                {"ticker": "MU_US_EQ", "workingScheduleId": 71}, {"ticker": "TDC_US_EQ", "workingScheduleId": 71}]
 
     def place_market_order(self, ticker, quantity):
         if self.fail_next:
@@ -165,6 +166,7 @@ def make(tmp_path, enabled=True, prices=None, satellite=False, active_on=False):
     cfg["satellite"]["enabled"] = satellite  # the older tests hold a 90% single-stock book on purpose
     cfg["active"]["enabled"] = active_on
     cfg["scoreboard"]["enabled"] = False  # the real scoreboard must never read a test's state
+    cfg["active"]["stock_screen"]["enabled"] = False  # its own test turns it on; it would fund itself from VWRP first
     ag = agent_mod.Agent(st, b, cfg, ambiguous_exc=Ambiguous, api_exc=ApiErr,
                          get=fake_get(clock, prices), clock=clock, sleep=lambda s: None)
     st.acquire_lease()
@@ -971,3 +973,46 @@ def test_january_small_holds_small_caps_through_january_only(tmp_path):
     clock.t = feb
     advance(ag, clock, 3, by=301)
     assert [o for o in b.orders if o[0] == "VRSGl_EQ" and o[1] < 0] == [("VRSGl_EQ", -buys[0][1])]
+
+
+def test_stock_screen_funds_from_vwrp_buys_each_pick_and_exits_on_the_yearly_rebalance(tmp_path):
+    ag, b, st, clock = make(tmp_path, active_on=True, prices={"VWRP.L": 140.0, "GBPUSD=X": 1.25, "MU": 100.0,
+                                                               "TDC": 50.0})
+    _active_book(b)  # £900 book: VWRP £840, cash £60, under the sleeve's 10% reserve
+    for k in ("social", "merger"):
+        ag.cfg["active"][k]["enabled"] = False
+    ag.cfg["active"]["timing"] = {}
+    sc = ag.cfg["active"]["stock_screen"]
+    sc.update(enabled=True, picks=["MU_US_EQ", "TDC_US_EQ"], previous_picks=[])
+    ag.cfg["limits"]["buy_whitelist"] += ["MU_US_EQ", "TDC_US_EQ"]
+    clock.t = dt.datetime(2026, 11, 2, 9, 0, tzinfo=dt.timezone.utc).timestamp()   # Monday: LSE open, US shut
+    advance(ag, clock, 2, by=30)
+    sells = [o for o in b.orders if o[0] == "VWRPl_EQ"]
+    # 2 picks x £18 x 1.08 reserve = £38.88, plus the £30 the sleeve reserve is short: £68.88 -> 0.50 VWRP
+    assert sells == [("VWRPl_EQ", -0.5)]
+    assert not [o for o in b.orders if o[0] in ("MU_US_EQ", "TDC_US_EQ")]        # the US market is shut
+    b.pos = [pos("VWRPl_EQ", 5.5, 5.5, 0, 770.0, 770.0, ccy="GBP")]
+    b.cash += 70.0
+    advance(ag, clock, 3, by=301)
+    assert [o for o in b.orders if o[0] == "VWRPl_EQ"] == sells                    # no core buy-back, no 2nd sale
+    clock.t = dt.datetime(2026, 11, 2, 14, 0, tzinfo=dt.timezone.utc).timestamp()  # US open
+    advance(ag, clock, 4, by=60)
+    buys = [o for o in b.orders if o[0] in ("MU_US_EQ", "TDC_US_EQ")]
+    assert [o[0] for o in buys] == ["MU_US_EQ", "TDC_US_EQ"]                      # score order, one per pass
+    assert buys[0][1] == round(18.0 / (100.0 / 1.25), 4)                           # 2% of the £900 book
+    recs = execution.latest_intents(st.intents()).values()
+    mu = next(r for r in recs if r["ticker"] == "MU_US_EQ")
+    assert mu["signal"]["strategy"] == "stock_screen" and mu["signal"]["stop"] is None
+    for o in buys:
+        b.pos.append(pos(o[0], o[1], o[1], 0, 18.0, 18.0))
+    b.cash -= 36.0
+    advance(ag, clock, 3, by=301)
+    assert not [p for p in b.pending if p["ticker"] in ("MU_US_EQ", "TDC_US_EQ")]  # no broker stop by rule
+    assert len([o for o in b.orders if o[0] in ("MU_US_EQ", "TDC_US_EQ")]) == 2   # held
+    sc.update(picks=["TDC_US_EQ"], previous_picks=["MU_US_EQ", "TDC_US_EQ"])        # the January rebalance
+    advance(ag, clock, 2, by=301)
+    out = [o for o in b.orders if o[0] == "MU_US_EQ" and o[1] < 0]
+    assert out == [("MU_US_EQ", -buys[0][1])]
+    ex = next(r for r in execution.latest_intents(st.intents()).values()
+              if (r.get("signal") or {}).get("type") == "active_exit")
+    assert ex["signal"]["why"] == "rebalance" and ex["signal"]["strategy"] == "stock_screen"

@@ -14,7 +14,17 @@ import uuid
 from pathlib import Path
 from urllib.parse import quote
 
-from . import active, execution, feeds, merger, review, social, swing, value_timing
+from . import (
+    active,
+    execution,
+    feeds,
+    merger,
+    review,
+    social,
+    stock_screen,
+    swing,
+    value_timing,
+)
 
 HERE = Path(__file__).resolve().parent
 
@@ -594,6 +604,11 @@ class Agent:
             return []
         return [{**v, "name": k} for k, v in (a.get("timing") or {}).items() if v.get("enabled")]
 
+    def _screen(self) -> dict | None:
+        a = self.cfg.get("active") or {}
+        sc = a.get("stock_screen") or {}
+        return {**sc, "name": stock_screen.NAME} if a.get("enabled") and sc.get("enabled") else None
+
     def _merger(self) -> dict | None:
         a = self.cfg.get("active") or {}
         mc = a.get("merger") or {}
@@ -616,6 +631,10 @@ class Agent:
             if strategy in (self.s.read("strategies.json") or {}):
                 return "killed"
             return value_timing.exit_why(self.s.read(f"{strategy}.json"), ticker)
+        if strategy == stock_screen.NAME:  # held until the yearly rebalance drops the name, or the kill rule
+            if strategy in (self.s.read("strategies.json") or {}):
+                return "killed"
+            return stock_screen.exit_why(self._screen() or self.cfg["active"].get("stock_screen"), ticker)
         if strategy == merger.NAME:  # a deal trade exits on a termination, its stop or the cash-out, not on price
             return "deal_terminated" if ticker in self.mstate.get("terminated", {}) else None
         if strategy == social.NAME:  # C8 trades exit on their own attention rule, not the price review
@@ -736,7 +755,8 @@ class Agent:
             return []
         return (list(a.get("watchlist", [])) + sorted((self._social() or {}).get("universe", {}))
                 + (list(self.mstate.get("watch", [])) if self._merger() else [])
-                + [t for vc in self._vt() for t in (vc["factor_ticker"], vc.get("market_ticker")) if t])
+                + [t for vc in self._vt() for t in (vc["factor_ticker"], vc.get("market_ticker")) if t]
+                + stock_screen.watch(a.get("stock_screen")))
 
     def _active_exits(self, recs, vwrp_px) -> list[tuple]:
         if not self._watch():
@@ -835,9 +855,29 @@ class Agent:
                 self.s._replace("strategies.json", disabled)
                 self.s.event("strategy_disabled", strategy=vc["name"], **k)
                 self.alert("warn", f"strategy_disabled:{vc['name']}", f"strategy {vc['name']} switched off: {k['why']}")
+        sc = self._screen()
+        if sc and sc["name"] not in disabled:
+            k = value_timing.kill(recs, self.positions, self.clock(), vwrp_px, sc, feeds_ts(self.clock()))
+            if k:
+                disabled = {**disabled, sc["name"]: k}
+                self.s._replace("strategies.json", disabled)
+                self.s.event("strategy_disabled", strategy=sc["name"], **k)
+                self.alert("warn", f"strategy_disabled:{sc['name']}", f"strategy {sc['name']} switched off: {k['why']}")
         total = float((self.summary or {}).get("totalValue") or 0)
         cash = float(((self.summary or {}).get("cash") or {}).get("availableToTrade") or 0)
         fxq = self.quotes.get(self.cfg["benchmark"]["fx"])
+        if sc:  # the basket first: it is funded from VWRP, so it never competes with the sleeve for cash
+            keep = self.cfg["active"].get("cash_reserve_weight", 0) * total
+            need = stock_screen.need_gbp(sc, self.cfg, recs, self.positions, total, disabled)
+            so, n = stock_screen.entry_orders(sc, self.cfg, recs, self.positions, self._quote,
+                                              fxq["price"] if fxq else None, total, cash - keep, self.clock(),
+                                              vwrp_px, disabled, self.market_open)
+            notes += n
+            if so:
+                return so[0]
+            fo = stock_screen.fund_order(sc, self.cfg, self.positions, self._quote, total, cash, keep, need, day, recs)
+            if fo and self.market_open(fo[0]):
+                return fo
         orders, n = active.entry_orders(self.cfg, recs, self.positions, self._quote, fxq["price"] if fxq else None,
                                         total, cash, day, self.clock(), vwrp_px, disabled,
                                         self._gate if (self.cfg["active"].get("review") or {}).get("enabled") else None)
@@ -942,6 +982,8 @@ class Agent:
             return None
         total = float((self.summary or {}).get("totalValue") or 0)
         keep = (self.cfg.get("active") or {}).get("cash_reserve_weight", 0) * total if self._watch() else 0.0
+        keep += stock_screen.need_gbp(self._screen(), self.cfg, self.s.intents(), self.positions, total,
+                                      self.s.read("strategies.json") or {})  # cash freed for the basket stays
         if cash - keep <= core["invest_cash_above_gbp"]:
             notes.append(f"cash £{cash:.2f}: £{keep:.2f} is kept for the active sleeve")
             return None

@@ -75,8 +75,9 @@ def exit_orders(records, positions, quote_of, now, vwrp_px, review_why=None) -> 
         if avail <= 0 or not q:
             continue
         ret = q["price"] / sig["entry_px"] - 1
-        why = ("stop" if ret <= -sig["stop"] else "take_profit" if ret >= sig["take_profit"]
-               else "time" if now - e.get("t", now) >= sig["time_stop_s"]
+        why = ("stop" if sig["stop"] is not None and ret <= -sig["stop"]
+               else "take_profit" if sig["take_profit"] is not None and ret >= sig["take_profit"]
+               else "time" if sig["time_stop_s"] is not None and now - e.get("t", now) >= sig["time_stop_s"]
                else (review_why(tk, sig["strategy"]) if review_why else None))
         if why:
             v = float((p.get("walletImpact") or {}).get("currentValue") or 0)
@@ -93,6 +94,8 @@ def sleeve_pnl(records, positions, day: str) -> tuple[float, float]:
     broker's current value."""
     today = total = 0.0
     for t in trades(records):
+        if t["entry"]["signal"].get("strategy") == "stock_screen":
+            continue  # a separate forward test funded from the core, judged only by its own kill rule
         if t["exit"]:
             r = closed_result(t)["pnl_gbp"]
             total += r
@@ -194,9 +197,9 @@ def stops_needed(records: list[dict], positions: dict, stops: dict) -> list[dict
     out = []
     for e in open_trades(records):
         p = positions.get(e["ticker"])
-        if e["id"] in stops or not p or float(p.get("quantity") or 0) <= 0:
-            continue
         sig = e["signal"]
+        if e["id"] in stops or not p or float(p.get("quantity") or 0) <= 0 or sig.get("stop") is None:
+            continue  # stock_screen trades carry no stop by rule
         out.append({"entry_id": e["id"], "ticker": e["ticker"], "qty": float(p["quantity"]),
                     "stop_px": round(sig["entry_px"] * (1 - sig["stop"]), 2), "strategy": sig["strategy"]})
     return out

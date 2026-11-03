@@ -1,4 +1,4 @@
-# Always-on demo market agent (agent-1.11)
+# Always-on demo market agent (agent-1.12)
 
 **Mandate:** the owner's 26 Oct 2026 handoff (`cmsg_01U4KMvkBYNknqm4HRVie8uvK9gRYqGXBK4bQP49dBz49i`), covering
 the demo account only. The Trading 212 client refuses any host but `demo.trading212.com`, and `load_credentials`
@@ -148,6 +148,17 @@ before buys.
    holds Vanguard Russell 2000 US Small-Cap (`VRSGl_EQ`, GBP) from the first LSE open of January to the first open of
    February (`why: switch`), nothing otherwise. Same 2% size, -50% disaster stop and kill rule (the 730 days binds
    first). Low confidence: the classic January effect, +3.0%/yr 1926-2022 (t 5.07) but -0.8%/yr since 2007.
+16. **stock_screen** (agent-1.12, research loop Q199, `results/Q199.md`, `stock_screen.py`, `active.stock_screen`):
+   a basket of individual US stocks from the system-designed screener, 2% of the book each, held with no stop,
+   take-profit or time stop. Once a year (early January, December data) `picks` is replaced; a held name that drops
+   out exits with `why: rebalance`, and each sale is one closed trade scored against VWRP. Kill after 30 closed
+   trades or 730 days if it has not beaten VWRP. When cash above the sleeve's 10% reserve cannot cover the next buy,
+   one VWRP sale a day frees the remaining spend (`screen_fund`), and the core buy leaves that cash alone. Its P&L is
+   kept out of the sleeve's daily loss stop and freeze. Low confidence: the pre-registered backtest failed (+3.4%/yr
+   vs its universe, t 0.85). First picks (October 2026 data): 15 names, all on T212; 9 are consumer discretionary,
+   which at 2% each is about +13pt active vs VWRP look-through (UNVERIFIED: FTSE All-World discretionary taken as
+   about 10-13%), over the +-10pt sector limit, so the three lowest-scored (CROX, COLM, CALY) are left out: 12
+   names, about +8pt.
 
 Every other pass is recorded as a `decision` with `no_trade: true` and its reasons.
 

@@ -30,7 +30,11 @@
     "VWRPl_EQ": "VWRP.L",
     "ELF_EQ_US": "ELF",
     "OAC_US_EQ": "HIMS",
-    "SG1_US_EQ": "SG"
+    "SG1_US_EQ": "SG",
+    "SNDK1_US_EQ": "SNDK",
+    "GPS_US_EQ": "GAP",
+    "TPR_EQ_US": "TPR",
+    "ELY_US_EQ": "CALY"
   },
   "freshness_s": {
     "market_open": 600,
@@ -113,7 +117,16 @@
       "VUSAl_EQ",
       "IUMOl_EQ",
       "VUAGl_EQ",
-      "VRSGl_EQ"
+      "VRSGl_EQ",
+      "SNDK1_US_EQ",
+      "TDC_US_EQ",
+      "CARG_US_EQ",
+      "MU_US_EQ",
+      "HRMY_US_EQ",
+      "CART_US_EQ",
+      "GPS_US_EQ",
+      "VSCO_US_EQ",
+      "TPR_EQ_US"
     ],
     "max_order_gbp": 600.0,
     "max_orders_per_day": 60,
@@ -383,6 +396,39 @@
         "rationale": "Research loop Q65a passed its pre-registered test 31 Oct 2026 (results/Q61_Q65.md): +3.0%/yr vs the US market 1926-2022, t 5.07. LOW confidence: the classic January effect, -0.8%/yr since 2007 after publication. -50% disaster stop only. Demo only; first trade January 2027; kill after 30 closed trades or 730 days if it does not beat VWRP (the 730 days binds first).",
         "qty_decimals": 2
       }
+    },
+    "stock_screen": {
+      "enabled": true,
+      "rule": "Q199 screener basket: top 15 by composite score (gross profitability, FCF yield, momentum, low leverage, buybacks), equal 2% each, held a year",
+      "picks_month": "2026-10",
+      "picks_file": "/mnt/project-files/research/stock-screener/picks_2026-11.csv",
+      "picks": [
+        "SNDK1_US_EQ",
+        "TDC_US_EQ",
+        "CARG_US_EQ",
+        "MU_US_EQ",
+        "HRMY_US_EQ",
+        "DECK_US_EQ",
+        "CART_US_EQ",
+        "GPS_US_EQ",
+        "YETI_US_EQ",
+        "VSCO_US_EQ",
+        "LULU_US_EQ",
+        "TPR_EQ_US"
+      ],
+      "previous_picks": [],
+      "skipped": {
+        "CROX_US_EQ": "consumer discretionary cap: 9 of the 15 picks are consumer discretionary; at 2% each that is about +13pt active vs VWRP look-through, over the +-10pt sector limit, so the 3 lowest-scored discretionary names are left out (6 kept, about +8pt)",
+        "COLM_US_EQ": "consumer discretionary cap (see CROX_US_EQ)",
+        "ELY_US_EQ": "consumer discretionary cap (see CROX_US_EQ); CALY on Yahoo"
+      },
+      "entry_weight": 0.02,
+      "qty_decimals": 4,
+      "fund_from_vwrp": true,
+      "kill_after_trades": 30,
+      "kill_after_days": 730,
+      "rebalance": "Early January, from December month-end data: run python3 research/stock_screener/pick1.py live <YYYY-12> out.csv on branch claude/project-thread-b35v9o after the monthly research-data rebuild, then set picks to the new names (same sector cap), previous_picks to the old list, and picks_month. Held names that dropped out exit with reason rebalance.",
+      "rationale": "LOW CONFIDENCE demo forward test (research loop Q199, results/Q199.md): the pre-registered backtest failed (+3.4%/yr vs its universe, t 0.85); the pre-registration said it runs as a demo forward test either way. Owner asked on 3 Nov 2026 for individual stock picks from a system-designed screener. Demo only, never ISA or real money."
     }
   },
   "scoreboard": {
