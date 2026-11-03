@@ -1016,3 +1016,24 @@ def test_stock_screen_funds_from_vwrp_buys_each_pick_and_exits_on_the_yearly_reb
     ex = next(r for r in execution.latest_intents(st.intents()).values()
               if (r.get("signal") or {}).get("type") == "active_exit")
     assert ex["signal"]["why"] == "rebalance" and ex["signal"]["strategy"] == "stock_screen"
+
+
+def test_stock_screen_watch_sells_only_on_hard_sec_events_and_alerts_on_the_rest():
+    from market_agent import stock_screen as ss
+    sub = {"filings": {"recent": {"form": ["8-K", "10-Q", "8-K", "8-K", "4"],
+                                  "filingDate": ["2026-11-05", "2026-11-04", "2026-11-04", "2026-10-01", "2026-11-04"],
+                                  "accessionNumber": ["a1", "a2", "a3", "a0", "a4"],
+                                  "items": ["4.02,9.01", "", "2.02,9.01", "1.03", ""]}}}
+    held = {"MU_US_EQ": {"cik": 723125, "since": "2026-11-03", "entry_px": 100.0}}
+    st, found = ss.watch_filings(held, {"MU_US_EQ": sub}, {})
+    kinds = [(r["adsh"], r["kind"]) for r in found]
+    assert kinds == [("a1", "exit"), ("a2", "alert"), ("a3", "alert")]   # a0 predates the entry; a Form 4 is ignored
+    assert st["exit"]["MU_US_EQ"]["why"] == "sec_8k_non-reliance_on_past_financials"
+    assert ss.watch_filings(held, {"MU_US_EQ": sub}, st)[1] == []          # each filing reported once
+    sc = {"picks": ["MU_US_EQ"]}
+    assert ss.exit_why(sc, "MU_US_EQ", st) == "sec_8k_non-reliance_on_past_financials"
+    assert ss.missing({**sc, "_state": st}, [], {}, {}) == []              # no replacement until January
+    assert ss.classify({"form": "DEFM14A", "items": ""}) == ("exit", "sec_merger_vote")
+    st2, drops = ss.price_alerts(held, lambda t: {"price": 74.0}, {}, 0.25)
+    assert len(drops) == 1 and drops[0]["kind"] == "alert"
+    assert ss.price_alerts(held, lambda t: {"price": 70.0}, st2, 0.25)[1] == []

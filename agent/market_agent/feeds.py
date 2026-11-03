@@ -155,13 +155,13 @@ def sec_get(ua: str, max_bytes: int = 3_000_000) -> Callable:
     """A getter for SEC EDGAR that sends only to sec.gov hosts, with the declared User-Agent: JSON for full-text
     search, the first `max_bytes` of text for an archived filing."""
     def get(url: str, params: dict) -> dict | str:
-        if not url.startswith(("https://efts.sec.gov/", "https://www.sec.gov/")):
+        if not url.startswith(("https://efts.sec.gov/", "https://www.sec.gov/", "https://data.sec.gov/")):
             raise FeedError("sec_get refuses a non-SEC host")
         r = requests.get(url, params=params, headers={"User-Agent": ua, "Accept-Encoding": "gzip, deflate"},
                          timeout=30, stream=True)
         if r.status_code != 200:
             raise FeedError(f"sec: HTTP {r.status_code}")
-        if url.startswith("https://efts.sec.gov/"):
+        if url.startswith(("https://efts.sec.gov/", "https://data.sec.gov/")):
             return r.json()
         body = r.raw.read(max_bytes, decode_content=True)
         r.close()

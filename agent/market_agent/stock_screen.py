@@ -29,10 +29,14 @@ def watch(sc: dict | None) -> list[str]:
     return list(dict.fromkeys([*sc.get("picks", []), *sc.get("previous_picks", [])]))
 
 
-def exit_why(sc: dict | None, ticker: str) -> str | None:
-    """'rebalance' once a held name has left the picks list; otherwise held."""
+def exit_why(sc: dict | None, ticker: str, state: dict | None = None) -> str | None:
+    """A hard SEC event found by `watch_filings` (state["exit"]), else 'rebalance' once a held name has left the
+    picks list; otherwise held."""
     if not sc:
         return None
+    hard = ((state or {}).get("exit") or {}).get(ticker)
+    if hard:
+        return hard["why"]
     return None if ticker in sc.get("picks", []) else "rebalance"
 
 
@@ -41,7 +45,8 @@ def missing(sc: dict, records, positions, disabled) -> list[str]:
     if NAME in disabled:
         return []
     held = {e["ticker"] for e in active.open_trades(records) if e["signal"].get("strategy") == NAME}
-    return [t for t in sc.get("picks", []) if t not in held and t not in positions]
+    sold = set((sc.get("_state") or {}).get("exit") or {})  # a hard-event exit holds the cash until January
+    return [t for t in sc.get("picks", []) if t not in held and t not in positions and t not in sold]
 
 
 def need_gbp(sc: dict | None, cfg, records, positions, total: float, disabled) -> float:
@@ -114,3 +119,76 @@ def fund_order(sc, cfg, positions, quote_of, total: float, cash: float, keep: fl
     return (bt, -qty, qty * q["price"], q["price"], True,
             f"{NAME} funding: sell VWRP to buy the screen basket (needs £{need:.2f}, free cash £{free:.2f})",
             {"type": "screen_fund", "strategy": NAME, "need_gbp": round(need, 2), "quote": q})
+
+
+# ------------------------------------------------------------ continuous watch (owner 3 Nov: "on all of the time")
+# Rules from the research thread (Q200/Q201: interim selling on ranks, gate breaks or a 25% crash guard all did worse
+# than holding to January). Only hard SEC events sell; everything else is an alert for the daily brief.
+SUBMISSIONS = "https://data.sec.gov/submissions/CIK{cik:010d}.json"
+HARD_ITEMS = {"1.03": "bankruptcy", "3.01": "delisting notice", "4.01": "auditor change",
+              "4.02": "non-reliance on past financials"}
+HARD_FORMS = {"25-NSE": "delisting", "25": "delisting", "15-12B": "deregistration", "15-12G": "deregistration",
+              "DEFM14A": "merger vote", "PREM14A": "merger proxy", "SC TO-T": "tender offer", "SC 14D9": "tender offer"}
+PERIODIC = {"10-Q", "10-K", "10-Q/A", "10-K/A"}
+
+
+def recent_filings(sub: dict) -> list[dict]:
+    """[{form, date, adsh, items}] from an EDGAR submissions reply, newest first."""
+    r = (sub.get("filings") or {}).get("recent") or {}
+    forms = r.get("form") or []
+    return [{"form": f, "date": (r.get("filingDate") or [""] * len(forms))[i],
+             "adsh": (r.get("accessionNumber") or [""] * len(forms))[i],
+             "items": (r.get("items") or [""] * len(forms))[i] or ""} for i, f in enumerate(forms)]
+
+
+def classify(f: dict) -> tuple[str, str] | None:
+    """('exit', why) for a hard event, ('alert', why) for a filing to look at, or None."""
+    if f["form"] in HARD_FORMS:
+        return "exit", f"sec_{HARD_FORMS[f['form']].replace(' ', '_')}"
+    if f["form"].startswith("8-K"):
+        items = {i.strip() for i in f["items"].split(",") if i.strip()}
+        hard = sorted(items & set(HARD_ITEMS))
+        if hard:
+            return "exit", "sec_8k_" + "_".join(HARD_ITEMS[i].replace(" ", "_") for i in hard)
+        return "alert", f"8-K items {f['items'] or 'none listed'}"
+    if f["form"] in PERIODIC:
+        return "alert", f"new {f['form']}: re-check the screen gates (gross profitability, FCF yield, leverage, buybacks)"
+    return None
+
+
+def watch_filings(held: dict[str, dict], subs: dict[str, dict], state: dict) -> tuple[dict, list[dict]]:
+    """Scan each held name's filings since its entry day. `held` = {ticker: {cik, since}}; `subs` = {ticker:
+    submissions JSON}. Returns (new state, new findings [{ticker, kind, why, form, date, adsh}]); each filing is
+    reported once (state["seen"])."""
+    seen = dict(state.get("seen") or {})
+    exits = dict(state.get("exit") or {})
+    out = []
+    for tk, h in held.items():
+        for f in recent_filings(subs.get(tk) or {}):
+            if f["date"] < h["since"] or f["adsh"] in seen:
+                continue
+            seen[f["adsh"]] = tk
+            c = classify(f)
+            if not c:
+                continue
+            row = {"ticker": tk, "kind": c[0], "why": c[1], "form": f["form"], "date": f["date"], "adsh": f["adsh"],
+                   "items": f["items"]}
+            out.append(row)
+            if c[0] == "exit" and tk not in exits:
+                exits[tk] = {"why": c[1], "form": f["form"], "date": f["date"], "adsh": f["adsh"]}
+    return {**state, "seen": seen, "exit": exits}, out
+
+
+def price_alerts(held: dict[str, dict], quote_of, state: dict, drop: float) -> tuple[dict, list[dict]]:
+    """An alert (once per name) when a held name is `drop` or more below its entry price; no trade."""
+    done = dict(state.get("drop_alerted") or {})
+    out = []
+    for tk, h in held.items():
+        q = quote_of(tk)
+        if not q or tk in done or not h.get("entry_px"):
+            continue
+        r = q["price"] / h["entry_px"] - 1
+        if r <= -drop:
+            done[tk] = round(r, 4)
+            out.append({"ticker": tk, "kind": "alert", "why": f"{r:+.1%} below entry ({h['entry_px']} -> {q['price']})"})
+    return {**state, "drop_alerted": done}, out

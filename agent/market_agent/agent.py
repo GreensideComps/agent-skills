@@ -108,6 +108,8 @@ class Agent:
             self._run("social", self.refresh_social)
         if self._merger():
             self._run("merger", self.refresh_merger)
+        if self._screen():
+            self._run("screen_watch", self.refresh_screen_watch)
         if self._swing("gap"):
             self._run("gaps", self.refresh_gaps)
         if self._vt():
@@ -609,7 +611,55 @@ class Agent:
     def _screen(self) -> dict | None:
         a = self.cfg.get("active") or {}
         sc = a.get("stock_screen") or {}
-        return {**sc, "name": stock_screen.NAME} if a.get("enabled") and sc.get("enabled") else None
+        return ({**sc, "name": stock_screen.NAME, "_state": self.s.read("stock_screen.json") or {}}
+                if a.get("enabled") and sc.get("enabled") else None)
+
+    def refresh_screen_watch(self) -> None:
+        """stock_screen continuous watch: each held name's SEC filings (8-K items, delisting, merger and tender
+        forms, new 10-Q/10-K), a 25% fall from entry, and a missing quote while its market is open (a possible halt).
+        A hard SEC event marks the name for exit (no replacement until January); the rest are stock_screen_alert
+        events for the daily brief."""
+        sc = self._screen()
+        held = {e["ticker"]: {"cik": (sc.get("ciks") or {}).get(e["ticker"]), "since": feeds_ts(e.get("t", 0))[:10],
+                              "entry_px": e["signal"].get("entry_px")}
+                for e in active.open_trades(self.s.intents()) if e["signal"].get("strategy") == stock_screen.NAME}
+        if not held:
+            return
+        state = sc["_state"]
+        if self.sec_get is None:
+            ua = feeds.sec_user_agent(self.s.root)
+            if ua:
+                self.sec_get = feeds.sec_get(ua)
+        subs = {}
+        for tk, h in held.items():
+            if not h["cik"] or self.sec_get is None:
+                continue
+            self.s.renew_lease()
+            self.sleep(0.3)  # well under the SEC's 10 requests a second
+            try:
+                subs[tk] = self.sec_get(stock_screen.SUBMISSIONS.format(cik=int(h["cik"])), {})
+            except Exception as e:  # noqa: BLE001 - an unreadable reply confirms nothing; the next run retries
+                self.s.event("duty_failed", duty="screen_watch", ticker=tk, error=str(e)[:200])
+        state, found = stock_screen.watch_filings({k: v for k, v in held.items() if k in subs}, subs, state)
+        state, drops = stock_screen.price_alerts(held, self._quote, state, sc.get("alert_drop", 0.25))
+        day = feeds_ts(self.clock())[:10]
+        halts = dict(state.get("halt_alerted") or {})
+        for tk in held:
+            if self.market_open(tk) and not self._quote(tk) and halts.get(tk) != day:
+                halts[tk] = day
+                drops.append({"ticker": tk, "kind": "alert",
+                              "why": f"no valid quote while its market is open ({self.quote_state.get(feeds.yahoo_symbol(tk, self.cfg['yahoo_overrides']))}): possible halt"})
+        state = {**state, "halt_alerted": halts, "checked": feeds_ts(self.clock()),
+                 "missing_cik": sorted(k for k, v in held.items() if not v["cik"])}
+        self.s._replace("stock_screen.json", state)
+        for r in found + drops:
+            self.s.event("stock_screen_alert", strategy=stock_screen.NAME, **r)
+            lvl = "critical" if r["kind"] == "exit" else "warn"
+            self.alert(lvl, f"stock_screen:{r['ticker']}:{r.get('adsh') or r['why'][:20]}",
+                       f"stock_screen {r['ticker']}: {'EXIT ' if r['kind'] == 'exit' else ''}{r['why']}"
+                       + (f" ({r['form']} {r['date']})" if r.get("form") else ""))
+        if any(r["kind"] == "exit" for r in found):
+            self.need_decide = True
 
     def _merger(self) -> dict | None:
         a = self.cfg.get("active") or {}
@@ -636,7 +686,8 @@ class Agent:
         if strategy == stock_screen.NAME:  # held until the yearly rebalance drops the name, or the kill rule
             if strategy in (self.s.read("strategies.json") or {}):
                 return "killed"
-            return stock_screen.exit_why(self._screen() or self.cfg["active"].get("stock_screen"), ticker)
+            return stock_screen.exit_why(self._screen() or self.cfg["active"].get("stock_screen"), ticker,
+                                         self.s.read("stock_screen.json"))
         if strategy == merger.NAME:  # a deal trade exits on a termination, its stop or the cash-out, not on price
             return "deal_terminated" if ticker in self.mstate.get("terminated", {}) else None
         if strategy == social.NAME:  # C8 trades exit on their own attention rule, not the price review

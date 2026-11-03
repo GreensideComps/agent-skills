@@ -1,4 +1,4 @@
-# Always-on demo market agent (agent-1.12)
+# Always-on demo market agent (agent-1.12.3)
 
 **Mandate:** the owner's 26 Oct 2026 handoff (`cmsg_01U4KMvkBYNknqm4HRVie8uvK9gRYqGXBK4bQP49dBz49i`), covering
 the demo account only. The Trading 212 client refuses any host but `demo.trading212.com`, and `load_credentials`
@@ -159,6 +159,14 @@ before buys.
    which at 2% each is about +13pt active vs VWRP look-through (UNVERIFIED: FTSE All-World discretionary taken as
    about 10-13%), over the +-10pt sector limit, so the three lowest-scored (CROX, COLM, CALY) are left out: 12
    names, about +8pt.
+   Continuous watch (agent-1.12.3, owner 3 Nov "on all of the time"; rules from research Q200/Q201, where interim
+   selling on ranks, gate breaks or a 25% crash guard all did worse than holding): every 15 minutes the agent reads
+   each held name's SEC submissions. It SELLS on an 8-K with item 1.03 (bankruptcy), 3.01 (delisting notice), 4.01
+   (auditor change) or 4.02 (non-reliance), or a delisting (25, 25-NSE, 15-12B/G), merger (DEFM14A, PREM14A) or
+   tender (SC TO-T, SC 14D9) filing, and holds the cash until January. It only ALERTS (`stock_screen_alert` events)
+   on any other 8-K, a new 10-Q or 10-K (the gates still need re-checking by hand), a 25% fall from entry, or no
+   quote while the market is open (a possible halt). Orders use 3 decimals (T212 refused 4 on CARG and HRMY); any
+   other precision refusal is learned per line in `state/precision.json`.
 
 Every other pass is recorded as a `decision` with `no_trade: true` and its reasons.
 
