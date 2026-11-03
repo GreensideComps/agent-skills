@@ -1,0 +1,108 @@
+{
+ "n_trials": 418,
+ "B1_vs_universe": {
+  "months": 96,
+  "ann": 0.0342832818252555,
+  "t_nw": 0.8486151183672794,
+  "sr_m": 0.0853669794285969,
+  "skew": 0.351819192644009,
+  "kurt": 3.5346735767618362
+ },
+ "dsr": 0.00012868650817210447,
+ "B2_vs_vwrp_gbp": {
+  "months": 96,
+  "ann": 0.05833661259136812,
+  "t_nw": 1.1269939649348784,
+  "sr_m": 0.1126886659232209,
+  "skew": 0.34025527344041767,
+  "kurt": 5.222560111379581
+ },
+ "portfolio_cagr_gbp": 0.1478684436425488,
+ "vwrp_cagr_gbp": 0.10128757436095803,
+ "universe_cagr_usd": 0.08578833348293702,
+ "portfolio_cagr_usd": 0.11176049156403822,
+ "T2_thirds_ann": [
+  -0.04253980298425004,
+  -0.0006757060004066607,
+  0.14606535446042318
+ ],
+ "T3_bull_ann": 0.07768785892800194,
+ "T3_bear_ann": -0.05759524860466589,
+ "T4_half_yearly": {
+  "months": 96,
+  "ann": -0.012383867202487055,
+  "t_nw": -0.3601238515891444,
+  "sr_m": -0.03228681901795519,
+  "skew": 0.4392546503770915,
+  "kurt": 4.169935926058773
+ },
+ "T5_large_only": {
+  "months": 96,
+  "ann": 0.03604982462326137,
+  "t_nw": 1.4900855493279954,
+  "sr_m": 0.15303512261357807,
+  "skew": 0.3018484648461508,
+  "kurt": 3.0483156958967337
+ },
+ "T6_cost2": {
+  "months": 96,
+  "ann": 0.0290832818252555,
+  "t_nw": 0.7169686241003039,
+  "sr_m": 0.07245505525753859,
+  "skew": 0.3302457407805157,
+  "kurt": 3.432599582321351
+ },
+ "T6_lag1": {
+  "months": 96,
+  "ann": 0.0009055044672462258,
+  "t_nw": 0.024706125701793518,
+  "sr_m": 0.002355577495536125,
+  "skew": 0.37301358949826574,
+  "kurt": 3.293580490268082
+ },
+ "gross_minus_univ_ann": 0.0394832818252555,
+ "cost_drag_ann": 0.005199999999999999,
+ "yearly": {
+  "2015": {
+   "port": -0.07776683164691867,
+   "univ": -0.028545453099548368,
+   "names": "CENX,GLW,INTC,KDP,LMT,LOGI,LRCX,MSFT,NXPI,PPC,SWKS,TAP,TDC,TTWO,WDC"
+  },
+  "2016": {
+   "port": 0.14048697330941584,
+   "univ": 0.13634973726293986,
+   "names": "AEO,AYI,CALM,CBRL,DLX,EBAY,EL,GME,HD,HELE,NUS,PEGA,POOL,RHI,SNX"
+  },
+  "2017": {
+   "port": 0.27912247516069577,
+   "univ": 0.2257548041670281,
+   "names": "AEIS,BBY,CPRI,FFIV,GAP,GME,KSS,LCII,NTAP,NUS,STLD,TDC,TSEOQ,URBN,WOR"
+  },
+  "2018": {
+   "port": -0.11129628754900356,
+   "univ": -0.09733026333703942,
+   "names": "ALGN,BBY,BLDR,CGNX,CPRI,DECK,EL,GAP,GGG,HLF,KRO,NUS,PLCE,RL,TREX"
+  },
+  "2019": {
+   "port": 0.18340123174316791,
+   "univ": 0.2987492325114596,
+   "names": "AAP,AEO,CPRI,DECK,DKS,FFIV,GWW,KSS,LULU,M,MU,SAM,USNA,WSM,ZBRA"
+  },
+  "2020": {
+   "port": 0.37934221709148064,
+   "univ": 0.24164227321433018,
+   "names": "ABG,BBY,BLDR,CRUS,IBP,LAD,LKQ,LRCX,LULU,MAN,MLKN,RHI,TER,UFPI,YETI"
+  },
+  "2021": {
+   "port": 0.3742725600009158,
+   "univ": 0.16113858540610027,
+   "names": "BBY,DKS,FIZZ,IDXX,LAD,LOGI,MED,NUS,POOL,RHI,SFM,SNX,UPBD,WSM,YETI"
+  },
+  "2022": {
+   "port": -0.12981262033704044,
+   "univ": -0.15532716231361987,
+   "names": "ACI,AN,ASO,BKE,CROX,GPI,LPX,PAG,RHI,RVLV,SFM,SIG,SKY,TDC,WSM"
+  }
+ },
+ "pass": false
+}
