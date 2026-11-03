@@ -67,6 +67,7 @@ def entry_orders(sc, cfg, records, positions, quote_of, fx, total, cash, now, vw
     day = time.strftime("%Y-%m-%d", time.gmtime(now))
     tried = {r["ticker"] for r in execution.latest_intents(records).values()
              if (r.get("signal") or {}).get("strategy") == NAME and r.get("ts", "").startswith(day)
+             and r.get("status") != "not_sent"  # never reached the broker (lost in a restart): retry now
              and "quantity-precision-mismatch" not in (r.get("error") or "")}  # retried at fewer decimals
     size = sc["entry_weight"] * total
     reserve = 1 + cfg["core"].get("buy_reserve", 0)
