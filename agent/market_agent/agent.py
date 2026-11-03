@@ -268,6 +268,8 @@ class Agent:
             try:
                 bars = swing.ohlcv(sym, self.get)
                 closes, vols = bars["c"], bars["v"]
+                if not closes:
+                    raise ValueError(f"no daily bars for {sym}")
             except Exception as e:  # noqa: BLE001 - a name without history gets no review, so no entry
                 rows.append({"ticker": t, "error": str(e)[:120]})
                 self.reviews.pop(t, None)

@@ -34,7 +34,8 @@
     "SNDK1_US_EQ": "SNDK",
     "GPS_US_EQ": "GAP",
     "TPR_EQ_US": "TPR",
-    "ELY_US_EQ": "CALY"
+    "ELY_US_EQ": "CALY",
+    "VSCO_US_EQ": "VSXY"
   },
   "freshness_s": {
     "market_open": 600,
