@@ -94,7 +94,7 @@ def sleeve_pnl(records, positions, day: str) -> tuple[float, float]:
     broker's current value."""
     today = total = 0.0
     for t in trades(records):
-        if t["entry"]["signal"].get("strategy") == "stock_screen":
+        if t["entry"]["signal"].get("strategy") in ("stock_screen", "buyback_value"):
             continue  # a separate forward test funded from the core, judged only by its own kill rule
         if t["exit"]:
             r = closed_result(t)["pnl_gbp"]

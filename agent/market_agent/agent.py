@@ -16,6 +16,7 @@ from urllib.parse import quote
 
 from . import (
     active,
+    buyback_value,
     execution,
     feeds,
     gap_rebound,
@@ -617,6 +618,20 @@ class Agent:
         return ({**sc, "name": stock_screen.NAME, "_state": self.s.read("stock_screen.json") or {}}
                 if a.get("enabled") and sc.get("enabled") else None)
 
+    def _buyback(self) -> dict | None:
+        a = self.cfg.get("active") or {}
+        bc = a.get("buyback_value") or {}
+        return ({**bc, "name": buyback_value.NAME, "fund_type": "buyback_fund"}
+                if a.get("enabled") and bc.get("enabled") else None)
+
+    def _buyback_picks(self) -> dict | None:
+        bc = self._buyback()
+        return buyback_value.load_picks(bc["picks_dir"], self.clock(), bc["max_picks_age_days"]) if bc else None
+
+    def _us_tradeable(self, sym: str) -> str | None:
+        t = f"{sym}_US_EQ"
+        return t if t in self.schedule_of else None
+
     def _gap_rebound(self) -> dict | None:
         a = self.cfg.get("active") or {}
         gc = a.get("gap_rebound") or {}
@@ -788,6 +803,8 @@ class Agent:
                 return "killed"
             return stock_screen.exit_why(self._screen() or self.cfg["active"].get("stock_screen"), ticker,
                                          self.s.read("stock_screen.json"))
+        if strategy == buyback_value.NAME:  # held 6 months (its time stop), or until the kill rule
+            return "killed" if strategy in (self.s.read("strategies.json") or {}) else None
         if strategy == gap_rebound.NAME:  # held 60 trading days (its time stop), or until the kill rule
             return "killed" if strategy in (self.s.read("strategies.json") or {}) else None
         if strategy == merger.NAME:  # a deal trade exits on a termination, its stop or the cash-out, not on price
@@ -912,7 +929,17 @@ class Agent:
                 + (list(self.mstate.get("watch", [])) if self._merger() else [])
                 + [t for vc in self._vt() for t in (vc["factor_ticker"], vc.get("market_ticker")) if t]
                 + stock_screen.watch(a.get("stock_screen"))
-                + self._gap_rebound_watch())
+                + self._gap_rebound_watch() + self._buyback_watch())
+
+    def _buyback_watch(self) -> list[str]:
+        bc = self._buyback()
+        if not bc:
+            return []
+        recs = self.s.intents()
+        w = buyback_value.wanted(bc, self._buyback_picks(), recs, self.positions, self._us_tradeable,
+                                 self.s.read("strategies.json") or {})
+        return sorted({x["ticker"] for x in w} | {e["ticker"] for e in active.open_trades(recs)
+                                                   if e["signal"].get("strategy") == buyback_value.NAME})
 
     def _gap_rebound_watch(self) -> list[str]:
         if not self._gap_rebound():
@@ -1036,6 +1063,14 @@ class Agent:
                 self.s._replace("strategies.json", disabled)
                 self.s.event("strategy_disabled", strategy=gc["name"], **k)
                 self.alert("warn", f"strategy_disabled:{gc['name']}", f"strategy {gc['name']} switched off: {k['why']}")
+        bc = self._buyback()
+        if bc and bc["name"] not in disabled:
+            k = value_timing.kill(recs, self.positions, self.clock(), vwrp_px, bc, feeds_ts(self.clock()))
+            if k:
+                disabled = {**disabled, bc["name"]: k}
+                self.s._replace("strategies.json", disabled)
+                self.s.event("strategy_disabled", strategy=bc["name"], **k)
+                self.alert("warn", f"strategy_disabled:{bc['name']}", f"strategy {bc['name']} switched off: {k['why']}")
         total = float((self.summary or {}).get("totalValue") or 0)
         cash = float(((self.summary or {}).get("cash") or {}).get("availableToTrade") or 0)
         fxq = self.quotes.get(self.cfg["benchmark"]["fx"])
@@ -1049,6 +1084,22 @@ class Agent:
             if so:
                 return so[0]
             fo = stock_screen.fund_order(sc, self.cfg, self.positions, self._quote, total, cash, keep, need, day, recs)
+            if fo and self.market_open(fo[0]):
+                return fo
+        if bc:  # funded from VWRP like the screen basket, after it
+            keep = self.cfg["active"].get("cash_reserve_weight", 0) * total
+            keep += stock_screen.need_gbp(sc, self.cfg, recs, self.positions, total, disabled) if sc else 0.0
+            picks = self._buyback_picks()
+            bo, n = buyback_value.entry_orders(bc, self.cfg, recs, self.positions, self._quote,
+                                               fxq["price"] if fxq else None, total, cash - keep, self.clock(),
+                                               vwrp_px, disabled, picks, self._us_tradeable, self.market_open,
+                                               self.s.read("precision.json") or {})
+            notes += n
+            if bo:
+                return bo[0]
+            need = buyback_value.need_gbp(bc, self.cfg, picks, recs, self.positions, self._us_tradeable, total,
+                                          disabled)
+            fo = stock_screen.fund_order(bc, self.cfg, self.positions, self._quote, total, cash, keep, need, day, recs)
             if fo and self.market_open(fo[0]):
                 return fo
         orders, n = active.entry_orders(self.cfg, recs, self.positions, self._quote, fxq["price"] if fxq else None,
@@ -1164,6 +1215,8 @@ class Agent:
         keep = (self.cfg.get("active") or {}).get("cash_reserve_weight", 0) * total if self._watch() else 0.0
         keep += stock_screen.need_gbp(self._screen(), self.cfg, self.s.intents(), self.positions, total,
                                       self.s.read("strategies.json") or {})  # cash freed for the basket stays
+        keep += buyback_value.need_gbp(self._buyback(), self.cfg, self._buyback_picks(), self.s.intents(),
+                                       self.positions, self._us_tradeable, total, self.s.read("strategies.json") or {})
         if cash - keep <= core["invest_cash_above_gbp"]:
             notes.append(f"cash £{cash:.2f}: £{keep:.2f} is kept for the active sleeve")
             return None
@@ -1186,6 +1239,8 @@ class Agent:
         if (signal or {}).get("strategy") == gap_rebound.NAME and (
                 ((self.s.read("gap_rebound.json") or {}).get("signals") or {}).get(ticker) or {}).get("eligible"):
             limits = {**limits, "buy_whitelist": [*limits["buy_whitelist"], ticker]}  # a signal that passed every filter
+        if (signal or {}).get("strategy") == buyback_value.NAME and signal.get("type") == "active_entry":
+            limits = {**limits, "buy_whitelist": [*limits["buy_whitelist"], ticker]}  # a pick from the month's file
         refusals = execution.risk_check(order, control=self.s.control(), records=self.s.intents(),
                                         pending=self.pending, positions=self.positions, limits=limits,
                                         day=day, consecutive_errors=self.ex.consecutive_errors, quote_ok=quote_ok,

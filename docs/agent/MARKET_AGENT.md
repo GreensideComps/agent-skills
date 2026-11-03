@@ -1,4 +1,4 @@
-# Always-on demo market agent (agent-1.13)
+# Always-on demo market agent (agent-1.14)
 
 **Mandate:** the owner's 26 Oct 2026 handoff (`cmsg_01U4KMvkBYNknqm4HRVie8uvK9gRYqGXBK4bQP49dBz49i`), covering
 the demo account only. The Trading 212 client refuses any host but `demo.trading212.com`, and `load_credentials`
@@ -179,6 +179,13 @@ Every other pass is recorded as a `decision` with `no_trade: true` and its reaso
     in the last 90 minutes of New York trading on day +2 and sold by its time stop 60 trading days later; no stop or
     take-profit; at most 8 open; kill after 30 closed trades or 730 days if it has not beaten VWRP. Every liquid
     drop (bought or not) is appended to `research/always-on/forward/Q205.csv`; state in `state/gap_rebound.json`.
+
+18. **buyback_value** (agent-1.14, research loop Q206, `buyback_value.py`, `active.buyback_value`): edge "near miss,
+    unproven" (+2.2%/trade 2015-22, DSR 0.78 < 0.95). The research loop writes each month-end's point-in-time picks to
+    `research/always-on/forward/Q206_picks_YYYY-MM.csv` (columns symbol, sic, rank, fcf_ev, ...; best FCF/EV first).
+    The agent buys the newest list (ignored once 45 days past its month-end) at 2% each, at most 10 open and 2 per SIC
+    two-digit group, funded by selling VWRP like stock_screen, and sells each by its 182-day time stop; no stop-loss;
+    P&L kept out of the sleeve's loss stop; kill after 30 closed trades or 730 days if it has not beaten VWRP.
 
 ## Risk gate (`execution.risk_check`)
 

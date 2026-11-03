@@ -1,5 +1,5 @@
 {
-  "version": "agent-1.13",
+  "version": "agent-1.14",
   "note": "Always-on demo market agent. Demo account only (the client refuses any other host). Owner mandate: cmsg_01U4KMvkBYNknqm4HRVie8uvK9gRYqGXBK4bQP49dBz49i (26 Oct 2026).",
   "intervals_s": {
     "loop": 15,
@@ -467,6 +467,21 @@
       "kill_after_trades": 30,
       "kill_after_days": 730,
       "forward_csv": "/mnt/project-files/research/always-on/forward/Q205.csv"
+    },
+    "buyback_value": {
+      "enabled": true,
+      "rule": "monthly Q206 screen (US $2bn+, ex financials/utilities): TTM buybacks/market cap top 10%, shares down y/y, TTM FCF > 0, net debt/EBITDA < 3, FCF/EV top 30%; buy 2% each (cheapest FCF/EV first, max 10 open, max 2 per SIC2), hold 6 months",
+      "edge": "near miss, unproven: Q206 +2.2%/trade vs universe 2015-2022, DSR 0.78 < 0.95",
+      "picks_dir": "/mnt/project-files/research/always-on/forward",
+      "max_picks_age_days": 45,
+      "entry_weight": 0.02,
+      "max_open": 10,
+      "max_per_sic2": 2,
+      "hold_days": 182,
+      "qty_decimals": 3,
+      "fund_from_vwrp": true,
+      "kill_after_trades": 30,
+      "kill_after_days": 730
     }
   },
   "scoreboard": {

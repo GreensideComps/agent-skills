@@ -105,7 +105,8 @@ def fund_order(sc, cfg, positions, quote_of, total: float, cash: float, keep: fl
     free = cash - keep
     if free >= min(need, sc["entry_weight"] * total * reserve):
         return None
-    if any((r.get("signal") or {}).get("type") == "screen_fund" and r.get("ts", "").startswith(day)
+    ftype = sc.get("fund_type", "screen_fund")  # buyback_value reuses this with its own type and name
+    if any((r.get("signal") or {}).get("type") == ftype and r.get("ts", "").startswith(day)
            for r in execution.latest_intents(records).values()):
         return None
     bt = cfg["benchmark"]["t212"]
@@ -118,8 +119,8 @@ def fund_order(sc, cfg, positions, quote_of, total: float, cash: float, keep: fl
     if qty <= 0:
         return None
     return (bt, -qty, qty * q["price"], q["price"], True,
-            f"{NAME} funding: sell VWRP to buy the screen basket (needs £{need:.2f}, free cash £{free:.2f})",
-            {"type": "screen_fund", "strategy": NAME, "need_gbp": round(need, 2), "quote": q})
+            f"{sc.get('name', NAME)} funding: sell VWRP to buy its basket (needs £{need:.2f}, free cash £{free:.2f})",
+            {"type": ftype, "strategy": sc.get("name", NAME), "need_gbp": round(need, 2), "quote": q})
 
 
 # ------------------------------------------------------------ continuous watch (owner 3 Nov: "on all of the time")
