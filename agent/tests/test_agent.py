@@ -167,6 +167,7 @@ def make(tmp_path, enabled=True, prices=None, satellite=False, active_on=False):
     cfg["active"]["enabled"] = active_on
     cfg["scoreboard"]["enabled"] = False  # the real scoreboard must never read a test's state
     cfg["active"]["stock_screen"]["enabled"] = False  # its own test turns it on; it would fund itself from VWRP first
+    cfg["active"]["gap_rebound"]["enabled"] = False  # needs the Nasdaq calendar and SEC; its unit tests cover it
     ag = agent_mod.Agent(st, b, cfg, ambiguous_exc=Ambiguous, api_exc=ApiErr,
                          get=fake_get(clock, prices), clock=clock, sleep=lambda s: None)
     st.acquire_lease()

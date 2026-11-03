@@ -18,6 +18,7 @@ from . import (
     active,
     execution,
     feeds,
+    gap_rebound,
     merger,
     review,
     social,
@@ -110,6 +111,8 @@ class Agent:
             self._run("merger", self.refresh_merger)
         if self._screen():
             self._run("screen_watch", self.refresh_screen_watch)
+        if self._gap_rebound():
+            self._run("gap_rebound", self.refresh_gap_rebound)
         if self._swing("gap"):
             self._run("gaps", self.refresh_gaps)
         if self._vt():
@@ -614,6 +617,103 @@ class Agent:
         return ({**sc, "name": stock_screen.NAME, "_state": self.s.read("stock_screen.json") or {}}
                 if a.get("enabled") and sc.get("enabled") else None)
 
+    def _gap_rebound(self) -> dict | None:
+        a = self.cfg.get("active") or {}
+        gc = a.get("gap_rebound") or {}
+        return {**gc, "name": gap_rebound.NAME} if a.get("enabled") and gc.get("enabled") else None
+
+    def refresh_gap_rebound(self) -> float | None:
+        """gap_rebound (Q205): for each recent earnings day whose day +1 close is in, measure every listed US stock's
+        move vs SPY over days -1..+1; for a liquid >= 10% drop, read its SEC filings (made before day 0) for the health
+        gate. Signals go to state/gap_rebound.json and the research thread's forward log; buys happen in decide()."""
+        gc = self._gap_rebound()
+        now = self.clock()
+        nyd = gap_rebound.ny_now(now)
+        if nyd.weekday() >= 5:
+            return None
+        st = {"done": {}, "signals": {}, "queue": {}, **(self.s.read("gap_rebound.json") or {})}
+        spy = gap_rebound.bars("SPY", self.get)
+        days = [d for d, _, _ in spy]
+        today = nyd.date().isoformat()
+        complete = [d for d in days if d < today or (d == today and nyd.hour >= 17)]
+        for i in range(max(0, len(complete) - 4), len(complete) - 1):
+            d0, dp1 = complete[i], complete[i + 1]
+            buy = gap_rebound.exit_day(dp1, 1)
+            if buy < today or d0 in st["done"]:
+                continue
+            if d0 not in st["queue"]:
+                rows = ((self.get(gap_rebound.EARNINGS, {"date": d0}) or {}).get("data") or {}).get("rows") or []
+                st["queue"][d0] = sorted({r["symbol"] for r in rows if r.get("symbol", "").isalpha()
+                                          and gap_rebound.mcap(r) >= gc["min_mcap"]
+                                          and f"{r['symbol']}_US_EQ" in self.schedule_of})
+        n = 0
+        for d0 in sorted(st["queue"]):
+            todo = st["queue"][d0]
+            while todo and n < gc["per_run"]:
+                sym = todo.pop(0)
+                n += 1
+                self.s.renew_lease()
+                self.sleep(gc["pacing_s"])
+                try:
+                    m = gap_rebound.event_move(gap_rebound.bars(sym, self.get), spy, d0)
+                except Exception as e:  # noqa: BLE001 - no bars confirm nothing; the name is skipped and logged
+                    self.s.event("gap_rebound_skip", strategy=gap_rebound.NAME, symbol=sym, error=str(e)[:200])
+                    continue
+                if not m or m["ear"] > gc["ear_max"] or m["median_dollar_vol"] < gc["min_dollar_vol"]:
+                    continue
+                self._gap_rebound_signal(sym, m, gc, st)
+            if not todo:
+                st["queue"].pop(d0)
+                st["done"][d0] = feeds_ts(self.clock())
+        st["done"] = dict(sorted(st["done"].items())[-30:])
+        keep_from = complete[max(0, len(complete) - 40)] if complete else today
+        st["signals"] = {k: v for k, v in st["signals"].items() if v["day0"] >= keep_from}  # the last ~40 sessions
+        st["checked"] = feeds_ts(self.clock())
+        self.s._replace("gap_rebound.json", st)
+        if any(s.get("eligible") and s["buy_day"] == today for s in st["signals"].values()):
+            self.need_decide = True
+        return gc["resume_s"] if st["queue"] else None
+
+    def _gap_rebound_signal(self, sym: str, m: dict, gc: dict, st: dict) -> None:
+        """Health gate (SEC companyfacts, filed before day 0) for one liquid >= 10% earnings drop, then record it."""
+        if self.sec_get is None:
+            ua = feeds.sec_user_agent(self.s.root)
+            if ua:
+                self.sec_get = feeds.sec_get(ua, max_bytes=5_000_000)
+        h = {"weak": None, "why": "UNVERIFIED: no SEC contact User-Agent configured"}
+        if self.sec_get is not None:
+            try:
+                if not getattr(self, "sec_ciks", None):
+                    raw = self.sec_get(gap_rebound.TICKERS, {})
+                    raw = json.loads(raw) if isinstance(raw, str) else raw
+                    self.sec_ciks = {v["ticker"]: int(v["cik_str"]) for v in raw.values()}
+                cik = self.sec_ciks.get(sym)
+                if cik is None:
+                    h = {"weak": None, "why": "UNVERIFIED: ticker not in SEC company_tickers"}
+                else:
+                    self.sleep(0.3)
+                    h = gap_rebound.health(self.sec_get(gap_rebound.FACTS.format(cik=cik), {}), m["day0"])
+            except Exception as e:  # noqa: BLE001 - an unreadable filing confirms nothing: no trade
+                h = {"weak": None, "why": f"UNVERIFIED: SEC read failed ({str(e)[:120]})"}
+        tk = f"{sym}_US_EQ"
+        sig = {**m, "symbol": sym, "ticker": tk, "health": h, "eligible": h.get("weak") is True,
+               "buy_day": gap_rebound.exit_day(m["day_p1"], 1), "ts": feeds_ts(self.clock())}
+        st["signals"][tk] = sig
+        self.s.event("gap_rebound_signal", strategy=gap_rebound.NAME, **sig)
+        path = Path(gc["forward_csv"])
+        try:
+            new = not path.exists()
+            with path.open("a") as f:
+                if new:
+                    f.write("logged_utc,symbol,day0,ear,ret,spy_ret,median_dollar_vol,fcf_ttm,rev_ttm,rev_ttm_prev,"
+                            "weak,eligible,buy_day,note\n")
+                f.write(",".join(str(x) for x in (
+                    sig["ts"], sym, m["day0"], m["ear"], m["ret"], m["spy_ret"], m["median_dollar_vol"], h.get("fcf"),
+                    h.get("rev"), h.get("rev_prev"), h.get("weak"), sig["eligible"], sig["buy_day"],
+                    '"' + h.get("why", "").replace('"', "'") + '"')) + "\n")
+        except OSError as e:
+            self.s.event("duty_failed", duty="gap_rebound", error=f"forward log: {e}"[:200])
+
     def refresh_screen_watch(self) -> None:
         """stock_screen continuous watch: each held name's SEC filings (8-K items, delisting, merger and tender
         forms, new 10-Q/10-K), a 25% fall from entry, and a missing quote while its market is open (a possible halt).
@@ -688,6 +788,8 @@ class Agent:
                 return "killed"
             return stock_screen.exit_why(self._screen() or self.cfg["active"].get("stock_screen"), ticker,
                                          self.s.read("stock_screen.json"))
+        if strategy == gap_rebound.NAME:  # held 60 trading days (its time stop), or until the kill rule
+            return "killed" if strategy in (self.s.read("strategies.json") or {}) else None
         if strategy == merger.NAME:  # a deal trade exits on a termination, its stop or the cash-out, not on price
             return "deal_terminated" if ticker in self.mstate.get("terminated", {}) else None
         if strategy == social.NAME:  # C8 trades exit on their own attention rule, not the price review
@@ -809,7 +911,17 @@ class Agent:
         return (list(a.get("watchlist", [])) + sorted((self._social() or {}).get("universe", {}))
                 + (list(self.mstate.get("watch", [])) if self._merger() else [])
                 + [t for vc in self._vt() for t in (vc["factor_ticker"], vc.get("market_ticker")) if t]
-                + stock_screen.watch(a.get("stock_screen")))
+                + stock_screen.watch(a.get("stock_screen"))
+                + self._gap_rebound_watch())
+
+    def _gap_rebound_watch(self) -> list[str]:
+        if not self._gap_rebound():
+            return []
+        today = gap_rebound.ny_now(self.clock()).date().isoformat()
+        st = self.s.read("gap_rebound.json") or {}
+        return sorted({tk for tk, s in (st.get("signals") or {}).items() if s.get("eligible") and s["buy_day"] >= today}
+                      | {e["ticker"] for e in active.open_trades(self.s.intents())
+                         if e["signal"].get("strategy") == gap_rebound.NAME})
 
     def _active_exits(self, recs, vwrp_px) -> list[tuple]:
         if not self._watch():
@@ -916,6 +1028,14 @@ class Agent:
                 self.s._replace("strategies.json", disabled)
                 self.s.event("strategy_disabled", strategy=sc["name"], **k)
                 self.alert("warn", f"strategy_disabled:{sc['name']}", f"strategy {sc['name']} switched off: {k['why']}")
+        gc = self._gap_rebound()
+        if gc and gc["name"] not in disabled:
+            k = value_timing.kill(recs, self.positions, self.clock(), vwrp_px, gc, feeds_ts(self.clock()))
+            if k:
+                disabled = {**disabled, gc["name"]: k}
+                self.s._replace("strategies.json", disabled)
+                self.s.event("strategy_disabled", strategy=gc["name"], **k)
+                self.alert("warn", f"strategy_disabled:{gc['name']}", f"strategy {gc['name']} switched off: {k['why']}")
         total = float((self.summary or {}).get("totalValue") or 0)
         cash = float(((self.summary or {}).get("cash") or {}).get("availableToTrade") or 0)
         fxq = self.quotes.get(self.cfg["benchmark"]["fx"])
@@ -950,6 +1070,13 @@ class Agent:
                                         total, cash, day, self.clock(), vwrp_px, disabled, self.mstate)
             notes += n
             orders += mo
+        if gc and not active.sleeve_block(self.cfg, recs, self.positions, day, total):
+            go, n = gap_rebound.entry_orders(gc, self.cfg, recs, self.positions, self._quote,
+                                             fxq["price"] if fxq else None, total, cash, self.clock(), vwrp_px,
+                                             disabled, self.s.read("gap_rebound.json"),
+                                             self.s.read("precision.json") or {})
+            notes += n
+            orders += go
         for vc in (self._vt() if not active.sleeve_block(self.cfg, recs, self.positions, day, total) else []):
             vo, n = value_timing.entry_orders({**vc, "_cfg": self.cfg}, recs, self.positions, self._quote,
                                               fxq["price"] if fxq else None, total, cash, self.clock(), vwrp_px,
@@ -1056,6 +1183,9 @@ class Agent:
         limits = self.cfg["limits"]
         if (signal or {}).get("strategy") == merger.NAME and (self.mstate.get("deals", {}).get(ticker) or {}).get("eligible"):
             limits = {**limits, "buy_whitelist": [*limits["buy_whitelist"], ticker]}  # a deal that passed every filter
+        if (signal or {}).get("strategy") == gap_rebound.NAME and (
+                ((self.s.read("gap_rebound.json") or {}).get("signals") or {}).get(ticker) or {}).get("eligible"):
+            limits = {**limits, "buy_whitelist": [*limits["buy_whitelist"], ticker]}  # a signal that passed every filter
         refusals = execution.risk_check(order, control=self.s.control(), records=self.s.intents(),
                                         pending=self.pending, positions=self.positions, limits=limits,
                                         day=day, consecutive_errors=self.ex.consecutive_errors, quote_ok=quote_ok,

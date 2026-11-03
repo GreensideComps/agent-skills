@@ -1,4 +1,4 @@
-# Always-on demo market agent (agent-1.12.3)
+# Always-on demo market agent (agent-1.13)
 
 **Mandate:** the owner's 26 Oct 2026 handoff (`cmsg_01U4KMvkBYNknqm4HRVie8uvK9gRYqGXBK4bQP49dBz49i`), covering
 the demo account only. The Trading 212 client refuses any host but `demo.trading212.com`, and `load_credentials`
@@ -169,6 +169,16 @@ before buys.
    other precision refusal is learned per line in `state/precision.json`.
 
 Every other pass is recorded as a `decision` with `no_trade: true` and its reasons.
+
+17. **gap_rebound** (agent-1.13, research loop Q205 from the Q203 control group, `gap_rebound.py`,
+    `active.gap_rebound`): a live-only forward test of single-stock mispricing; edge "unproven, forward test only".
+    Every 30 minutes on weekdays, for each recent earnings day (Nasdaq calendar) whose day +1 close is in, it measures
+    each Trading 212-listed US stock (market cap >= $300m) over days -1..+1 against SPY. A liquid (20-day median
+    dollar volume >= $10m) fall of 10% or more is checked against SEC companyfacts filed before day 0: weak = TTM
+    free cash flow <= 0 or TTM revenue down y/y (missing data is UNVERIFIED, no trade). A weak name is bought at 2%
+    in the last 90 minutes of New York trading on day +2 and sold by its time stop 60 trading days later; no stop or
+    take-profit; at most 8 open; kill after 30 closed trades or 730 days if it has not beaten VWRP. Every liquid
+    drop (bought or not) is appended to `research/always-on/forward/Q205.csv`; state in `state/gap_rebound.json`.
 
 ## Risk gate (`execution.risk_check`)
 

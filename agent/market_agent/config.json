@@ -1,5 +1,5 @@
 {
-  "version": "agent-1.11.1",
+  "version": "agent-1.13",
   "note": "Always-on demo market agent. Demo account only (the client refuses any other host). Owner mandate: cmsg_01U4KMvkBYNknqm4HRVie8uvK9gRYqGXBK4bQP49dBz49i (26 Oct 2026).",
   "intervals_s": {
     "loop": 15,
@@ -15,7 +15,8 @@
     "gaps": 60,
     "scoreboard": 300,
     "timing": 3600,
-    "screen_watch": 900
+    "screen_watch": 900,
+    "gap_rebound": 1800
   },
   "benchmark": {
     "t212": "VWRPl_EQ",
@@ -447,6 +448,25 @@
       },
       "alert_drop": 0.25,
       "watch": "Every 15 min (intervals_s.screen_watch): SEC submissions of each held name. SELL on an 8-K with item 1.03, 3.01, 4.01 or 4.02, or a delisting (25/25-NSE/15-12B), merger (DEFM14A/PREM14A) or tender (SC TO-T/SC 14D9) filing; the cash is held until January. ALERT only (stock_screen_alert events) on any other 8-K, a new 10-Q/10-K, a 25% fall from entry, or no quote while the market is open. Rules: research Q200/Q201 (interim selling did worse than holding)."
+    },
+    "gap_rebound": {
+      "enabled": true,
+      "rule": "liquid US stock (20-day median dollar volume >= $10m) falls >= 10% vs SPY over earnings days -1..+1 and fails the health gate (TTM FCF <= 0 or TTM revenue down y/y, filings before day 0): buy 2% near the close of day +2, hold 60 trading days",
+      "edge": "unproven, forward test only (Q205; idea from the Q203 control group, +5.0%/trade t 2.75 in 2014-22, not a registered result)",
+      "entry_weight": 0.02,
+      "max_open": 8,
+      "min_mcap": 300000000,
+      "min_dollar_vol": 10000000,
+      "ear_max": -0.1,
+      "hold_days": 60,
+      "buy_window_min": 90,
+      "qty_decimals": 3,
+      "per_run": 60,
+      "pacing_s": 0.25,
+      "resume_s": 60,
+      "kill_after_trades": 30,
+      "kill_after_days": 730,
+      "forward_csv": "/mnt/project-files/research/always-on/forward/Q205.csv"
     }
   },
   "scoreboard": {
