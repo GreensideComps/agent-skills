@@ -53,7 +53,7 @@ def need_gbp(sc: dict | None, cfg, records, positions, total: float, disabled) -
 
 
 def entry_orders(sc, cfg, records, positions, quote_of, fx, total, cash, now, vwrp_px, disabled,
-                 market_open) -> tuple[list, list]:
+                 market_open, precision=None) -> tuple[list, list]:
     """One buy per missing pick whose market is open and price validated; at most one try per name per day. `cash`
     is the cash above the sleeve's reserve, so the basket never spends the other strategies' money."""
     notes: list[str] = []
@@ -61,7 +61,8 @@ def entry_orders(sc, cfg, records, positions, quote_of, fx, total, cash, now, vw
         return [], notes
     day = time.strftime("%Y-%m-%d", time.gmtime(now))
     tried = {r["ticker"] for r in execution.latest_intents(records).values()
-             if (r.get("signal") or {}).get("strategy") == NAME and r.get("ts", "").startswith(day)}
+             if (r.get("signal") or {}).get("strategy") == NAME and r.get("ts", "").startswith(day)
+             and "quantity-precision-mismatch" not in (r.get("error") or "")}  # retried at fewer decimals
     size = sc["entry_weight"] * total
     reserve = 1 + cfg["core"].get("buy_reserve", 0)
     out = []
@@ -75,7 +76,7 @@ def entry_orders(sc, cfg, records, positions, quote_of, fx, total, cash, now, vw
         if cash < size * reserve:
             notes.append(f"{NAME}: {tk} waits for cash (£{cash:.2f} < £{size * reserve:.2f})")
             break
-        d = 10 ** sc.get("qty_decimals", cfg["active"]["qty_decimals"])
+        d = 10 ** min(sc.get("qty_decimals", cfg["active"]["qty_decimals"]), (precision or {}).get(tk, 8))
         qty = math.floor(size / (q["price"] / fx) * d) / d
         if qty <= 0:
             continue

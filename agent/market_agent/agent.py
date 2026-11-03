@@ -873,7 +873,7 @@ class Agent:
             need = stock_screen.need_gbp(sc, self.cfg, recs, self.positions, total, disabled)
             so, n = stock_screen.entry_orders(sc, self.cfg, recs, self.positions, self._quote,
                                               fxq["price"] if fxq else None, total, cash - keep, self.clock(),
-                                              vwrp_px, disabled, self.market_open)
+                                              vwrp_px, disabled, self.market_open, self.s.read("precision.json") or {})
             notes += n
             if so:
                 return so[0]
@@ -1016,6 +1016,12 @@ class Agent:
         rec = self.ex.submit(order, refusals)
         if rec["status"] == "placed":
             self.due["broker"] = min(self.due.get("broker", 0), self.clock() + 20)  # confirm the fill quickly
+        if rec["status"] == "rejected" and "quantity-precision-mismatch" in rec.get("error", ""):
+            # T212 allows fewer decimals on some lines than others and names none in its metadata: learn one fewer
+            prec = self.s.read("precision.json") or {}
+            d = len(f"{abs(qty):.8f}".rstrip("0").split(".")[1]) if "." in f"{abs(qty):.8f}".rstrip("0") else 0
+            prec[ticker] = max(0, min(prec.get(ticker, 8), d) - 1)
+            self.s._replace("precision.json", prec)
         if rec["status"] in ("rejected", "ambiguous"):
             self.alert("critical", f"order_{rec['status']}:{rec['id']}", f"order {ticker} {qty}: {rec['status']}: "
                                                                           f"{rec.get('error', '')[:200]}")
