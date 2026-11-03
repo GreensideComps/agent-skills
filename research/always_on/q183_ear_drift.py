@@ -12,6 +12,16 @@ def load():
         if len(s) > 300: px[c] = s
     P = pd.DataFrame(px).sort_index(); P = P[P.index <= '2022-12-31']
     return P.pct_change(fill_method=None)
+def liquid(index, thresh=1e7):
+    """Ex-ante liquidity mask (LOOP.md 3 Nov): prior-20d median adjClose*adjVolume >= thresh."""
+    dv = {}
+    for f in glob.glob(D + 'tiingo_daily/*.csv'):
+        c = int(os.path.basename(f).split('_')[0])
+        try: x = pd.read_csv(f, usecols=['date', 'adjClose', 'adjVolume'], parse_dates=['date']).set_index('date')
+        except ValueError: continue
+        dv[c] = x.adjClose * x.adjVolume
+    V = pd.DataFrame(dv).reindex(index)
+    return V.rolling(20).median().shift(1) >= thresh
 def events(R):
     k = pd.read_csv(D + '8k_items_large_2013_2026.csv.gz', parse_dates=['date'])
     k = k[k['items'].astype(str).str.contains('2.02') & k.cik.isin(R.columns) & (k.date >= '2013-06-01') & (k.date <= '2022-12-31')]
