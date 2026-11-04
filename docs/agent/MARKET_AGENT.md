@@ -151,8 +151,8 @@ before buys.
 16. **stock_screen** (agent-1.12, research loop Q199, `results/Q199.md`, `stock_screen.py`, `active.stock_screen`):
    a basket of individual US stocks from the system-designed screener, 2% of the book each, held with no stop,
    take-profit or time stop. Monthly 1/12 refresh (agent-1.15, research Q214, from the 30 Nov 2026 US close; the
-   yearly January rebalance is retired, since Q214 found its result partly luck in the rebalance month): the month's
-   `pick1.py live` scoring goes through `python3 -m market_agent screen-refresh out.csv`, which skips when every held
+   yearly January rebalance is retired, since Q214 found its result partly luck in the rebalance month): on the 3rd of each month at about 13:30Z, after the research data
+   rebuild (skipped with an alert if that month's rows are missing), the month's `pick1.py live` scoring goes through `python3 -m market_agent screen-refresh out.csv`, which skips when every held
    name is in the top 15, else names one sale (oldest entry; ties: lowest score, or a name gone from the gated list)
    and the best-scored name not held (max 3 per SIC2), plus a refill for any hard-event sale. After the ±10pt sector
    check, `picks` is edited to match; the sold name exits with `why: rebalance`, and each sale is one closed trade
