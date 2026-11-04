@@ -769,8 +769,9 @@ class Agent:
         self.s._replace("stock_screen.json", state)
         for r in found + drops:
             self.s.event("stock_screen_alert", strategy=stock_screen.NAME, **r)
-            lvl = "critical" if r["kind"] == "exit" else "warn"
-            self.alert(lvl, f"stock_screen:{r['ticker']}:{r.get('adsh') or r['why'][:20]}",
+            if r["kind"] != "exit":
+                continue  # alert-only checks stay in the event log; nothing is pushed to the owner (4 Nov 2026)
+            self.alert("critical", f"stock_screen:{r['ticker']}:{r.get('adsh') or r['why'][:20]}",
                        f"stock_screen {r['ticker']}: {'EXIT ' if r['kind'] == 'exit' else ''}{r['why']}"
                        + (f" ({r['form']} {r['date']})" if r.get("form") else ""))
         if any(r["kind"] == "exit" for r in found):

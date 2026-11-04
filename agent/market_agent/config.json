@@ -1,5 +1,5 @@
 {
-  "version": "agent-1.15",
+  "version": "agent-1.15.1",
   "note": "Always-on demo market agent. Demo account only (the client refuses any other host). Owner mandate: cmsg_01U4KMvkBYNknqm4HRVie8uvK9gRYqGXBK4bQP49dBz49i (26 Oct 2026).",
   "intervals_s": {
     "loop": 15,
@@ -449,7 +449,7 @@
         "TPR_EQ_US": 1116132
       },
       "alert_drop": 0.25,
-      "watch": "Every 15 min (intervals_s.screen_watch): SEC submissions of each held name. SELL on an 8-K with item 1.03, 3.01, 4.01 or 4.02, or a delisting (25/25-NSE/15-12B), merger (DEFM14A/PREM14A) or tender (SC TO-T/SC 14D9) filing; the cash is held until the next monthly refresh. ALERT only (stock_screen_alert events) on any other 8-K, a new 10-Q/10-K, a 25% fall from entry, or no quote while the market is open. Rules: research Q200/Q201 (interim selling did worse than holding)."
+      "watch": "Every 15 min (intervals_s.screen_watch): SEC submissions of each held name. SELL on an 8-K with item 1.03, 3.01, 4.01 or 4.02, or a delisting (25/25-NSE/15-12B), merger (DEFM14A/PREM14A) or tender (SC TO-T/SC 14D9) filing; the cash is held until the next monthly refresh. LOG only, no alert or brief line (stock_screen_alert events) on any other 8-K, a new 10-Q/10-K, a 25% fall from entry, or no quote while the market is open. Rules: research Q200/Q201 (interim selling did worse than holding)."
     },
     "gap_rebound": {
       "enabled": true,
