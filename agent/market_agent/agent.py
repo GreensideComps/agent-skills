@@ -732,7 +732,7 @@ class Agent:
     def refresh_screen_watch(self) -> None:
         """stock_screen continuous watch: each held name's SEC filings (8-K items, delisting, merger and tender
         forms, new 10-Q/10-K), a 25% fall from entry, and a missing quote while its market is open (a possible halt).
-        A hard SEC event marks the name for exit (no replacement until January); the rest are stock_screen_alert
+        A hard SEC event marks the name for exit (replaced at the next monthly refresh); the rest are stock_screen_alert
         events for the daily brief."""
         sc = self._screen()
         held = {e["ticker"]: {"cik": (sc.get("ciks") or {}).get(e["ticker"]), "since": feeds_ts(e.get("t", 0))[:10],
@@ -798,7 +798,7 @@ class Agent:
             if strategy in (self.s.read("strategies.json") or {}):
                 return "killed"
             return value_timing.exit_why(self.s.read(f"{strategy}.json"), ticker)
-        if strategy == stock_screen.NAME:  # held until the yearly rebalance drops the name, or the kill rule
+        if strategy == stock_screen.NAME:  # held until a monthly refresh drops the name, or the kill rule
             if strategy in (self.s.read("strategies.json") or {}):
                 return "killed"
             return stock_screen.exit_why(self._screen() or self.cfg["active"].get("stock_screen"), ticker,

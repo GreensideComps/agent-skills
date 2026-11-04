@@ -59,6 +59,7 @@ def main(argv: list[str] | None = None) -> int:
     sub.add_parser("uptime").add_argument("--hours", type=float, default=24.0)
     for c in ("halt", "resume"):
         sub.add_parser(c).add_argument("reason")
+    sub.add_parser("screen-refresh").add_argument("scored_csv")  # Q214 monthly 1/12 refresh: prints the swap
     a = ap.parse_args(argv)
     from .store import LeaseHeld, Store
     store = Store(Path(a.state))
@@ -69,6 +70,16 @@ def main(argv: list[str] | None = None) -> int:
         return code
     if a.cmd == "uptime":
         print(json.dumps(uptime(store, time.time(), a.hours), indent=1))
+        return 0
+    if a.cmd == "screen-refresh":
+        import csv  # noqa: PLC0415
+        from . import stock_screen  # noqa: PLC0415
+        from .agent import load_config  # noqa: PLC0415
+        sc = {**load_config()["active"]["stock_screen"], "_state": store.read("stock_screen.json") or {}}
+        with open(a.scored_csv) as fh:
+            scored = list(csv.DictReader(fh))
+        print(json.dumps(stock_screen.monthly_refresh(sc, scored, store.intents(), sc.get("refresh_top_n", 15),
+                                                      sc.get("max_per_sic2", 3)), indent=1))
         return 0
     if a.cmd in ("halt", "resume"):
         store.set_control(a.cmd == "resume", a.reason, by=os.environ.get("USER", "cli"))

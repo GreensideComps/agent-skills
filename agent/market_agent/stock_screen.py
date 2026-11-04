@@ -3,9 +3,11 @@ system-designed screener (research/stock_screener/pick1.py). LOW CONFIDENCE: the
 (+3.4%/yr vs its universe, t 0.85); the pre-registration said before the result that it runs as a demo forward test
 either way.
 
-Rules: hold each name in `picks` at `entry_weight` of the book; no stop, take-profit or time stop. Once a year (early
-January, from December month-end data) the picks list in config.json is replaced: a held name that is no longer in
-`picks` exits with reason "rebalance", and a new name is bought. Each sale is one closed trade, scored against VWRP over
+Rules: hold each name in `picks` at `entry_weight` of the book; no stop, take-profit or time stop. Monthly 1/12 refresh
+(research Q214, from 30 Nov 2026; replaces the yearly January rebalance): at each US month-end close the month's scoring
+(pick1.py live) goes through `monthly_refresh`, and the picks list in config.json is edited to match: one held name
+leaves and exits with reason "rebalance", and the best-scored name not held is bought. A name sold on a hard SEC event
+is replaced at the next refresh. Each sale is one closed trade, scored against VWRP over
 the same days. Kill after `kill_after_trades` closed trades or `kill_after_days` from the first entry if it has not
 beaten VWRP (value_timing.kill). When cash is short, the basket is funded by selling VWRP (demo only).
 
@@ -45,7 +47,7 @@ def missing(sc: dict, records, positions, disabled) -> list[str]:
     if NAME in disabled:
         return []
     held = {e["ticker"] for e in active.open_trades(records) if e["signal"].get("strategy") == NAME}
-    sold = set((sc.get("_state") or {}).get("exit") or {})  # a hard-event exit holds the cash until January
+    sold = set((sc.get("_state") or {}).get("exit") or {})  # a hard-event exit holds the cash until the next monthly refresh
     return [t for t in sc.get("picks", []) if t not in held and t not in positions and t not in sold]
 
 
@@ -194,3 +196,52 @@ def price_alerts(held: dict[str, dict], quote_of, state: dict, drop: float) -> t
             done[tk] = round(r, 4)
             out.append({"ticker": tk, "kind": "alert", "why": f"{r:+.1%} below entry ({h['entry_px']} -> {q['price']})"})
     return {**state, "drop_alerted": done}, out
+
+
+def monthly_refresh(sc: dict, scored: list[dict], records, top_n: int = 15, max_per_sic2: int = 3) -> dict:
+    """Q214's monthly 1/12 refresh. `scored` is that month's pick1.py live output (ticker, cik, sic, score).
+    Skip when every held name is still in the top `top_n` and no slot is empty. Otherwise sell one held name, the oldest
+    by entry day (ties: lowest score this month, a name gone from the gated list first), and buy the best-scored name not
+    held, at most `max_per_sic2` per SIC two-digit group. Empty slots (picks sold on a hard SEC event) are refilled the same
+    way, best score first, with no sale. Returns {action, sell, buy: [rows], notes}; the ±10pt sector look-through check
+    and the T212 ticker of each buy are done when the config is edited."""
+    rows = sorted((r for r in scored if str(r.get("cik") or "").strip()), key=lambda r: -float(r["score"]))
+    score = {int(float(r["cik"])): float(r["score"]) for r in rows}
+    top = {int(float(r["cik"])) for r in rows[:top_n]}
+    ciks = sc.get("ciks") or {}
+    held = {e["ticker"]: e for e in active.open_trades(records) if e["signal"].get("strategy") == NAME}
+    hard = set((sc.get("_state") or {}).get("exit") or {})
+    vacant = [t for t in sc.get("picks", []) if t not in held and t in hard]
+    notes = []
+    sell = None
+    if any(int(ciks[t]) not in top for t in held if t in ciks) or not held:
+        def key(t):
+            return (held[t]["ts"][:10], score.get(int(ciks.get(t, 0)), float("-inf")))
+        sell = min(held, key=key) if held else None
+    if sell is None and not vacant:
+        return {"action": "skip", "sell": None, "buy": [], "notes": ["every held name is in the top %d" % top_n]}
+    keep = [t for t in held if t != sell]
+    keep_ciks = {int(ciks[t]) for t in keep if t in ciks}
+    groups: dict[str, int] = {}
+    for r in rows:
+        if int(float(r["cik"])) in keep_ciks:
+            g = str(r.get("sic") or "")[:2]
+            groups[g] = groups.get(g, 0) + 1
+    gone = {int(ciks[t]) for t in [*vacant, *([sell] if sell else [])] if t in ciks}
+    want = len(vacant) + (1 if sell else 0)
+    buy = []
+    for r in rows:
+        if len(buy) >= want:
+            break
+        c = int(float(r["cik"]))
+        g = str(r.get("sic") or "")[:2]
+        if c in keep_ciks or c in gone or groups.get(g, 0) >= max_per_sic2:
+            continue
+        groups[g] = groups.get(g, 0) + 1
+        buy.append(r)
+    if sell:
+        notes.append(f"sell {sell}: oldest entry {held[sell]['ts'][:10]}, score "
+                     f"{score.get(int(ciks.get(sell, 0)), 'not in gated list')}")
+    if vacant:
+        notes.append("refill " + ", ".join(vacant))
+    return {"action": "swap", "sell": sell, "vacant": vacant, "buy": buy, "notes": notes}
