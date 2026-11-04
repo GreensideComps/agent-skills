@@ -106,7 +106,12 @@ def check(cfg, journal, ro, quotes, daily_loader, now: datetime, kill_file: Path
         except Exception as e:
             _alert(alerts, "CRITICAL", f"discretionary targets unreadable: {e}")
     held_target = {t: w * (1 - cfg.cash_buffer_pct) for t, w in targets.items()}
-    for t in set(held_target) | set(weights):
+    if getattr(cfg, "mode", "rules") == "retired":
+        _alert(alerts, "INFO", "strategy retired: no targets, nothing is traded; holdings are monitored only")
+        weights_to_check = set()
+    else:
+        weights_to_check = set(held_target) | set(weights)
+    for t in weights_to_check:
         diff = weights.get(t, 0.0) - held_target.get(t, 0.0)
         if abs(diff) > WEIGHT_TOL:
             _alert(alerts, "WARN", f"{t} is {weights.get(t, 0.0):.0%} of the account vs target {held_target.get(t, 0.0):.0%}")

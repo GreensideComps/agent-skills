@@ -1,0 +1,39 @@
+['status'] -> AssertionError: patched | would contact: []
+['run'] -> AssertionError: patched | would contact: []
+['reconcile'] -> AssertionError: patched | would contact: []
+['report'] -> AssertionError: patched | would contact: []
+{
+ "ts_utc": "2026-10-20T07:24:19+00:00",
+ "strategy": "discretionary_intraday_v1",
+ "last_run_utc": "2026-10-14T07:45:52+00:00"
+}
+CRITICAL: trading bot has not run for 5 days
+CRITICAL: account read failed: OSError: network blocked by trace
+['monitor'] -> 2 | would contact: ['GET https://demo.trading212.com/api/v0/equity/account/summary']
+No withdrawal assessment today: account data could not be read.
+['advise'] -> 0 | would contact: ['GET https://demo.trading212.com/api/v0/equity/account/summary', 'GET https://demo.trading212.com/api/v0/equity/history/dividends', 'GET https://demo.trading212.com/api/v0/equity/history/orders', 'GET https://demo.trading212.com/api/v0/equity/history/transactions', 'GET https://demo.trading212.com/api/v0/equity/orders', 'GET https://demo.trading212.com/api/v0/equity/positions', 'GET https://query1.finance.yahoo.com/v8/finance/chart/ERNS.L', 'GET https://query1.finance.yahoo.com/v8/finance/chart/GBPUSD=X', 'GET https://query1.finance.yahoo.com/v8/finance/chart/
+{
+ "exit": 3,
+ "status": "generated",
+ "paths": {
+  "md": "/tmp/claude-0/o10b/mut/reports/daily/2026-10-20.md",
+  "html": "/tmp/claude-0/o10b/mut/reports/daily/2026-10-20.html",
+  "json": "/tmp/claude-0/o10b/mut/reports/metrics/2026-10-20.json"
+ },
+ "adviser": "No withdrawal assessment today: account data could not be read.",
+ "delivery": {
+  "status": "failed",
+  "provider": "resend",
+  "detail": "transient errors exhausted after 4 attempts: network: OSError",
+  "attempts": 4,
+  "key": "9b0471c86f9775497873e4c206700c82b92b71c8eaf4e68a4159756cbde199cb",
+  "provider_id": ""
+ }
+}
+['daily-report', '--send', '--force'] -> 3 | would contact: ['GET https://demo.trading212.com/api/v0/equity/account/summary', 'GET https://demo.trading212.com/api/v0/equity/history/dividends', 'GET https://demo.trading212.com/api/v0/equity/history/orders', 'GET https://demo.trading212.com/api/v0/equity/history/transactions', 'GET https://demo.trading212.com/api/v0/equity/orders', 'GET https://demo.trading212.com/api/v0/equity/positions', 'GET https://query1.finance.yahoo.com/v8/finance/chart/ERNS.L', 'GET https://query1.finance.yahoo.com/v8/finance/chart/GBPUSD=X', 'GET https://query1.finance.
+EmailConfig(provider='resend', to=set, sender=set, secrets=<redacted>)
+OK - configuration complete (this does not prove delivery; run `daily-report --send --force` and check your inbox)
+['email-check'] -> 0 | would contact: []
+['decide', '--cash', '--reason', 'x', '--execute'] -> AssertionError: patched | would contact: []
+
+[exited with code 0]

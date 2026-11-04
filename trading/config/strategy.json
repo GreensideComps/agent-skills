@@ -1,15 +1,8 @@
 {
-  "name": "discretionary_intraday_v1",
-  "mode": "discretionary",
-  "decision_limits": {
-    "universe": ["LQQ3l_EQ", "EQQQl_EQ", "VUAGl_EQ", "SGLNl_EQ", "3LGO1l_EQ"],
-    "max_decisions_per_day": 8,
-    "daily_loss_stop": 0.10,
-    "note": "Owner override 2026-10-14: Claude trades the whole demo account intraday, 3x ETPs allowed. Long-only, no borrowing, no inverse products. The trend rule (signal) is kept only as the paper shadow B_live_rules_at_close."
-  },
-  "targets": {
-    "LQQ3l_EQ": 1.0
-  },
+  "name": "retired_2026-10-19",
+  "mode": "retired",
+  "decision_limits": {},
+  "targets": {},
   "yahoo_symbols": {
     "EQQQl_EQ": "EQQQ.L",
     "SGLNl_EQ": "SGLN.L",
@@ -61,15 +54,10 @@
       "bond": "VAGSl_EQ"
     }
   },
-  "signal": {
-    "type": "sma_trend",
-    "symbol": "QQQ",
-    "window": 100,
-    "max_age_days": 5,
-    "on_targets": {
-      "LQQ3l_EQ": 1.0
-    },
-    "off_targets": {},
-    "evidence": "research/h03_leveraged_trend.py, research/experiments/E009.json"
+  "retired": {
+    "date": "2026-10-19",
+    "owner_decision": "O10, owner message cmsg_01U4KMvkBYNknqm4HRVie8uv5WhbXFRm6KFGKqgHWHri4W (2026-10-19 14:36Z)",
+    "previous": "discretionary_intraday_v1 (100% LQQ3l_EQ target); full previous file archived at trading/config/archive/strategy_discretionary_intraday_v1_2026-10-19.json; its trend signal (QQQ 100-day, evidence E009) is in the archive too",
+    "note": "No strategy is active. Any new strategy needs evidence at the required tier and a separate owner-approved execution mandate; it is never set by the research office."
   }
 }
