@@ -1,4 +1,4 @@
-# Always-on demo market agent (agent-1.17)
+# Always-on demo market agent (agent-1.18)
 
 **Mandate:** the owner's 26 Oct 2026 handoff (`cmsg_01U4KMvkBYNknqm4HRVie8uvK9gRYqGXBK4bQP49dBz49i`), covering
 the demo account only. The Trading 212 client refuses any host but `demo.trading212.com`, and `load_credentials`
@@ -278,3 +278,13 @@ carries the edge line "gap-down rebound in high fear (VIX>=25): unproven, Q218b 
 (`edge_vix_hi`). Rules, 2% sizing, the go-live rule and the 30-trade kill test are unchanged: the tag only labels
 trades. `strategy_scores` reports each tag's trades apart under `variants`, and the kill rule still counts the whole
 strategy. Signals recorded before 1.17 are tagged on the next scan.
+
+## agent-1.18: momentum OFF-switch (research Q219, 6 Nov 2026, unproven)
+
+No new breakout_momentum, momentum_timing or vol_squeeze entries while SPY's last close is below the average of its
+last 10 month-end closes, or VIX last closed at 25 or more (`active.momentum_off`). In 2011-22 momentum lost about
+0.8% a month in those conditions (the Daniel-Moskowitz crash pattern); the overall Q219 test failed, so this is an
+unproven demo switch. Open trades keep their normal exits. Each blocked entry is logged once a day per name as a
+`momentum_blocked` event with the reason "momentum off-switch: SPY<10m MA or VIX>=25 (Q219, unproven)" and the SPY,
+MA and VIX readings, so the scoreboard can show what the switch avoided. Missing SPY or VIX history blocks the
+entry (UNVERIFIED). Readings refresh hourly.

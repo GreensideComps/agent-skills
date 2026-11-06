@@ -172,6 +172,7 @@ def make(tmp_path, enabled=True, prices=None, satellite=False, active_on=False):
     cfg["scoreboard"]["enabled"] = False  # the real scoreboard must never read a test's state
     cfg["active"]["stock_screen"]["enabled"] = False  # its own test turns it on; it would fund itself from VWRP first
     cfg["active"]["gap_rebound"]["enabled"] = False  # needs the Nasdaq calendar and SEC; its unit tests cover it
+    cfg["active"]["momentum_off"]["enabled"] = False  # needs SPY and VIX history; its own test turns it on
     cfg["active"]["buyback_value"]["enabled"] = False  # needs a picks file; its own test turns it on
     ag = agent_mod.Agent(st, b, cfg, ambiguous_exc=Ambiguous, api_exc=ApiErr,
                          get=fake_get(clock, prices), clock=clock, sleep=lambda s: None)
@@ -892,7 +893,7 @@ def _daily(end, n, f):
     days.reverse()
     ts = [dt.datetime(x.year, x.month, x.day, 20, 0, tzinfo=dt.timezone.utc).timestamp() for x in days]
     c = [f(i) for i in range(n)]
-    return {"chart": {"result": [{"timestamp": ts, "indicators": {"quote": [{"close": c}], "adjclose": [{"adjclose": c}]}}]}}
+    return {"chart": {"result": [{"timestamp": ts, "indicators": {"quote": [{"close": c, "volume": [1.0] * n}], "adjclose": [{"adjclose": c}]}}]}}
 
 
 def test_value_timing_month_end_signal_rules():
@@ -990,6 +991,43 @@ def test_momentum_timing_runs_beside_value_timing_on_its_own_etfs(tmp_path):
     assert "VRVAl_EQ" in bought and "VUAGl_EQ" in bought
     rec = next(r for r in execution.latest_intents(st.intents()).values() if r["ticker"] == "VUAGl_EQ")
     assert rec["signal"]["strategy"] == "momentum_timing" and "losers" in rec["signal"]["approximation"]
+
+
+def test_momentum_off_switch_blocks_momentum_entries_only_q219(tmp_path):
+    ag, b, st, clock = make(tmp_path, active_on=True, prices={"VWRP.L": 140.0, "GBPUSD=X": 1.25, "VRVA.L": 100.0,
+                                                               "VUSA.L": 100.0, "IUMO.L": 20.0, "VUAG.L": 100.0})
+    _active_book(b)
+    base = ag.get
+    spy = {"f": lambda i: 600 - i * 0.5}                                      # falling: below its 10-month average
+    vix = {"v": 18.0}
+
+    def get(url, params):
+        up, flat = (lambda i: 100 + i), (lambda i: 100.0)
+        for sym, f in (("IWD", up), ("IWF", flat), ("MTUM", flat), ("IWB", up)):
+            if url.endswith("/" + sym):
+                return _daily(dt.date(2026, 10, 30), 500, f)
+        if url.endswith("/SPY"):
+            return _daily(dt.date(2026, 10, 30), 500, spy["f"])
+        if url.endswith("/^VIX"):
+            return _daily(dt.date(2026, 10, 30), 60, lambda i: vix["v"])
+        return base(url, params)
+    ag.get = get
+    ag.cfg["active"]["social"]["enabled"] = False
+    ag.cfg["active"]["momentum_off"]["enabled"] = True
+    clock.t = dt.datetime(2026, 10, 31, 17, 0, tzinfo=dt.timezone.utc).timestamp()
+    advance(ag, clock, 2, by=150)
+    clock.t = dt.datetime(2026, 11, 2, 9, 0, tzinfo=dt.timezone.utc).timestamp()
+    advance(ag, clock, 4, by=30)
+    bought = {o[0] for o in b.orders if o[1] > 0}
+    assert "VRVAl_EQ" in bought and "VUAGl_EQ" not in bought                 # value_timing is not momentum
+    ev = [e for e in st.events("2026-11-02") if e["kind"] == "momentum_blocked"]
+    assert len(ev) == 1 and ev[0]["strategy"] == "momentum_timing" and ev[0]["ticker"] == "VUAGl_EQ"
+    assert ev[0]["why"] == "momentum off-switch: SPY<10m MA or VIX>=25 (Q219, unproven)" and ev[0]["spy"] < ev[0]["spy_ma10m"]
+    from market_agent import active
+    up = [(f"2026-{m:02d}-15", 500.0 + m, 1.0) for m in range(1, 11)] + [("2026-11-02", 520.0, 1.0)]
+    assert active.momentum_off(up, [("2026-11-02", 18.0)], "2026-11-03")[0] is False
+    assert active.momentum_off(up, [("2026-11-02", 25.0)], "2026-11-03")[0] is True
+    assert active.momentum_off(up[:5], [("2026-11-02", 18.0)], "2026-11-03")[0] is None   # UNVERIFIED: blocks
 
 
 def test_january_small_holds_small_caps_through_january_only(tmp_path):

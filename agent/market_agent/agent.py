@@ -1169,7 +1169,43 @@ class Agent:
                                               disabled, self.s.read(f"{vc['name']}.json"))
             notes += n
             orders += vo
+        orders = self._momentum_switch(orders, notes)
         return next((o for o in orders if self.market_open(o[0])), None)
+
+    def _momentum_switch(self, orders: list, notes: list) -> list:
+        """Q219 OFF-switch (unproven, demo): no new momentum-family entries while SPY is below its 10-month average or
+        VIX closed at 25 or more; open trades keep their exits. Each blocked entry is logged once a day."""
+        mc = self.cfg["active"].get("momentum_off") or {}
+        fam = set(mc.get("strategies") or [])
+        if not mc.get("enabled") or not any((o[6] or {}).get("strategy") in fam for o in orders):
+            return orders
+        now = self.clock()
+        today = gap_rebound.ny_now(now).date().isoformat()
+        c = getattr(self, "_mom", None)
+        if not c or now - c["t"] > mc.get("refresh_s", 3600) or c["today"] != today:
+            try:
+                spy = gap_rebound.bars("SPY", self.get, "2y")
+                vix = gap_rebound.bars("^VIX", self.get)
+            except Exception:  # noqa: BLE001 - unreadable: UNVERIFIED, so the switch blocks
+                spy, vix = [], []
+            off, det = active.momentum_off(spy, vix, today, mc.get("vix_hi", 25.0), mc.get("months", 10))
+            c = self._mom = {"t": now, "today": today, "off": off, "det": det, "logged": (c or {}).get("logged", set())}
+        if c["off"] is False:
+            return orders
+        keep = []
+        for o in orders:
+            st = (o[6] or {}).get("strategy")
+            if st not in fam:
+                keep.append(o)
+                continue
+            why = active.MOMENTUM_OFF_WHY if c["off"] else f"{active.MOMENTUM_OFF_WHY}; {c['det']['why']}"
+            notes.append(f"{st}: {o[0]} entry blocked: {why}")
+            k = (today, st, o[0])
+            if k not in c["logged"]:
+                c["logged"].add(k)
+                self.s.event("momentum_blocked", strategy=st, ticker=o[0], why=why, **c["det"],
+                             would_buy_gbp=round(o[2], 2))
+        return keep
 
     def _satellite(self) -> dict[str, dict]:
         skip = {self.cfg["benchmark"]["t212"], *self.cfg["exits"]["tickers"], *self._watch()}

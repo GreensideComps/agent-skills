@@ -243,3 +243,25 @@ def stop_exit_record(entry: dict, stop: dict, hist: dict, vwrp_px) -> dict:
             "broker": hist, "reason": f"active exit (broker stop at {stop['stop_px']}): {entry['signal']['strategy']}",
             "signal": {"type": "active_exit", "entry_id": entry["id"], "strategy": entry["signal"]["strategy"],
                        "why": "broker_stop", "exit_reason": "broker_stop", "vwrp_px": vwrp_px}}
+
+
+# ------------------------------------------------------------ momentum off-switch (agent-1.18, research Q219)
+MOMENTUM_OFF_WHY = "momentum off-switch: SPY<10m MA or VIX>=25 (Q219, unproven)"
+
+
+def momentum_off(spy_bars: list[tuple], vix_bars: list[tuple], today: str, vix_hi: float = 25.0,
+                 months: int = 10) -> tuple[bool | None, dict]:
+    """(off, detail) from daily (date, close, ...) bars, using closes before `today` only. Off when the last SPY close is
+    below the average of its last `months` month-end closes, or the last VIX close is `vix_hi` or more. None when
+    either series is missing or short (UNVERIFIED: the switch then blocks, as missing data trades nothing)."""
+    spy = [b for b in spy_bars or [] if b[0] < today]
+    vix = [b for b in vix_bars or [] if b[0] < today]
+    ends: dict[str, float] = {}
+    for d, c, *_ in spy:
+        ends[d[:7]] = c  # the last close of each month
+    done = [c for m, c in sorted(ends.items()) if m < today[:7]][-months:]
+    if not spy or not vix or len(done) < months:
+        return None, {"why": "UNVERIFIED: SPY or VIX history missing"}
+    ma = sum(done) / months
+    det = {"spy": round(spy[-1][1], 2), "spy_ma10m": round(ma, 2), "vix": round(vix[-1][1], 2), "day": spy[-1][0]}
+    return (spy[-1][1] < ma or vix[-1][1] >= vix_hi), det
