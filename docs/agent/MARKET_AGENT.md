@@ -156,8 +156,8 @@ before buys.
    a basket of individual US stocks from the system-designed screener, 2% of the book each, held with no stop,
    take-profit or time stop. Monthly 1/12 refresh (agent-1.15, research Q214, from the 30 Nov 2026 US close; the
    yearly January rebalance is retired, since Q214 found its result partly luck in the rebalance month). Run weekly
-   since agent-1.16.2 (6 Nov, results season): every Monday at about 13:30Z (next weekday on a holiday), after the
-   weekly research data rebuild (Mondays 05:41Z; skipped if prices_monthly was not modified that day or the month has
+   since agent-1.16.2 (6 Nov, results season): as soon as each research data rebuild finishes (weekly, Mondays 05:41Z; owner 6 Nov:
+   do it now, never wait for a set time; skipped if prices_monthly was not modified that day or the month has
    no monthly_metrics rows), the current month's `pick1.py live` scoring goes through
    `python3 -m market_agent screen-refresh out.csv --month YYYY-MM`. At most ONE scheduled swap per calendar month
    (recorded with `--record` in `state/screen_refresh.json`), so turnover stays at the tested 1/12: later Mondays
