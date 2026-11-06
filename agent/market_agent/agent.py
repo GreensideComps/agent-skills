@@ -22,6 +22,7 @@ from . import (
     feeds,
     gap_rebound,
     merger,
+    news_shock,
     review,
     social,
     stock_screen,
@@ -117,6 +118,8 @@ class Agent:
             self._run("gap_rebound", self.refresh_gap_rebound)
         if self._exit_cfg():
             self._run("exit_review", self.refresh_exit_review)
+        if self._news_shock():
+            self._run("news_shock", self.refresh_news_shock)
         if self._swing("gap"):
             self._run("gaps", self.refresh_gaps)
         if self._vt():
@@ -702,6 +705,93 @@ class Agent:
             self.need_decide = True
         return gc["resume_s"] if st["queue"] else None
 
+    def _news_shock(self) -> dict | None:
+        a = self.cfg.get("active") or {}
+        nc = a.get("news_shock") or {}
+        return {**nc, "name": news_shock.NAME} if a.get("enabled") and nc.get("enabled") else None
+
+    def refresh_news_shock(self) -> float | None:
+        """news_shock_vix_hi (Q222): for each session d0 whose VIX close was >= vix_min and whose d0+1 close is in, list
+        the non-earnings 8-Ks (SEC full-text search) filed for d0 and measure each T212-listed name's 2-day move vs
+        SPY. A liquid -8% shock is a signal bought near the close of d0+2. State: state/news_shock.json."""
+        nc = self._news_shock()
+        now = self.clock()
+        nyd = gap_rebound.ny_now(now)
+        if nyd.weekday() >= 5:
+            return None
+        st = {"done": {}, "signals": {}, "queue": {}, **(self.s.read("news_shock.json") or {})}
+        spy = gap_rebound.bars("SPY", self.get)
+        vix = {d: c for d, c, _ in gap_rebound.bars("^VIX", self.get)}
+        days = [d for d, _, _ in spy]
+        today = nyd.date().isoformat()
+        complete = [d for d in days if d < today or (d == today and nyd.hour >= 17)]
+        if self.sec_get is None:
+            ua = feeds.sec_user_agent(self.s.root)
+            if ua:
+                self.sec_get = feeds.sec_get(ua, max_bytes=5_000_000)
+        for i in range(max(1, len(complete) - 3), len(complete) - 1):
+            d0, dp1 = complete[i], complete[i + 1]
+            if gap_rebound.exit_day(dp1, 1) < today or d0 in st["done"] or d0 in st["queue"]:
+                continue
+            if d0 not in vix:
+                continue  # UNVERIFIED: no VIX close for d0 yet; retried next run
+            if vix[d0] < nc["vix_min"]:
+                st["done"][d0] = f"VIX {vix[d0]:.2f} < {nc['vix_min']}: no scan"
+                continue
+            if self.sec_get is None:
+                continue
+            w = news_shock.window(complete, d0)
+            rows, frm = [], 0
+            while w:
+                self.s.renew_lease()
+                self.sleep(0.3)
+                r = self.sec_get(news_shock.EFTS, {"forms": "8-K", "dateRange": "custom", "startdt": w[0],
+                                                   "enddt": w[1], "from": frm})
+                hits = (r.get("hits") or {}).get("hits") or []
+                rows += news_shock.filings(hits)
+                frm += len(hits)
+                if not hits or frm >= ((r.get("hits") or {}).get("total") or {}).get("value", 0) or frm >= 5000:
+                    break
+            items: dict[str, list] = {}
+            for x in rows:
+                if f"{x['symbol']}_US_EQ" in self.schedule_of:
+                    items[x["symbol"]] = sorted(set(items.get(x["symbol"], [])) | set(x["items"]))
+            st["queue"][d0] = {"vix": round(vix[d0], 2), "items": items, "todo": sorted(items)}
+        n = 0
+        for d0 in sorted(st["queue"]):
+            q = st["queue"][d0]
+            buy = gap_rebound.exit_day(complete[complete.index(d0) + 1], 1) if d0 in complete[:-1] else None
+            while q["todo"] and n < nc["per_run"]:
+                sym = q["todo"].pop(0)
+                n += 1
+                self.s.renew_lease()
+                self.sleep(nc["pacing_s"])
+                try:
+                    m = news_shock.move(gap_rebound.bars(sym, self.get), spy, d0)
+                except Exception as e:  # noqa: BLE001 - no bars confirm nothing; the name is skipped and logged
+                    self.s.event("news_shock_skip", strategy=news_shock.NAME, symbol=sym, error=str(e)[:200])
+                    continue
+                if not m or m["ear"] > nc["ear_max"] or m["median_dollar_vol"] < nc["min_dollar_vol"]:
+                    continue
+                tk = f"{sym}_US_EQ"
+                rep = news_shock.recent(st["signals"], sym, d0, days, nc["no_repeat_days"])
+                sig = {**m, "symbol": sym, "items": q["items"].get(sym, []), "vix": q["vix"], "buy_day": buy,
+                       "eligible": bool(buy) and not rep, "why": "repeat within 10 sessions" if rep else "signal"}
+                if not rep:  # a repeat is logged only; the earlier signal for the name stays
+                    st["signals"][tk] = sig
+                self.s.event("news_shock_signal", strategy=news_shock.NAME, ticker=tk, **sig)
+            if not q["todo"]:
+                st["queue"].pop(d0)
+                st["done"][d0] = feeds_ts(self.clock())
+        st["done"] = dict(sorted(st["done"].items())[-30:])
+        keep_from = complete[max(0, len(complete) - 30)] if complete else today
+        st["signals"] = {k: v for k, v in st["signals"].items() if v["day0"] >= keep_from}
+        st["checked"] = feeds_ts(self.clock())
+        self.s._replace("news_shock.json", st)
+        if any(s.get("eligible") and s["buy_day"] == today for s in st["signals"].values()):
+            self.need_decide = True
+        return nc["resume_s"] if st["queue"] else None
+
     def _gap_rebound_signal(self, sym: str, m: dict, gc: dict, st: dict) -> None:
         """Health gate (SEC companyfacts, filed before day 0) for one liquid >= 10% earnings drop, then record it."""
         if self.sec_get is None:
@@ -842,6 +932,8 @@ class Agent:
             return stock_screen.exit_why(self._screen() or self.cfg["active"].get("stock_screen"), ticker,
                                          self.s.read("stock_screen.json"))
         if strategy == buyback_value.NAME:  # held 6 months (its time stop), or until the kill rule
+            return "killed" if strategy in (self.s.read("strategies.json") or {}) else None
+        if strategy == news_shock.NAME:  # held 5 trading days (its time stop), or until the kill rule
             return "killed" if strategy in (self.s.read("strategies.json") or {}) else None
         if strategy == gap_rebound.NAME:  # held 60 trading days (its time stop), or until the kill rule
             return "killed" if strategy in (self.s.read("strategies.json") or {}) else None
@@ -1073,7 +1165,7 @@ class Agent:
                 + (list(self.mstate.get("watch", [])) if self._merger() else [])
                 + [t for vc in self._vt() for t in (vc["factor_ticker"], vc.get("market_ticker")) if t]
                 + stock_screen.watch(a.get("stock_screen"))
-                + self._gap_rebound_watch() + self._buyback_watch())
+                + self._gap_rebound_watch() + self._news_shock_watch() + self._buyback_watch())
 
     def _buyback_watch(self) -> list[str]:
         bc = self._buyback()
@@ -1084,6 +1176,16 @@ class Agent:
                                  self.s.read("strategies.json") or {})
         return sorted({x["ticker"] for x in w} | {e["ticker"] for e in active.open_trades(recs)
                                                    if e["signal"].get("strategy") == buyback_value.NAME})
+
+    def _news_shock_watch(self) -> list[str]:
+        if not self._news_shock():
+            return []
+        today = gap_rebound.ny_now(self.clock()).date().isoformat()
+        st = self.s.read("news_shock.json") or {}
+        return sorted({tk for tk, s in (st.get("signals") or {}).items()
+                       if s.get("eligible") and (s.get("buy_day") or "") >= today}
+                      | {e["ticker"] for e in active.open_trades(self.s.intents())
+                         if e["signal"].get("strategy") == news_shock.NAME})
 
     def _gap_rebound_watch(self) -> list[str]:
         if not self._gap_rebound():
@@ -1230,6 +1332,14 @@ class Agent:
                 self.s._replace("strategies.json", disabled)
                 self.s.event("strategy_disabled", strategy=bc["name"], **k)
                 self.alert("warn", f"strategy_disabled:{bc['name']}", f"strategy {bc['name']} switched off: {k['why']}")
+        nc = self._news_shock()
+        if nc and nc["name"] not in disabled:
+            k = value_timing.kill(recs, self.positions, self.clock(), vwrp_px, nc, feeds_ts(self.clock()))
+            if k:
+                disabled = {**disabled, nc["name"]: k}
+                self.s._replace("strategies.json", disabled)
+                self.s.event("strategy_disabled", strategy=nc["name"], **k)
+                self.alert("warn", f"strategy_disabled:{nc['name']}", f"strategy {nc['name']} switched off: {k['why']}")
         total = float((self.summary or {}).get("totalValue") or 0)
         cash = float(((self.summary or {}).get("cash") or {}).get("availableToTrade") or 0)
         fxq = self.quotes.get(self.cfg["benchmark"]["fx"])
@@ -1287,6 +1397,13 @@ class Agent:
                                              self.s.read("precision.json") or {})
             notes += n
             orders += go
+        if nc and not active.sleeve_block(self.cfg, recs, self.positions, day, total):
+            no, n = news_shock.entry_orders(nc, self.cfg, recs, self.positions, self._quote,
+                                            fxq["price"] if fxq else None, total, cash, self.clock(), vwrp_px,
+                                            disabled, self.s.read("news_shock.json"),
+                                            self.s.read("precision.json") or {})
+            notes += n
+            orders += no
         for vc in (self._vt() if not active.sleeve_block(self.cfg, recs, self.positions, day, total) else []):
             vo, n = value_timing.entry_orders({**vc, "_cfg": self.cfg}, recs, self.positions, self._quote,
                                               fxq["price"] if fxq else None, total, cash, self.clock(), vwrp_px,
@@ -1433,6 +1550,9 @@ class Agent:
             limits = {**limits, "buy_whitelist": [*limits["buy_whitelist"], ticker]}  # a deal that passed every filter
         if (signal or {}).get("strategy") == gap_rebound.NAME and (
                 ((self.s.read("gap_rebound.json") or {}).get("signals") or {}).get(ticker) or {}).get("eligible"):
+            limits = {**limits, "buy_whitelist": [*limits["buy_whitelist"], ticker]}  # a signal that passed every filter
+        if (signal or {}).get("strategy") == news_shock.NAME and (
+                ((self.s.read("news_shock.json") or {}).get("signals") or {}).get(ticker) or {}).get("eligible"):
             limits = {**limits, "buy_whitelist": [*limits["buy_whitelist"], ticker]}  # a signal that passed every filter
         if (signal or {}).get("strategy") == buyback_value.NAME and signal.get("type") == "active_entry":
             limits = {**limits, "buy_whitelist": [*limits["buy_whitelist"], ticker]}  # a pick from the month's file

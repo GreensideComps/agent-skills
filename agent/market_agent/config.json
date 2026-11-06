@@ -1,5 +1,5 @@
 {
-  "version": "agent-1.19.2",
+  "version": "agent-1.20",
   "note": "Always-on demo market agent. Demo account only (the client refuses any other host). Owner mandate: cmsg_01U4KMvkBYNknqm4HRVie8uvK9gRYqGXBK4bQP49dBz49i (26 Oct 2026).",
   "intervals_s": {
     "loop": 15,
@@ -17,7 +17,8 @@
     "timing": 3600,
     "screen_watch": 900,
     "gap_rebound": 1800,
-    "exit_review": 900
+    "exit_review": 900,
+    "news_shock": 1800
   },
   "benchmark": {
     "t212": "VWRPl_EQ",
@@ -452,6 +453,26 @@
       "kill_after_days": 730,
       "forward_csv": "/mnt/project-files/research/always-on/forward/Q205.csv"
     },
+    "news_shock": {
+      "enabled": true,
+      "rule": "non-earnings 8-K (no item 2.02) filed for session d0 with VIX close >= 25 on d0; the stock falls 8% or more vs SPY over d0 and d0+1 (close d0+1 over close d0-1); 20-day median dollar volume >= $10m; no repeat in the name within 10 sessions; buy 2% near the close of d0+2 (Q222 lag variant), hold 5 trading days; max 10 open (20% cap)",
+      "edge": "news drop >=8% vs SPY on non-earnings 8-K with VIX>=25 (liquidity-provision premium in fear, Q222, unproven)",
+      "note": "Q222 FAIL on the go-live rule (DSR 0.000), benched unproven 6 Nov: +3.05%/trade 2013-22 at the d0+1 close, +5.75% with a one-day lag (the live timing), costs x2 +2.45%; 142 of 197 trades in 2020, the rest about +0.5%; below VIX 25 -0.44%/trade",
+      "vix_min": 25.0,
+      "ear_max": -0.08,
+      "min_dollar_vol": 10000000,
+      "no_repeat_days": 10,
+      "entry_weight": 0.02,
+      "max_open": 10,
+      "hold_days": 5,
+      "buy_window_min": 90,
+      "qty_decimals": 3,
+      "per_run": 60,
+      "pacing_s": 0.25,
+      "resume_s": 60,
+      "kill_after_trades": 30,
+      "kill_after_days": 730
+    },
     "exit_review": {
       "enabled": true,
       "rule": "agent-1.19 (owner 6 Nov 14:39Z cmsg_01U4KMvkBYNknqm4HRVie8uv3hDyNfMR4r18MaefWEF2yi): every open trade gets a recorded hold-or-sell decision (exit_review event) once a day and whenever its verdict changes, naming why it is held and what will sell it. Added sell rules beside each strategy's own tested exits: hard SEC events for buyback and gap names; buyback thesis broken (shares outstanding up y/y in a filing after entry); profit lock (after +25%, sell at half the best gain). Both new rules are unproven priors under test by the research loop; screener picks keep no profit lock because Q200/Q201 found interim selling worse than holding.",
@@ -488,7 +509,8 @@
         "buyback_value": "buyback pick: held 6 months, the tested holding period (Q206)",
         "gap_rebound": "gap rebound: held 60 trading days, the tested holding period (Q218b)",
         "momentum_timing": "ETF timing: held until the month-end signal names the other fund",
-        "value_timing": "ETF timing: held until the month-end signal names the other fund"
+        "value_timing": "ETF timing: held until the month-end signal names the other fund",
+        "news_shock_vix_hi": "news shock in fear: held 5 trading days, the tested holding period (Q222)"
       }
     },
     "buyback_value": {

@@ -311,3 +311,27 @@ Research Q221 (N=436-439) failed both the thesis check and the profit lock. Each
 The hard-event extension has no supporting test, and the closest one (Q201) was negative. agent-1.19.1 therefore
 switches all three off in config, with the code kept so each can be switched back on. The decision for each position
 is its tested hold, plus the broker-held stop and the strategy's kill rule.
+
+## agent-1.20: news_shock_vix_hi (research Q222, 6 Nov 2026, benched unproven)
+
+This entry rule applies when a US company files a non-earnings 8-K (any 8-K without item 2.02) on a session d0 whose VIX close was 25 or higher. All of the following must also hold:
+- The stock's move over d0 and d0+1, net of SPY's move, is -8% or worse. This is measured as close(d0+1) / close(d0-1).
+- The stock's median daily dollar volume over the 20 sessions before d0 is at least $10m.
+- No earlier signal for the same name in the previous 10 sessions.
+
+The trade:
+- Buy 2% of the book near the close of d0+2 (last 90 minutes).
+- Hold for 5 trading days.
+- At most 10 trades are open at once, a 20% cap.
+- The usual 30-trade kill rule applies.
+
+Data sources:
+- 8-K list: SEC full-text search (efts) for the filing dates that map to d0.
+- Prices: Yahoo daily bars.
+- State: state/news_shock.json. Events: news_shock_signal and news_shock_skip.
+
+The live entry is Q222's one-day-lag variant, because the scan needs the d0+1 close:
+- Backtest return with that lag: +5.75% per trade.
+- Return at the d0+1 close: +3.05% per trade.
+
+Q222 failed the go-live rule (DSR 0.000). 142 of its 197 trades fell in 2020.
