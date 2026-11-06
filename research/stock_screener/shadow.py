@@ -19,6 +19,8 @@ VARIANTS = {  # name: (added, description, picker)
                       lambda m: p1.pick(p1.universe(m, 10e9))),
     "c2_top30": ("2026-11-04", "pick-1 top 30, max 4 per SIC2 (more diversified)", None),
     "c3_no_momentum": ("2026-11-04", "quality + value only, no 12-1m momentum", None),
+    "c4_no_value": ("2026-11-06", "quality + momentum only, no FCF/EV value leg", None),
+    "c5_no_quality": ("2026-11-06", "value + momentum only, no gross-profitability leg", None),
 }
 
 
@@ -31,9 +33,9 @@ def _c2(m):
         p1.TOP, p1.PER_SIC = old
 
 
-def _c3(m):
+def _legs(m, legs):
     s = p1.score(p1.universe(m)).copy()
-    s["score"] = s[["z_gpa", "z_fcf_ev"]].mean(axis=1)
+    s["score"] = s[legs].mean(axis=1)
     s = s.sort_values("score", ascending=False)
     out, per = [], {}
     for _, r in s.iterrows():
@@ -45,8 +47,14 @@ def _c3(m):
     return pd.DataFrame(out)
 
 
+def _c3(m):
+    return _legs(m, ["z_gpa", "z_fcf_ev"])
+
+
 VARIANTS["c2_top30"] = VARIANTS["c2_top30"][:2] + (_c2,)
 VARIANTS["c3_no_momentum"] = VARIANTS["c3_no_momentum"][:2] + (_c3,)
+VARIANTS["c4_no_value"] = VARIANTS["c4_no_value"][:2] + (lambda m: _legs(m, ["z_gpa", "z_mom"]),)
+VARIANTS["c5_no_quality"] = VARIANTS["c5_no_quality"][:2] + (lambda m: _legs(m, ["z_fcf_ev", "z_mom"]),)
 
 
 def main(month: str):
