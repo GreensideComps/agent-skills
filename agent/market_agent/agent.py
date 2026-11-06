@@ -17,6 +17,7 @@ from urllib.parse import quote
 from . import (
     active,
     buyback_value,
+    exits,
     execution,
     feeds,
     gap_rebound,
@@ -114,6 +115,8 @@ class Agent:
             self._run("screen_watch", self.refresh_screen_watch)
         if self._gap_rebound():
             self._run("gap_rebound", self.refresh_gap_rebound)
+        if self._exit_cfg():
+            self._run("exit_review", self.refresh_exit_review)
         if self._swing("gap"):
             self._run("gaps", self.refresh_gaps)
         if self._vt():
@@ -753,9 +756,17 @@ class Agent:
         A hard SEC event marks the name for exit (replaced at the next monthly refresh); the rest are stock_screen_alert
         events for the daily brief."""
         sc = self._screen()
+        xc = self._exit_cfg() or {}
+        watch = {stock_screen.NAME, *xc.get("hard_events_for", [])}  # agent-1.19: buyback and gap names too
         held = {e["ticker"]: {"cik": (sc.get("ciks") or {}).get(e["ticker"]), "since": feeds_ts(e.get("t", 0))[:10],
-                              "entry_px": e["signal"].get("entry_px")}
-                for e in active.open_trades(self.s.intents()) if e["signal"].get("strategy") == stock_screen.NAME}
+                              "entry_px": e["signal"].get("entry_px"), "strategy": e["signal"].get("strategy")}
+                for e in active.open_trades(self.s.intents()) if e["signal"].get("strategy") in watch}
+        for tk, h in held.items():
+            if not h["cik"] and h["strategy"] != stock_screen.NAME:
+                try:
+                    h["cik"] = self._sec_cik(tk)
+                except Exception as e:  # noqa: BLE001 - no CIK means no filing check this pass, logged below
+                    self.s.event("duty_failed", duty="screen_watch", ticker=tk, error=f"cik: {e}"[:200])
         if not held:
             return
         state = sc["_state"]
@@ -786,12 +797,13 @@ class Agent:
                  "missing_cik": sorted(k for k, v in held.items() if not v["cik"])}
         self.s._replace("stock_screen.json", state)
         for r in found + drops:
-            self.s.event("stock_screen_alert", strategy=stock_screen.NAME, check=r["kind"],
+            strat = held.get(r["ticker"], {}).get("strategy") or stock_screen.NAME
+            self.s.event("stock_screen_alert", strategy=strat, check=r["kind"],
                          **{k: v for k, v in r.items() if k != "kind"})
             if r["kind"] != "exit":
                 continue  # alert-only checks stay in the event log; nothing is pushed to the owner (4 Nov 2026)
             self.alert("critical", f"stock_screen:{r['ticker']}:{r.get('adsh') or r['why'][:20]}",
-                       f"stock_screen {r['ticker']}: {'EXIT ' if r['kind'] == 'exit' else ''}{r['why']}"
+                       f"{strat} {r['ticker']}: {'EXIT ' if r['kind'] == 'exit' else ''}{r['why']}"
                        + (f" ({r['form']} {r['date']})" if r.get("form") else ""))
         if any(r["kind"] == "exit" for r in found):
             self.need_decide = True
@@ -812,6 +824,12 @@ class Agent:
         return ok, why, rev
 
     def _review_why(self, ticker: str, strategy: str | None = None) -> str | None:
+        why = self._exit_rules_why(ticker, strategy)
+        if why:
+            return why
+        return self._strategy_why(ticker, strategy)
+
+    def _strategy_why(self, ticker: str, strategy: str | None = None) -> str | None:
         if strategy in (swing.SQUEEZE, swing.GAP):  # C9 trades follow their own exits, not the price review
             return self._swing_why(ticker, strategy)
         if strategy in value_timing.NAMES:  # held until the month-end signal names the other ETF, or the kill rule
@@ -837,6 +855,110 @@ class Agent:
         if not rev or self.clock() - rev["t"] > rc["max_age_s"] or rev["scores"]["composite"] is None:
             return None
         return "review" if rev["scores"]["composite"] <= rc["exit_max"] else None
+
+    # ------------------------------------------------------------ exit review (agent-1.19)
+    def _exit_cfg(self) -> dict | None:
+        a = self.cfg.get("active") or {}
+        c = a.get("exit_review") or {}
+        return c if a.get("enabled") and c.get("enabled") else None
+
+    def _sec_cik(self, t212: str) -> int | None:
+        """CIK for a US T212 ticker from SEC company_tickers.json (fetched once per process); None if unknown."""
+        sym = feeds.yahoo_symbol(t212, self.cfg.get("yahoo_overrides") or {})
+        if not sym:
+            return None
+        if self.sec_get is None:
+            ua = feeds.sec_user_agent(self.s.root)
+            if ua:
+                self.sec_get = feeds.sec_get(ua, max_bytes=5_000_000)
+        if self.sec_get is None:
+            return None
+        if not getattr(self, "sec_ciks", None):
+            raw = self.sec_get(gap_rebound.TICKERS, {})
+            raw = json.loads(raw) if isinstance(raw, str) else raw
+            self.sec_ciks = {v["ticker"]: int(v["cik_str"]) for v in raw.values()}
+        return self.sec_ciks.get(sym) or self.sec_ciks.get(sym.replace("-", "."))
+
+    def _exit_rules_why(self, ticker: str, strategy: str | None) -> str | None:
+        """agent-1.19 sell rules beside each strategy's own: a hard SEC event, a broken buyback thesis, a profit lock."""
+        xc = self._exit_cfg()
+        if not xc or not strategy:
+            return None
+        if strategy in xc.get("hard_events_for", []):
+            hard = ((self.s.read("stock_screen.json") or {}).get("exit") or {}).get(ticker)
+            if hard:
+                return hard["why"]
+        st = self.s.read("exit_review.json") or {}
+        th = xc.get("thesis") or {}
+        if th.get("enabled") and strategy in th.get("strategies", []) and ((st.get("thesis") or {}).get(ticker) or {}).get("broken"):
+            return "thesis_broken"
+        pl = xc.get("profit_lock") or {}
+        pk = (st.get("peak") or {}).get(ticker)
+        q = self._quote(ticker)
+        if pl.get("enabled") and strategy in pl.get("strategies", []) and pk and q and pk.get("entry_px"):
+            if exits.profit_lock(q["price"] / pk["entry_px"] - 1, pk["peak"], pl["arm"], pl["keep"]):
+                return "profit_lock"
+        return None
+
+    def refresh_exit_review(self) -> None:
+        """A recorded hold-or-sell decision for every open trade: peak return, the buyback thesis (SEC share count,
+        once a day per name), and an exit_review event per trade once a day or when its verdict changes."""
+        xc = self._exit_cfg()
+        now = self.clock()
+        day = feeds_ts(now)[:10]
+        st = self.s.read("exit_review.json") or {}
+        peaks, thesis, last = dict(st.get("peak") or {}), dict(st.get("thesis") or {}), dict(st.get("last") or {})
+        opens = active.open_trades(self.s.intents())
+        th = xc.get("thesis") or {}
+        stops = {v.get("ticker"): v.get("stop_px") for v in (self.s.read("stops.json") or {}).values()
+                 if isinstance(v, dict) and v.get("order_id") and not v.get("cancelled") and not v.get("filled")}
+        for e in opens:
+            tk, sig = e["ticker"], e["signal"]
+            q = self._quote(tk)
+            if q and sig.get("entry_px"):
+                ret = q["price"] / sig["entry_px"] - 1
+                pk = peaks.get(tk)
+                if not pk or pk.get("entry_id") != e["id"]:
+                    pk = {"entry_id": e["id"], "entry_px": sig["entry_px"], "peak": ret}
+                peaks[tk] = {**pk, "peak": max(pk["peak"], ret)}
+            if th.get("enabled") and sig.get("strategy") in th.get("strategies", []) and (thesis.get(tk) or {}).get("day") != day:
+                try:
+                    cik = self._sec_cik(tk)
+                    if cik is None:
+                        r = {"broken": None, "why": "UNVERIFIED: no CIK"}
+                    else:
+                        self.s.renew_lease()
+                        self.sleep(0.3)
+                        r = exits.shares_thesis(self.sec_get(gap_rebound.FACTS.format(cik=cik), {}),
+                                                feeds_ts(e.get("t", now))[:10])
+                except Exception as ex:  # noqa: BLE001 - an unreadable filing confirms nothing: hold
+                    r = {"broken": None, "why": f"UNVERIFIED: SEC read failed ({str(ex)[:120]})"}
+                thesis[tk] = {**r, "day": day}
+        open_tk = {e["ticker"] for e in opens}
+        peaks = {k: v for k, v in peaks.items() if k in open_tk}
+        thesis = {k: v for k, v in thesis.items() if k in open_tk}
+        self.s._replace("exit_review.json", {**st, "peak": peaks, "thesis": thesis, "last": last})
+        rules = xc.get("hold_rules") or {}
+        pl = xc.get("profit_lock") or {}
+        rows, sell = [], False
+        for e in opens:
+            tk, strat = e["ticker"], e["signal"].get("strategy")
+            q = self._quote(tk)
+            ret = q["price"] / e["signal"]["entry_px"] - 1 if q and e["signal"].get("entry_px") else None
+            why = self._review_why(tk, strat) if q else None
+            pk = (peaks.get(tk) or {}).get("peak")
+            row = exits.plan(e, ret, pk, now, rules.get(strat), why, (thesis.get(tk) or {}).get("why"),
+                             stops.get(tk), pl if pl.get("enabled") and strat in pl.get("strategies", []) else None)
+            rows.append(row)
+            sell = sell or bool(why)
+            if last.get(tk, {}).get("day") != day or last.get(tk, {}).get("verdict") != row["verdict"]:
+                last[tk] = {"day": day, "verdict": row["verdict"]}
+                self.s.event("exit_review", **row)
+        last = {k: v for k, v in last.items() if k in open_tk}
+        self.s._replace("exit_review.json", {"peak": peaks, "thesis": thesis, "last": last, "plans": rows,
+                                             "ts": feeds_ts(now)})
+        if sell:
+            self.need_decide = True
 
     # ------------------------------------------------------------ evaluation
     def snapshot(self) -> None:

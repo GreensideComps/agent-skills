@@ -1,5 +1,5 @@
 {
-  "version": "agent-1.18.1",
+  "version": "agent-1.19",
   "note": "Always-on demo market agent. Demo account only (the client refuses any other host). Owner mandate: cmsg_01U4KMvkBYNknqm4HRVie8uvK9gRYqGXBK4bQP49dBz49i (26 Oct 2026).",
   "intervals_s": {
     "loop": 15,
@@ -16,7 +16,8 @@
     "scoreboard": 300,
     "timing": 3600,
     "screen_watch": 900,
-    "gap_rebound": 1800
+    "gap_rebound": 1800,
+    "exit_review": 900
   },
   "benchmark": {
     "t212": "VWRPl_EQ",
@@ -450,6 +451,38 @@
       "kill_after_trades": 30,
       "kill_after_days": 730,
       "forward_csv": "/mnt/project-files/research/always-on/forward/Q205.csv"
+    },
+    "exit_review": {
+      "enabled": true,
+      "rule": "agent-1.19 (owner 6 Nov 14:39Z cmsg_01U4KMvkBYNknqm4HRVie8uv3hDyNfMR4r18MaefWEF2yi): every open trade gets a recorded hold-or-sell decision (exit_review event) once a day and whenever its verdict changes, naming why it is held and what will sell it. Added sell rules beside each strategy's own tested exits: hard SEC events for buyback and gap names; buyback thesis broken (shares outstanding up y/y in a filing after entry); profit lock (after +25%, sell at half the best gain). Both new rules are unproven priors under test by the research loop; screener picks keep no profit lock because Q200/Q201 found interim selling worse than holding.",
+      "hard_events_for": [
+        "buyback_value",
+        "gap_rebound"
+      ],
+      "thesis": {
+        "enabled": true,
+        "strategies": [
+          "buyback_value"
+        ],
+        "edge": "unproven prior: Q206 bought shrinking share counts; a rising count means the buyback stopped"
+      },
+      "profit_lock": {
+        "enabled": true,
+        "strategies": [
+          "buyback_value",
+          "gap_rebound"
+        ],
+        "arm": 0.25,
+        "keep": 0.5,
+        "edge": "unproven prior, research test requested 6 Nov"
+      },
+      "hold_rules": {
+        "stock_screen": "screener pick: held while it stays in the weekly top 15 and its filings are clean (Q214)",
+        "buyback_value": "buyback pick: held 6 months, the tested holding period (Q206), while the buyback continues",
+        "gap_rebound": "gap rebound: held 60 trading days, the tested holding period (Q218b)",
+        "momentum_timing": "ETF timing: held until the month-end signal names the other fund",
+        "value_timing": "ETF timing: held until the month-end signal names the other fund"
+      }
     },
     "buyback_value": {
       "enabled": true,
