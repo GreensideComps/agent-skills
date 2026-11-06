@@ -22,7 +22,10 @@ VARIANTS = {  # name: (added, description, picker)
     "c4_no_value": ("2026-11-06", "quality + momentum only, no FCF/EV value leg", None),
     "c5_no_quality": ("2026-11-06", "value + momentum only, no gross-profitability leg", None),
     "c6_low_vol": ("2026-11-06", "pick-1 after dropping the most volatile third (12m monthly-return std)", None),
+    "c7_monthly": ("2026-11-06", "pick-1 rebuilt every month (fast refresh; tests the cost of the yearly/12-tranche cadence)",
+                   lambda m: p1.pick(p1.universe(m))),
 }
+MONTHLY = {"c7_monthly"}  # variants re-formed every month instead of each December
 
 
 def _c2(m):
@@ -96,7 +99,7 @@ def main(month: str):
             if b["formed"].iloc[0] < month:  # score the month just ended
                 r = [(px_now.get(c, px_prev.get(c)) / px_prev[c] - 1) if px_prev.get(c) else 0.0 for c in b["cik"]]
                 rows.append({"month": month, "variant": name, "ret_usd": sum(r) / len(r), "n": len(r)})
-        if not bf.exists() or m_end.month == 12:
+        if not bf.exists() or m_end.month == 12 or name in MONTHLY:
             b = VARIANTS[name][2](now)[["cik", "ticker", "score"]].copy(); b["formed"] = month
             b.to_csv(bf, index=False)
     if rows:
