@@ -198,10 +198,32 @@ def stops_needed(records: list[dict], positions: dict, stops: dict) -> list[dict
     for e in open_trades(records):
         p = positions.get(e["ticker"])
         sig = e["signal"]
-        if e["id"] in stops or not p or float(p.get("quantity") or 0) <= 0 or sig.get("stop") is None:
+        prev = stops.get(e["id"])
+        retry = bool(prev) and too_far(prev.get("failed")) and not prev.get("clamp_tried")
+        if (prev and not retry) or not p or float(p.get("quantity") or 0) <= 0 or sig.get("stop") is None:
             continue  # stock_screen trades carry no stop by rule
         out.append({"entry_id": e["id"], "ticker": e["ticker"], "qty": float(p["quantity"]),
-                    "stop_px": round(sig["entry_px"] * (1 - sig["stop"]), 2), "strategy": sig["strategy"]})
+                    "stop_px": round(sig["entry_px"] * (1 - sig["stop"]), 2), "strategy": sig["strategy"],
+                    "px": float(p.get("currentPrice") or 0)})
+    return out
+
+
+def too_far(err) -> bool:
+    """True when the broker refused a stop because its price sits outside the band it accepts."""
+    return bool(err) and "price-too-far" in str(err)
+
+
+def clamp_ladder(stop_px: float, px: float, depths=(0.3, 0.2, 0.15, 0.1)) -> list[float]:
+    """Stop prices to retry, widest first, after a "price too far" refusal: each `depth` below the current price,
+    never below the trade's own rule stop (a clamped stop only ever sits closer to the price, so it can exit early
+    in a fall the rule would ride out, but never later)."""
+    if not px or px <= 0:
+        return []
+    out = []
+    for d in depths:
+        c = round(px * (1 - d), 2)
+        if c > stop_px and c not in out:
+            out.append(c)
     return out
 
 

@@ -49,6 +49,7 @@ class FakeBroker:
         self.pos = [pos("INTC_US_EQ", 0.2, 0, 0.2, 17.0, 20.0), pos("MSFT_US_EQ", 0.3, 0, 0.3, 150.0, 160.0)]
         self.orders, self.history, self.pending = [], [], []
         self.fail_next = None
+        self.stop_min, self.stop_refused = None, []
 
     def account_summary(self):
         return {"totalValue": self.cash + sum(p["walletImpact"]["currentValue"] for p in self.pos),
@@ -89,6 +90,9 @@ class FakeBroker:
         return {"id": oid, "status": "NEW"}
 
     def place_stop_order(self, ticker, quantity, stop_price):
+        if self.stop_min and stop_price < self.stop_min:
+            self.stop_refused.append(stop_price)
+            raise RuntimeError('/api/v0/equity/orders/stop: HTTP 400: {"type":"/api-errors/price-too-far"}')
         oid = 5000 + len(self.pending) + len(self.history)
         self.pending.append({"id": oid, "ticker": ticker, "type": "STOP", "quantity": quantity, "stopPrice": stop_price})
         return {"id": oid, "status": "NEW"}
@@ -518,6 +522,44 @@ def test_open_trade_gets_a_broker_stop_and_its_fill_closes_the_trade(tmp_path):
     assert t[0]["exit"] and t[0]["exit"]["signal"]["why"] == "broker_stop"
     assert active.closed_result(t[0])["pnl_gbp"] < 0
     assert not [o for o in b.orders if o[0] == "JPM_US_EQ" and o[1] < 0]     # no market sell on top
+
+
+def _restop(st, b, px, stop_min, prev=None):
+    """Drop the JPM broker stop, move the price, and set the band the fake broker accepts."""
+    b.pending = [p for p in b.pending if p["type"] != "STOP"]
+    st._replace("stops.json", prev or {})
+    for p in b.pos:
+        if p["instrument"]["ticker"] == "JPM_US_EQ":
+            p["currentPrice"] = px
+    b.stop_min = stop_min
+
+
+def test_stop_refused_as_too_far_is_clamped_inside_the_band(tmp_path):
+    ag, b, st, clock, rec, q = _jpm_entry(tmp_path)
+    _restop(st, b, 200.0, 150.0)                         # rule stop 86.94 sits far below a 200 price
+    advance(ag, clock, 1, by=301)
+    stops = [p for p in b.pending if p["type"] == "STOP"]
+    assert b.stop_refused == [86.94, 140.0] and [p["stopPrice"] for p in stops] == [160.0]
+    rec_ = next(iter(st.read("stops.json").values()))
+    assert rec_["stop_px"] == 160.0 and rec_["clamped_from"] == 86.94
+
+
+def test_earlier_too_far_refusal_is_retried_once_on_the_ladder(tmp_path):
+    ag, b, st, clock, rec, q = _jpm_entry(tmp_path)
+    prev = {rec["id"]: {"order_id": None, "ticker": "JPM_US_EQ", "failed": "HTTP 400 price-too-far", "ts": "x"}}
+    _restop(st, b, 200.0, 175.0, prev)
+    advance(ag, clock, 1, by=301)
+    assert b.stop_refused == [140.0, 160.0, 170.0] and [p["stopPrice"] for p in b.pending if p["type"] == "STOP"] == [180.0]
+    _restop(st, b, 200.0, 199.0, {rec["id"]: {**prev[rec["id"]], "clamp_tried": True}})
+    advance(ag, clock, 2, by=301)
+    assert not [p for p in b.pending if p["type"] == "STOP"]   # tried once already: not retried every cycle
+
+
+def test_clamp_never_puts_the_stop_below_the_rule_stop():
+    from market_agent import active
+    assert active.clamp_ladder(86.94, 94.5) == []
+    assert active.clamp_ladder(52.82, 106.0) == [74.2, 84.8, 90.1, 95.4]
+    assert active.clamp_ladder(50.0, 0) == []
 
 
 def test_agent_exit_cancels_the_broker_stop_first(tmp_path):

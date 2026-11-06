@@ -986,18 +986,33 @@ class Agent:
         for n in active.stops_needed(recs, self.positions, stops):
             if not self.market_open(n["ticker"]):
                 continue  # placed during the market's own hours, when the broker accepts and works it
-            try:
-                ack = self.c.place_stop_order(n["ticker"], -n["qty"], n["stop_px"])
+            retry = n["entry_id"] in stops  # an earlier "price too far" refusal: go straight to the clamped ladder
+            tries = ([] if retry else [n["stop_px"]]) + active.clamp_ladder(n["stop_px"], n.get("px") or 0)
+            err, ack, px = None, None, None
+            for px in tries:
+                try:
+                    ack = self.c.place_stop_order(n["ticker"], -n["qty"], px)
+                    err = None
+                    break
+                except Exception as e:  # noqa: BLE001 - a refusal other than "too far" ends the ladder
+                    err = e
+                    if not active.too_far(e):
+                        break
+            if tries and err is None:
                 stops[n["entry_id"]] = {"order_id": (ack or {}).get("id"), "ticker": n["ticker"], "qty": n["qty"],
-                                        "stop_px": n["stop_px"], "ts": feeds_ts(self.clock()), "ack": ack}
-                self.s.event("stop_placed", entry=n["entry_id"], **{k: n[k] for k in ("ticker", "qty", "stop_px")},
-                             order_id=stops[n["entry_id"]]["order_id"])
-                notes.append(f"broker stop placed: {n['ticker']} {n['qty']} at {n['stop_px']}")
-            except Exception as e:  # noqa: BLE001 - recorded once; the agent's own stop still watches while it runs
-                stops[n["entry_id"]] = {"order_id": None, "ticker": n["ticker"], "failed": str(e)[:300],
-                                        "ts": feeds_ts(self.clock())}
-                self.s.event("stop_failed", entry=n["entry_id"], ticker=n["ticker"], error=str(e)[:300])
-                self.alert("warn", f"stop_failed:{n['ticker']}", f"broker stop for {n['ticker']} refused: {str(e)[:150]}")
+                                        "stop_px": px, "ts": feeds_ts(self.clock()), "ack": ack}
+                if px != n["stop_px"]:
+                    stops[n["entry_id"]]["clamped_from"] = n["stop_px"]
+                self.s.event("stop_placed", entry=n["entry_id"], ticker=n["ticker"], qty=n["qty"], stop_px=px,
+                             rule_stop_px=n["stop_px"], order_id=stops[n["entry_id"]]["order_id"])
+                notes.append(f"broker stop placed: {n['ticker']} {n['qty']} at {px}"
+                             + (f" (clamped from {n['stop_px']})" if px != n["stop_px"] else ""))
+            else:  # recorded once; the agent's own stop still watches while it runs
+                msg = str(err)[:300] if err else "no stop price inside the broker's band"
+                stops[n["entry_id"]] = {"order_id": None, "ticker": n["ticker"], "failed": msg,
+                                        "ts": feeds_ts(self.clock()), "clamp_tried": True}
+                self.s.event("stop_failed", entry=n["entry_id"], ticker=n["ticker"], error=msg, tried=tries)
+                self.alert("warn", f"stop_failed:{n['ticker']}", f"broker stop for {n['ticker']} refused: {msg[:150]}")
             self.s._replace("stops.json", stops)
 
     def _sync_stops(self) -> None:

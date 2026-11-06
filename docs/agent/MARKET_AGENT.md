@@ -1,4 +1,4 @@
-# Always-on demo market agent (agent-1.15.1)
+# Always-on demo market agent (agent-1.16)
 
 **Mandate:** the owner's 26 Oct 2026 handoff (`cmsg_01U4KMvkBYNknqm4HRVie8uvK9gRYqGXBK4bQP49dBz49i`), covering
 the demo account only. The Trading 212 client refuses any host but `demo.trading212.com`, and `load_credentials`
@@ -67,6 +67,10 @@ before buys.
    gets a resting stop sell at the broker, at the trade's own stop-loss price (`state/stops.json`).
    - It is placed during the market's own hours, once per trade, and respects the kill switch. A refusal is
      recorded once and alerted; the agent's own stop still applies while it runs.
+   - A "price too far" refusal (agent-1.16; T212 only accepts stops within a band around the price, which a wide
+     rule stop such as value_timing's -50% falls outside) is retried at 30%, 20%, 15%, then 10% below the current
+     price, never below the rule stop, and the first accepted price is kept (`clamped_from` in `stops.json`).
+     The clamped stop can exit earlier in a fall than the rule would; it never exits later. One ladder per trade.
    - A broker stop that fills is recorded from the broker's history as the trade's exit (`why: broker_stop`),
      so P&L and the kill rule count it like any other exit.
    - Before the agent's own take-profit, time or stop exit, it cancels the broker stop, then sells on a later pass
