@@ -21,6 +21,7 @@ TOP, PER_SIC = 15, 3
 
 def load() -> pd.DataFrame:
     df = xs.load()
+    df = _extend_partial_month(df)
     co = pd.read_csv(DATA / "sec_companies.csv.gz", usecols=["cik", "sic"])
     df = df.merge(co, on="cik", how="left")
     df = df.sort_values(["cik", "month"]).reset_index(drop=True)
@@ -43,6 +44,28 @@ def load() -> pd.DataFrame:
     df["gpa"] = df["ttm_gross_profit"] / df["total_assets"]
     df["sic2"] = (df["sic"] // 100)
     return df
+
+
+def _extend_partial_month(df: pd.DataFrame) -> pd.DataFrame:
+    """Live use: the metrics file only has completed months, but prices_monthly carries a row for the current
+    (partial) month. Add that month with each company's latest metrics carried forward (as-of) and the latest
+    price, so the screen can run mid-month on fresh prices. Backtests cut data at 2022 and never reach this."""
+    last_m = df["month"].max()
+    p = pd.read_csv(xs.DATA / "prices_monthly.csv.gz", dtype={"cik": int})
+    p = p[p["currency"] == "USD"]
+    p["month"] = pd.to_datetime(p["month"])
+    newer = p[p["month"] > last_m].sort_values("month").drop_duplicates(["cik", "month"], keep="last")
+    if newer.empty:
+        return df
+    base = df[df["month"] == last_m].drop(columns=["ticker", "close_raw", "adjclose", "ret_next", "mcap", "band"])
+    add = base.drop(columns=["month"]).merge(newer[["cik", "month", "ticker", "close_raw", "adjclose"]], on="cik")
+    shares = add["shares_out"].where(add["shares_out"] > 0, add["shares_diluted"])
+    add["mcap"] = shares * add["close_raw"]
+    add["ret_next"] = np.nan
+    add["band"] = None
+    for b, (lo, hi) in xs.SIZE_BANDS.items():
+        add.loc[(add["mcap"] >= lo) & (add["mcap"] < hi), "band"] = b
+    return pd.concat([df, add[df.columns]], ignore_index=True)
 
 
 def universe(m: pd.DataFrame, min_cap=2e9) -> pd.DataFrame:
