@@ -59,7 +59,10 @@ def main(argv: list[str] | None = None) -> int:
     sub.add_parser("uptime").add_argument("--hours", type=float, default=24.0)
     for c in ("halt", "resume"):
         sub.add_parser(c).add_argument("reason")
-    sub.add_parser("screen-refresh").add_argument("scored_csv")  # Q214 monthly 1/12 refresh: prints the swap
+    sr = sub.add_parser("screen-refresh")  # Q214 1/12 refresh, run weekly: prints the swap
+    sr.add_argument("scored_csv")
+    sr.add_argument("--month", help="YYYY-MM: apply the one-scheduled-swap-a-month budget from screen_refresh.json")
+    sr.add_argument("--record", action="store_true", help="record this month's swap as used (after the config edit)")
     a = ap.parse_args(argv)
     from .store import LeaseHeld, Store
     store = Store(Path(a.state))
@@ -78,8 +81,15 @@ def main(argv: list[str] | None = None) -> int:
         sc = {**load_config()["active"]["stock_screen"], "_state": store.read("stock_screen.json") or {}}
         with open(a.scored_csv) as fh:
             scored = list(csv.DictReader(fh))
-        print(json.dumps(stock_screen.monthly_refresh(sc, scored, store.intents(), sc.get("refresh_top_n", 15),
-                                                      sc.get("max_per_sic2", 3)), indent=1))
+        log = store.read("screen_refresh.json") or {}
+        used = bool(a.month and (log.get("swaps") or {}).get(a.month))
+        out = stock_screen.monthly_refresh(sc, scored, store.intents(), sc.get("refresh_top_n", 15),
+                                           sc.get("max_per_sic2", 3), swapped_this_month=used)
+        if a.record and a.month and out["action"] == "swap" and out["sell"] and not used:
+            store._replace("screen_refresh.json", {**log, "swaps": {**(log.get("swaps") or {}), a.month: {
+                "sell": out["sell"], "buy": [r.get("ticker") or r.get("cik") for r in out["buy"]],
+                "ts": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())}}})
+        print(json.dumps(out, indent=1))
         return 0
     if a.cmd in ("halt", "resume"):
         store.set_control(a.cmd == "resume", a.reason, by=os.environ.get("USER", "cli"))

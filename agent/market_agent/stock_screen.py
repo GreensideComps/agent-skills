@@ -198,7 +198,8 @@ def price_alerts(held: dict[str, dict], quote_of, state: dict, drop: float) -> t
     return {**state, "drop_alerted": done}, out
 
 
-def monthly_refresh(sc: dict, scored: list[dict], records, top_n: int = 15, max_per_sic2: int = 3) -> dict:
+def monthly_refresh(sc: dict, scored: list[dict], records, top_n: int = 15, max_per_sic2: int = 3,
+                    swapped_this_month: bool = False) -> dict:
     """Q214's monthly 1/12 refresh. `scored` is that month's pick1.py live output (ticker, cik, sic, score).
     Skip when every held name is still in the top `top_n` and no slot is empty. Otherwise sell one held name, the oldest
     by entry day (ties: lowest score this month, a name gone from the gated list first), and buy the best-scored name not
@@ -214,10 +215,24 @@ def monthly_refresh(sc: dict, scored: list[dict], records, top_n: int = 15, max_
     vacant = [t for t in sc.get("picks", []) if t not in held and t in hard]
     notes = []
     sell = None
+    def key(t):
+        return (held[t]["ts"][:10], score.get(int(ciks.get(t, 0)), float("-inf")))
     if any(int(ciks[t]) not in top for t in held if t in ciks) or not held:
-        def key(t):
-            return (held[t]["ts"][:10], score.get(int(ciks.get(t, 0)), float("-inf")))
         sell = min(held, key=key) if held else None
+    if swapped_this_month and sell:
+        # weekly runs keep the tested 1/12 turnover: one scheduled swap a month; after it, only a held name that has
+        # dropped out of the gated list altogether may be swapped (an extra swap), else the run just logs
+        dropped = [t for t in held if t in ciks and int(ciks[t]) not in score]
+        if dropped:
+            sell = min(dropped, key=key)
+            notes.append(f"extra swap: {sell} dropped out of the gated list")
+        else:
+            would = sell
+            sell = None
+            if not vacant:
+                return {"action": "log_only", "sell": None, "would_sell": would, "buy": [],
+                        "notes": [f"this month's swap is used; would have sold {would} (oldest entry "
+                                  f"{held[would]['ts'][:10]})"]}
     if sell is None and not vacant:
         return {"action": "skip", "sell": None, "buy": [], "notes": ["every held name is in the top %d" % top_n]}
     keep = [t for t in held if t != sell]

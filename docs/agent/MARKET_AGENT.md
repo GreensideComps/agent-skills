@@ -1,4 +1,4 @@
-# Always-on demo market agent (agent-1.16.1)
+# Always-on demo market agent (agent-1.16.2)
 
 **Mandate:** the owner's 26 Oct 2026 handoff (`cmsg_01U4KMvkBYNknqm4HRVie8uvK9gRYqGXBK4bQP49dBz49i`), covering
 the demo account only. The Trading 212 client refuses any host but `demo.trading212.com`, and `load_credentials`
@@ -155,8 +155,13 @@ before buys.
 16. **stock_screen** (agent-1.12, research loop Q199, `results/Q199.md`, `stock_screen.py`, `active.stock_screen`):
    a basket of individual US stocks from the system-designed screener, 2% of the book each, held with no stop,
    take-profit or time stop. Monthly 1/12 refresh (agent-1.15, research Q214, from the 30 Nov 2026 US close; the
-   yearly January rebalance is retired, since Q214 found its result partly luck in the rebalance month): on the 3rd of each month at about 13:30Z, after the research data
-   rebuild (skipped with an alert if that month's rows are missing), the month's `pick1.py live` scoring goes through `python3 -m market_agent screen-refresh out.csv`, which skips when every held
+   yearly January rebalance is retired, since Q214 found its result partly luck in the rebalance month). Run weekly
+   since agent-1.16.2 (6 Nov, results season): every Monday at about 13:30Z (next weekday on a holiday), after the
+   weekly research data rebuild (Mondays 05:41Z; skipped if prices_monthly was not modified that day or the month has
+   no monthly_metrics rows), the current month's `pick1.py live` scoring goes through
+   `python3 -m market_agent screen-refresh out.csv --month YYYY-MM`. At most ONE scheduled swap per calendar month
+   (recorded with `--record` in `state/screen_refresh.json`), so turnover stays at the tested 1/12: later Mondays
+   that month return `log_only`, except an extra swap for a held name gone from the gated list. The refresh skips when every held
    name is in the top 15, else names one sale (oldest entry; ties: lowest score, or a name gone from the gated list)
    and the best-scored name not held (max 3 per SIC2), plus a refill for any hard-event sale. After the ±10pt sector
    check, `picks` is edited to match; the sold name exits with `why: rebalance`, and each sale is one closed trade
@@ -172,7 +177,7 @@ before buys.
    selling on ranks, gate breaks or a 25% crash guard all did worse than holding): every 15 minutes the agent reads
    each held name's SEC submissions. It SELLS on an 8-K with item 1.03 (bankruptcy), 3.01 (delisting notice), 4.01
    (auditor change) or 4.02 (non-reliance), or a delisting (25, 25-NSE, 15-12B/G), merger (DEFM14A, PREM14A) or
-   tender (SC TO-T, SC 14D9) filing, and holds the cash until the next monthly refresh. It only LOGS, with no alert or brief line (`stock_screen_alert` events, event log only)
+   tender (SC TO-T, SC 14D9) filing, and holds the cash until the next refresh. It only LOGS, with no alert or brief line (`stock_screen_alert` events, event log only)
    on any other 8-K, a new 10-Q or 10-K (the gates still need re-checking by hand), a 25% fall from entry, or no
    quote while the market is open (a possible halt). Orders use 3 decimals (T212 refused 4 on CARG and HRMY); any
    other precision refusal is learned per line in `state/precision.json`.

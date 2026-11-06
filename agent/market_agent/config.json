@@ -1,5 +1,5 @@
 {
-  "version": "agent-1.16.1",
+  "version": "agent-1.16.2",
   "note": "Always-on demo market agent. Demo account only (the client refuses any other host). Owner mandate: cmsg_01U4KMvkBYNknqm4HRVie8uvK9gRYqGXBK4bQP49dBz49i (26 Oct 2026).",
   "intervals_s": {
     "loop": 15,
@@ -402,7 +402,7 @@
     },
     "stock_screen": {
       "enabled": true,
-      "rule": "Q199 screener basket: top 15 by composite score (gross profitability, FCF yield, momentum, low leverage, buybacks), equal 2% each; monthly 1/12 refresh (Q214) from 30 Nov 2026",
+      "rule": "Q199 screener basket: top 15 by composite score (gross profitability, FCF yield, momentum, low leverage, buybacks), equal 2% each; 1/12 refresh (Q214), checked weekly from 9 Nov 2026, max one scheduled swap a month",
       "picks_month": "2026-10",
       "picks_file": "/mnt/project-files/research/stock-screener/picks_2026-11.csv",
       "picks": [
@@ -432,7 +432,7 @@
       "kill_after_days": 730,
       "refresh_top_n": 15,
       "max_per_sic2": 3,
-      "rebalance": "Monthly 1/12 refresh (research Q214, from the 30 Nov 2026 US close; the yearly January rebalance is retired): on the 3rd of each month at about 13:30Z (next weekday if the 3rd is a weekend), after the monthly research-data rebuild (monthly signal log routine, 3rd 06:46 London, ~2h; skip and alert if monthly_metrics.csv.gz has no rows for the month or prices_monthly predates the 3rd), run python3 research/stock_screener/pick1.py live <YYYY-MM> out.csv on branch claude/project-thread-b35v9o, then python3 -m market_agent screen-refresh out.csv. It skips when every held name is in the top 15; otherwise it names ONE sale (oldest entry; ties: lowest score this month, or a name gone from the gated list) and the best-scored name not held (max 3 per SIC2), plus a refill for any name sold on a hard SEC event. Check the +-10pt sector look-through, then edit picks (sale out, buy in, with its T212 ticker and CIK), previous_picks and picks_month. The sold name exits with reason rebalance.",
+      "rebalance": "Weekly check of the 1/12 refresh (research Q214; owner asked 6 Nov why it waits a month): every Monday at about 13:30Z (next weekday on a holiday), after the weekly research data rebuild (Mondays 05:41Z, ~2h, log research/stock-screener/REBUILD_LOG.md; skip if prices_monthly was not modified today or monthly_metrics.csv.gz has no rows for the current month), run python3 research/stock_screener/pick1.py live <current YYYY-MM> out.csv on branch claude/project-thread-b35v9o, then python3 -m market_agent screen-refresh out.csv --month <YYYY-MM>. At most ONE scheduled swap per calendar month (tested 1/12 turnover): the first Monday that finds a swap uses it (re-run with --record after the config edit); later Mondays that month return log_only, except an extra swap for a held name gone from the gated list (logged as a stock_screen_alert). It skips when every held name is in the top 15; otherwise it names ONE sale (oldest entry; ties: lowest score this month, or a name gone from the gated list) and the best-scored name not held (max 3 per SIC2), plus a refill for any name sold on a hard SEC event. Check the +-10pt sector look-through, then edit picks (sale out, buy in, with its T212 ticker and CIK), previous_picks and picks_month. The sold name exits with reason rebalance.",
       "rationale": "LOW CONFIDENCE demo forward test (research loop Q199, results/Q199.md): the pre-registered backtest failed (+3.4%/yr vs its universe, t 0.85); the pre-registration said it runs as a demo forward test either way. Owner asked on 3 Nov 2026 for individual stock picks from a system-designed screener. Demo only, never ISA or real money.",
       "ciks": {
         "SNDK1_US_EQ": 2023554,

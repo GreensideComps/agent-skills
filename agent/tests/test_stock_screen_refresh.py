@@ -45,3 +45,18 @@ def test_a_hard_event_exit_is_refilled_without_a_sale(monkeypatch):
     sc = {**SC, "_state": {"exit": {"C_US_EQ": {"why": "8-K 1.03"}}}}
     r = s.monthly_refresh(sc, [row(3, 9), row(1, 3), row(2, 2), row(7, 1)], [], top_n=3)
     assert r["sell"] is None and r["vacant"] == ["C_US_EQ"] and [b["cik"] for b in r["buy"]] == ["7"]
+
+
+def test_after_this_months_swap_later_weekly_runs_only_log(monkeypatch):
+    held(monkeypatch, {"A_US_EQ": "2026-11-03", "B_US_EQ": "2026-11-03", "C_US_EQ": "2026-11-03"})
+    rows = [row(9, 5), row(1, 3), row(2, 2), row(3, 1)]
+    r = s.monthly_refresh(SC, rows, [], top_n=3, swapped_this_month=True)
+    assert r["action"] == "log_only" and r["sell"] is None and r["would_sell"] == "C_US_EQ" and r["buy"] == []
+
+
+def test_a_name_gone_from_the_gated_list_is_an_extra_swap(monkeypatch):
+    held(monkeypatch, {"A_US_EQ": "2026-11-03", "B_US_EQ": "2026-12-01", "C_US_EQ": "2026-11-03"})
+    rows = [row(9, 5), row(1, 3), row(3, 1), row(8, 0.9)]                  # B left the gated list
+    r = s.monthly_refresh(SC, rows, [], top_n=3, swapped_this_month=True)
+    assert r["action"] == "swap" and r["sell"] == "B_US_EQ" and [b["cik"] for b in r["buy"]] == ["9"]
+    assert "extra swap" in r["notes"][0]
