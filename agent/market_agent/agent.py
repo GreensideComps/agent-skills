@@ -662,6 +662,7 @@ class Agent:
                                           and gap_rebound.mcap(r) >= gc["min_mcap"]
                                           and f"{r['symbol']}_US_EQ" in self.schedule_of})
         n = 0
+        self._vix_bars = None
         for d0 in sorted(st["queue"]):
             todo = st["queue"][d0]
             while todo and n < gc["per_run"]:
@@ -680,6 +681,15 @@ class Agent:
             if not todo:
                 st["queue"].pop(d0)
                 st["done"][d0] = feeds_ts(self.clock())
+        untagged = [v for v in st["signals"].values() if "variant" not in v]
+        if untagged:  # signals recorded before agent-1.17 get their Q218b VIX tag too
+            if getattr(self, "_vix_bars", None) is None:
+                try:
+                    self._vix_bars = gap_rebound.bars("^VIX", self.get)
+                except Exception:  # noqa: BLE001 - tagged vix_unknown
+                    self._vix_bars = []
+            for v in untagged:
+                v["vix"], v["variant"] = gap_rebound.vix_tag(self._vix_bars, v["day0"], gc.get("vix_hi", 25.0))
         st["done"] = dict(sorted(st["done"].items())[-30:])
         keep_from = complete[max(0, len(complete) - 40)] if complete else today
         st["signals"] = {k: v for k, v in st["signals"].items() if v["day0"] >= keep_from}  # the last ~40 sessions
@@ -710,8 +720,16 @@ class Agent:
                     h = gap_rebound.health(self.sec_get(gap_rebound.FACTS.format(cik=cik), {}), m["day0"])
             except Exception as e:  # noqa: BLE001 - an unreadable filing confirms nothing: no trade
                 h = {"weak": None, "why": f"UNVERIFIED: SEC read failed ({str(e)[:120]})"}
+        if getattr(self, "_vix_bars", None) is None:
+            try:  # Q218b: tag each signal with the VIX close; the trade itself does not depend on it
+                self._vix_bars = gap_rebound.bars("^VIX", self.get)
+            except Exception as e:  # noqa: BLE001 - no VIX: the signal is tagged vix_unknown and trades as before
+                self._vix_bars = []
+                self.s.event("gap_rebound_skip", strategy=gap_rebound.NAME, symbol="^VIX", error=str(e)[:200])
+        vix, variant = gap_rebound.vix_tag(self._vix_bars, m["day0"], gc.get("vix_hi", 25.0))
         tk = f"{sym}_US_EQ"
         sig = {**m, "symbol": sym, "ticker": tk, "health": h, "eligible": h.get("weak") is True,
+               "vix": vix, "variant": variant,
                "buy_day": gap_rebound.exit_day(m["day_p1"], 1), "ts": feeds_ts(self.clock())}
         st["signals"][tk] = sig
         self.s.event("gap_rebound_signal", strategy=gap_rebound.NAME, **sig)

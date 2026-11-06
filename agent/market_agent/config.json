@@ -1,5 +1,5 @@
 {
-  "version": "agent-1.16.2",
+  "version": "agent-1.17",
   "note": "Always-on demo market agent. Demo account only (the client refuses any other host). Owner mandate: cmsg_01U4KMvkBYNknqm4HRVie8uvK9gRYqGXBK4bQP49dBz49i (26 Oct 2026).",
   "intervals_s": {
     "loop": 15,
@@ -455,6 +455,9 @@
       "enabled": true,
       "rule": "liquid US stock (20-day median dollar volume >= $10m) falls >= 10% vs SPY over earnings days -1..+1 and fails the health gate (TTM FCF <= 0 or TTM revenue down y/y, filings before day 0): buy 2% near the close of day +2, hold 60 trading days",
       "edge": "unproven, forward test only (Q205; idea from the Q203 control group, +5.0%/trade t 2.75 in 2014-22, not a registered result)",
+      "vix_hi": 25.0,
+      "edge_vix_hi": "gap-down rebound in high fear (VIX>=25): unproven, Q218b +4.5%/trade 2010-22, DSR 0.02",
+      "vix_note": "Q218b (6 Nov): each signal carries the VIX close on day 0 and a vix_hi (>=25) / vix_lo tag; vix_hi trades carry edge_vix_hi; sizing, rules and the 30-trade kill test are unchanged; strategy_scores reports the two variants apart",
       "entry_weight": 0.02,
       "max_open": 8,
       "min_mcap": 300000000,

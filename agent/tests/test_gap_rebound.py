@@ -73,3 +73,41 @@ def test_entry_only_on_buy_day_inside_the_last_90_minutes():
     assert o[0][6]["exit_day"] == g.exit_day("2026-11-05", 60) and o[0][6]["time_stop_s"] > 80 * 86400
     o, _ = g.entry_orders(gc, cfg, [], {}, q, 1.3, 1000, 100, late, 140, {"gap_rebound": {}}, st)
     assert not o  # killed
+
+
+def test_vix_tag_and_high_fear_edge_line_q218b():
+    vb = [("2026-11-02", 24.1, 0), ("2026-11-03", 26.4, 0), ("2026-11-05", 19.0, 0)]
+    assert g.vix_tag(vb, "2026-11-03") == (26.4, "vix_hi")
+    assert g.vix_tag(vb, "2026-11-04") == (26.4, "vix_hi")   # no close that day: the last one before it
+    assert g.vix_tag(vb, "2026-11-02") == (24.1, "vix_lo")
+    assert g.vix_tag([], "2026-11-03") == (None, "vix_unknown")
+    gc = {"entry_weight": 0.02, "max_open": 8, "buy_window_min": 90, "hold_days": 60, "rule": "r", "edge": "e",
+          "edge_vix_hi": "hi"}
+    cfg = {"core": {"buy_reserve": 0.01}}
+    late = datetime.fromisoformat("2026-11-05T15:00:00-05:00").timestamp()
+    q = lambda tk: {"price": 10.0, "t": 0}
+    base = {"eligible": True, "buy_day": "2026-11-05", "ear": -0.2, "day0": "2026-11-03", "health": {"why": "w"}}
+    st = {"signals": {"X_US_EQ": {**base, "vix": 26.4, "variant": "vix_hi"},
+                      "Y_US_EQ": {**base, "ear": -0.1, "vix": 18.0, "variant": "vix_lo"}}}
+    o, _ = g.entry_orders(gc, cfg, [], {}, q, 1.3, 1000, 100, late, 140, {}, st)
+    sig = {x[0]: x[6] for x in o}
+    assert sig["X_US_EQ"]["edge"] == "hi" and sig["X_US_EQ"]["variant"] == "vix_hi" and sig["X_US_EQ"]["vix"] == 26.4
+    assert sig["Y_US_EQ"]["edge"] == "e" and sig["Y_US_EQ"]["variant"] == "vix_lo"   # unchanged below 25
+
+
+def test_strategy_scores_report_variants_apart():
+    from market_agent import active
+    def trade(v, ret):
+        e = {"id": v + str(ret), "ticker": "X", "signal": {"strategy": "gap_rebound", "variant": v}}
+        return e, ret
+    ts = [trade("vix_hi", 0.05), trade("vix_lo", -0.01), trade("vix_lo", -0.03)]
+    orig_t, orig_c = active.trades, active.closed_result
+    active.trades = lambda recs: [{"entry": e, "exit": {"x": 1}} for e, _ in ts]
+    active.closed_result = lambda t: {"ret": dict((e["id"], r) for e, r in ts)[t["entry"]["id"]], "vwrp_ret": 0.0,
+                                      "pnl_gbp": 1.0}
+    try:
+        s = active.strategy_scores([])["gap_rebound"]
+    finally:
+        active.trades, active.closed_result = orig_t, orig_c
+    assert s["n"] == 3 and s["variants"]["vix_hi"]["n"] == 1 and s["variants"]["vix_lo"]["n"] == 2
+    assert abs(s["variants"]["vix_lo"]["avg_ret"] + 0.02) < 1e-9

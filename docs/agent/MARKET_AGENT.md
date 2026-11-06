@@ -1,4 +1,4 @@
-# Always-on demo market agent (agent-1.16.2)
+# Always-on demo market agent (agent-1.17)
 
 **Mandate:** the owner's 26 Oct 2026 handoff (`cmsg_01U4KMvkBYNknqm4HRVie8uvK9gRYqGXBK4bQP49dBz49i`), covering
 the demo account only. The Trading 212 client refuses any host but `demo.trading212.com`, and `load_credentials`
@@ -269,3 +269,12 @@ Kill switch commands:
   - paid hosting is excluded.
 
   This setup is the strongest permitted alternative, and its measured uptime is reported as it is.
+
+## agent-1.17: gap_rebound VIX tag (research Q218b, 6 Nov 2026)
+
+Every gap_rebound signal records the VIX close on its day 0 (Yahoo ^VIX, the same quote source; the last close before
+it if that day has none) and a tag: `vix_hi` at 25 or above, `vix_lo` below, `vix_unknown` with no VIX. A vix_hi trade
+carries the edge line "gap-down rebound in high fear (VIX>=25): unproven, Q218b +4.5%/trade 2010-22, DSR 0.02"
+(`edge_vix_hi`). Rules, 2% sizing, the go-live rule and the 30-trade kill test are unchanged: the tag only labels
+trades. `strategy_scores` reports each tag's trades apart under `variants`, and the kill rule still counts the whole
+strategy. Signals recorded before 1.17 are tagged on the next scan.

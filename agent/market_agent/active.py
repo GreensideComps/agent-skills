@@ -52,8 +52,16 @@ def strategy_scores(records: list[dict]) -> dict[str, dict]:
         d["ret"] += r["ret"]
         d["vwrp_ret"] += r["vwrp_ret"]
         d["pnl_gbp"] += r["pnl_gbp"]
+        v = t["entry"]["signal"].get("variant")
+        if v:  # reported apart (e.g. gap_rebound vix_hi/vix_lo, Q218b); the kill rule still uses the whole strategy
+            w = d.setdefault("variants", {}).setdefault(v, {"n": 0, "ret": 0.0, "vwrp_ret": 0.0, "pnl_gbp": 0.0})
+            w["n"] += 1
+            w["ret"] += r["ret"]
+            w["vwrp_ret"] += r["vwrp_ret"]
+            w["pnl_gbp"] += r["pnl_gbp"]
     for d in out.values():
-        d["avg_ret"], d["avg_vwrp_ret"] = d["ret"] / d["n"], d["vwrp_ret"] / d["n"]
+        for x in [d, *(d.get("variants") or {}).values()]:
+            x["avg_ret"], x["avg_vwrp_ret"] = x["ret"] / x["n"], x["vwrp_ret"] / x["n"]
     return out
 
 

@@ -60,6 +60,15 @@ def bars(sym: str, get: Callable, rng: str = "3mo") -> list[tuple[str, float, fl
     return out
 
 
+def vix_tag(vix_bars: list[tuple], day: str, hi: float = 25.0) -> tuple[float | None, str]:
+    """The VIX close on `day` (else the last one before it) and its regime tag (Q218b: vix_hi at `hi` or above,
+    vix_lo below, vix_unknown when no close is in)."""
+    c = [x[1] for x in vix_bars or [] if x[0] <= day]
+    if not c:
+        return None, "vix_unknown"
+    return round(c[-1], 2), ("vix_hi" if c[-1] >= hi else "vix_lo")
+
+
 def day_index(days: list[str], d: str) -> int | None:
     """The index of the first trading day on or after calendar date `d` (a report dated on a non-trading day reacts
     on the next session)."""
@@ -247,8 +256,9 @@ def entry_orders(gc, cfg, records, positions, quote_of, fx, total, cash, now, vw
         x_t = datetime.fromisoformat(f"{xd}T15:00:00").replace(tzinfo=NY).timestamp()
         out.append((tk, qty, qty * q["price"] / fx, q["price"], True,
                     f"active entry: {NAME} ({gc['rule']}); EAR {s['ear']:+.1%} around {s['day0']}; {s['health']['why']}",
-                    {"type": "active_entry", "strategy": NAME, "rule": gc["rule"], "edge": gc["edge"],
-                     "day0": s["day0"], "ear": s["ear"], "health": s["health"], "exit_day": xd,
+                    {"type": "active_entry", "strategy": NAME, "rule": gc["rule"],
+                     "edge": gc.get("edge_vix_hi", gc["edge"]) if s.get("variant") == "vix_hi" else gc["edge"],
+                     "variant": s.get("variant"), "vix": s.get("vix"), "day0": s["day0"], "ear": s["ear"], "health": s["health"], "exit_day": xd,
                      "entry_px": q["price"], "stop": None, "take_profit": None, "time_stop_s": round(x_t - now),
                      "quote": q, "vwrp_px": vwrp_px}))
         cash -= size * reserve
