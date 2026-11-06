@@ -1,4 +1,4 @@
-# Always-on demo market agent (agent-1.16)
+# Always-on demo market agent (agent-1.16.1)
 
 **Mandate:** the owner's 26 Oct 2026 handoff (`cmsg_01U4KMvkBYNknqm4HRVie8uvK9gRYqGXBK4bQP49dBz49i`), covering
 the demo account only. The Trading 212 client refuses any host but `demo.trading212.com`, and `load_credentials`

@@ -768,7 +768,8 @@ class Agent:
                  "missing_cik": sorted(k for k, v in held.items() if not v["cik"])}
         self.s._replace("stock_screen.json", state)
         for r in found + drops:
-            self.s.event("stock_screen_alert", strategy=stock_screen.NAME, **r)
+            self.s.event("stock_screen_alert", strategy=stock_screen.NAME, check=r["kind"],
+                         **{k: v for k, v in r.items() if k != "kind"})
             if r["kind"] != "exit":
                 continue  # alert-only checks stay in the event log; nothing is pushed to the owner (4 Nov 2026)
             self.alert("critical", f"stock_screen:{r['ticker']}:{r.get('adsh') or r['why'][:20]}",

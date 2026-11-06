@@ -1053,6 +1053,12 @@ def test_stock_screen_funds_from_vwrp_buys_each_pick_and_exits_on_the_yearly_reb
     advance(ag, clock, 3, by=301)
     assert not [p for p in b.pending if p["ticker"] in ("MU_US_EQ", "TDC_US_EQ")]  # no broker stop by rule
     assert len([o for o in b.orders if o[0] in ("MU_US_EQ", "TDC_US_EQ")]) == 2   # held
+    q = ag._quote
+    ag._quote = lambda t: {"price": 70.0} if t == "MU_US_EQ" else q(t)             # MU -30% from entry
+    ag.refresh_screen_watch()                                                       # logs it, no crash, no sale
+    ag._quote = q
+    al = [e for e in st.events(iso(clock())[:10]) if e["kind"] == "stock_screen_alert"]
+    assert [(e["ticker"], e["check"]) for e in al] == [("MU_US_EQ", "alert")]
     sc.update(picks=["TDC_US_EQ"], previous_picks=["MU_US_EQ", "TDC_US_EQ"])        # the January rebalance
     advance(ag, clock, 2, by=301)
     out = [o for o in b.orders if o[0] == "MU_US_EQ" and o[1] < 0]
