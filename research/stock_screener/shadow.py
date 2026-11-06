@@ -21,6 +21,7 @@ VARIANTS = {  # name: (added, description, picker)
     "c3_no_momentum": ("2026-11-04", "quality + value only, no 12-1m momentum", None),
     "c4_no_value": ("2026-11-06", "quality + momentum only, no FCF/EV value leg", None),
     "c5_no_quality": ("2026-11-06", "value + momentum only, no gross-profitability leg", None),
+    "c6_low_vol": ("2026-11-06", "pick-1 after dropping the most volatile third (12m monthly-return std)", None),
 }
 
 
@@ -54,6 +55,28 @@ def _c3(m):
 VARIANTS["c2_top30"] = VARIANTS["c2_top30"][:2] + (_c2,)
 VARIANTS["c3_no_momentum"] = VARIANTS["c3_no_momentum"][:2] + (_c3,)
 VARIANTS["c4_no_value"] = VARIANTS["c4_no_value"][:2] + (lambda m: _legs(m, ["z_gpa", "z_mom"]),)
+_VOL = {}
+
+
+def _vol12(m_end):
+    if m_end not in _VOL:
+        df = p1.load().sort_values(["cik", "month"])
+        df = df[df["month"] <= m_end]
+        r = df.groupby("cik")["adjclose"].pct_change()
+        df = df.assign(r=r)
+        last = df.groupby("cik").tail(12)
+        _VOL[m_end] = last.groupby("cik")["r"].agg(lambda x: x.std() if x.count() >= 10 else float("nan"))
+    return _VOL[m_end]
+
+
+def _c6(m):
+    u = p1.universe(m)
+    v = _vol12(u["month"].iloc[0]).reindex(u["cik"]).values
+    u = u.assign(vol12=v).dropna(subset=["vol12"])
+    return p1.pick(u[u["vol12"] <= u["vol12"].quantile(2 / 3)])
+
+
+VARIANTS["c6_low_vol"] = VARIANTS["c6_low_vol"][:2] + (_c6,)
 VARIANTS["c5_no_quality"] = VARIANTS["c5_no_quality"][:2] + (lambda m: _legs(m, ["z_fcf_ev", "z_mom"]),)
 
 
