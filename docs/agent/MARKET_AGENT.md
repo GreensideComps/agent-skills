@@ -288,3 +288,26 @@ unproven demo switch. Open trades keep their normal exits. Each blocked entry is
 `momentum_blocked` event with the reason "momentum off-switch: SPY<10m MA or VIX>=25 (Q219, unproven)" and the SPY,
 MA and VIX readings, so the scoreboard can show what the switch avoided. Missing SPY or VIX history blocks the
 entry (UNVERIFIED). Readings refresh hourly.
+
+## agent-1.19 / 1.19.1: exit review (6 Nov 2026)
+
+Owner, 14:39Z: "at what point would this system sell a stock? ... there should be a conscious thing for this".
+Every open trade now gets a recorded hold-or-sell decision. An `exit_review` event fires once a day per trade and again
+whenever its verdict changes. It carries the verdict, `held_because` (the strategy's tested hold rule) and `sells_if`
+(stop, broker stop, time exit date, and any other rule that is live). The current table is in
+`state/exit_review.json` under `plans`. Every sale already logs its reason in the order intent.
+
+Three extra sell rules were built and tested the same day:
+- **Buyback thesis check:** sell when the SEC share count rises year on year.
+- **Profit lock:** after a gain of 25% or more, sell once half of the best gain is given back.
+- **SEC hard events for buyback and gap names.**
+
+Research Q221 (N=436-439) failed both the thesis check and the profit lock. Each did worse than the plain tested hold:
+- thesis check on buyback: -0.54%/trade, t -4.45;
+- profit lock on buyback: -0.12%, t -2.20;
+- profit lock on gap_rebound: -0.08%;
+- profit lock on pick-1: -1.25%.
+
+The hard-event extension has no supporting test, and the closest one (Q201) was negative. agent-1.19.1 therefore
+switches all three off in config, with the code kept so each can be switched back on. The decision for each position
+is its tested hold, plus the broker-held stop and the strategy's kill rule.

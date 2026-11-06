@@ -49,7 +49,9 @@ def test_plan_names_why_held_and_what_sells():
 def test_agent_exit_rules_sell_on_profit_lock_thesis_and_hard_event_only_where_configured(tmp_path):
     ag, b, st, clock = make(tmp_path)
     ag.cfg["active"]["enabled"] = True
-    ag.cfg["active"]["exit_review"]["enabled"] = True
+    xc = ag.cfg["active"]["exit_review"]
+    xc.update(enabled=True, hard_events_for=["buyback_value", "gap_rebound"])
+    xc["thesis"]["enabled"] = xc["profit_lock"]["enabled"] = True  # both OFF in config after Q221; mechanics tested
     px = {"DXC_US_EQ": 11.0, "SPB_US_EQ": 50.0, "TTD_US_EQ": 13.0}
     ag._quote = lambda tk: {"price": px[tk]} if tk in px else None
     st._replace("exit_review.json", {
