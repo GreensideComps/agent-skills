@@ -947,8 +947,10 @@ class Agent:
             ret = q["price"] / e["signal"]["entry_px"] - 1 if q and e["signal"].get("entry_px") else None
             why = self._review_why(tk, strat) if q else None
             pk = (peaks.get(tk) or {}).get("peak")
-            row = exits.plan(e, ret, pk, now, rules.get(strat), why, (thesis.get(tk) or {}).get("why"),
+            row = exits.plan(e, ret, pk, now, rules.get(strat), why,
+                             (thesis.get(tk) or {}).get("why") if th.get("enabled") else None,
                              stops.get(tk), pl if pl.get("enabled") and strat in pl.get("strategies", []) else None)
+            row["sells_if"] += (xc.get("sell_rules") or {}).get(strat, [])
             rows.append(row)
             sell = sell or bool(why)
             if last.get(tk, {}).get("day") != day or last.get(tk, {}).get("verdict") != row["verdict"]:

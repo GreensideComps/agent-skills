@@ -1,5 +1,5 @@
 {
-  "version": "agent-1.19.1",
+  "version": "agent-1.19.2",
   "note": "Always-on demo market agent. Demo account only (the client refuses any other host). Owner mandate: cmsg_01U4KMvkBYNknqm4HRVie8uvK9gRYqGXBK4bQP49dBz49i (26 Oct 2026).",
   "intervals_s": {
     "loop": 15,
@@ -476,9 +476,16 @@
         "keep": 0.5,
         "edge": "unproven prior, research test requested 6 Nov"
       },
+      "sell_rules": {
+        "stock_screen": ["drops out of the weekly top 15 (one scheduled swap a month)", "SEC hard event: bankruptcy, delisting, auditor change, restatement, merger or tender", "strategy killed: trails VWRP after 30 trades"],
+        "buyback_value": ["strategy killed: trails VWRP after 30 trades"],
+        "gap_rebound": ["strategy killed: trails VWRP after 30 trades"],
+        "momentum_timing": ["month-end signal switches fund", "momentum off-switch blocks new buys only"],
+        "value_timing": ["month-end signal switches fund"]
+      },
       "hold_rules": {
         "stock_screen": "screener pick: held while it stays in the weekly top 15 and its filings are clean (Q214)",
-        "buyback_value": "buyback pick: held 6 months, the tested holding period (Q206), while the buyback continues",
+        "buyback_value": "buyback pick: held 6 months, the tested holding period (Q206)",
         "gap_rebound": "gap rebound: held 60 trading days, the tested holding period (Q218b)",
         "momentum_timing": "ETF timing: held until the month-end signal names the other fund",
         "value_timing": "ETF timing: held until the month-end signal names the other fund"
