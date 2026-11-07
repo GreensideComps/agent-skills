@@ -39,6 +39,9 @@ def load_config(path: Path | None = None) -> dict:
     return json.loads((path or HERE / "config.json").read_text())
 
 
+FRAMES = "https://data.sec.gov/api/xbrl/frames/dei/EntityCommonStockSharesOutstanding/shares/{p}.json"
+
+
 class Agent:
     def __init__(self, store, client, cfg: dict, *, ambiguous_exc, api_exc, get=feeds.http_get,
                  clock=time.time, sleep=time.sleep, sec_get=None):
@@ -681,7 +684,7 @@ class Agent:
                 rows = self._efts_8k(complete, d0, earnings=True)
                 st["queue"][d0] = self._liquid_enough(sorted({r["symbol"] for r in rows if r["symbol"].isalpha()
                                                               and f"{r['symbol']}_US_EQ" in self.schedule_of}),
-                                                      gc["min_dollar_vol"])
+                                                      gc["min_dollar_vol"], gc.get("min_mcap", 0), gap_rebound.NAME)
         n = 0
         self._vix_bars = None
         for d0 in sorted(st["queue"]):
@@ -778,6 +781,12 @@ class Agent:
         nyd = gap_rebound.ny_now(now)
         # agent-1.21: scans run at weekends too; the bars are final and Tiingo's request budget is idle then
         st = {"done": {}, "signals": {}, "queue": {}, **(self.s.read("news_shock.json") or {})}
+        for tk, sig in st["signals"].items():  # agent-1.21.2: signals logged before the cap floor get checked once
+            if "cap_ok" not in sig and nc.get("min_mcap"):
+                sym = tk[:-len("_US_EQ")]
+                sig["cap_ok"] = bool(self._liquid_enough([sym], 0, nc["min_mcap"], news_shock.NAME))
+                if not sig["cap_ok"] and sig.get("eligible"):
+                    sig["eligible"], sig["why"] = False, "below the tested market-cap floor or cap UNVERIFIED"
         spy = gap_rebound.bars("SPY", self.get)
         vix = {d: c for d, c, _ in gap_rebound.bars("^VIX", self.get)}
         days = [d for d, _, _ in spy]
@@ -805,7 +814,8 @@ class Agent:
                 if f"{x['symbol']}_US_EQ" in self.schedule_of:
                     items[x["symbol"]] = sorted(set(items.get(x["symbol"], [])) | set(x["items"]))
             st["queue"][d0] = {"vix": round(vix[d0], 2), "items": items,
-                               "todo": self._liquid_enough(sorted(items), nc["min_dollar_vol"])}
+                               "todo": self._liquid_enough(sorted(items), nc["min_dollar_vol"], nc.get("min_mcap", 0),
+                                                           news_shock.NAME)}
         n = 0
         for d0 in sorted(st["queue"]):
             q = st["queue"][d0]
@@ -828,7 +838,7 @@ class Agent:
                     continue
                 tk = f"{sym}_US_EQ"
                 rep = news_shock.recent(st["signals"], sym, d0, days, nc["no_repeat_days"])
-                sig = {**m, "symbol": sym, "items": q["items"].get(sym, []), "vix": q["vix"], "buy_day": buy,
+                sig = {**m, "symbol": sym, "items": q["items"].get(sym, []), "vix": q["vix"], "buy_day": buy, "cap_ok": True,
                        "eligible": bool(buy) and not rep, "why": "repeat within 10 sessions" if rep else "signal"}
                 if not rep:  # a repeat is logged only; the earlier signal for the name stays
                     st["signals"][tk] = sig
@@ -1053,22 +1063,62 @@ class Agent:
                 break
         return rows
 
-    def _liquid_enough(self, syms: list[str], min_dollar_vol: float) -> list[str]:
-        """agent-1.21 request saver: drop names whose latest session traded under a third of the liquidity floor (one
-        Tiingo snapshot call), before per-name bars are fetched. Without the snapshot every name is kept."""
+    def _liquid_enough(self, syms: list[str], min_dollar_vol: float, min_mcap: float = 0, label: str = "") -> list[str]:
+        """agent-1.21 pre-filter before per-name bars are fetched (one Tiingo snapshot call). Drops names whose latest
+        session traded under a third of the liquidity floor, and (agent-1.21.2, research 7 Nov) names below the
+        tested market-cap floor: Q203/Q218b/Q222 were run on large US names only, so a name whose cap cannot be
+        measured (SEC cover-page shares x latest price) is UNVERIFIED and skipped too."""
         try:
             snap = self.data.snapshot() if self.data is not None else None
         except feeds.FeedError:
             snap = None
-        if not snap:
-            return syms
-        keep = []
+        keep, small = [], []
         for s in syms:
-            r = snap.get(s.upper())
+            r = (snap or {}).get(s.upper())
             px, vol = r and (r.get("tngoLast") or r.get("prevClose")), r and r.get("volume")
-            if not r or px is None or vol is None or px * vol >= min_dollar_vol / 3:
-                keep.append(s)
+            if r and px is not None and vol is not None and px * vol < min_dollar_vol / 3:
+                continue
+            if min_mcap:
+                cap = self._mcap(s, px)
+                if cap is None or cap < min_mcap:
+                    small.append((s, None if cap is None else round(cap / 1e9, 2)))
+                    continue
+            keep.append(s)
+        if small:
+            self.s.event("cap_filter", strategy=label, min_mcap=min_mcap, dropped=small[:200], n=len(small))
         return keep
+
+    def _mcap(self, sym: str, px: float | None) -> float | None:
+        """Market cap from SEC cover-page shares (dei frames, latest of the last four quarters) x `px`; None if unknown."""
+        if px is None:
+            return None
+        today = gap_rebound.ny_now(self.clock()).date()
+        if getattr(self, "_shares_day", None) != today.isoformat():
+            shares: dict[int, float] = {}
+            y, q = today.year, (today.month - 1) // 3 + 1
+            periods = []
+            for _ in range(4):
+                periods.append(f"CY{y}Q{q}I")
+                y, q = (y, q - 1) if q > 1 else (y - 1, 4)
+            got = 0
+            for per in reversed(periods):  # oldest first, so later cover pages win
+                try:
+                    self.s.renew_lease()
+                    d = self.sec_get(FRAMES.format(p=per), {})
+                    d = json.loads(d) if isinstance(d, str) else d
+                    shares.update({int(r["cik"]): float(r["val"]) for r in d.get("data") or [] if r.get("val")})
+                    got += 1
+                except Exception:  # noqa: BLE001 - a missing quarter leaves older counts in place
+                    continue
+            if not got:
+                return None
+            self._shares, self._shares_day = shares, today.isoformat()
+        try:
+            cik = self._sec_cik(f"{sym}_US_EQ")
+        except Exception:  # noqa: BLE001
+            return None
+        n = self._shares.get(cik) if cik else None
+        return n * px if n else None
 
     def _sec_cik(self, t212: str) -> int | None:
         """CIK for a US T212 ticker from SEC company_tickers.json (fetched once per process); None if unknown."""

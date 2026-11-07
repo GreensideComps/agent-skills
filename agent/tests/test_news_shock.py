@@ -72,15 +72,28 @@ def test_agent_scans_a_high_vix_day_and_buys_at_the_close_of_day_plus_2(tmp_path
     calls = []
 
     def sec(url, params):
+        if url == gap_rebound.TICKERS:
+            return {"0": {"ticker": "ABC", "cik_str": 1}, "1": {"ticker": "CALM", "cik_str": 2},
+                    "2": {"ticker": "TINY", "cik_str": 3}}
+        if "frames" in url:  # cover-page shares: ABC $8.9bn, TINY $0.9bn (below the tested $2bn floor), CALM unknown
+            return {"data": [{"cik": 1, "val": 1e8}, {"cik": 3, "val": 1e7}]}
         calls.append(params["startdt"])
         hits = [{"_source": {"form": "8-K", "items": ["5.02"], "display_names": [f"{s} Inc  ({s})  (CIK 1)"]}}
-                for s in ("ABC", "CALM", "OTC")] if params["startdt"] == "2026-11-05" else []
+                for s in ("ABC", "CALM", "TINY", "OTC")] if params["startdt"] == "2026-11-05" else []
         return {"hits": {"total": {"value": len(hits)}, "hits": hits}}
     ag.sec_get = sec
-    ag.schedule_of = {"ABC_US_EQ": 71, "CALM_US_EQ": 71}
+
+    class Snap:
+        def snapshot(self):
+            return {"ABC": {"tngoLast": 89.0, "volume": 1e6}, "TINY": {"tngoLast": 89.0, "volume": 1e6},
+                    "CALM": {"tngoLast": 100.0, "volume": 1e6}}
+    ag.data = Snap()
+    ag.schedule_of = {"ABC_US_EQ": 71, "CALM_US_EQ": 71, "TINY_US_EQ": 71}
     ag.refresh_news_shock()
     s = st.read("news_shock.json")
     assert calls == ["2026-11-05"]                       # only the VIX >= 25 day is scanned
+    capf = [e for e in st.events("2026-11-09") if e["kind"] == "cap_filter"]
+    assert capf and capf[0]["dropped"] == [["CALM", None], ["TINY", 0.89]]  # UNVERIFIED and small caps never scanned
     assert list(s["signals"]) == ["ABC_US_EQ"] and s["signals"]["ABC_US_EQ"]["buy_day"] == "2026-11-09"
     assert s["signals"]["ABC_US_EQ"]["ear"] == -0.12
     orders, notes = ns.entry_orders(nc, ag.cfg, [], {}, lambda tk: {"price": 89.0}, 1.3, 1000.0, 500.0, clock.t,

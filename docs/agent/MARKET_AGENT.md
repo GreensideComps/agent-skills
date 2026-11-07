@@ -326,13 +326,19 @@ same calls from sources that accept an honest client:
 | US daily bars | Tiingo daily, split-adjusted like Yahoo, with dividend-adjusted closes; cached until 18:00 New York |
 | VIX | CBOE's public delayed quote and history (the finished session comes from the quote) |
 | Results dates (review gate) | SEC filings: last results 8-K (item 2.02) plus 91 days; blocked from 17 days before; no results 8-K in 120 days is UNVERIFIED |
-| gap_rebound event list | SEC full-text search for results 8-Ks (replaces Nasdaq's calendar; the $300m market-cap filter goes, the liquidity filter stays) |
+| gap_rebound event list | SEC full-text search for results 8-Ks (replaces Nasdaq's calendar) |
+| Market cap | SEC cover-page shares (dei frames, last four quarters) x latest Tiingo price |
 | News headlines | none (Yahoo search had no honest replacement; headlines were alert-only) |
 
 Tiingo's free plan allows 50 requests an hour and 1,000 a day. The agent counts its calls in `state/tiingo_usage.json`
 and stops at 45 and 900, with 20 calls an hour kept for prices; a scan that hits the cap keeps its place and continues next run. Before per-name bars are
 fetched, gap_rebound and news_shock drop names whose latest session traded under a third of the liquidity floor (one
-snapshot call). Both scans now also run at weekends. The token lives in `state/tiingo_token.txt` and is never committed.
+snapshot call). Both scans now also run at weekends.
+
+agent-1.21.2 (research, 7 Nov): Q203/Q218b and Q222 were backtested only on about 450 large US names ($2bn and up), so
+gap_rebound and news_shock now skip any name below a $2bn market cap, and any name whose cap cannot be measured
+(UNVERIFIED), before its bars are fetched. Signals logged before this are checked once and made ineligible if they
+fail. Each drop is logged as a `cap_filter` event. The token lives in `state/tiingo_token.txt` and is never committed.
 
 ## agent-1.20: news_shock_vix_hi (research Q222, 6 Nov 2026, benched unproven)
 

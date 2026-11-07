@@ -1,5 +1,5 @@
 {
-  "version": "agent-1.21.1",
+  "version": "agent-1.21.2",
   "note": "Always-on demo market agent. Demo account only (the client refuses any other host). Owner mandate: cmsg_01U4KMvkBYNknqm4HRVie8uvK9gRYqGXBK4bQP49dBz49i (26 Oct 2026).",
   "intervals_s": {
     "loop": 15,
@@ -448,7 +448,7 @@
       "vix_note": "Q218b (6 Nov): each signal carries the VIX close on day 0 and a vix_hi (>=25) / vix_lo tag; vix_hi trades carry edge_vix_hi; sizing, rules and the 30-trade kill test are unchanged; strategy_scores reports the two variants apart",
       "entry_weight": 0.02,
       "max_open": 8,
-      "min_mcap": 300000000,
+      "min_mcap": 2000000000,
       "min_dollar_vol": 10000000,
       "ear_max": -0.1,
       "hold_days": 60,
@@ -468,6 +468,7 @@
       "note": "Q222 FAIL on the go-live rule (DSR 0.000), benched unproven 6 Nov: +3.05%/trade 2013-22 at the d0+1 close, +5.75% with a one-day lag (the live timing), costs x2 +2.45%; 142 of 197 trades in 2020, the rest about +0.5%; below VIX 25 -0.44%/trade",
       "vix_min": 25.0,
       "ear_max": -0.08,
+      "min_mcap": 2000000000,
       "min_dollar_vol": 10000000,
       "no_repeat_days": 10,
       "entry_weight": 0.02,
