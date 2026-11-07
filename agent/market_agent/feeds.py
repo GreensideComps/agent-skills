@@ -12,7 +12,10 @@ from typing import Callable
 
 import requests
 
-UA = {"User-Agent": "Mozilla/5.0 (market-agent; demo research)"}
+# agent-1.20.2 (7 Nov 2026): an honest client name. The old "Mozilla/5.0 ..." string only got through because Yahoo and
+# Nasdaq let browser-like clients pass; that is a workaround of their access controls, so it is gone. Sources that
+# refuse this client fail as UNVERIFIED (no trade) until agent-1.21 moves them to Tiingo, CBOE and the SEC.
+UA = {"User-Agent": "market-agent/1.20 (https://github.com/GreensideComps/agent-skills; demo research) python-requests"}
 SPARK = "https://query1.finance.yahoo.com/v8/finance/spark"
 SEARCH = "https://query1.finance.yahoo.com/v1/finance/search"
 
