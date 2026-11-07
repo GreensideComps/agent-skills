@@ -175,7 +175,8 @@ def make(tmp_path, enabled=True, prices=None, satellite=False, active_on=False):
     cfg["active"]["momentum_off"]["enabled"] = False  # needs SPY and VIX history; its own test turns it on
     cfg["active"]["buyback_value"]["enabled"] = False  # needs a picks file; its own test turns it on
     cfg["active"]["exit_review"]["enabled"] = False
-    cfg["active"]["news_shock"]["enabled"] = False  # needs SEC full-text search; test_news_shock covers it  # needs SEC facts; test_exits covers it
+    cfg["active"]["news_shock"]["enabled"] = False
+    cfg["slippage"]["enabled"] = False  # test_news_shock covers it  # needs SEC full-text search; test_news_shock covers it  # needs SEC facts; test_exits covers it
     ag = agent_mod.Agent(st, b, cfg, ambiguous_exc=Ambiguous, api_exc=ApiErr,
                          get=fake_get(clock, prices), clock=clock, sleep=lambda s: None)
     st.acquire_lease()

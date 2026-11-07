@@ -23,6 +23,7 @@ from . import (
     gap_rebound,
     merger,
     news_shock,
+    slippage,
     review,
     social,
     stock_screen,
@@ -120,6 +121,8 @@ class Agent:
             self._run("exit_review", self.refresh_exit_review)
         if self._news_shock():
             self._run("news_shock", self.refresh_news_shock)
+        if (self.cfg.get("slippage") or {}).get("enabled"):
+            self._run("slippage", self.refresh_slippage)
         if self._swing("gap"):
             self._run("gaps", self.refresh_gaps)
         if self._vt():
@@ -704,6 +707,46 @@ class Agent:
         if any(s.get("eligible") and s["buy_day"] == today for s in st["signals"].values()):
             self.need_decide = True
         return gc["resume_s"] if st["queue"] else None
+
+    def refresh_slippage(self) -> None:
+        """Q224: fill vs the backtest's reference price (open or close of the fill session) for every filled strategy
+        order whose session bar is final; at most `per_run` names per run."""
+        sc = self.cfg["slippage"]
+        now = self.clock()
+        nyd = gap_rebound.ny_now(now)
+        today = nyd.date().isoformat()
+        st = {"rows": {}, "skip": {}, **(self.s.read("slippage.json") or {})}
+        cache: dict[str, dict] = {}
+        n = 0
+        for rec in execution.latest_intents(self.s.intents()).values():
+            sig = rec.get("signal") or {}
+            if rec.get("status") != "filled" or not sig.get("strategy") or rec["id"] in st["rows"]:
+                continue
+            t = rec.get("t") or 0
+            day = gap_rebound.ny_now(t).date().isoformat()
+            if day > today or (day == today and nyd.hour < 17) or st["skip"].get(rec["id"], 0) >= 3:
+                continue
+            kind = (sc.get("ref_kind") or {}).get(sig["strategy"], sc.get("default_kind", "close"))
+            sym = feeds.yahoo_symbol(rec["ticker"], self.cfg.get("yahoo_overrides") or {})
+            if not sym:
+                continue
+            if sym not in cache:
+                if n >= sc["per_run"]:
+                    break
+                n += 1
+                self.s.renew_lease()
+                self.sleep(0.25)
+                try:
+                    cache[sym] = slippage.day_bars(sym, self.get, "3mo")
+                except Exception:  # noqa: BLE001 - retried next run, at most three times
+                    cache[sym] = {}
+            r = slippage.row(rec, kind, cache[sym], day)
+            if r:
+                st["rows"][rec["id"]] = r
+            else:
+                st["skip"][rec["id"]] = st["skip"].get(rec["id"], 0) + 1
+        st["checked"] = feeds_ts(now)
+        self.s._replace("slippage.json", st)
 
     def _news_shock(self) -> dict | None:
         a = self.cfg.get("active") or {}

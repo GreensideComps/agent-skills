@@ -1,5 +1,5 @@
 {
-  "version": "agent-1.20",
+  "version": "agent-1.20.1",
   "note": "Always-on demo market agent. Demo account only (the client refuses any other host). Owner mandate: cmsg_01U4KMvkBYNknqm4HRVie8uvK9gRYqGXBK4bQP49dBz49i (26 Oct 2026).",
   "intervals_s": {
     "loop": 15,
@@ -18,7 +18,15 @@
     "screen_watch": 900,
     "gap_rebound": 1800,
     "exit_review": 900,
-    "news_shock": 1800
+    "news_shock": 1800,
+    "slippage": 21600
+  },
+  "slippage": {
+    "enabled": true,
+    "rule": "research Q224 (7 Nov 2026): every filled strategy order gets its backtest reference price (open or close of the fill's New York session, from Yahoo daily bars) in state/slippage.json; cost is signed so positive means worse than the backtest price",
+    "default_kind": "close",
+    "ref_kind": {"stock_screen": "open", "buyback_value": "open"},
+    "per_run": 40
   },
   "benchmark": {
     "t212": "VWRPl_EQ",

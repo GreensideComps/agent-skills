@@ -89,3 +89,16 @@ def test_agent_scans_a_high_vix_day_and_buys_at_the_close_of_day_plus_2(tmp_path
     sig = orders[0][6]
     assert sig["strategy"] == ns.NAME and sig["exit_day"] == gap_rebound.exit_day("2026-11-09", 5)
     assert "VIX>=25" in sig["edge"]
+
+
+def test_slippage_row_is_signed_as_a_cost():
+    from market_agent import slippage
+    bars = {"2026-11-06": (100.0, 110.0)}
+    buy = {"ticker": "A_US_EQ", "quantity": 1, "signal": {"strategy": "gap_rebound"},
+           "broker": {"fill": {"price": 110.11, "quantity": 1}}}
+    r = slippage.row(buy, "close", bars, "2026-11-06")
+    assert r["ref_px"] == 110.0 and r["cost"] == 0.001
+    sell = {**buy, "quantity": -1, "broker": {"fill": {"price": 99.0, "quantity": -1}}}
+    assert slippage.row(sell, "open", bars, "2026-11-06")["cost"] == round(100 / 99 - 1, 5)
+    assert slippage.row(buy, "close", {"2026-11-06": (10000.0, 11000.0)}, "2026-11-06")["ref_px"] == 110.0  # pence
+    assert slippage.row(buy, "close", bars, "2026-11-05") is None
