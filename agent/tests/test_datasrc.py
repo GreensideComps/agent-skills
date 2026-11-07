@@ -49,7 +49,7 @@ def test_spark_prices_us_from_iex_london_from_the_broker_and_fx_from_tiingo(tmp_
     assert all("Mozilla" not in (c[2] or {}).get("User-Agent", "") for c in calls)
     assert calls[0][2]["Authorization"] == "Token tok"
     h.get(feeds.SPARK, {"symbols": "SPY,GBPUSD=X"})
-    assert len(calls) == 2  # the IEX batch (150 s) and FX (15 min) are cached
+    assert len(calls) == 2  # the IEX snapshot (4 min in US hours) and FX (15 min) are cached
     q = feeds.fetch_quotes(["SPY"], get=h.get)["SPY"]
     assert q["price"] == 600.5 and q["prev_close"] == 598.0
 
@@ -76,12 +76,15 @@ def test_daily_bars_split_adjusted_like_yahoo_with_adjclose(tmp_path):
 
 
 def test_budget_refuses_above_the_hourly_cap(tmp_path):
-    h, _ = make(tmp_path, {"/tiingo/daily/": []}, hour_cap=2)
+    h, _ = make(tmp_path, {"/tiingo/daily/": [], "/iex/": []}, hour_cap=3, quote_reserve=1)
     h.tiingo("/tiingo/daily/a/prices")
     h.tiingo("/tiingo/daily/b/prices")
     with pytest.raises(datasrc.BudgetError):
-        h.tiingo("/tiingo/daily/c/prices")
-    assert len(json.loads((tmp_path / "tiingo_usage.json").read_text())["t"]) == 2
+        h.tiingo("/tiingo/daily/c/prices")  # bars stop short of the cap: the last call is kept for prices
+    h.snapshot()
+    with pytest.raises(datasrc.BudgetError):
+        h.snapshot(ttl=0)
+    assert len(json.loads((tmp_path / "tiingo_usage.json").read_text())["t"]) == 3
 
 
 def test_vix_history_takes_the_finished_session_from_the_quote(tmp_path):

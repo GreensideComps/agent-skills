@@ -320,7 +320,7 @@ same calls from sources that accept an honest client:
 
 | Need | Source |
 |---|---|
-| US live prices | Tiingo IEX, one batch call for every US line (cached 150 s in US hours, 30 min otherwise) |
+| US live prices | Tiingo IEX snapshot of every US ticker in one call (cached 4 min in US hours, 30 min otherwise) |
 | London prices | the broker's own position price; a London line the fund does not hold has no price (UNVERIFIED) |
 | GBP/USD | Tiingo FX, cached 15 minutes |
 | US daily bars | Tiingo daily, split-adjusted like Yahoo, with dividend-adjusted closes; cached until 18:00 New York |
@@ -330,7 +330,7 @@ same calls from sources that accept an honest client:
 | News headlines | none (Yahoo search had no honest replacement; headlines were alert-only) |
 
 Tiingo's free plan allows 50 requests an hour and 1,000 a day. The agent counts its calls in `state/tiingo_usage.json`
-and stops at 45 and 900; a scan that hits the cap keeps its place and continues next run. Before per-name bars are
+and stops at 45 and 900, with 20 calls an hour kept for prices; a scan that hits the cap keeps its place and continues next run. Before per-name bars are
 fetched, gap_rebound and news_shock drop names whose latest session traded under a third of the liquidity floor (one
 snapshot call). Both scans now also run at weekends. The token lives in `state/tiingo_token.txt` and is never committed.
 

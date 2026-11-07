@@ -52,14 +52,13 @@ def last_eod(now: float) -> float:
 
 class Honest:
     def __init__(self, root: str | Path, positions_fn: Callable[[], dict], clock: Callable[[], float] = time.time,
-                 hour_cap: int = 45, day_cap: int = 900, bars_ttl_s: float = 900, raw_get=None):
+                 hour_cap: int = 45, day_cap: int = 900, bars_ttl_s: float = 900, raw_get=None, quote_reserve: int = 20):
         self.root = Path(root)
         self.positions_fn = positions_fn
         self.clock = clock
-        self.hour_cap, self.day_cap, self.bars_ttl_s = hour_cap, day_cap, bars_ttl_s
+        self.hour_cap, self.day_cap, self.bars_ttl_s, self.quote_reserve = hour_cap, day_cap, bars_ttl_s, quote_reserve
         self.raw_get = raw_get or requests.get
         self._fx: dict | None = None
-        self._iex: dict = {"at": -1e18, "key": None, "rows": []}
         self._snap: dict = {"at": -1e18, "rows": {}}
 
     # ------------------------------------------------------------ entry point (Yahoo-shaped answers)
@@ -81,22 +80,23 @@ class Honest:
             raise feeds.FeedError("tiingo: no token in state/tiingo_token.txt")
         return p.read_text().strip()
 
-    def _budget(self) -> None:
+    def _budget(self, kind: str) -> None:
         p = self.root / "tiingo_usage.json"
         now = self.clock()
         try:
             ts = [t for t in json.loads(p.read_text()).get("t", []) if now - t < 86400]
         except (OSError, ValueError):
             ts = []
-        if sum(1 for t in ts if now - t < 3600) >= self.hour_cap or len(ts) >= self.day_cap:
+        cap = self.hour_cap if kind == "quotes" else self.hour_cap - self.quote_reserve  # prices never starve
+        if sum(1 for t in ts if now - t < 3600) >= cap or len(ts) >= self.day_cap - (kind != "quotes") * 100:
             raise BudgetError(f"tiingo: request budget used ({self.hour_cap}/h, {self.day_cap}/day)")
         ts.append(now)
         tmp = p.with_suffix(".tmp")
         tmp.write_text(json.dumps({"t": ts}))
         tmp.replace(p)
 
-    def tiingo(self, path: str, params: dict | None = None, timeout: float = 30.0):
-        self._budget()
+    def tiingo(self, path: str, params: dict | None = None, timeout: float = 30.0, kind: str = "bars"):
+        self._budget(kind)
         r = self.raw_get(TIINGO + path, params=params or {}, timeout=timeout,
                          headers={**feeds.UA, "Authorization": f"Token {self._token()}"})
         if r.status_code != 200:
@@ -108,12 +108,7 @@ class Honest:
         out: dict[str, dict] = {}
         us = [s for s in symbols if not s.endswith((".L", "=X")) and not s.startswith("^")]
         if us:
-            key = ",".join(sorted(s.lower() for s in us))
-            ttl = 150 if us_hours(self.clock()) else 1800  # one batch call covers every US line; ~24 calls/h at most
-            if self._iex["key"] != key or self.clock() - self._iex["at"] >= ttl:
-                self._iex = {"at": self.clock(), "key": key, "rows": self.tiingo("/iex/", {"tickers": key}) or []}
-            rows = self._iex["rows"]
-            by = {r["ticker"].upper(): r for r in rows or []}
+            by = self.snapshot(ttl=240 if us_hours(self.clock()) else 1800)  # one call prices every US line
             for s in us:
                 r = by.get(s.upper())
                 px = r and (r.get("tngoLast") or r.get("last"))
@@ -135,10 +130,13 @@ class Honest:
                     out[s] = _spark_row(q["t"], q["price"], None)
         return out
 
-    def snapshot(self) -> dict[str, dict]:
-        """Every US ticker's latest IEX/consolidated row ({SYMBOL: row}) in one call, cached 30 minutes."""
-        if self.clock() - self._snap["at"] >= 1800:
-            self._snap = {"at": self.clock(), "rows": {r["ticker"].upper(): r for r in self.tiingo("/iex/") or []}}
+    def snapshot(self, ttl: float = 1800) -> dict[str, dict]:
+        """Every US ticker's latest IEX/consolidated row ({SYMBOL: row}) in one call: at most 15 calls an hour."""
+        if self.clock() - self._snap["at"] >= ttl:
+            rows = self.tiingo("/iex/", kind="quotes")
+            if not isinstance(rows, list):
+                raise feeds.FeedError(f"tiingo iex: unexpected reply {str(rows)[:80]}")
+            self._snap = {"at": self.clock(), "rows": {r["ticker"].upper(): r for r in rows if r.get("ticker")}}
         return self._snap["rows"]
 
     def fx(self, sym: str) -> tuple[float, float] | None:
@@ -146,7 +144,7 @@ class Honest:
         now = self.clock()
         if self._fx and self._fx["sym"] == sym and now - self._fx["at"] < 900:
             return self._fx["q"]
-        rows = self.tiingo("/tiingo/fx/top", {"tickers": sym[:-2].lower()})
+        rows = self.tiingo("/tiingo/fx/top", {"tickers": sym[:-2].lower()}, kind="quotes")
         r = (rows or [{}])[0]
         if not r.get("midPrice"):
             return None
