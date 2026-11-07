@@ -93,7 +93,7 @@ def test_agent_scans_a_high_vix_day_and_buys_at_the_close_of_day_plus_2(tmp_path
     s = st.read("news_shock.json")
     assert calls == ["2026-11-05"]                       # only the VIX >= 25 day is scanned
     capf = [e for e in st.events("2026-11-09") if e["kind"] == "cap_filter"]
-    assert capf and capf[0]["dropped"] == [["CALM", None], ["TINY", 0.89]]  # UNVERIFIED and small caps never scanned
+    assert [d for e in capf for d in e["dropped"]] == [["CALM", None], ["TINY", 0.89]]  # UNVERIFIED and small: skipped
     assert list(s["signals"]) == ["ABC_US_EQ"] and s["signals"]["ABC_US_EQ"]["buy_day"] == "2026-11-09"
     assert s["signals"]["ABC_US_EQ"]["ear"] == -0.12
     orders, notes = ns.entry_orders(nc, ag.cfg, [], {}, lambda tk: {"price": 89.0}, 1.3, 1000.0, 500.0, clock.t,

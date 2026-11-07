@@ -684,7 +684,7 @@ class Agent:
                 rows = self._efts_8k(complete, d0, earnings=True)
                 st["queue"][d0] = self._liquid_enough(sorted({r["symbol"] for r in rows if r["symbol"].isalpha()
                                                               and f"{r['symbol']}_US_EQ" in self.schedule_of}),
-                                                      gc["min_dollar_vol"], gc.get("min_mcap", 0), gap_rebound.NAME)
+                                                      gc["min_dollar_vol"])
         n = 0
         self._vix_bars = None
         for d0 in sorted(st["queue"]):
@@ -695,8 +695,13 @@ class Agent:
                 self.s.renew_lease()
                 self.sleep(gc["pacing_s"])
                 try:
+                    if gc.get("min_mcap") and not self._liquid_enough([sym], 0, gc["min_mcap"], gap_rebound.NAME):
+                        continue  # below the tested cap floor, or cap UNVERIFIED (agent-1.21.2)
                     m = gap_rebound.event_move(gap_rebound.bars(sym, self.get), spy, d0)
-                except datasrc.BudgetError:
+                except (datasrc.BudgetError, feeds.FeedError) as e:
+                    if not isinstance(e, datasrc.BudgetError) and "retried" not in str(e):
+                        self.s.event("gap_rebound_skip", strategy=gap_rebound.NAME, symbol=sym, error=str(e)[:200])
+                        continue
                     todo.insert(0, sym)  # Tiingo's hourly budget: the name waits for the next run
                     n = gc["per_run"]
                     break
@@ -783,8 +788,10 @@ class Agent:
         st = {"done": {}, "signals": {}, "queue": {}, **(self.s.read("news_shock.json") or {})}
         for tk, sig in st["signals"].items():  # agent-1.21.2: signals logged before the cap floor get checked once
             if "cap_ok" not in sig and nc.get("min_mcap"):
-                sym = tk[:-len("_US_EQ")]
-                sig["cap_ok"] = bool(self._liquid_enough([sym], 0, nc["min_mcap"], news_shock.NAME))
+                try:
+                    sig["cap_ok"] = bool(self._liquid_enough([tk[:-len("_US_EQ")]], 0, nc["min_mcap"], news_shock.NAME))
+                except feeds.FeedError:
+                    continue  # no price or share data yet: checked again next run
                 if not sig["cap_ok"] and sig.get("eligible"):
                     sig["eligible"], sig["why"] = False, "below the tested market-cap floor or cap UNVERIFIED"
         spy = gap_rebound.bars("SPY", self.get)
@@ -814,8 +821,7 @@ class Agent:
                 if f"{x['symbol']}_US_EQ" in self.schedule_of:
                     items[x["symbol"]] = sorted(set(items.get(x["symbol"], [])) | set(x["items"]))
             st["queue"][d0] = {"vix": round(vix[d0], 2), "items": items,
-                               "todo": self._liquid_enough(sorted(items), nc["min_dollar_vol"], nc.get("min_mcap", 0),
-                                                           news_shock.NAME)}
+                               "todo": self._liquid_enough(sorted(items), nc["min_dollar_vol"])}
         n = 0
         for d0 in sorted(st["queue"]):
             q = st["queue"][d0]
@@ -826,8 +832,13 @@ class Agent:
                 self.s.renew_lease()
                 self.sleep(nc["pacing_s"])
                 try:
+                    if nc.get("min_mcap") and not self._liquid_enough([sym], 0, nc["min_mcap"], news_shock.NAME):
+                        continue  # below the tested cap floor, or cap UNVERIFIED (agent-1.21.2)
                     m = news_shock.move(gap_rebound.bars(sym, self.get), spy, d0)
-                except datasrc.BudgetError:
+                except (datasrc.BudgetError, feeds.FeedError) as e:
+                    if not isinstance(e, datasrc.BudgetError) and "retried" not in str(e):
+                        self.s.event("news_shock_skip", strategy=news_shock.NAME, symbol=sym, error=str(e)[:200])
+                        continue
                     q["todo"].insert(0, sym)  # Tiingo's hourly budget: the name waits for the next run
                     n = nc["per_run"]
                     break
@@ -1072,6 +1083,8 @@ class Agent:
             snap = self.data.snapshot() if self.data is not None else None
         except feeds.FeedError:
             snap = None
+        if min_mcap and not snap:
+            raise feeds.FeedError("no price snapshot for the market-cap check (retried)")
         keep, small = [], []
         for s in syms:
             r = (snap or {}).get(s.upper())
@@ -1111,12 +1124,9 @@ class Agent:
                 except Exception:  # noqa: BLE001 - a missing quarter leaves older counts in place
                     continue
             if not got:
-                return None
+                raise feeds.FeedError("SEC share counts unavailable for the market-cap check (retried)")
             self._shares, self._shares_day = shares, today.isoformat()
-        try:
-            cik = self._sec_cik(f"{sym}_US_EQ")
-        except Exception:  # noqa: BLE001
-            return None
+        cik = self._sec_cik(f"{sym}_US_EQ")
         n = self._shares.get(cik) if cik else None
         return n * px if n else None
 
