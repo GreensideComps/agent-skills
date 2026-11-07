@@ -137,7 +137,54 @@ class Honest:
             if not isinstance(rows, list):
                 raise feeds.FeedError(f"tiingo iex: unexpected reply {str(rows)[:80]}")
             self._snap = {"at": self.clock(), "rows": {r["ticker"].upper(): r for r in rows if r.get("ticker")}}
+            try:
+                self._store_session(rows)
+            except (OSError, ValueError, KeyError, TypeError):
+                pass  # the store is a fallback; a failed write never blocks prices
         return self._snap["rows"]
+
+    def _store_session(self, rows: list[dict]) -> None:
+        """agent-1.21.4 bars store: each finished US session's OHLC and volume for every ticker, kept from the
+        snapshot calls the agent makes anyway (no extra request, no per-symbol lookup). Tiingo's free plan allows 500
+        distinct symbols a month for daily history; the store gives bars for any name once enough sessions are in."""
+        now = datetime.fromtimestamp(self.clock(), NY)
+        days: dict[str, int] = {}
+        for r in rows:
+            if r.get("timestamp"):
+                days[r["timestamp"][:10]] = days.get(r["timestamp"][:10], 0) + 1
+        if not days:
+            return
+        day = max(days, key=days.get)  # the session most tickers last traded in
+        if now.date().isoformat() == day and (now.hour, now.minute) < (16, 20):
+            return  # still trading (or the closing prints are not in yet)
+        d = self.root / "bars_store"
+        d.mkdir(exist_ok=True)
+        p = d / f"{day}.json"
+        if p.exists():
+            return
+        out = {}
+        for r in rows:
+            c = r.get("tngoLast") or r.get("last")
+            if r.get("ticker") and (r.get("timestamp") or "")[:10] == day and c and r.get("volume"):
+                out[r["ticker"].upper()] = [r.get("open"), r.get("high"), r.get("low"), c, r["volume"]]
+        tmp = p.with_suffix(".tmp")
+        tmp.write_text(json.dumps(out, separators=(",", ":")))
+        tmp.replace(p)
+
+    def _stored(self, sym: str, after: str = "") -> list[dict]:
+        """Daily rows for `sym` from the bars store (raw prices: no split adjustment), sessions after `after`."""
+        out = []
+        for p in sorted((self.root / "bars_store").glob("*.json")):
+            if p.stem <= after:
+                continue
+            try:
+                r = json.loads(p.read_text()).get(sym.upper())
+            except (OSError, ValueError):
+                continue
+            if r:
+                out.append({"date": p.stem, "open": r[0], "high": r[1], "low": r[2], "close": r[3], "volume": r[4],
+                            "adjClose": r[3], "splitFactor": 1.0})
+        return out
 
     def fx(self, sym: str) -> tuple[float, float] | None:
         """(mid, epoch) for e.g. GBPUSD=X, cached 15 minutes."""
@@ -196,7 +243,21 @@ class Honest:
         except (OSError, ValueError, KeyError):
             pass
         start = (datetime.fromtimestamp(now, timezone.utc) - timedelta(days=RANGE_DAYS["2y"])).date().isoformat()
-        rows = self.tiingo(f"/tiingo/daily/{sym.lower()}/prices", {"startDate": start}) or []
+        try:
+            rows = self.tiingo(f"/tiingo/daily/{sym.lower()}/prices", {"startDate": start}) or []
+            if not isinstance(rows, list):
+                raise feeds.FeedError(f"tiingo daily {sym}: {str(rows)[:100]}")
+        except BudgetError:
+            raise
+        except feeds.FeedError as e:  # e.g. the 500-symbol monthly cap: fall back to the cache plus the bars store
+            try:
+                old = json.loads(p.read_text())["rows"]
+            except (OSError, ValueError, KeyError):
+                old = []
+            rows = old + self._stored(sym, old[-1]["date"][:10] if old else "")
+            if len(rows) < 2:
+                raise feeds.FeedError(f"{e} (bars store has {len(rows)} sessions: UNVERIFIED)") from e
+            return rows
         tmp = p.with_suffix(".tmp")
         tmp.write_text(json.dumps({"at": now, "rows": rows}))
         tmp.replace(p)

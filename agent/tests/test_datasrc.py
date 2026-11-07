@@ -112,3 +112,19 @@ def test_filings_split_results_from_other_8ks():
             {"_source": {"form": "8-K", "items": ["8.01"], "display_names": ["Xyz Corp  (XYZ, XYZW)  (CIK 0002)"]}}]
     assert [r["symbol"] for r in news_shock.filings(hits, earnings=True)] == ["ABC"]
     assert [r["symbol"] for r in news_shock.filings(hits)] == ["XYZ"]
+
+
+def test_bars_store_keeps_finished_sessions_and_backs_up_a_refused_symbol(tmp_path):
+    sat = datetime(2026, 11, 7, 12, 0, tzinfo=timezone.utc).timestamp()
+    snap = [{"ticker": "NEW", "timestamp": "2026-11-06T21:00:00+00:00", "open": 10.0, "high": 11.0, "low": 9.5,
+             "tngoLast": 10.5, "volume": 1000, "prevClose": 9.9},
+            {"ticker": "OLD", "timestamp": "2026-11-06T21:00:00+00:00", "open": 5.0, "high": 5.0, "low": 5.0,
+             "tngoLast": 5.0, "volume": 10}]
+    h, _ = make(tmp_path, {"/iex/": snap, "/tiingo/daily/new/prices": {"detail": "You have run over your 500 symbol"}},
+                clock=lambda: sat)
+    h.snapshot()
+    assert json.loads((tmp_path / "bars_store" / "2026-11-06.json").read_text())["NEW"] == [10.0, 11.0, 9.5, 10.5, 1000]
+    (tmp_path / "bars_store" / "2026-11-05.json").write_text(json.dumps({"NEW": [9.0, 9.0, 9.0, 9.9, 500]}))
+    assert [(d, c) for d, c, _ in gap_rebound.bars("NEW", h.get)] == [("2026-11-05", 9.9), ("2026-11-06", 10.5)]
+    with pytest.raises(feeds.FeedError):
+        gap_rebound.bars("NONE", h.get)  # refused and not in the store: UNVERIFIED

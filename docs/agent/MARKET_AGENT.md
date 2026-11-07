@@ -338,7 +338,13 @@ snapshot call). Both scans now also run at weekends.
 agent-1.21.2 (research, 7 Nov): Q203/Q218b and Q222 were backtested only on about 450 large US names ($2bn and up), so
 gap_rebound and news_shock now skip any name below a $2bn market cap, and any name whose cap cannot be measured
 (UNVERIFIED), before its bars are fetched. Signals logged before this are checked once and made ineligible if they
-fail. Each drop is logged as a `cap_filter` event. The token lives in `state/tiingo_token.txt` and is never committed.
+fail. Each drop is logged as a `cap_filter` event.
+
+agent-1.21.4 (7 Nov): Tiingo's free plan allows daily history for 500 distinct symbols a month, and that cap was used up
+on 7 Nov. Each finished session from the all-ticker snapshot (which the agent fetches for prices anyway) is now kept in
+`state/bars_store/DATE.json`. When Tiingo refuses a symbol, its bars come from the cache plus that store. A name with
+too few sessions is UNVERIFIED and skipped. The scans need about 23 sessions, so new names come back as the store fills
+or when the cap resets. The token lives in `state/tiingo_token.txt` and is never committed.
 
 ## agent-1.20: news_shock_vix_hi (research Q222, 6 Nov 2026, benched unproven)
 
