@@ -101,6 +101,9 @@ def main(argv: list[str] | None = None) -> int:
     from .agent import Agent, load_config
     agent = Agent(store, T212Client(load_credentials()), load_config(), ambiguous_exc=AmbiguousOrderError,
                   api_exc=ApiError)
+    from . import datasrc  # noqa: PLC0415 - agent-1.21: Tiingo, CBOE and broker prices instead of Yahoo/Nasdaq
+    agent.data = datasrc.Honest(store.root, agent.broker_quotes)
+    agent.get = agent.data.get
     try:
         agent.run_forever()
     except LeaseHeld as e:

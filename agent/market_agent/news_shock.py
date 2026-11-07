@@ -21,13 +21,14 @@ EFTS = "https://efts.sec.gov/LATEST/search-index"
 _TK = re.compile(r"\(([A-Z][A-Z0-9.\-]*(?:,\s*[A-Z][A-Z0-9.\-]*)*)\)\s*\(CIK")
 
 
-def filings(hits: list[dict]) -> list[dict]:
-    """[{symbol, items, file_date}] for 8-Ks without item 2.02, one row per listed ticker (first ticker per filer)."""
+def filings(hits: list[dict], earnings: bool = False) -> list[dict]:
+    """[{symbol, items, file_date}] for 8-Ks without item 2.02 (with it when `earnings`: the results releases that
+    gap_rebound scans), one row per listed ticker (first ticker per filer)."""
     out = []
     for h in hits:
         s = h.get("_source") or h
         items = s.get("items") or []
-        if "2.02" in items or (s.get("form") or "8-K") != "8-K":
+        if ("2.02" in items) != earnings or (s.get("form") or "8-K") != "8-K":
             continue
         for name in s.get("display_names") or []:
             m = _TK.search(name)

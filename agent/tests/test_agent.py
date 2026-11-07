@@ -10,7 +10,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from market_agent import agent as agent_mod, execution, feeds  # noqa: E402
+from market_agent import agent as agent_mod, execution, feeds, gap_rebound  # noqa: E402
 from market_agent.__main__ import health  # noqa: E402
 from market_agent.store import LeaseHeld, Store  # noqa: E402
 
@@ -178,9 +178,26 @@ def make(tmp_path, enabled=True, prices=None, satellite=False, active_on=False):
     cfg["active"]["news_shock"]["enabled"] = False
     cfg["slippage"]["enabled"] = False  # test_news_shock covers it  # needs SEC full-text search; test_news_shock covers it  # needs SEC facts; test_exits covers it
     ag = agent_mod.Agent(st, b, cfg, ambiguous_exc=Ambiguous, api_exc=ApiErr,
-                         get=fake_get(clock, prices), clock=clock, sleep=lambda s: None)
+                         get=fake_get(clock, prices), clock=clock, sleep=lambda s: None, sec_get=fake_sec(clock))
     st.acquire_lease()
     return ag, b, st, clock
+
+
+def fake_sec(clock):
+    """agent-1.21 results dates come from SEC filings: every name filed a results 8-K 30 days ago (not due soon)."""
+    def sec(url, params):
+        if url == gap_rebound.TICKERS:
+            return {str(i): {"ticker": t, "cik_str": i + 1} for i, t in enumerate(
+                ["JPM", "V", "LLY", "COST", "NFLX", "ORCL", "CRM", "AAPL", "TSLA", "UBER", "WMT", "XOM", "UNH", "MA",
+                 "ADBE"])}
+        if "submissions" in url:
+            d = time.strftime("%Y-%m-%d", time.gmtime(clock() - 30 * 86400))
+            return {"filings": {"recent": {"form": ["8-K"], "filingDate": [d], "accessionNumber": ["x"],
+                                           "items": ["2.02,9.01"]}}}
+        if "efts" in url:
+            return {"hits": {"hits": [], "total": {"value": 0}}}
+        raise AssertionError(url)
+    return sec
 
 
 def advance(ag, clock, n=1, by=301):

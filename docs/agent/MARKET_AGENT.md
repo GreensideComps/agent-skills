@@ -312,6 +312,28 @@ The hard-event extension has no supporting test, and the closest one (Q201) was 
 switches all three off in config, with the code kept so each can be switched back on. The decision for each position
 is its tested hold, plus the broker-held stop and the strategy's kill rule.
 
+## agent-1.21: honest data sources (7 Nov 2026)
+
+Until agent-1.20.1 the agent read Yahoo and Nasdaq with a browser-like User-Agent. Both refuse an honest client, so that
+was a workaround of their access controls. agent-1.20.2 dropped the disguise and agent-1.21 (`datasrc.py`) answers the
+same calls from sources that accept an honest client:
+
+| Need | Source |
+|---|---|
+| US live prices | Tiingo IEX, one batch call for every US line (cached 150 s in US hours, 30 min otherwise) |
+| London prices | the broker's own position price; a London line the fund does not hold has no price (UNVERIFIED) |
+| GBP/USD | Tiingo FX, cached 15 minutes |
+| US daily bars | Tiingo daily, split-adjusted like Yahoo, with dividend-adjusted closes; cached until 18:00 New York |
+| VIX | CBOE's public delayed quote and history (the finished session comes from the quote) |
+| Results dates (review gate) | SEC filings: last results 8-K (item 2.02) plus 91 days; blocked from 17 days before; no results 8-K in 120 days is UNVERIFIED |
+| gap_rebound event list | SEC full-text search for results 8-Ks (replaces Nasdaq's calendar; the $300m market-cap filter goes, the liquidity filter stays) |
+| News headlines | none (Yahoo search had no honest replacement; headlines were alert-only) |
+
+Tiingo's free plan allows 50 requests an hour and 1,000 a day. The agent counts its calls in `state/tiingo_usage.json`
+and stops at 45 and 900; a scan that hits the cap keeps its place and continues next run. Before per-name bars are
+fetched, gap_rebound and news_shock drop names whose latest session traded under a third of the liquidity floor (one
+snapshot call). Both scans now also run at weekends. The token lives in `state/tiingo_token.txt` and is never committed.
+
 ## agent-1.20: news_shock_vix_hi (research Q222, 6 Nov 2026, benched unproven)
 
 This entry rule applies when a US company files a non-earnings 8-K (any 8-K without item 2.02) on a session d0 whose VIX close was 25 or higher. All of the following must also hold:

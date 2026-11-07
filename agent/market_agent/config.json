@@ -1,5 +1,5 @@
 {
-  "version": "agent-1.20.2",
+  "version": "agent-1.21",
   "note": "Always-on demo market agent. Demo account only (the client refuses any other host). Owner mandate: cmsg_01U4KMvkBYNknqm4HRVie8uvK9gRYqGXBK4bQP49dBz49i (26 Oct 2026).",
   "intervals_s": {
     "loop": 15,
@@ -56,7 +56,7 @@
     "delayed_suffixes": [
       ".L"
     ],
-    "note": "Yahoo's London quotes arrive about 15 minutes late, so London lines get the delayed limit."
+    "note": "agent-1.21: London lines are priced from the broker's position price (refreshed every 5 minutes), so they keep the delayed limit."
   },
   "abnormal_move": 0.25,
   "exits": {

@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import math
 import time
+from datetime import date, timedelta
 from typing import Callable
 
 CHART = "https://query1.finance.yahoo.com/v8/finance/chart/{s}"
@@ -100,6 +101,24 @@ def earnings_soon(days: int, now: float, get: Callable) -> dict[str, str]:
             out.setdefault(row.get("symbol", ""), d)
     out.pop("", None)
     return out
+
+
+def earnings_due(filings: list[dict], today: str, block_days: int, cadence: int = 91, early: int = 14,
+                 stale: int = 120) -> str | None:
+    """agent-1.21: the next results date estimated from SEC filings, as Nasdaq's calendar refuses an honest client.
+    `filings` are [{form, date, items}] (newest first) from EDGAR submissions. The last results 8-K (item 2.02) plus a
+    quarter (`cadence` days) is the expected date; entries are blocked from `early` + `block_days` days before it.
+    No results 8-K within `stale` days is UNVERIFIED (blocked). Returns the block reason, or None when clear."""
+    last = next((f["date"] for f in filings if f["form"].startswith("8-K") and "2.02" in (f.get("items") or "")), None)
+    if not last:
+        return "UNVERIFIED (no results 8-K on file)"
+    age = (date.fromisoformat(today) - date.fromisoformat(last)).days
+    nxt = (date.fromisoformat(last) + timedelta(days=cadence)).isoformat()
+    if age > stale:
+        return f"UNVERIFIED (last results 8-K {last}, over {stale} days ago)"
+    if age >= cadence - early - block_days:
+        return f"expected about {nxt} (last results 8-K {last})"
+    return None
 
 
 def entry_ok(strategy: str, rev: dict | None, cfg: dict, now: float) -> tuple[bool, str]:

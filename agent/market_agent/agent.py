@@ -17,6 +17,7 @@ from urllib.parse import quote
 from . import (
     active,
     buyback_value,
+    datasrc,
     exits,
     execution,
     feeds,
@@ -64,6 +65,9 @@ class Agent:
         self.attn: dict[str, float] = {}     # last Wikipedia attention z per T212 ticker
         self.earn: dict[str, str] = {}
         self.earn_t = 0.0
+        self.earn_day: dict[str, str] = {}   # agent-1.21: day each name's SEC results check last ran
+        self.broker_t = 0.0                  # when positions (and their broker prices) were last read
+        self.data = None                     # datasrc.Honest when the agent runs on the honest data sources
         self.mstate: dict = store.read("merger.json") or {}
         self.bars: dict[str, dict] = {}      # daily bars per T212 ticker, from the review pass
         self.squeezes: dict[str, dict] = {}  # vol_squeeze readings on the last finished session
@@ -184,6 +188,7 @@ class Agent:
         self.summary = self.c.account_summary()
         pos = self.c.positions()
         self.positions = {(p.get("instrument") or {}).get("ticker") or p.get("ticker"): p for p in pos}
+        self.broker_t = self.clock()
         self.pending = self.c.pending_orders()
         if set(self.positions) - set(self.schedule_of):
             self.learn_schedules()  # a new holding: learn which market calendar it trades on
@@ -197,6 +202,17 @@ class Agent:
         self.snapshot()
         self.need_decide = True
         self.due["prices"] = 0  # price the current holdings before deciding
+
+    def broker_quotes(self) -> dict[str, dict]:
+        """agent-1.21: London lines are priced from the broker's own position price ({yahoo symbol: {price, t}}), as
+        no free source serves LSE quotes to an honest client. Only held lines have one; others stay UNVERIFIED."""
+        ov = self.cfg["yahoo_overrides"]
+        out = {}
+        for t, p in self.positions.items():
+            sym = feeds.yahoo_symbol(t, ov)
+            if sym and sym.endswith(".L") and p.get("currentPrice"):
+                out[sym] = {"price": float(p["currentPrice"]), "t": self.broker_t}
+        return out
 
     def refresh_prices(self) -> None:
         ov = self.cfg["yahoo_overrides"]
@@ -271,12 +287,8 @@ class Agent:
         """Score every watched name and open trade on short, medium and long horizons (review.py) and log it."""
         rc = self.cfg["active"]["review"]
         now = self.clock()
-        if now - self.earn_t > rc["earnings_refresh_s"]:
-            try:
-                self.earn, self.earn_t = review.earnings_soon(rc["earnings_block_days"], now, self.get), now
-            except Exception as e:  # noqa: BLE001 - unknown earnings dates block entries via the gate below
-                self.s.event("duty_failed", duty="earnings", error=str(e)[:300])
         names = sorted(set(self._watch()) | {e["ticker"] for e in active.open_trades(self.s.intents())})
+        self._earnings_sec(names, rc["earnings_block_days"], now)
         rows = []
         for t in names:
             sym = feeds.yahoo_symbol(t, self.cfg["yahoo_overrides"])
@@ -300,7 +312,8 @@ class Agent:
             q = self._quote(t)
             f = review.factors(closes, vols, q["price"] if q else None)
             rev = {"t": now, "ticker": t, "factors": f, "scores": review.score(f, self.attn.get(t)),
-                   "earnings": self.earn.get(sym) if self.earn_t else "UNVERIFIED (calendar unavailable)"}
+                   "earnings": self.earn.get(sym, "UNVERIFIED (results check not run)") if t.endswith("_US_EQ")
+                   else None}
             self.reviews[t] = rev
             rows.append({k: v for k, v in rev.items() if k != "t"})
         self.s.event("review", rows=rows)
@@ -653,8 +666,7 @@ class Agent:
         gc = self._gap_rebound()
         now = self.clock()
         nyd = gap_rebound.ny_now(now)
-        if nyd.weekday() >= 5:
-            return None
+        # agent-1.21: scans run at weekends too; the bars are final and Tiingo's request budget is idle then
         st = {"done": {}, "signals": {}, "queue": {}, **(self.s.read("gap_rebound.json") or {})}
         spy = gap_rebound.bars("SPY", self.get)
         days = [d for d, _, _ in spy]
@@ -665,11 +677,11 @@ class Agent:
             buy = gap_rebound.exit_day(dp1, 1)
             if buy < today or d0 in st["done"]:
                 continue
-            if d0 not in st["queue"]:
-                rows = ((self.get(gap_rebound.EARNINGS, {"date": d0}) or {}).get("data") or {}).get("rows") or []
-                st["queue"][d0] = sorted({r["symbol"] for r in rows if r.get("symbol", "").isalpha()
-                                          and gap_rebound.mcap(r) >= gc["min_mcap"]
-                                          and f"{r['symbol']}_US_EQ" in self.schedule_of})
+            if d0 not in st["queue"]:  # agent-1.21: results 8-Ks from SEC (Nasdaq's calendar refuses honest clients)
+                rows = self._efts_8k(complete, d0, earnings=True)
+                st["queue"][d0] = self._liquid_enough(sorted({r["symbol"] for r in rows if r["symbol"].isalpha()
+                                                              and f"{r['symbol']}_US_EQ" in self.schedule_of}),
+                                                      gc["min_dollar_vol"])
         n = 0
         self._vix_bars = None
         for d0 in sorted(st["queue"]):
@@ -681,6 +693,10 @@ class Agent:
                 self.sleep(gc["pacing_s"])
                 try:
                     m = gap_rebound.event_move(gap_rebound.bars(sym, self.get), spy, d0)
+                except datasrc.BudgetError:
+                    todo.insert(0, sym)  # Tiingo's hourly budget: the name waits for the next run
+                    n = gc["per_run"]
+                    break
                 except Exception as e:  # noqa: BLE001 - no bars confirm nothing; the name is skipped and logged
                     self.s.event("gap_rebound_skip", strategy=gap_rebound.NAME, symbol=sym, error=str(e)[:200])
                     continue
@@ -760,8 +776,7 @@ class Agent:
         nc = self._news_shock()
         now = self.clock()
         nyd = gap_rebound.ny_now(now)
-        if nyd.weekday() >= 5:
-            return None
+        # agent-1.21: scans run at weekends too; the bars are final and Tiingo's request budget is idle then
         st = {"done": {}, "signals": {}, "queue": {}, **(self.s.read("news_shock.json") or {})}
         spy = gap_rebound.bars("SPY", self.get)
         vix = {d: c for d, c, _ in gap_rebound.bars("^VIX", self.get)}
@@ -781,25 +796,16 @@ class Agent:
             if vix[d0] < nc["vix_min"]:
                 st["done"][d0] = f"VIX {vix[d0]:.2f} < {nc['vix_min']}: no scan"
                 continue
-            if self.sec_get is None:
+            try:
+                rows = self._efts_8k(complete, d0, earnings=False)
+            except feeds.FeedError:
                 continue
-            w = news_shock.window(complete, d0)
-            rows, frm = [], 0
-            while w:
-                self.s.renew_lease()
-                self.sleep(0.3)
-                r = self.sec_get(news_shock.EFTS, {"forms": "8-K", "dateRange": "custom", "startdt": w[0],
-                                                   "enddt": w[1], "from": frm})
-                hits = (r.get("hits") or {}).get("hits") or []
-                rows += news_shock.filings(hits)
-                frm += len(hits)
-                if not hits or frm >= ((r.get("hits") or {}).get("total") or {}).get("value", 0) or frm >= 5000:
-                    break
             items: dict[str, list] = {}
             for x in rows:
                 if f"{x['symbol']}_US_EQ" in self.schedule_of:
                     items[x["symbol"]] = sorted(set(items.get(x["symbol"], [])) | set(x["items"]))
-            st["queue"][d0] = {"vix": round(vix[d0], 2), "items": items, "todo": sorted(items)}
+            st["queue"][d0] = {"vix": round(vix[d0], 2), "items": items,
+                               "todo": self._liquid_enough(sorted(items), nc["min_dollar_vol"])}
         n = 0
         for d0 in sorted(st["queue"]):
             q = st["queue"][d0]
@@ -811,6 +817,10 @@ class Agent:
                 self.sleep(nc["pacing_s"])
                 try:
                     m = news_shock.move(gap_rebound.bars(sym, self.get), spy, d0)
+                except datasrc.BudgetError:
+                    q["todo"].insert(0, sym)  # Tiingo's hourly budget: the name waits for the next run
+                    n = nc["per_run"]
+                    break
                 except Exception as e:  # noqa: BLE001 - no bars confirm nothing; the name is skipped and logged
                     self.s.event("news_shock_skip", strategy=news_shock.NAME, symbol=sym, error=str(e)[:200])
                     continue
@@ -996,6 +1006,69 @@ class Agent:
         a = self.cfg.get("active") or {}
         c = a.get("exit_review") or {}
         return c if a.get("enabled") and c.get("enabled") else None
+
+    def _earnings_sec(self, names: list[str], block_days: int, now: float) -> None:
+        """agent-1.21: next results dates from each US name's SEC filings (review.earnings_due), once a New York day per
+        name. A failed check marks the name UNVERIFIED, which blocks its entries."""
+        today = gap_rebound.ny_now(now).date().isoformat()
+        for t in names:
+            sym = feeds.yahoo_symbol(t, self.cfg["yahoo_overrides"])
+            if not sym or not t.endswith("_US_EQ") or self.earn_day.get(t) == today:
+                continue
+            try:
+                cik = self._sec_cik(t)
+                if not cik:
+                    raise ValueError("no SEC CIK")
+                self.s.renew_lease()
+                self.sleep(0.2)
+                sub = self.sec_get(stock_screen.SUBMISSIONS.format(cik=cik), {})
+                sub = json.loads(sub) if isinstance(sub, str) else sub
+                due = review.earnings_due(stock_screen.recent_filings(sub), today, block_days)
+                self.earn[sym] = due  # None: no results date near
+                self.earn_day[t] = today
+            except Exception as e:  # noqa: BLE001 - unknown results date blocks the name's entries
+                self.earn[sym] = f"UNVERIFIED (SEC check failed: {str(e)[:80]})"
+        self.earn_t = now
+
+    def _efts_8k(self, complete: list[str], d0: str, earnings: bool) -> list[dict]:
+        """8-Ks filed for session d0 (SEC full-text search, paged): results releases (item 2.02) when `earnings`,
+        else the non-earnings ones. Raises when SEC is unreachable, so the day is retried."""
+        if self.sec_get is None:
+            ua = feeds.sec_user_agent(self.s.root)
+            if ua:
+                self.sec_get = feeds.sec_get(ua, max_bytes=5_000_000)
+        if self.sec_get is None:
+            raise feeds.FeedError("SEC: no contact User-Agent")
+        w = news_shock.window(complete, d0)
+        rows, frm = [], 0
+        while w:
+            self.s.renew_lease()
+            self.sleep(0.3)
+            r = self.sec_get(news_shock.EFTS, {"forms": "8-K", "dateRange": "custom", "startdt": w[0], "enddt": w[1],
+                                               "from": frm})
+            hits = (r.get("hits") or {}).get("hits") or []
+            rows += news_shock.filings(hits, earnings=earnings)
+            frm += len(hits)
+            if not hits or frm >= ((r.get("hits") or {}).get("total") or {}).get("value", 0) or frm >= 5000:
+                break
+        return rows
+
+    def _liquid_enough(self, syms: list[str], min_dollar_vol: float) -> list[str]:
+        """agent-1.21 request saver: drop names whose latest session traded under a third of the liquidity floor (one
+        Tiingo snapshot call), before per-name bars are fetched. Without the snapshot every name is kept."""
+        try:
+            snap = self.data.snapshot() if self.data is not None else None
+        except feeds.FeedError:
+            snap = None
+        if not snap:
+            return syms
+        keep = []
+        for s in syms:
+            r = snap.get(s.upper())
+            px, vol = r and (r.get("tngoLast") or r.get("prevClose")), r and r.get("volume")
+            if not r or px is None or vol is None or px * vol >= min_dollar_vol / 3:
+                keep.append(s)
+        return keep
 
     def _sec_cik(self, t212: str) -> int | None:
         """CIK for a US T212 ticker from SEC company_tickers.json (fetched once per process); None if unknown."""
