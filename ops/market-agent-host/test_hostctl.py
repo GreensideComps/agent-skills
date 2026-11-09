@@ -82,10 +82,16 @@ def run_test(tmp: Path):
     # hosted run on a fresh root
     host = tmp / "hostroot"
     host.mkdir()
+    # the runner has a DIFFERENT secret: it registers its key and waits for a reseal
+    renv = {**env, "T212_API_SECRET": "runner-secret"}
+    r = sh(*hc, "run", "--root", str(host), "--agent-ref", "agent-branch", "--code-dir", str(tmp / "code0"),
+           "--budget-min", "1", env=renv)
+    assert "registered this host's key" in r.stdout and "hostctl reseal" in r.stdout, r.stdout
+    sh(*hc, "reseal", env=env)
     runner = subprocess.Popen(hc + ["run", "--root", str(host), "--agent-ref", "agent-branch",
                                     "--code-dir", str(tmp / "code"), "--budget-min", "0.4", "--tick-s", "0.5", "--sync-s", "3",
                                     "--agent-cmd", f"{sys.executable} fake_agent.py"],
-                              env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+                              env=renv, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
     time.sleep(8)
     assert (host / "market-agent/state/sec_user_agent.txt").read_text() == "secret-ua\n"
     assert (host / "research/always-on/forward/Q206_picks_2026-11.csv").exists()
@@ -109,7 +115,7 @@ def run_test(tmp: Path):
     # handover to session: the next run stands by
     sh(*hc, "handover", "--to", "session", "--reason", "test", "--wait-s", "5", env=env)
     r = sh(*hc, "run", "--root", str(host), "--agent-ref", "agent-branch", "--code-dir", str(tmp / "code"),
-           "--budget-min", "1", env={**env, "GITHUB_RUN_ID": "r2"})
+           "--budget-min", "1", env={**renv, "GITHUB_RUN_ID": "r2"})
     assert "standby" in r.stdout, r.stdout
     # wrong secret cannot decrypt
     bad = sh(*hc, "mirror", "--root", str(tmp / "m2"), env={**env, "T212_API_SECRET": "nope"}, check=False)
