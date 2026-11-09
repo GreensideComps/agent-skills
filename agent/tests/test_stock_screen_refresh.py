@@ -60,3 +60,43 @@ def test_a_name_gone_from_the_gated_list_is_an_extra_swap(monkeypatch):
     r = s.monthly_refresh(SC, rows, [], top_n=3, swapped_this_month=True)
     assert r["action"] == "swap" and r["sell"] == "B_US_EQ" and [b["cik"] for b in r["buy"]] == ["9"]
     assert "extra swap" in r["notes"][0]
+
+
+def test_with_dropout_swaps_off_only_a_12_month_old_name_or_a_vacancy_trades(monkeypatch):
+    sc = {**SC, "swap_on_dropout": False}
+    rows = [row(9, 5), row(1, 3), row(3, 1), row(8, 0.9)]                  # B left the gated list
+    held(monkeypatch, {"A_US_EQ": "2026-11-03", "B_US_EQ": "2026-11-03", "C_US_EQ": "2026-11-03"})
+    assert s.monthly_refresh(sc, rows, [], top_n=3)["action"] == "skip"
+    held(monkeypatch, {"A_US_EQ": "2020-01-02", "B_US_EQ": "2026-11-03", "C_US_EQ": "2026-11-03"})
+    r = s.monthly_refresh(sc, rows, [], top_n=3)
+    assert r["sell"] == "A_US_EQ" and [b["cik"] for b in r["buy"]] == ["9"]
+    assert s.monthly_refresh(sc, rows, [], top_n=3, swapped_this_month=True)["action"] == "skip"
+
+
+def test_equal_weight_trims_and_top_ups(monkeypatch):
+    trades = [{"ticker": t, "id": t.lower(), "ts": "2026-11-03T15:00:00Z", "signal": {"strategy": s.NAME}}
+              for t in ("A_US_EQ", "B_US_EQ", "C_US_EQ")]
+    monkeypatch.setattr(s.active, "open_trades", lambda records: trades)
+    pos = {t: {"quantity": 1.0, "quantityAvailableForTrading": 1.0, "walletImpact": {"currentValue": v}}
+           for t, v in (("A_US_EQ", 13.0), ("B_US_EQ", 10.0), ("C_US_EQ", 7.0))}
+    q = {"A_US_EQ": {"price": 13.0}, "B_US_EQ": {"price": 10.0}, "C_US_EQ": {"price": 7.0}}
+    sc = {"ew_rebalance": {"enabled": True, "from": "2026-12", "min_trade_gbp": 1.0}}
+    dec = 1796126400.0                                                     # 2026-12-01
+    args = (sc, [], pos, q.get, 1.0, dec, None)
+    trims, tops, n = s.ew_orders(*args, {}, lambda t: True)
+    assert [(o[0], o[1]) for o in trims] == [("A_US_EQ", -0.23)] and [(o[0], o[1]) for o in tops] == [("C_US_EQ", 0.428)]
+    assert trims[0][6]["type"] == "active_trim" and tops[0][6]["entry_id"] == "c_us_eq"
+    assert s.ew_orders(*args, {"ew_month": "2026-12"}, lambda t: True)[:2] == ([], [])
+    assert s.ew_orders(*args, {"ew_done": {"2026-12": ["A_US_EQ", "C_US_EQ"]}}, lambda t: True)[:2] == ([], [])
+    assert s.ew_orders(sc, [], pos, q.get, 1.0, dec - 86400 * 30, None, {}, lambda t: True)[:2] == ([], [])  # Nov
+    assert s.ew_orders(*args, {}, lambda t: False)[2]                      # market shut: waits, month not done
+
+
+def test_closed_result_counts_trims_and_top_ups():
+    def rec(kind, net, fee=0.0):
+        return {"signal": {"type": kind}, "broker": {"fill": {"walletImpact": {"netValue": net,
+                                                                                "taxes": [{"quantity": -fee}]}}}}
+    t = {"entry": rec("active_entry", 10.0), "exit": rec("active_exit", 11.0),
+         "adj": [rec("active_trim", 2.0, 0.01), rec("active_topup", 1.0)]}
+    r = s.active.closed_result(t)
+    assert abs(r["pnl_gbp"] - (11 + 2 - 1 - 10 - 0.01)) < 1e-9 and abs(r["ret"] - r["pnl_gbp"] / 11) < 1e-9

@@ -19,7 +19,13 @@ def trades(records: list[dict]) -> list[dict]:
     entries = [r for r in li.values() if (r.get("signal") or {}).get("type") == "active_entry" and r["status"] == "filled"]
     exits = {(r.get("signal") or {}).get("entry_id"): r for r in li.values()
              if (r.get("signal") or {}).get("type") == "active_exit" and r["status"] == "filled"}
-    return [{"entry": e, "exit": exits.get(e["id"])} for e in sorted(entries, key=lambda r: r.get("t", 0))]
+    adj: dict = {}
+    for r in li.values():  # stock_screen equal-weight trims and top-ups (Q237b bench) of an open trade
+        sig = r.get("signal") or {}
+        if sig.get("type") in ("active_trim", "active_topup") and r["status"] == "filled":
+            adj.setdefault(sig.get("entry_id"), []).append(r)
+    return [{"entry": e, "exit": exits.get(e["id"]), "adj": adj.get(e["id"], [])}
+            for e in sorted(entries, key=lambda r: r.get("t", 0))]
 
 
 def _fill(rec: dict) -> tuple[float, float]:
@@ -34,6 +40,11 @@ def closed_result(t: dict) -> dict:
     e_net, e_fee = _fill(t["entry"])
     x_net, x_fee = _fill(t["exit"])
     pnl = x_net - e_net - e_fee - x_fee
+    for r in t.get("adj") or []:  # trims add cash back, top-ups add cost
+        a_net, a_fee = _fill(r)
+        pnl += (a_net if r["signal"]["type"] == "active_trim" else -a_net) - a_fee
+        if r["signal"]["type"] == "active_topup":
+            e_net += a_net
     v0 = (t["entry"].get("signal") or {}).get("vwrp_px")
     v1 = (t["exit"].get("signal") or {}).get("vwrp_px")
     return {"pnl_gbp": pnl, "ret": pnl / e_net if e_net else 0.0,

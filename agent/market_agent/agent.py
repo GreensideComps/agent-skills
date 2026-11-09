@@ -1295,7 +1295,9 @@ class Agent:
         vwrp_px = vw["price"] if vw else None
         recs = self.s.intents()
         self._place_stops(recs, notes)
-        sells = self._exit_orders(notes) + self._active_exits(recs, vwrp_px) + self._rebalance_orders(notes)
+        ew_trims, self._ew_tops = self._ew(recs, vwrp_px, notes)
+        sells = (self._exit_orders(notes) + self._active_exits(recs, vwrp_px) + self._rebalance_orders(notes)
+                 + ew_trims)
         order = None
         if sells:
             order = next((o for o in sells if self.market_open(o[0])), None)
@@ -1306,8 +1308,37 @@ class Agent:
             if order is None:
                 order = self._active_entry(recs, day, vwrp_px, notes)
         acted = [self._order(*order, day)] if order else []
+        if order and (order[6] or {}).get("type") in ("active_trim", "active_topup"):
+            self._ew_mark(order[0])
         self.s.event("decision", orders=[a for a in acted if a],
                      no_trade=not any(a and a.get("status") == "placed" for a in acted), notes=notes)
+
+    def _ew(self, recs, vwrp_px, notes) -> tuple[list, list]:
+        """Q237b bench: this month's equal-weight trims (sells) and top-ups (buys) for the stock_screen basket."""
+        sc = self._screen()
+        disabled = self.s.read("strategies.json") or {}
+        if not sc or stock_screen.NAME in disabled or stock_screen.missing(sc, recs, self.positions, disabled):
+            return [], []  # only a complete basket is re-weighted
+        fxq = self.quotes.get(self.cfg["benchmark"]["fx"])
+        state = self.s.read("stock_screen.json") or {}
+        trims, tops, n = stock_screen.ew_orders(sc, recs, self.positions, self._quote, fxq["price"] if fxq else None,
+                                                self.clock(), vwrp_px, state, self.market_open,
+                                                self.s.read("precision.json") or {}, sc.get("qty_decimals", 3))
+        notes += n
+        ew = sc.get("ew_rebalance") or {}
+        month = time.strftime("%Y-%m", time.gmtime(self.clock()))
+        if ew.get("enabled") and month >= ew.get("from", "9999") and state.get("ew_month") != month \
+                and not trims and not tops and not n and len(self.positions):
+            self.s._replace("stock_screen.json", {**state, "ew_month": month})
+            self.s.event("ew_rebalance_done", strategy=stock_screen.NAME, month=month)
+        return trims, tops
+
+    def _ew_mark(self, ticker: str) -> None:
+        state = self.s.read("stock_screen.json") or {}
+        month = time.strftime("%Y-%m", time.gmtime(self.clock()))
+        done = dict(state.get("ew_done") or {})
+        done[month] = sorted({*(done.get(month) or []), ticker})
+        self.s._replace("stock_screen.json", {**state, "ew_done": done})
 
     def _quote(self, t212: str) -> dict | None:
         sym = feeds.yahoo_symbol(t212, self.cfg["yahoo_overrides"])
@@ -1523,6 +1554,11 @@ class Agent:
         fxq = self.quotes.get(self.cfg["benchmark"]["fx"])
         if sc:  # the basket first: it is funded from VWRP, so it never competes with the sleeve for cash
             keep = self.cfg["active"].get("cash_reserve_weight", 0) * total
+            for o in getattr(self, "_ew_tops", None) or []:  # Q237b top-ups, paid from this month's trims
+                if cash - keep >= o[2] * (1 + self.cfg["core"].get("buy_reserve", 0)):
+                    return o
+                notes.append(f"stock_screen: equal-weight top-up of {o[0]} waits for cash")
+                break
             need = stock_screen.need_gbp(sc, self.cfg, recs, self.positions, total, disabled)
             so, n = stock_screen.entry_orders(sc, self.cfg, recs, self.positions, self._quote,
                                               fxq["price"] if fxq else None, total, cash - keep, self.clock(),

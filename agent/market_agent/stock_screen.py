@@ -217,7 +217,15 @@ def monthly_refresh(sc: dict, scored: list[dict], records, top_n: int = 15, max_
     sell = None
     def key(t):
         return (held[t]["ts"][:10], score.get(int(ciks.get(t, 0)), float("-inf")))
-    if any(int(ciks[t]) not in top for t in held if t in ciks) or not held:
+    if sc.get("swap_on_dropout", True) is False:
+        # Q233b/Q237a (9 Nov 2026): swapping a name out on rank lost to holding, so a name leaves only after the
+        # tested 12-month hold (oldest first, one a month) or on a hard SEC event; empty slots are still refilled
+        aged = [t for t in held if held[t]["ts"][:10] <= time.strftime("%Y-%m-%d", time.gmtime(time.time() - 365 * 86400))]
+        sell = min(aged, key=key) if aged and not swapped_this_month else None
+        if sell is None and not vacant:
+            return {"action": "skip", "sell": None, "buy": [],
+                    "notes": ["no name has reached its 12-month hold (drop-out swaps off since 9 Nov 2026)"]}
+    elif any(int(ciks[t]) not in top for t in held if t in ciks) or not held:
         sell = min(held, key=key) if held else None
     if swapped_this_month and sell:
         # weekly runs keep the tested 1/12 turnover: one scheduled swap a month; after it, only a held name that has
@@ -260,3 +268,48 @@ def monthly_refresh(sc: dict, scored: list[dict], records, top_n: int = 15, max_
     if vacant:
         notes.append("refill " + ", ".join(vacant))
     return {"action": "swap", "sell": sell, "vacant": vacant, "buy": buy, "notes": notes}
+
+
+def ew_orders(sc, records, positions, quote_of, fx, now, vwrp_px, state, market_open, precision=None,
+              qty_decimals: int = 3) -> tuple[list, list, list[str]]:
+    """Q237b bench (unproven): once a calendar month, from `ew_rebalance.from`, reset each held basket name to the
+    basket's equal weight. Returns (trims, top-ups, notes), one order per name not yet done this month; trades under
+    `min_trade_gbp` are skipped. Every held name needs a validated quote, else nothing is sent this pass."""
+    ew = (sc or {}).get("ew_rebalance") or {}
+    month = time.strftime("%Y-%m", time.gmtime(now))
+    if not ew.get("enabled") or month < ew.get("from", "9999") or state.get("ew_month") == month:
+        return [], [], []
+    held = {e["ticker"]: e for e in active.open_trades(records) if e["signal"].get("strategy") == NAME}
+    held = {t: e for t, e in held.items() if float((positions.get(t) or {}).get("quantity") or 0) > 0}
+    if len(held) < 2 or not fx:
+        return [], [], []
+    quotes = {t: quote_of(t) for t in held}
+    if not all(quotes.values()):
+        return [], [], [f"{NAME}: equal-weight trim waits for quotes on " +
+                        ", ".join(t for t, q in quotes.items() if not q)]
+    val = {t: float((positions[t].get("walletImpact") or {}).get("currentValue") or 0) for t in held}
+    target = sum(val.values()) / len(val)
+    done = set((state.get("ew_done") or {}).get(month) or [])
+    trims, tops, shut = [], [], False
+    for t, e in held.items():
+        diff = target - val[t]
+        if t in done or abs(diff) < ew.get("min_trade_gbp", 1.0):
+            continue
+        if not market_open(t):
+            shut = True
+            continue
+        q = quotes[t]
+        d = 10 ** min(qty_decimals, (precision or {}).get(t, 8))
+        qty = math.floor(abs(diff) / (q["price"] / fx) * d) / d
+        if diff < 0:
+            qty = min(qty, float(positions[t].get("quantityAvailableForTrading") or 0))
+        if qty <= 0:
+            continue
+        kind = "active_topup" if diff > 0 else "active_trim"
+        o = (t, qty if diff > 0 else -qty, qty * q["price"] / fx, q["price"], True,
+             f"{NAME} equal-weight {'top-up' if diff > 0 else 'trim'} (Q237b bench, unproven): "
+             f"£{val[t]:.2f} -> target £{target:.2f}",
+             {"type": kind, "strategy": NAME, "entry_id": e["id"], "month": month, "target_gbp": round(target, 2),
+              "quote": q, "vwrp_px": vwrp_px})
+        (tops if diff > 0 else trims).append(o)
+    return trims, tops, ([f"{NAME}: equal-weight trims wait for the US open"] if shut and not (trims or tops) else [])

@@ -351,6 +351,14 @@ the month's signal was recorded, and failed 9 times on 9 Nov on the hourly Tiing
 when the state already holds the latest finished month (`value_timing.last_done_month`), so it only fetches bars in the
 first loops after a month end.
 
+agent-1.22 (9 Nov): stock_screen selling changes from research's sell-rule track (Q231-Q237, 0 of 19 rules beat the
+hold). Drop-out swaps are off (`swap_on_dropout: false`): Q233b (swap when a name leaves the top band) cost 2.5% per
+name-year and Q237a (swap into a better-ranked name) cost 0.36% a month (t -1.96, all thirds negative). A name now
+leaves after its 12-month hold (oldest first, one a month) or on a hard SEC event. New bench rule `ew_rebalance` (Q237b,
+unproven, DSR 0.03, +0.06%/month): from December, once a month each held name is reset to the basket's equal weight,
+trims first and top-ups paid from them, trades under GBP 1 skipped. Trims and top-ups carry the trade's `entry_id` and
+count in its closed P&L.
+
 ## agent-1.20: news_shock_vix_hi (research Q222, 6 Nov 2026, benched unproven)
 
 This entry rule applies when a US company files a non-earnings 8-K (any 8-K without item 2.02) on a session d0 whose VIX close was 25 or higher. All of the following must also hold:

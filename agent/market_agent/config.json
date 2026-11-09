@@ -1,5 +1,5 @@
 {
-  "version": "agent-1.21.6",
+  "version": "agent-1.22",
   "note": "Always-on demo market agent. Demo account only (the client refuses any other host). Owner mandate: cmsg_01U4KMvkBYNknqm4HRVie8uvK9gRYqGXBK4bQP49dBz49i (26 Oct 2026).",
   "intervals_s": {
     "loop": 15,
@@ -420,6 +420,8 @@
       "skipped": {"CROX_US_EQ": "consumer discretionary cap (6 Nov refresh): all four new top-15 names (CROX, COLM, LRN, SIG) are consumer discretionary; a 7th discretionary name puts the basket at about +10.5pt active vs VWRP look-through, over the +-10pt limit (UNVERIFIED VWRP sector weight)", "COLM_US_EQ": "consumer discretionary cap (see CROX_US_EQ)", "ELY_US_EQ": "consumer discretionary cap (see CROX_US_EQ); CALY on Yahoo", "LRN_US_EQ": "consumer discretionary cap (see CROX_US_EQ)", "SIG_US_EQ": "consumer discretionary cap (see CROX_US_EQ)", "SN_US_EQ": "consumer discretionary cap (see CROX_US_EQ)", "SPB_US_EQ": "9 Nov: dropped out of the gated list (extra swap); replaced by ENS (EnerSys, gated rank 27), the first name that is neither consumer discretionary (CROX, LRN, COLM, SIG, SN, PVH, BBY skipped) nor SIC 73 (FIVN, NTCT, RHI, ADBE, TENB, PEGA, DOCU, TEAM skipped)", "NTCT_US_EQ": "SIC 73 group cap (TDC, CART, CARG held); RHI, ADBE, FIVN, TENB likewise"},
       "entry_weight": 0.02,
       "qty_decimals": 3,
+      "swap_on_dropout": false,
+      "ew_rebalance": {"enabled": true, "from": "2026-12", "min_trade_gbp": 1.0, "label": "unproven", "rule": "Q237b bench (9 Nov 2026, DSR 0.03, t 1.1, +0.06%/month): once a month reset each held name to the basket's equal weight, trims first, top-ups paid from them; trades under GBP 1 skipped; review after 12 months of demo data"},
       "fund_from_vwrp": true,
       "kill_after_trades": 30,
       "kill_after_days": 730,
