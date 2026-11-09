@@ -13,8 +13,10 @@ State branch `market-agent-state` (one orphan commit, force-pushed with a lease,
   control.json         plaintext kill switch, copied into the hosted agent's state on every sync.
   hosted.json          plaintext runner status: run id, phase, last sync time, agent commit, health verdict.
 
-Encryption key = sha256("market-agent-state-v1" + T212_API_SECRET), so no extra secret is needed: anyone who can run the
-agent can read its state and nobody else can. Nothing secret is ever printed (Actions logs on a public repo are public).
+Encryption: each host (a Claude session, the GitHub runner) derives its own X25519 key pair from its own
+T212_API_SECRET (or MA_STATE_KEY) and registers the public half in keys.json. Snapshots are AES-256-GCM with a random
+data key wrapped for every registered key, so the hosts need not share a secret. A new host registers its key and waits;
+any host that can already read the state runs `reseal`. Nothing secret is ever printed (Actions logs are public).
 
 One trader at a time:
   * the hosted runner starts the agent only while owner.json says github-actions, and stops within one sync interval
@@ -26,6 +28,7 @@ One trader at a time:
 
 Commands (run from any clone of the repo with push rights):
   seed     --root /mnt/project-files [--force]   first cutover: pack local state + inputs, set host=github-actions
+  reseal                                         re-encrypt for every registered host key (after a new host joins)
   status                                         owner, hosted run, last sync age (exit 0 ok, 1 stale, 2 not seeded)
   mirror   --root /mnt/project-files             copy the hosted snapshot over local files (read-only replica)
   push-inputs --root /mnt/project-files          send fresh research inputs to the hosted agent
@@ -75,29 +78,100 @@ def log(msg: str) -> None:
 
 
 # ------------------------------------------------------------------ crypto
-def state_key(env=os.environ) -> str:
-    """MA_STATE_KEY when set (a dedicated shared key), else derived from T212_API_SECRET."""
-    if env.get("MA_STATE_KEY", "").strip():
-        return hashlib.sha256(b"market-agent-state-v1\0key\0" + env["MA_STATE_KEY"].strip().encode()).hexdigest()
-    secret = env.get("T212_API_SECRET", "").strip()
-    if not secret:
-        raise SystemExit("T212_API_SECRET is not set: cannot derive the state key")
-    return hashlib.sha256(b"market-agent-state-v1\0" + secret.encode()).hexdigest()
+def _secret(env=os.environ) -> bytes:
+    """This host's private seed: MA_STATE_KEY when set, else its T212_API_SECRET. Hosts need not share it."""
+    v = env.get("MA_STATE_KEY", "").strip() or env.get("T212_API_SECRET", "").strip()
+    if not v:
+        raise SystemExit("T212_API_SECRET is not set: this host has no state key")
+    return v.encode()
+
+
+def host_key(env=os.environ):
+    """This host's X25519 key pair, derived from its own secret, so it is the same on every run of that host."""
+    from cryptography.hazmat.primitives.asymmetric.x25519 import X25519PrivateKey  # noqa: PLC0415
+    return X25519PrivateKey.from_private_bytes(hashlib.sha256(b"ma-x25519-v1\0" + _secret(env)).digest())
+
+
+def _raw_pub(priv) -> bytes:
+    from cryptography.hazmat.primitives import serialization as ser  # noqa: PLC0415
+    return priv.public_key().public_bytes(ser.Encoding.Raw, ser.PublicFormat.Raw)
+
+
+def kid_of(pub_raw: bytes) -> str:
+    return hashlib.sha256(pub_raw).hexdigest()[:10]
 
 
 def key_id(env=os.environ) -> str:
-    """A short public fingerprint of the state key, to tell two hosts' keys apart without revealing either."""
-    return hashlib.sha256(b"key-id\0" + state_key(env).encode()).hexdigest()[:10]
+    """Public fingerprint of this host's key."""
+    return kid_of(_raw_pub(host_key(env)))
 
 
-def _openssl(data: bytes, decrypt: bool) -> bytes:
-    env = {**os.environ, "MA_STATE_PASS": state_key()}
-    cmd = ["openssl", "enc", "-aes-256-cbc", "-pbkdf2", "-iter", "200000", "-md", "sha256", "-pass", "env:MA_STATE_PASS"]
-    cmd += ["-d"] if decrypt else ["-salt"]
-    r = subprocess.run(cmd, input=data, capture_output=True, env=env)
-    if r.returncode != 0:
-        raise RuntimeError("decryption failed (wrong T212_API_SECRET?)" if decrypt else "encryption failed")
-    return r.stdout
+def _kek(shared: bytes) -> bytes:
+    from cryptography.hazmat.primitives import hashes  # noqa: PLC0415
+    from cryptography.hazmat.primitives.kdf.hkdf import HKDF  # noqa: PLC0415
+    return HKDF(algorithm=hashes.SHA256(), length=32, salt=None, info=b"ma-wrap-v1").derive(shared)
+
+
+def seal(data: bytes, pubs: dict[str, str]) -> bytes:
+    """AES-256-GCM with a random data key, wrapped for each recipient public key (ephemeral X25519 + HKDF)."""
+    import base64  # noqa: PLC0415
+    from cryptography.hazmat.primitives.asymmetric.x25519 import X25519PrivateKey, X25519PublicKey  # noqa: PLC0415
+    from cryptography.hazmat.primitives.ciphers.aead import AESGCM  # noqa: PLC0415
+    dk, nonce = os.urandom(32), os.urandom(12)
+    rcpt = {}
+    for kid, pub_b64 in sorted(pubs.items()):
+        eph = X25519PrivateKey.generate()
+        kek = _kek(eph.exchange(X25519PublicKey.from_public_bytes(base64.b64decode(pub_b64))))
+        n2 = os.urandom(12)
+        rcpt[kid] = {"epk": base64.b64encode(_raw_pub(eph)).decode(), "n": base64.b64encode(n2).decode(),
+                     "w": base64.b64encode(AESGCM(kek).encrypt(n2, dk, None)).decode()}
+    hdr = json.dumps({"v": 2, "n": base64.b64encode(nonce).decode(), "rcpt": rcpt}).encode()
+    return b"MAS2" + len(hdr).to_bytes(4, "big") + hdr + AESGCM(dk).encrypt(nonce, data, hdr)
+
+
+def recipients(blob: bytes) -> list[str]:
+    if not blob or blob[:4] != b"MAS2":
+        return []
+    n = int.from_bytes(blob[4:8], "big")
+    return sorted(json.loads(blob[8:8 + n])["rcpt"])
+
+
+def open_sealed(blob: bytes, env=os.environ) -> bytes:
+    import base64  # noqa: PLC0415
+    from cryptography.hazmat.primitives.asymmetric.x25519 import X25519PublicKey  # noqa: PLC0415
+    from cryptography.hazmat.primitives.ciphers.aead import AESGCM  # noqa: PLC0415
+    if blob[:4] != b"MAS2":
+        raise NotSealedForMe("old or unknown snapshot format")
+    n = int.from_bytes(blob[4:8], "big")
+    hdr_raw = blob[8:8 + n]
+    hdr = json.loads(hdr_raw)
+    priv = host_key(env)
+    r = hdr["rcpt"].get(kid_of(_raw_pub(priv)))
+    if not r:
+        raise NotSealedForMe(f"sealed for {sorted(hdr['rcpt'])}, not for this host's key {key_id(env)}")
+    kek = _kek(priv.exchange(X25519PublicKey.from_public_bytes(base64.b64decode(r["epk"]))))
+    dk = AESGCM(kek).decrypt(base64.b64decode(r["n"]), base64.b64decode(r["w"]), None)
+    return AESGCM(dk).decrypt(base64.b64decode(hdr["n"]), blob[8 + n:], hdr_raw)
+
+
+class NotSealedForMe(RuntimeError):
+    pass
+
+
+def my_pub_entry(role: str) -> dict:
+    import base64  # noqa: PLC0415
+    return {"pub": base64.b64encode(_raw_pub(host_key())).decode(), "role": role, "ts": utc()}
+
+
+def with_my_key(keys: dict, role: str) -> dict:
+    kid = key_id()
+    if kid in keys:
+        return keys
+    return {**keys, kid: my_pub_entry(role)}
+
+
+def pubs_of(keys: dict) -> dict[str, str]:
+    return {k: v["pub"] for k, v in keys.items()}
 
 
 # ------------------------------------------------------------------ packing
@@ -125,7 +199,7 @@ def collect(root: Path, globs: list[str], exclude: list[str], now: float | None 
     return sorted(set(out))
 
 
-def pack(root: Path, globs: list[str], exclude: list[str]) -> bytes:
+def pack(root: Path, globs: list[str], exclude: list[str], pubs: dict[str, str]) -> bytes:
     buf = io.BytesIO()
     with tarfile.open(fileobj=buf, mode="w:gz", compresslevel=6) as tar:
         for rel in collect(root, globs, exclude):
@@ -133,11 +207,11 @@ def pack(root: Path, globs: list[str], exclude: list[str]) -> bytes:
             info = tarfile.TarInfo(rel)
             info.size, info.mtime, info.mode = len(data), int((root / rel).stat().st_mtime), 0o644
             tar.addfile(info, io.BytesIO(data))
-    return _openssl(buf.getvalue(), decrypt=False)
+    return seal(buf.getvalue(), pubs)
 
 
 def unpack(blob: bytes, root: Path, only: list[str] | None = None, skip: list[str] | None = None) -> list[str]:
-    raw = _openssl(blob, decrypt=True)
+    raw = open_sealed(blob)
     written = []
     with tarfile.open(fileobj=io.BytesIO(raw), mode="r:gz") as tar:
         for m in tar.getmembers():
@@ -248,18 +322,40 @@ def cmd_seed(b: Branch, a) -> int:
         print(f"a local agent still holds its lease ({held}); stop it first", file=sys.stderr)
         return 1
     control = json.loads((root / STATE_REL / "control.json").read_text())
-    files = {"snapshot.tar.gz.enc": pack(root, SNAPSHOT_GLOBS, SNAPSHOT_EXCLUDE),
-             "inputs.tar.gz.enc": pack(root, INPUT_GLOBS, INPUT_EXCLUDE),
+    keys = with_my_key(b.read_json(head, "keys.json"), "session")
+    files = {"snapshot.tar.gz.enc": pack(root, SNAPSHOT_GLOBS, SNAPSHOT_EXCLUDE, pubs_of(keys)),
+             "inputs.tar.gz.enc": pack(root, INPUT_GLOBS, INPUT_EXCLUDE, pubs_of(keys)),
+             "keys.json": jdump(keys),
              "control.json": jdump(control),
-             "owner.json": jdump({"host": "github-actions", "ts": utc(), "by": "seed", "reason": a.reason,
-                                  "key_id": key_id()}),
+             "owner.json": jdump({"host": "github-actions", "ts": utc(), "by": "seed", "reason": a.reason}),
              "hosted.json": jdump({"phase": "seeded", "ts": utc(), "t": time.time()})}
     if not b.write(head, files, f"seed {utc()}"):
         print("the branch moved during the seed; run it again", file=sys.stderr)
         return 1
     n = len(collect(root, SNAPSHOT_GLOBS, SNAPSHOT_EXCLUDE))
-    print(json.dumps({"seeded": True, "files": n, "host": "github-actions", "key_id": key_id()}))
+    print(json.dumps({"seeded": True, "files": n, "host": "github-actions", "key_id": key_id(),
+                      "sealed_for": sorted(keys)}))
     return 0
+
+
+def cmd_reseal(b: Branch, a) -> int:
+    """Re-encrypt the snapshot and inputs for every key in keys.json (run by any host that can read them, after a
+    new host registered its key). The plaintext never leaves this process."""
+    for _ in range(3):
+        head = b.fetch()
+        if not head:
+            print("not seeded", file=sys.stderr)
+            return 2
+        keys = with_my_key(b.read_json(head, "keys.json"), "session")
+        files = {"keys.json": jdump(keys)}
+        for name in ("snapshot.tar.gz.enc", "inputs.tar.gz.enc"):
+            blob = b.read(head, name)
+            if blob:
+                files[name] = seal(open_sealed(blob), pubs_of(keys))
+        if b.write(head, files, f"reseal {utc()}"):
+            print(json.dumps({"resealed_for": sorted(keys)}))
+            return 0
+    return 1
 
 
 def _status(b: Branch) -> tuple[int, dict]:
@@ -308,7 +404,9 @@ def cmd_push_inputs(b: Branch, a) -> int:
         if not head:
             print("not seeded", file=sys.stderr)
             return 2
-        if b.write(head, {"inputs.tar.gz.enc": pack(root, INPUT_GLOBS, INPUT_EXCLUDE)}, f"inputs {utc()}"):
+        keys = with_my_key(b.read_json(head, "keys.json"), "session")
+        if b.write(head, {"inputs.tar.gz.enc": pack(root, INPUT_GLOBS, INPUT_EXCLUDE, pubs_of(keys)),
+                          "keys.json": jdump(keys)}, f"inputs {utc()}"):
             print(json.dumps({"inputs": len(collect(root, INPUT_GLOBS, INPUT_EXCLUDE))}))
             return 0
     return 1
@@ -401,7 +499,8 @@ class Runner:
                 log(f"control.json applied: trading_enabled={json.loads(ctl).get('trading_enabled')}")
             files = {"hosted.json": self.hosted()}
             if self.phase != "starting":
-                files["snapshot.tar.gz.enc"] = pack(self.root, SNAPSHOT_GLOBS, SNAPSHOT_EXCLUDE)
+                keys = with_my_key(self.b.read_json(head, "keys.json"), "github-actions")
+                files["snapshot.tar.gz.enc"] = pack(self.root, SNAPSHOT_GLOBS, SNAPSHOT_EXCLUDE, pubs_of(keys))
             if self.b.write(head, files, f"{'final' if final else 'sync'} {self.run_id} {utc()}"):
                 return owner
             time.sleep(3 + attempt * 3)
@@ -494,15 +593,23 @@ class Runner:
             if not head:
                 log("state branch not seeded yet (hostctl seed); nothing to do")
                 return 0
+            keys = self.b.read_json(head, "keys.json")
+            if key_id() not in keys:  # register even on standby, so the next seed or reseal includes this host
+                if self.b.write(head, {"keys.json": jdump(with_my_key(keys, "github-actions"))},
+                                f"register key {key_id()}"):
+                    log(f"registered this host's key {key_id()}")
+                continue
             owner = self.b.read_json(head, "owner.json")
             if owner.get("host") != "github-actions":
                 log(f"standby: owner.json says host={owner.get('host')!r}")
                 return 0
-            want = owner.get("key_id")
-            if want and want != key_id():
-                log(f"::error::state key mismatch: the state branch was sealed with key id {want}, this runner has "
-                    f"{key_id()}. The T212_API_SECRET (or MA_STATE_KEY) secret differs from the seeding session's; "
-                    "re-seed or fix the secret. Not starting.")
+            snap0 = self.b.read(head, "snapshot.tar.gz.enc")
+            if snap0 and key_id() not in recipients(snap0):
+                log(f"::warning::the state is not yet sealed for this host's key {key_id()} (sealed for "
+                    f"{recipients(snap0)}); a session must run `hostctl reseal`. Not starting.")
+                self.b.write(head, {"hosted.json": jdump({"phase": "awaiting_reseal", "run_id": self.run_id,
+                                                          "key_id": key_id(), "ts": utc(), "t": time.time()})},
+                             f"awaiting reseal {self.run_id}")
                 return 0
             prev = self.b.read_json(head, "hosted.json")
             age = time.time() - float(prev.get("t", 0) or 0)
@@ -593,6 +700,7 @@ def main(argv: list[str] | None = None) -> int:
     s.add_argument("--force", action="store_true")
     s.add_argument("--reason", default="cutover to hosted runner")
     sub.add_parser("status")
+    sub.add_parser("reseal")
     for c in ("mirror", "push-inputs"):
         sub.add_parser(c).add_argument("--root", default="/mnt/project-files")
     h = sub.add_parser("handover")
@@ -615,7 +723,7 @@ def main(argv: list[str] | None = None) -> int:
     a = ap.parse_args(argv)
     b = Branch(Path(a.repo))
     fn = {"seed": cmd_seed, "status": cmd_status, "mirror": cmd_mirror, "push-inputs": cmd_push_inputs,
-          "handover": cmd_handover, "halt": cmd_control, "resume": cmd_control, "run": cmd_run}[a.cmd]
+          "handover": cmd_handover, "reseal": cmd_reseal, "halt": cmd_control, "resume": cmd_control, "run": cmd_run}[a.cmd]
     return fn(b, a)
 
 

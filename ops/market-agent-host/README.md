@@ -12,7 +12,9 @@ which is free for this public repository and does not depend on any session bein
 | `ops/market-agent-host/hostctl.py run` | Restores state, checks out the agent from `AGENT_REF` (the office thread's deploy branch), runs `python -m market_agent run`, restarts it on exit with a backoff, syncs state every 2 min, restarts on a new agent commit within 5 min, and pushes a final snapshot when it stops. |
 | branch `market-agent-state` | One orphan commit, force-pushed with a lease (history never grows). `snapshot.tar.gz.enc` (state, encrypted), `inputs.tar.gz.enc` (research picks the agent reads, encrypted), `owner.json`, `control.json`, `hosted.json` (plaintext, nothing secret). |
 
-The repository is public, so the state is encrypted (AES-256, key derived from `T212_API_SECRET`), and the runner
+The repository is public, so the state is encrypted: AES-256-GCM, with the data key wrapped for each host's own X25519
+key (derived from that host's `T212_API_SECRET`; public halves in `keys.json`). A new host registers its key on its
+first run and waits until a session runs `hostctl reseal`. The runner
 prints nothing about positions, orders or keys. Agent output stays in the encrypted `logs/agent.out`.
 
 ## One trader at a time
