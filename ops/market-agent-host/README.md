@@ -8,7 +8,7 @@ which is free for this public repository and does not depend on any session bein
 
 | Piece | What it does |
 |---|---|
-| `.github/workflows/market-agent.yml` | Weekdays 05:00–21:15 UTC. A run is queued every 20 min; the `market-agent` concurrency group keeps one running and one waiting, so when a run ends (~5.5 h budget) the next takes over in about a minute. |
+| `.github/workflows/market-agent.yml` | Around the clock. Each run (~5.5 h) queues its successor as soon as it starts; the `market-agent` concurrency group keeps one running and one waiting, so the next takes over about a minute after a run ends. GitHub's cron is hours late in practice, so a twice-hourly cron is only a backstop that restarts a broken chain. |
 | `ops/market-agent-host/hostctl.py run` | Restores state, checks out the agent from `AGENT_REF` (the office thread's deploy branch), runs `python -m market_agent run`, restarts it on exit with a backoff, syncs state every 2 min, restarts on a new agent commit within 5 min, and pushes a final snapshot when it stops. |
 | branch `market-agent-state` | One orphan commit, force-pushed with a lease (history never grows). `snapshot.tar.gz.enc` (state, encrypted), `inputs.tar.gz.enc` (research picks the agent reads, encrypted), `owner.json`, `control.json`, `hosted.json` (plaintext, nothing secret). |
 
@@ -53,10 +53,9 @@ python3 $H handover --to github-actions --reason "..." --root /mnt/project-files
 ## Not shipped to the hosted copy
 
 * `research/always-on/scoreboard.py`: the agent skips it when the file is absent; run it in a session after `mirror`.
-* Weekends and 21:15–05:00 UTC: no run (no market is open; the agent catches up on start).
 
 ## Caveat
 
 GitHub's terms say Actions is for building, testing and deploying a repository's software, and long-running service use
-can be throttled or disabled. This setup only runs during market hours to stay light. If GitHub objects, the same
+can be throttled or disabled. If GitHub objects, the same
 `hostctl.py run` works unchanged on an always-free cloud VM (for example Oracle Cloud's free tier) under systemd.

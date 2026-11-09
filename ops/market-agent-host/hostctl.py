@@ -435,6 +435,26 @@ class Runner:
             self.proc.wait()
         log(f"agent stopped rc={self.proc.returncode}")
 
+    def dispatch_next(self) -> None:
+        """Queue the next run now (it waits in the concurrency group and starts the moment this one ends). GitHub's
+        cron is often hours late, so the chain, not the cron, keeps the agent up; the cron is only a backstop."""
+        import urllib.request  # noqa: PLC0415
+        tok, repo = os.environ.get("GITHUB_TOKEN"), os.environ.get("GITHUB_REPOSITORY")
+        wf_ref = os.environ.get("GITHUB_WORKFLOW_REF", "")  # owner/repo/.github/workflows/x.yml@refs/heads/master
+        if not (tok and repo and "@" in wf_ref):
+            log("chain: not on GitHub Actions; skipped")
+            return
+        wf = wf_ref.split("@")[0].rsplit("/", 1)[-1]
+        ref = wf_ref.split("@", 1)[1].removeprefix("refs/heads/")
+        req = urllib.request.Request(f"https://api.github.com/repos/{repo}/actions/workflows/{wf}/dispatches",
+                                     data=json.dumps({"ref": ref}).encode(), method="POST",
+                                     headers={"Authorization": f"Bearer {tok}", "Accept": "application/vnd.github+json"})
+        try:
+            with urllib.request.urlopen(req, timeout=30) as r:
+                log(f"chain: next run queued (HTTP {r.status})")
+        except Exception as e:  # noqa: BLE001 - the cron backstop still restarts the chain
+            log(f"chain: dispatch failed ({type(e).__name__}); relying on the cron backstop")
+
     def _on_term(self, signum, frame):  # noqa: ARG002 - job cancelled or timed out
         self.stopping = True
 
@@ -490,6 +510,8 @@ class Runner:
             (self.state / d).mkdir(parents=True, exist_ok=True)
         (self.state / "lease.json").unlink(missing_ok=True)  # the previous holder is verified stopped or stale
         log(f"state restored: {n} files")
+        if self.a.chain:
+            self.dispatch_next()
         self.agent_sha = self.fetch_code()
         self.phase = "running"
         last_sync = last_code = last_inputs = 0.0
@@ -569,6 +591,7 @@ def main(argv: list[str] | None = None) -> int:
     r.add_argument("--until", default=None, help="HH:MM UTC: stop at this time today")
     r.add_argument("--tick-s", type=float, default=10)
     r.add_argument("--sync-s", type=float, default=SYNC_S)
+    r.add_argument("--chain", action="store_true", help="queue the next workflow run at start (GitHub Actions)")
     r.add_argument("--agent-cmd", default=None, help="tests only: replace the agent command")
     a = ap.parse_args(argv)
     b = Branch(Path(a.repo))
