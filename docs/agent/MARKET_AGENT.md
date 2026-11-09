@@ -346,6 +346,11 @@ on 7 Nov. Each finished session from the all-ticker snapshot (which the agent fe
 too few sessions is UNVERIFIED and skipped. The scans need about 23 sessions, so new names come back as the store fills
 or when the cap resets. The token lives in `state/tiingo_token.txt` and is never committed.
 
+agent-1.21.6 (9 Nov): the month-end timing duty re-read two years of daily bars for its ETFs on every loop, even after
+the month's signal was recorded, and failed 9 times on 9 Nov on the hourly Tiingo budget. It now skips the price calls
+when the state already holds the latest finished month (`value_timing.last_done_month`), so it only fetches bars in the
+first loops after a month end.
+
 ## agent-1.20: news_shock_vix_hi (research Q222, 6 Nov 2026, benched unproven)
 
 This entry rule applies when a US company files a non-earnings 8-K (any 8-K without item 2.02) on a session d0 whose VIX close was 25 or higher. All of the following must also hold:

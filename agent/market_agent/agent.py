@@ -621,6 +621,8 @@ class Agent:
                 if sig["month"] == state.get("month"):
                     continue
             else:
+                if "factor_12m" in state and state.get("month", "") >= value_timing.last_done_month(now):
+                    continue  # this month's signal is already read: no price calls until the next month end
                 f = value_timing.month_ends(value_timing.adjusted(vc["factor_symbol"], self.get), now)
                 b = value_timing.month_ends(value_timing.adjusted(vc["versus_symbol"], self.get), now)
                 sig = value_timing.signal(f, b, vc)

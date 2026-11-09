@@ -72,6 +72,18 @@ def signal(value: dict[str, float], growth: dict[str, float], vc: dict) -> dict 
             "why": f"{m}: {f} {rv:+.1%} vs {b} {rg:+.1%} over 12 months, so hold {hold}"}
 
 
+def last_done_month(now: float) -> str:
+    """The latest YYYY-MM whose month end can already be read: last month, or this month once its last weekday
+    has passed 21:00 UTC. Lets the timing duty skip price calls when that month is already recorded."""
+    t = time.gmtime(now)
+    days = calendar.monthrange(t.tm_year, t.tm_mon)[1]
+    weekdays = [d for d in range(1, days + 1) if calendar.weekday(t.tm_year, t.tm_mon, d) < 5]
+    if weekdays and (t.tm_mday > weekdays[-1] or (t.tm_mday == weekdays[-1] and t.tm_hour >= 21)):
+        return time.strftime("%Y-%m", t)
+    y, m = (t.tm_year, t.tm_mon - 1) if t.tm_mon > 1 else (t.tm_year - 1, 12)
+    return f"{y:04d}-{m:02d}"
+
+
 def calendar_signal(now: float, vc: dict) -> dict:
     """A calendar entry's target for the current UTC month: its ETF in the listed months, else nothing."""
     m = time.strftime("%Y-%m", time.gmtime(now))

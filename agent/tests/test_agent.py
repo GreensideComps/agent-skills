@@ -10,7 +10,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from market_agent import agent as agent_mod, execution, feeds, gap_rebound  # noqa: E402
+from market_agent import agent as agent_mod, execution, feeds, gap_rebound, value_timing  # noqa: E402
 from market_agent.__main__ import health  # noqa: E402
 from market_agent.store import LeaseHeld, Store  # noqa: E402
 
@@ -1145,3 +1145,26 @@ def test_stock_screen_watch_sells_only_on_hard_sec_events_and_alerts_on_the_rest
     st2, drops = ss.price_alerts(held, lambda t: {"price": 74.0}, {}, 0.25)
     assert len(drops) == 1 and drops[0]["kind"] == "alert"
     assert ss.price_alerts(held, lambda t: {"price": 70.0}, st2, 0.25)[1] == []
+
+
+def test_value_timing_skips_price_calls_once_the_month_is_recorded(tmp_path):
+    ts = lambda *a: dt.datetime(*a, tzinfo=dt.timezone.utc).timestamp()
+    assert value_timing.last_done_month(ts(2026, 11, 9, 9)) == "2026-10"
+    assert value_timing.last_done_month(ts(2026, 10, 30, 20)) == "2026-09"      # Fri 30 Oct, before 21:00
+    assert value_timing.last_done_month(ts(2026, 10, 30, 21)) == "2026-10"      # last weekday closed
+    assert value_timing.last_done_month(ts(2026, 1, 5, 9)) == "2025-12"
+    ag, b, st, clock = make(tmp_path, active_on=True, prices={"VWRP.L": 140.0, "GBPUSD=X": 1.25})
+    calls = []
+    base = ag.get
+
+    def get(url, params):
+        if url.endswith(("/IWD", "/IWF", "/MTUM", "/IWB")):
+            calls.append(url)
+            raise AssertionError("no price call expected")
+        return base(url, params)
+    ag.get = get
+    for name in ("value_timing", "momentum_timing"):
+        st._replace(f"{name}.json", {"month": "2026-10", "factor_12m": 0.1, "target": "X"})
+    clock.t = ts(2026, 11, 9, 9)
+    ag.refresh_value_timing()
+    assert calls == []
