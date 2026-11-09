@@ -1,5 +1,5 @@
 {
-  "version": "agent-1.22",
+  "version": "agent-1.22.1",
   "note": "Always-on demo market agent. Demo account only (the client refuses any other host). Owner mandate: cmsg_01U4KMvkBYNknqm4HRVie8uvK9gRYqGXBK4bQP49dBz49i (26 Oct 2026).",
   "intervals_s": {
     "loop": 15,
@@ -517,7 +517,7 @@
       },
       "hold_rules": {
         "stock_screen": "screener pick: held while it stays in the weekly top 15 and its filings are clean (Q214)",
-        "buyback_value": "buyback pick: held 6 months, the tested holding period (Q206)",
+        "buyback_value": "buyback pick: held 6 months, the tested holding period (Q206); 9 months for entries from 9 Nov 2026 (Q238 bench, unproven)",
         "gap_rebound": "gap rebound: held 60 trading days, the tested holding period (Q218b)",
         "momentum_timing": "ETF timing: held until the month-end signal names the other fund",
         "value_timing": "ETF timing: held until the month-end signal names the other fund",
@@ -526,14 +526,15 @@
     },
     "buyback_value": {
       "enabled": true,
-      "rule": "monthly Q206 screen (US $2bn+, ex financials/utilities): TTM buybacks/market cap top 10%, shares down y/y, TTM FCF > 0, net debt/EBITDA < 3, FCF/EV top 30%; buy 2% each (cheapest FCF/EV first, max 10 open, max 2 per SIC2), hold 6 months",
+      "rule": "monthly Q206 screen (US $2bn+, ex financials/utilities): TTM buybacks/market cap top 10%, shares down y/y, TTM FCF > 0, net debt/EBITDA < 3, FCF/EV top 30%; buy 2% each (cheapest FCF/EV first, max 10 open, max 2 per SIC2), hold 6 months (9 months for entries from 9 Nov 2026, Q238 bench, unproven)",
       "edge": "unproven: Q206 +3.0%/yr vs universe 2015-2022, not significant (DSR 0.02)",
       "picks_dir": "/mnt/project-files/research/always-on/forward",
       "max_picks_age_days": 45,
       "entry_weight": 0.02,
       "max_open": 10,
       "max_per_sic2": 2,
-      "hold_days": 182,
+      "hold_days": 273,
+      "hold_note": "Q238 bench (9 Nov 2026, unproven, DSR 0.18): new entries hold 9 months (273 days) instead of the tested 6; entries before 9 Nov keep their 6-month time stop",
       "qty_decimals": 3,
       "fund_from_vwrp": true,
       "kill_after_trades": 30,
