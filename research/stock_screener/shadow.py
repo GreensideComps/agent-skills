@@ -24,6 +24,7 @@ VARIANTS = {  # name: (added, description, picker)
     "c6_low_vol": ("2026-11-06", "pick-1 after dropping the most volatile third (12m monthly-return std)", None),
     "c7_monthly": ("2026-11-06", "pick-1 rebuilt every month (fast refresh; tests the cost of the yearly/12-tranche cadence)",
                    lambda m: p1.pick(p1.universe(m))),
+    "c8_profit_half": ("2026-11-09", "profitability weighted 1/2, value 1/4, momentum 1/4 (Q230: best leg since 2007)", None),
 }
 MONTHLY = {"c7_monthly"}  # variants re-formed every month instead of each December
 
@@ -37,9 +38,9 @@ def _c2(m):
         p1.TOP, p1.PER_SIC = old
 
 
-def _legs(m, legs):
+def _legs(m, legs, weights=None):
     s = p1.score(p1.universe(m)).copy()
-    s["score"] = s[legs].mean(axis=1)
+    s["score"] = s[legs].mean(axis=1) if weights is None else sum(w * s[c] for c, w in zip(legs, weights))
     s = s.sort_values("score", ascending=False)
     out, per = [], {}
     for _, r in s.iterrows():
@@ -81,6 +82,8 @@ def _c6(m):
 
 VARIANTS["c6_low_vol"] = VARIANTS["c6_low_vol"][:2] + (_c6,)
 VARIANTS["c5_no_quality"] = VARIANTS["c5_no_quality"][:2] + (lambda m: _legs(m, ["z_fcf_ev", "z_mom"]),)
+VARIANTS["c8_profit_half"] = VARIANTS["c8_profit_half"][:2] + (
+    lambda m: _legs(m, ["z_gpa", "z_fcf_ev", "z_mom"], [0.5, 0.25, 0.25]),)
 
 
 def main(month: str):
