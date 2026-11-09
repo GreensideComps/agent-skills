@@ -44,6 +44,7 @@ jobs:
           T212_ENV: demo
           T212_API_KEY: ${{ secrets.T212_API_KEY }}
           T212_API_SECRET: ${{ secrets.T212_API_SECRET }}
+          MA_STATE_KEY: ${{ secrets.MA_STATE_KEY }}   # optional shared state key; unset = derived from T212_API_SECRET
           BUDGET_MIN: ${{ github.event.inputs.budget_min || '330' }}
           GITHUB_TOKEN: ${{ github.token }}
         run: >
