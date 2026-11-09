@@ -76,10 +76,18 @@ def log(msg: str) -> None:
 
 # ------------------------------------------------------------------ crypto
 def state_key(env=os.environ) -> str:
-    secret = env.get("T212_API_SECRET", "")
+    """MA_STATE_KEY when set (a dedicated shared key), else derived from T212_API_SECRET."""
+    if env.get("MA_STATE_KEY", "").strip():
+        return hashlib.sha256(b"market-agent-state-v1\0key\0" + env["MA_STATE_KEY"].strip().encode()).hexdigest()
+    secret = env.get("T212_API_SECRET", "").strip()
     if not secret:
         raise SystemExit("T212_API_SECRET is not set: cannot derive the state key")
     return hashlib.sha256(b"market-agent-state-v1\0" + secret.encode()).hexdigest()
+
+
+def key_id(env=os.environ) -> str:
+    """A short public fingerprint of the state key, to tell two hosts' keys apart without revealing either."""
+    return hashlib.sha256(b"key-id\0" + state_key(env).encode()).hexdigest()[:10]
 
 
 def _openssl(data: bytes, decrypt: bool) -> bytes:
@@ -243,13 +251,14 @@ def cmd_seed(b: Branch, a) -> int:
     files = {"snapshot.tar.gz.enc": pack(root, SNAPSHOT_GLOBS, SNAPSHOT_EXCLUDE),
              "inputs.tar.gz.enc": pack(root, INPUT_GLOBS, INPUT_EXCLUDE),
              "control.json": jdump(control),
-             "owner.json": jdump({"host": "github-actions", "ts": utc(), "by": "seed", "reason": a.reason}),
+             "owner.json": jdump({"host": "github-actions", "ts": utc(), "by": "seed", "reason": a.reason,
+                                  "key_id": key_id()}),
              "hosted.json": jdump({"phase": "seeded", "ts": utc(), "t": time.time()})}
     if not b.write(head, files, f"seed {utc()}"):
         print("the branch moved during the seed; run it again", file=sys.stderr)
         return 1
     n = len(collect(root, SNAPSHOT_GLOBS, SNAPSHOT_EXCLUDE))
-    print(json.dumps({"seeded": True, "files": n, "host": "github-actions"}))
+    print(json.dumps({"seeded": True, "files": n, "host": "github-actions", "key_id": key_id()}))
     return 0
 
 
@@ -472,9 +481,13 @@ class Runner:
                 log(f"outside the trading window (ends {self.a.until}Z); nothing to do")
                 return 0
             deadline = min(deadline, until)
+        for k in ("T212_API_KEY", "T212_API_SECRET", "MA_STATE_KEY"):  # pasted secrets often carry a newline
+            if k in os.environ:
+                os.environ[k] = os.environ[k].strip()
         if not os.environ.get("T212_API_KEY") or not os.environ.get("T212_API_SECRET"):
             log("::warning::T212_API_KEY / T212_API_SECRET repository secrets are not set; the hosted agent cannot run")
             return 0
+        log(f"state key id {key_id()}")
         # wait for the previous run to hand over, then claim the branch
         while True:
             head = self.b.fetch()
@@ -484,6 +497,12 @@ class Runner:
             owner = self.b.read_json(head, "owner.json")
             if owner.get("host") != "github-actions":
                 log(f"standby: owner.json says host={owner.get('host')!r}")
+                return 0
+            want = owner.get("key_id")
+            if want and want != key_id():
+                log(f"::error::state key mismatch: the state branch was sealed with key id {want}, this runner has "
+                    f"{key_id()}. The T212_API_SECRET (or MA_STATE_KEY) secret differs from the seeding session's; "
+                    "re-seed or fix the secret. Not starting.")
                 return 0
             prev = self.b.read_json(head, "hosted.json")
             age = time.time() - float(prev.get("t", 0) or 0)
