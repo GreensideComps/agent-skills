@@ -28,6 +28,7 @@ def sim(years, rule, cost=COST, lag=0):
     for y in years:
         hold = list(y['picks']); val = np.ones(len(hold)) / len(hold)
         for k in range(12):
+            before = val.sum()  # value at month start, before any trade cost
             if k >= 1 and rule == 'swap':
                 kk = k - lag
                 if kk >= 1:
@@ -43,7 +44,7 @@ def sim(years, rule, cost=COST, lag=0):
                 tot = val.sum(); tgt = np.ones(len(val)) * tot / len(val)
                 c = cost * np.abs(tgt - val).sum(); val = tgt * (1 - c / tot)
             r = np.array([y['R'][k].get(c, 0.0) if pd.notna(y['R'][k].get(c, 0.0)) else 0.0 for c in hold])
-            before = val.sum(); val = val * (1 + r)
+            val = val * (1 + r)
             out.append((y['m'][k], val.sum() / before - 1 - y['ew'][k]))
     return pd.Series(dict(out)).sort_index()
 
