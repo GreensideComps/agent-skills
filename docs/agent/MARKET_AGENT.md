@@ -405,3 +405,6 @@ Q222 failed the go-live rule (DSR 0.000). 142 of its 197 trades fell in 2020.
   (45 calls/h) can starve the watchlist but never the review of what we own (11 Nov: 6 held names had no review).
 - **1.22.5:** social_trend benched per research Q226 (FAIL overall, t 0.15): it buys only when the signal Friday's VIX
   close is >= 25 (`active.social.vix_min`), labelled unproven; an unread VIX counts as UNVERIFIED and blocks entries.
+- **1.22.6:** Tiingo circuit breaker. A 429 writes `tiingo_down.json` and no Tiingo call is sent until the next
+  probe (3 h for monthly bandwidth, 1 h otherwise); duties that need Tiingo log one `duty_skipped` per probe window
+  instead of failing every retry. Held lines keep their broker prices meanwhile.

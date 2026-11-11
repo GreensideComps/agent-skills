@@ -37,6 +37,18 @@ class BudgetError(feeds.FeedError):
     """Tiingo's free request budget is used up for now: callers retry later instead of dropping the work."""
 
 
+class TiingoDown(BudgetError):
+    """agent-1.22.6: Tiingo refused for monthly bandwidth; no call is sent until `tiingo_down_until` (a probe every
+    DOWN_PROBE_S), so duties skip quietly instead of spending the local budget on certain 429s."""
+
+    def __init__(self, msg: str, until: float):
+        super().__init__(msg)
+        self.tiingo_down_until = until
+
+
+DOWN_PROBE_S = 3 * 3600
+
+
 def us_hours(now: float) -> bool:
     d = datetime.fromtimestamp(now, NY)
     return d.weekday() < 5 and (9, 25) <= (d.hour, d.minute) < (16, 10)
@@ -48,6 +60,17 @@ def last_eod(now: float) -> float:
     while d.timestamp() > now or d.weekday() >= 5:
         d -= timedelta(days=1)
     return d.timestamp()
+
+
+def feeds_iso(t: float) -> str:
+    return datetime.fromtimestamp(t, timezone.utc).strftime("%Y-%m-%dT%H:%MZ")
+
+
+def _body(r):
+    try:
+        return r.json()
+    except Exception:  # noqa: BLE001
+        return ""
 
 
 class Honest:
@@ -96,10 +119,27 @@ class Honest:
         tmp.write_text(json.dumps({"t": ts}))
         tmp.replace(p)
 
+    def _down_until(self) -> float:
+        try:
+            return float(json.loads((self.root / "tiingo_down.json").read_text()).get("until", 0))
+        except (OSError, ValueError, TypeError):
+            return 0.0
+
     def tiingo(self, path: str, params: dict | None = None, timeout: float = 30.0, kind: str = "bars"):
+        until = self._down_until()
+        if self.clock() < until:
+            raise TiingoDown(f"tiingo: refused (HTTP 429); no call until the next probe {feeds_iso(until)}", until)
         self._budget(kind)
         r = self.raw_get(TIINGO + path, params=params or {}, timeout=timeout,
                          headers={**feeds.UA, "Authorization": f"Token {self._token()}"})
+        if r.status_code == 429:  # monthly bandwidth: probe every 3 h; any other 429 (hourly limit): back off 1 h
+            bw = "bandwidth" in (getattr(r, "text", "") or str(_body(r))).lower()
+            until = self.clock() + (DOWN_PROBE_S if bw else 3600)
+            (self.root / "tiingo_down.json").write_text(json.dumps({"until": until, "since": feeds_iso(self.clock()),
+                                                                     "path": path.split("?")[0]}))
+            raise TiingoDown(f"tiingo: {'monthly bandwidth exhausted' if bw else 'rate limited'} (HTTP 429); next probe {feeds_iso(until)}", until)
+        if r.status_code == 200 and until:
+            (self.root / "tiingo_down.json").unlink(missing_ok=True)  # the probe got through: Tiingo is back
         if r.status_code != 200:
             raise feeds.FeedError(f"tiingo {path.split('?')[0]}: HTTP {r.status_code}")
         return r.json()

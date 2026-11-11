@@ -154,3 +154,23 @@ def test_spark_falls_back_to_broker_prices_when_tiingo_refuses(tmp_path):
     n = len(calls)
     h.get(feeds.SPARK, {"symbols": "FIVN,SPY"})
     assert len(calls) == n  # a failed IEX call is not retried for 15 minutes
+
+
+def test_monthly_bandwidth_429_trips_a_breaker_until_the_next_probe(tmp_path):
+    (tmp_path / "tiingo_token.txt").write_text("tok\n")
+    calls, clock = [], {"t": NOW}
+
+    def raw_get(url, params=None, headers=None, timeout=None):
+        calls.append(url)
+        return Resp({"detail": "Your monthly bandwidth limit has been reached"}, 429)
+    h = datasrc.Honest(tmp_path, lambda: {}, clock=lambda: clock["t"], raw_get=raw_get)
+    with pytest.raises(datasrc.TiingoDown):
+        h.tiingo("/tiingo/daily/a/prices")
+    for _ in range(5):
+        with pytest.raises(datasrc.TiingoDown) as e:
+            h.tiingo("/tiingo/daily/b/prices")
+    assert len(calls) == 1 and isinstance(e.value, datasrc.BudgetError)   # no call while the breaker is open
+    clock["t"] += datasrc.DOWN_PROBE_S + 1
+    with pytest.raises(datasrc.TiingoDown):
+        h.tiingo("/tiingo/daily/c/prices")
+    assert len(calls) == 2                                                  # one probe, still refused

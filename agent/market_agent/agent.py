@@ -51,6 +51,7 @@ class Agent:
         self.wiki_get = feeds.wiki_get if get is feeds.http_get else get
         self.due: dict[str, float] = {}
         self.fail: dict[str, int] = {}
+        self.skipped: dict[str, float] = {}
         self.quotes: dict[str, dict] = {}      # last validated quote per Yahoo symbol
         self.quote_state: dict[str, str] = {}  # last validation result per symbol
         self.positions: dict[str, dict] = {}
@@ -89,6 +90,13 @@ class Agent:
             self.last_ok[name] = self.clock()
             self.due[name] = now + (nxt if isinstance(nxt, (int, float)) and not isinstance(nxt, bool) else base)
         except Exception as e:  # noqa: BLE001 - every duty is isolated; the failure is recorded and retried
+            until = getattr(e, "tiingo_down_until", None)
+            if until:  # agent-1.22.6: a known Tiingo outage is a skip, logged once per outage, not a failure
+                self.due[name] = now + base
+                if self.skipped.get(name) != until:
+                    self.skipped[name] = until
+                    self.s.event("duty_skipped", duty=name, why=str(e)[:200])
+                return
             n = self.fail.get(name, 0) + 1
             self.fail[name] = n
             back = min(base * 2 ** (n - 1), 1800) if n > 1 else min(base, 60)
