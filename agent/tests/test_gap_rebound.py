@@ -104,7 +104,7 @@ def test_strategy_scores_report_variants_apart():
     orig_t, orig_c = active.trades, active.closed_result
     active.trades = lambda recs: [{"entry": e, "exit": {"x": 1}} for e, _ in ts]
     active.closed_result = lambda t: {"ret": dict((e["id"], r) for e, r in ts)[t["entry"]["id"]], "vwrp_ret": 0.0,
-                                      "pnl_gbp": 1.0}
+                                      "pnl_gbp": 1.0, "bench": True}
     try:
         s = active.strategy_scores([])["gap_rebound"]
     finally:

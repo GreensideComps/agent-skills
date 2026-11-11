@@ -256,3 +256,25 @@ def test_stop_action_states():
     assert sa(f, 1.0, now) == "wait" and sa({**f, "t": now - 1800}, 1.0, now) == "place"
     assert sa({**f, "attempts": 9, "t": now - 6 * 3600}, 1.0, now) == "place"                   # capped at 6 hours
     assert sa({"order_id": None, "failed": "price-too-far"}, 1.0, now) == "place"               # ladder not tried yet
+
+
+def test_kill_rule_compares_like_with_like_when_a_vwrp_price_is_missing():
+    """Before agent-1.23 a trade with no VWRP price scored VWRP as 0%, so a strategy that trailed VWRP could survive."""
+    def rec(kind, net, vw):
+        return {"signal": {"type": kind, "strategy": "s", "vwrp_px": vw},
+                "broker": {"fill": {"walletImpact": {"netValue": net, "taxes": []}}}}
+    def closed(buy, sell, v0, v1):
+        return {"entry": rec("active_entry", buy, v0), "exit": rec("active_exit", sell, v1), "adj": []}
+    good = active.closed_result(closed(100.0, 103.0, 100.0, 105.0))
+    assert good["bench"] and abs(good["ret"] - 0.03) < 1e-12 and abs(good["vwrp_ret"] - 0.05) < 1e-12
+    blind = active.closed_result(closed(100.0, 103.0, None, 105.0))
+    assert not blind["bench"]
+    ts = [closed(100.0, 103.0, 100.0, 105.0)] * 15 + [closed(100.0, 103.0, None, 105.0)] * 15
+    import unittest.mock as m
+    with m.patch.object(active, "trades", lambda records: ts):
+        sc = active.strategy_scores([])
+    d = sc["s"]
+    assert d["n"] == 30 and d["n_bench"] == 15
+    assert abs(d["avg_vwrp_ret"] - 0.05) < 1e-12 and abs(d["avg_ret_bench"] - 0.03) < 1e-12
+    cfg = {"active": {"kill_after_trades": 30}}
+    assert "s" in active.kill_check(sc, cfg, {}, "now")          # +3% a trade vs VWRP +5%: killed (old code: kept)

@@ -227,9 +227,9 @@ def render(cfg: dict, killed: dict | None = None) -> str:
          f"- Short-term sleeve brakes: no new short-term buys for the day after a loss of {_pct(a['daily_loss_stop'])} of "
          f"the book in one day; frozen for good if the sleeve loses {_pct(a['freeze_loss'])} of its £{a['sleeve_start_gbp']:.0f} start.",
          f"- Cash kept back: {_pct(a['cash_reserve_weight'])} of the book while short-term strategies are on.",
-         "- Self-check: on every broker pass the agent tests nine promises about the whole book (every holding that "
+         "- Self-check: on every broker pass the agent tests ten promises about the whole book (every holding that "
          "needs a stop has one resting at the broker, nothing is held without a rule that will sell it, no overdue "
-         "exits, no unknown orders or positions, no oversized or unpriced holdings) and raises an alert when one "
+         "exits, no unknown orders or positions, no oversized or unpriced holdings, no book-wide limit applied by one strategy and skipped by another) and raises an alert when one "
          "stays broken. `python3 -m market_agent audit` prints the latest result.",
          "",
          "## Strategies at a glance",

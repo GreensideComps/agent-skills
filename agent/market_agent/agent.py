@@ -542,11 +542,19 @@ class Agent:
                 self._sb = {"day": last["day"], "exits": exits}
             return
         self._sb = {"day": day if after_close else last["day"], "exits": exits}
-        if not Path(sb["path"]).exists():
+        script = Path(sb["path"])
+        if not script.is_absolute():  # agent-1.23: the versioned script in this repository (research/always_on)
+            script = HERE.parent.parent / script
+        if not script.exists():
             self.s.event("scoreboard", ok=False, why="script not found")
             return
+        args = ["python3", "-I", str(script), "--state", str(self.s.root)]
+        if sb.get("out") == "state":  # written into the state directory, so the hosted agent's copy is mirrored
+            out = Path(self.s.root) / "scoreboard"
+            out.mkdir(exist_ok=True)
+            args += ["--out", str(out)]
         try:
-            r = subprocess.run(["python3", "-I", sb["path"], "--state", str(self.s.root)], capture_output=True,
+            r = subprocess.run(args, capture_output=True,
                                text=True, timeout=sb["timeout_s"], env={"PATH": "/usr/bin:/bin", "HOME": "/tmp"})
             self.s.event("scoreboard", ok=r.returncode == 0, out=(r.stdout or r.stderr)[-300:])
         except Exception as e:  # noqa: BLE001 - the scoreboard never affects trading

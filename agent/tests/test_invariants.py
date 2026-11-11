@@ -166,3 +166,23 @@ def test_audit_command_and_health_verdict(tmp_path, capsys):
     hb = {"t": NOW, "duty_age_s": {"prices": 5, "broker": 5}, "invariants": {"critical": 1, "warn": 0, "info": 0}}
     assert health(hb, NOW)[0] == 1 and "self-check critical 1" in health(hb, NOW)[1]
     assert health({**hb, "invariants": {"critical": 0}}, NOW)[0] == 0
+
+
+def test_a_book_wide_limit_one_strategy_applied_and_another_did_not():
+    """11 Nov 2026: the screener left CROX out for the sector limit; buyback_value bought it anyway."""
+    cfg = {**CFG, "active": {**CFG["active"], "stock_screen": {"skipped": {
+        "CROX_US_EQ": "consumer discretionary cap (6 Nov refresh)", "SPB_US_EQ": "9 Nov: dropped out of the gated list"}}}}
+    recs = [entry("a", "CROX_US_EQ", "buyback_value", time_stop_s=273 * 86400.0),
+            entry("b", "SPB_US_EQ", "buyback_value", time_stop_s=273 * 86400.0)]   # skipped for another reason: fine
+    positions = {"CROX_US_EQ": pos(), "SPB_US_EQ": pos()}
+    stops = {"a": {"order_id": 1, "ticker": "CROX_US_EQ", "qty": 1.0}, "b": {"order_id": 2, "ticker": "SPB_US_EQ", "qty": 1.0}}
+    rep = invariants.check(now=NOW, cfg=cfg, positions=positions, pending=[{"id": 1, "ticker": "CROX_US_EQ"},
+                                                                         {"id": 2, "ticker": "SPB_US_EQ"}],
+                           records=recs, stops=stops, market_open=lambda t: True, quote_ok=lambda t: True, total=1000.0)
+    assert codes(rep) == [("limit_bypassed", "CROX_US_EQ", "warn")]
+    assert "buyback_value" in rep["violations"][0]["text"]
+    positions.pop("CROX_US_EQ")                                                  # sold: the promise holds again
+    rep = invariants.check(now=NOW, cfg=cfg, positions=positions, pending=[{"id": 2, "ticker": "SPB_US_EQ"}],
+                           records=recs[1:], stops={"b": stops["b"]}, market_open=lambda t: True,
+                           quote_ok=lambda t: True, total=1000.0)
+    assert rep["ok"]

@@ -12,7 +12,7 @@ Demo account only. No strategy here has passed the go-live rule; each is a small
 - Order limits: at most £600 an order, 60 orders and £3000 of trading a day. Buys only from the approved list of 64 tickers.
 - Short-term sleeve brakes: no new short-term buys for the day after a loss of 3% of the book in one day; frozen for good if the sleeve loses 25% of its £239 start.
 - Cash kept back: 10% of the book while short-term strategies are on.
-- Self-check: on every broker pass the agent tests nine promises about the whole book (every holding that needs a stop has one resting at the broker, nothing is held without a rule that will sell it, no overdue exits, no unknown orders or positions, no oversized or unpriced holdings) and raises an alert when one stays broken. `python3 -m market_agent audit` prints the latest result.
+- Self-check: on every broker pass the agent tests ten promises about the whole book (every holding that needs a stop has one resting at the broker, nothing is held without a rule that will sell it, no overdue exits, no unknown orders or positions, no oversized or unpriced holdings, no book-wide limit applied by one strategy and skipped by another) and raises an alert when one stays broken. `python3 -m market_agent audit` prints the latest result.
 
 ## Strategies at a glance
 

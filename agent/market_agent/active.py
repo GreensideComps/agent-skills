@@ -47,8 +47,10 @@ def closed_result(t: dict) -> dict:
             e_net += a_net
     v0 = (t["entry"].get("signal") or {}).get("vwrp_px")
     v1 = (t["exit"].get("signal") or {}).get("vwrp_px")
+    # agent-1.23: `bench` says whether VWRP's price was recorded at both ends. Without it the old code scored VWRP
+    # as 0% for the trade, which flattered every strategy whenever VWRP had risen.
     return {"pnl_gbp": pnl, "ret": pnl / e_net if e_net else 0.0,
-            "vwrp_ret": (v1 / v0 - 1) if v0 and v1 else 0.0}
+            "vwrp_ret": (v1 / v0 - 1) if v0 and v1 else 0.0, "bench": bool(v0 and v1)}
 
 
 def strategy_scores(records: list[dict]) -> dict[str, dict]:
@@ -58,11 +60,14 @@ def strategy_scores(records: list[dict]) -> dict[str, dict]:
             continue
         s = t["entry"]["signal"]["strategy"]
         r = closed_result(t)
-        d = out.setdefault(s, {"n": 0, "ret": 0.0, "vwrp_ret": 0.0, "pnl_gbp": 0.0})
+        d = out.setdefault(s, {"n": 0, "ret": 0.0, "vwrp_ret": 0.0, "pnl_gbp": 0.0, "n_bench": 0, "ret_bench": 0.0})
         d["n"] += 1
         d["ret"] += r["ret"]
         d["vwrp_ret"] += r["vwrp_ret"]
         d["pnl_gbp"] += r["pnl_gbp"]
+        if r["bench"]:
+            d["n_bench"] += 1
+            d["ret_bench"] += r["ret"]
         v = t["entry"]["signal"].get("variant")
         if v:  # reported apart (e.g. gap_rebound vix_hi/vix_lo, Q218b); the kill rule still uses the whole strategy
             w = d.setdefault("variants", {}).setdefault(v, {"n": 0, "ret": 0.0, "vwrp_ret": 0.0, "pnl_gbp": 0.0})
@@ -73,6 +78,11 @@ def strategy_scores(records: list[dict]) -> dict[str, dict]:
     for d in out.values():
         for x in [d, *(d.get("variants") or {}).values()]:
             x["avg_ret"], x["avg_vwrp_ret"] = x["ret"] / x["n"], x["vwrp_ret"] / x["n"]
+        # like with like: VWRP's average, and the strategy's average over the same trades, use only the trades
+        # that have a VWRP price at both ends; with none, the comparison falls back to beating zero
+        nb = d["n_bench"]
+        d["avg_vwrp_ret"] = d["vwrp_ret"] / nb if nb else 0.0
+        d["avg_ret_bench"] = d["ret_bench"] / nb if nb else d["avg_ret"]
     return out
 
 
@@ -205,8 +215,9 @@ def kill_check(scores: dict, cfg: dict, disabled: dict, ts: str) -> dict:
     new = {}
     n = cfg["active"]["kill_after_trades"]
     for name, d in scores.items():
-        if name not in disabled and d["n"] >= n and d["avg_ret"] <= d["avg_vwrp_ret"]:
-            new[name] = {"ts": ts, "why": f"{d['n']} trades: average {d['avg_ret']:+.2%} vs VWRP "
+        mine = d.get("avg_ret_bench", d["avg_ret"])
+        if name not in disabled and d["n"] >= n and mine <= d["avg_vwrp_ret"]:
+            new[name] = {"ts": ts, "why": f"{d['n']} trades: average {mine:+.2%} vs VWRP "
                                            f"{d['avg_vwrp_ret']:+.2%} over the same holding periods", "score": d}
     return new
 

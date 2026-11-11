@@ -123,6 +123,11 @@ def run_test(tmp: Path):
     print("ok")
 
 
+def test_hostctl_end_to_end(tmp_path):
+    """pytest entry point (the file was only runnable as a script before, so no test runner ever collected it)."""
+    run_test(tmp_path)
+
+
 if __name__ == "__main__":
     import tempfile
     with tempfile.TemporaryDirectory() as d:

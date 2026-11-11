@@ -533,9 +533,9 @@
   },
   "scoreboard": {
     "enabled": true,
-    "path": "/mnt/project-files/research/always-on/scoreboard.py",
+    "path": "research/always_on/scoreboard.py", "out": "state",
     "after_hour_utc": 21,
     "timeout_s": 120,
-    "rationale": "research scoreboard thread, 30 Oct 11:50Z: run once a day after the US close and after active exit fills. Runs in a separate process with an empty environment (no broker credentials)."
+    "rationale": "research scoreboard thread, 30 Oct 11:50Z: run once a day after the US close and after active exit fills. Runs in a separate process with an empty environment (no broker credentials). agent-1.23: the script is versioned in this repository (it was an unversioned file the hosted agent could not see, so the scoreboard never ran there) and writes SCOREBOARD.json and SCOREBOARD.md into state/scoreboard."
   }
 }

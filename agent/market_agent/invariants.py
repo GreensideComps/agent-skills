@@ -1,4 +1,4 @@
-"""agent-1.23 self-check: the standing promises about the book, tested on every broker pass.
+"""agent-1.23 self-check: ten standing promises about the book, tested on every broker pass.
 
 Why this exists: on 11 Nov 2026 the owner, not the system, noticed that six holdings had no stop. Each feature had its
 own tests, but nothing checked the book as a whole against what the system says about itself. This module does. It
@@ -17,6 +17,8 @@ The promises (code: meaning):
   overdue_refresh  no stock_screen name is held past its 12-month hold plus a month's grace
   weight_cap       no single name is more than 1.25x the single-name cap
   unpriced         every holding has a validated price while its market is open
+  limit_bypassed   no strategy holds a name another strategy left out for a book-wide limit (the sector limit):
+                   the limit is about the whole book, so it must not depend on which strategy asks
 
 Severity grows with how long a breach has lasted while something could have been done about it (market-open time for
 the checks that need an open market, wall-clock time for the rest), so the few minutes between a fill and its stop
@@ -46,6 +48,7 @@ GRACE = {                   # code -> (clock, seconds before `warn`)
     "overdue_refresh": ("wall", 0.0),
     "weight_cap": ("wall", 3600.0),
     "unpriced": ("open", 1800.0),
+    "limit_bypassed": ("wall", 0.0),
 }
 CRITICAL_AT_WARN = {"unprotected"}   # these are critical as soon as their grace has passed
 # Strategies whose exit is a rule in code rather than a stop or a time limit on the trade itself.
@@ -144,6 +147,15 @@ def check(*, now: float, cfg: dict, positions: dict, pending: list, records: lis
         if _qty(p) > 0 and market_open(t) and not quote_ok(t):
             add("unpriced", t, f"{t} is held but has no validated price while its market is open: stops and exits "
                 "that need a price cannot fire")
+
+    # a book-wide limit applied by one strategy and not by another (11 Nov 2026: the screener left CROX out for the
+    # consumer-discretionary limit while buyback_value went on to buy it)
+    skipped = (a.get("stock_screen") or {}).get("skipped") or {}
+    for e in opens:
+        t, why = e["ticker"], skipped.get(e["ticker"])
+        if why and "cap" in why and _qty(positions.get(t)) > 0:
+            add("limit_bypassed", t, f"{t} is held by {e['signal'].get('strategy')} although the screener left it "
+                f"out for a book-wide limit ({why[:80]})", entry_id=e["id"])
 
     # clocks and severity
     new_seen: dict[str, dict] = {}
