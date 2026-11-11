@@ -83,7 +83,7 @@ def test_budget_refuses_above_the_hourly_cap(tmp_path):
         h.tiingo("/tiingo/daily/c/prices")  # bars stop short of the cap: the last call is kept for prices
     h.snapshot()
     with pytest.raises(datasrc.BudgetError):
-        h.snapshot(ttl=0)
+        h.quotes(["SPY"], ttl=0)  # the full snapshot is now cached 30 min; the per-ticker call hits the cap
     assert len(json.loads((tmp_path / "tiingo_usage.json").read_text())["t"]) == 3
 
 
@@ -128,3 +128,29 @@ def test_bars_store_keeps_finished_sessions_and_backs_up_a_refused_symbol(tmp_pa
     assert [(d, c) for d, c, _ in gap_rebound.bars("NEW", h.get)] == [("2026-11-05", 9.9), ("2026-11-06", 10.5)]
     with pytest.raises(feeds.FeedError):
         gap_rebound.bars("NONE", h.get)  # refused and not in the store: UNVERIFIED
+
+
+def test_spark_asks_iex_for_just_the_requested_tickers(tmp_path):
+    h, calls = make(tmp_path, {"/iex/": [{"ticker": "SPY", "tngoLast": 600.5, "timestamp": "2026-11-09T14:59:58+00:00",
+                                          "prevClose": 598.0}]})
+    d = h.get(feeds.SPARK, {"symbols": "SPY"})
+    assert d["SPY"]["close"] == [600.5]
+    assert calls[0][1] == {"tickers": "SPY"}  # agent-1.22.2: never the full-market snapshot for pricing
+
+
+def test_spark_falls_back_to_broker_prices_when_tiingo_refuses(tmp_path):
+    (tmp_path / "tiingo_token.txt").write_text("tok\n")
+    calls = []
+
+    def raw_get(url, params=None, headers=None, timeout=None):
+        calls.append(url)
+        return Resp({"detail": "monthly bandwidth"}, 429)
+    bq = {"VWRP.L": {"price": 110.5, "t": NOW - 60}, "FIVN": {"price": 29.1, "t": NOW - 30},
+          "GBPUSD=X": {"price": 1.31, "t": NOW - 30}}
+    h = datasrc.Honest(tmp_path, lambda: bq, clock=lambda: NOW, raw_get=raw_get)
+    d = h.get(feeds.SPARK, {"symbols": "FIVN,SPY,GBPUSD=X,VWRP.L"})
+    assert d["FIVN"]["close"] == [29.1] and d["GBPUSD=X"]["close"] == [1.31] and d["VWRP.L"]["close"] == [110.5]
+    assert "SPY" not in d  # not held: no honest price, UNVERIFIED
+    n = len(calls)
+    h.get(feeds.SPARK, {"symbols": "FIVN,SPY"})
+    assert len(calls) == n  # a failed IEX call is not retried for 15 minutes

@@ -208,13 +208,22 @@ class Agent:
 
     def broker_quotes(self) -> dict[str, dict]:
         """agent-1.21: London lines are priced from the broker's own position price ({yahoo symbol: {price, t}}), as
-        no free source serves LSE quotes to an honest client. Only held lines have one; others stay UNVERIFIED."""
+        no free source serves LSE quotes to an honest client. agent-1.22.2: every held line has one (US lines use it
+        only when Tiingo fails), plus GBPUSD=X implied by the broker's USD positions (median of quantity x price /
+        GBP value). Lines not held stay UNVERIFIED."""
         ov = self.cfg["yahoo_overrides"]
-        out = {}
+        out, fx = {}, []
         for t, p in self.positions.items():
             sym = feeds.yahoo_symbol(t, ov)
-            if sym and sym.endswith(".L") and p.get("currentPrice"):
-                out[sym] = {"price": float(p["currentPrice"]), "t": self.broker_t}
+            px = p.get("currentPrice")
+            if sym and px:
+                out[sym] = {"price": float(px), "t": self.broker_t}
+            v, q = float((p.get("walletImpact") or {}).get("currentValue") or 0), float(p.get("quantity") or 0)
+            if px and v > 1 and q > 0 and (p.get("instrument") or {}).get("currency") == "USD":
+                fx.append(q * float(px) / v)
+        if fx:
+            fx.sort()
+            out[self.cfg["benchmark"]["fx"]] = {"price": fx[len(fx) // 2], "t": self.broker_t}
         return out
 
     def refresh_prices(self) -> None:

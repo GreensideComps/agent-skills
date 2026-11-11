@@ -60,6 +60,7 @@ class Honest:
         self.raw_get = raw_get or requests.get
         self._fx: dict | None = None
         self._snap: dict = {"at": -1e18, "rows": {}}
+        self._q: dict = {"at": -1e18, "want": [], "rows": {}}
 
     # ------------------------------------------------------------ entry point (Yahoo-shaped answers)
     def get(self, url: str, params: dict) -> dict:
@@ -105,35 +106,80 @@ class Honest:
 
     # ------------------------------------------------------------ quotes
     def spark(self, symbols: list[str]) -> dict:
+        """agent-1.22.2: US lines from one small Tiingo IEX call for just the requested tickers (cached 4 min in US
+        hours), not the full-market snapshot, which ran the free plan's monthly bandwidth out on 10 Nov 2026. When
+        Tiingo fails (bandwidth, budget, outage) a held line falls back to the broker's own position price, and
+        GBPUSD to the rate implied by the broker's USD positions; anything else stays UNVERIFIED."""
         out: dict[str, dict] = {}
+        bq = self.positions_fn() or {}
         us = [s for s in symbols if not s.endswith((".L", "=X")) and not s.startswith("^")]
         if us:
-            by = self.snapshot(ttl=240 if us_hours(self.clock()) else 1800)  # one call prices every US line
+            try:
+                by = self.quotes(us, ttl=240 if us_hours(self.clock()) else 1800)
+            except feeds.FeedError:
+                by = {}
             for s in us:
                 r = by.get(s.upper())
                 px = r and (r.get("tngoLast") or r.get("last"))
                 ts = r and (r.get("lastSaleTimestamp") or r.get("timestamp"))
                 if px and ts:
                     out[s] = _spark_row(_epoch(ts), float(px), r.get("prevClose"))
+                elif s in bq:
+                    out[s] = _spark_row(bq[s]["t"], bq[s]["price"], None)
         for s in symbols:
             if s.endswith("=X"):
-                q = self.fx(s)
+                try:
+                    q = self.fx(s)
+                except feeds.FeedError:
+                    q = None
                 if q:
                     out[s] = _spark_row(q[1], q[0], None)
+                elif s in bq:
+                    out[s] = _spark_row(bq[s]["t"], bq[s]["price"], None)
             elif s == "^VIX":
                 q = self.vix_quote()
                 if q:
                     out[s] = _spark_row(q[1], q[0], q[2])
             elif s.endswith(".L"):
-                q = (self.positions_fn() or {}).get(s)
+                q = bq.get(s)
                 if q:
                     out[s] = _spark_row(q["t"], q["price"], None)
         return out
 
+    def quotes(self, syms: list[str], ttl: float = 240) -> dict[str, dict]:
+        """Latest IEX rows for just `syms` ({SYMBOL: row}) in one call; a failed call is not retried for 15 min."""
+        now, want = self.clock(), {s.upper() for s in syms}
+        q = self._q
+        if now < q.get("fail_until", 0):
+            raise feeds.FeedError(q.get("why", "tiingo iex: backing off"))
+        if now - q["at"] >= ttl or not want <= set(q["want"]):
+            try:
+                rows = self.tiingo("/iex/", {"tickers": ",".join(sorted(want))}, kind="quotes")
+            except BudgetError:
+                raise
+            except feeds.FeedError as e:
+                self._q = {**q, "fail_until": now + 900, "why": str(e)}
+                raise
+            if not isinstance(rows, list):
+                raise feeds.FeedError(f"tiingo iex: unexpected reply {str(rows)[:80]}")
+            self._q = {"at": now, "want": sorted(want),
+                       "rows": {r["ticker"].upper(): r for r in rows if r.get("ticker")}}
+        return self._q["rows"]
+
     def snapshot(self, ttl: float = 1800) -> dict[str, dict]:
-        """Every US ticker's latest IEX/consolidated row ({SYMBOL: row}) in one call: at most 15 calls an hour."""
-        if self.clock() - self._snap["at"] >= ttl:
-            rows = self.tiingo("/iex/", kind="quotes")
+        """Every US ticker's latest IEX/consolidated row ({SYMBOL: row}) in one call, for the liquidity pre-filter and
+        the bars store only (agent-1.22.2: at most every 30 min; a failed call is not retried for 30 min)."""
+        now = self.clock()
+        if now < self._snap.get("fail_until", 0):
+            raise feeds.FeedError(self._snap.get("why", "tiingo iex snapshot: backing off"))
+        if now - self._snap["at"] >= max(ttl, 1800):
+            try:
+                rows = self.tiingo("/iex/", kind="quotes")
+            except BudgetError:
+                raise
+            except feeds.FeedError as e:
+                self._snap = {**self._snap, "fail_until": now + 1800, "why": str(e)}
+                raise
             if not isinstance(rows, list):
                 raise feeds.FeedError(f"tiingo iex: unexpected reply {str(rows)[:80]}")
             self._snap = {"at": self.clock(), "rows": {r["ticker"].upper(): r for r in rows if r.get("ticker")}}

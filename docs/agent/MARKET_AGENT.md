@@ -382,3 +382,11 @@ The live entry is Q222's one-day-lag variant, because the scan needs the d0+1 cl
 - Return at the d0+1 close: +3.05% per trade.
 
 Q222 failed the go-live rule (DSR 0.000). 142 of its 197 trades fell in 2020.
+
+## agent-1.22.2 (11 Nov 2026): prices survive a Tiingo outage
+- The all-tickers IEX snapshot (every US ticker, up to 15 times an hour) used up Tiingo's free monthly bandwidth on
+  10 Nov 19:14Z, so every US quote, FX and bar call got HTTP 429 and the agent had no US prices.
+- Pricing now asks IEX for just the requested tickers (a few KB). The full snapshot is kept only for the liquidity
+  pre-filter and bars store, at most every 30 min. A failed call backs off (15 min per-ticker, 30 min snapshot).
+- When Tiingo fails, a held line is priced from the broker's own position price and GBPUSD from the rate implied by
+  the broker's USD positions. Names not held stay UNVERIFIED, so new US entries wait until Tiingo is back.
