@@ -1,0 +1,56 @@
+# Hosted Trading 212 DEMO market agent: runs whether or not any Claude session is awake.
+# How it works and how to hand over: ops/market-agent-host/README.md.
+#
+# Each run lasts up to ~5.5 h and, as soon as it has started, queues its successor (workflow_dispatch). The concurrency
+# group keeps one running and one waiting, so the next run takes over about a minute after the previous one ends,
+# around the clock. GitHub's cron is often hours late (first weekend: one run in 2.5 days), so it is only a backstop
+# that restarts the chain if it ever breaks.
+# The runner only trades while the `market-agent-state` branch says host=github-actions.
+# Needs repository secrets T212_API_KEY and T212_API_SECRET (the DEMO key pair). Without them every run exits quietly.
+name: market-agent
+on:
+  schedule:
+    - cron: "7,37 * * * *"        # backstop only: restarts the self-chain if it breaks
+  workflow_dispatch:
+    inputs:
+      budget_min:
+        description: "Minutes to run (max ~335)"
+        default: "330"
+permissions:
+  contents: write                  # push the encrypted state snapshot to the market-agent-state branch
+  actions: write                   # queue the next run (self-chain)
+concurrency:
+  group: market-agent
+  cancel-in-progress: false
+env:
+  AGENT_REF: claude/research-office-plan-sseamv   # the office thread's deploy branch; new commits restart the agent
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 345
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        run: python -m pip install --quiet requests pandas cryptography
+      - name: Prepare the project root
+        run: sudo mkdir -p /mnt/project-files && sudo chown "$USER" /mnt/project-files
+      - name: Run the market agent
+        env:
+          T212_ENV: demo
+          T212_API_KEY: ${{ secrets.T212_API_KEY }}
+          T212_API_SECRET: ${{ secrets.T212_API_SECRET }}
+          MA_STATE_KEY: ${{ secrets.MA_STATE_KEY }}   # optional shared state key; unset = derived from T212_API_SECRET
+          BUDGET_MIN: ${{ github.event.inputs.budget_min || '330' }}
+          GITHUB_TOKEN: ${{ github.token }}
+        run: >
+          python ops/market-agent-host/hostctl.py run
+          --root /mnt/project-files
+          --agent-ref "$AGENT_REF"
+          --code-dir "$RUNNER_TEMP/ma-code"
+          --budget-min "$BUDGET_MIN"
+          --chain

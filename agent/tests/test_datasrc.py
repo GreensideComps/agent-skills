@@ -1,0 +1,264 @@
+"""agent-1.21 honest data sources: Tiingo, CBOE and broker prices in Yahoo's shapes; SEC results dates."""
+from __future__ import annotations
+
+import json
+import sys
+from datetime import datetime, timezone
+from pathlib import Path
+
+import pytest
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from market_agent import datasrc, feeds, gap_rebound, news_shock, review, value_timing  # noqa: E402
+
+NOW = datetime(2026, 11, 9, 15, 0, tzinfo=timezone.utc).timestamp()  # Monday 10:00 New York
+
+
+class Resp:
+    def __init__(self, body, code=200):
+        self.body, self.status_code = body, code
+
+    def json(self):
+        return self.body
+
+
+def make(tmp_path, routes, clock=lambda: NOW, **kw):
+    """The pre-1.24 tests exercise the fallback sources, so Yahoo is off unless a test turns it on."""
+    kw.setdefault("yahoo", False)
+    (tmp_path / "tiingo_token.txt").write_text("tok\n")
+    calls = []
+
+    def raw_get(url, params=None, headers=None, timeout=None):
+        calls.append((url, params, headers))
+        for k, v in routes.items():
+            if url.endswith(k) or k in url:
+                return Resp(v(params) if callable(v) else v)
+        return Resp({}, 404)
+    h = datasrc.Honest(tmp_path, lambda: {"VWRP.L": {"price": 110.5, "t": NOW - 60}}, clock=clock, raw_get=raw_get,
+                       **kw)
+    return h, calls
+
+
+def test_spark_prices_us_from_iex_london_from_the_broker_and_fx_from_tiingo(tmp_path):
+    h, calls = make(tmp_path, {
+        "/iex/": [{"ticker": "SPY", "tngoLast": 600.5, "timestamp": "2026-11-09T14:59:58+00:00", "prevClose": 598.0}],
+        "/tiingo/fx/top": [{"midPrice": 1.29, "quoteTimestamp": "2026-11-09T14:59:00+00:00"}]})
+    d = h.get(feeds.SPARK, {"symbols": "SPY,VWRP.L,GBPUSD=X,VUSA.L", "range": "1d", "interval": "5m"})
+    assert d["SPY"]["close"] == [600.5] and d["SPY"]["previousClose"] == 598.0
+    assert d["VWRP.L"]["close"] == [110.5] and d["GBPUSD=X"]["close"] == [1.29]
+    assert "VUSA.L" not in d  # a London line the broker does not hold has no honest price: UNVERIFIED
+    assert all("Mozilla" not in (c[2] or {}).get("User-Agent", "") for c in calls)
+    assert calls[0][2]["Authorization"] == "Token tok"
+    h.get(feeds.SPARK, {"symbols": "SPY,GBPUSD=X"})
+    assert len(calls) == 2  # the IEX snapshot (4 min in US hours) and FX (15 min) are cached
+    q = feeds.fetch_quotes(["SPY"], get=h.get)["SPY"]
+    assert q["price"] == 600.5 and q["prev_close"] == 598.0
+
+
+def test_yahoo_search_is_empty_and_refusing_hosts_raise(tmp_path):
+    h, _ = make(tmp_path, {})
+    assert h.get(feeds.SEARCH, {"q": "JPM"}) == {"news": []}
+    with pytest.raises(feeds.FeedError):
+        h.get(gap_rebound.EARNINGS, {"date": "2026-11-09"})
+
+
+def test_daily_bars_split_adjusted_like_yahoo_with_adjclose(tmp_path):
+    rows = [{"date": f"2026-11-0{d}T00:00:00.000Z", "open": o, "high": o, "low": o, "close": o, "volume": 100,
+             "adjClose": o * 0.99 if d < 6 else o, "splitFactor": sf}
+            for d, o, sf in ((3, 200.0, 1.0), (4, 202.0, 1.0), (5, 204.0, 1.0), (6, 103.0, 2.0))]
+    h, calls = make(tmp_path, {"/tiingo/daily/abc/prices": rows})
+    b = gap_rebound.bars("ABC", h.get)
+    assert [round(c, 2) for _, c, _ in b] == [100.0, 101.0, 102.0, 103.0]  # pre-split closes halved, volume doubled
+    assert b[0][0] == "2026-11-03" and b[0][2] == 200
+    adj = value_timing.adjusted("ABC", h.get)
+    assert round(adj[0][1], 2) == 198.0
+    gap_rebound.bars("ABC", h.get)
+    assert len(calls) == 1  # cached on disk until the next 18:00 New York
+
+
+def test_budget_refuses_above_the_hourly_cap(tmp_path):
+    h, _ = make(tmp_path, {"/tiingo/daily/": [], "/iex/": []}, hour_cap=3, quote_reserve=1)
+    h.tiingo("/tiingo/daily/a/prices")
+    h.tiingo("/tiingo/daily/b/prices")
+    with pytest.raises(datasrc.BudgetError):
+        h.tiingo("/tiingo/daily/c/prices")  # bars stop short of the cap: the last call is kept for prices
+    h.snapshot()
+    with pytest.raises(datasrc.BudgetError):
+        h.quotes(["SPY"], ttl=0)  # the full snapshot is now cached 30 min; the per-ticker call hits the cap
+    assert len(json.loads((tmp_path / "tiingo_usage.json").read_text())["t"]) == 3
+
+
+def test_vix_history_takes_the_finished_session_from_the_quote(tmp_path):
+    h, _ = make(tmp_path, {
+        "quotes/_VIX.json": {"data": {"current_price": 25.64, "close": 25.64, "open": 26.4, "high": 26.6, "low": 23.5,
+                                      "prev_day_close": 28.18, "last_trade_time": "2026-11-06T16:15:01"}},
+        "historical/_VIX.json": {"data": [{"date": "2026-11-05", "open": "17.1", "high": "28.4", "low": "16.7",
+                                           "close": "28.18"}]}})
+    v = gap_rebound.bars("^VIX", h.get)
+    assert [(d, c) for d, c, _ in v] == [("2026-11-05", 28.18), ("2026-11-06", 25.64)]
+    px, t, prev = h.vix_quote()
+    assert px == 25.64 and prev == 28.18 and t == datetime(2026, 11, 6, 21, 15, 1, tzinfo=timezone.utc).timestamp()
+
+
+def test_results_date_from_sec_filings():
+    f = [{"form": "8-K", "date": "2026-10-20", "items": "7.01"}, {"form": "8-K", "date": "2026-08-05", "items": "2.02,9.01"}]
+    assert review.earnings_due(f, "2026-10-01", 3) is None                      # 57 days on: clear
+    assert review.earnings_due(f, "2026-10-21", 3).startswith("expected about 2026-11-04")
+    assert review.earnings_due(f, "2026-12-10", 3).startswith("UNVERIFIED")      # 127 days: stale
+    assert review.earnings_due(f[:1], "2026-10-21", 3).startswith("UNVERIFIED")
+
+
+def test_filings_split_results_from_other_8ks():
+    hits = [{"_source": {"form": "8-K", "items": ["2.02", "9.01"], "display_names": ["Abc Inc  (ABC)  (CIK 0001)"]}},
+            {"_source": {"form": "8-K", "items": ["8.01"], "display_names": ["Xyz Corp  (XYZ, XYZW)  (CIK 0002)"]}}]
+    assert [r["symbol"] for r in news_shock.filings(hits, earnings=True)] == ["ABC"]
+    assert [r["symbol"] for r in news_shock.filings(hits)] == ["XYZ"]
+
+
+def test_bars_store_keeps_finished_sessions_and_backs_up_a_refused_symbol(tmp_path):
+    sat = datetime(2026, 11, 7, 12, 0, tzinfo=timezone.utc).timestamp()
+    snap = [{"ticker": "NEW", "timestamp": "2026-11-06T21:00:00+00:00", "open": 10.0, "high": 11.0, "low": 9.5,
+             "tngoLast": 10.5, "volume": 1000, "prevClose": 9.9},
+            {"ticker": "OLD", "timestamp": "2026-11-06T21:00:00+00:00", "open": 5.0, "high": 5.0, "low": 5.0,
+             "tngoLast": 5.0, "volume": 10}]
+    h, _ = make(tmp_path, {"/iex/": snap, "/tiingo/daily/new/prices": {"detail": "You have run over your 500 symbol"}},
+                clock=lambda: sat)
+    h.snapshot()
+    assert json.loads((tmp_path / "bars_store" / "2026-11-06.json").read_text())["NEW"] == [10.0, 11.0, 9.5, 10.5, 1000]
+    (tmp_path / "bars_store" / "2026-11-05.json").write_text(json.dumps({"NEW": [9.0, 9.0, 9.0, 9.9, 500]}))
+    assert [(d, c) for d, c, _ in gap_rebound.bars("NEW", h.get)] == [("2026-11-05", 9.9), ("2026-11-06", 10.5)]
+    with pytest.raises(feeds.FeedError):
+        gap_rebound.bars("NONE", h.get)  # refused and not in the store: UNVERIFIED
+
+
+def test_spark_asks_iex_for_just_the_requested_tickers(tmp_path):
+    h, calls = make(tmp_path, {"/iex/": [{"ticker": "SPY", "tngoLast": 600.5, "timestamp": "2026-11-09T14:59:58+00:00",
+                                          "prevClose": 598.0}]})
+    d = h.get(feeds.SPARK, {"symbols": "SPY"})
+    assert d["SPY"]["close"] == [600.5]
+    assert calls[0][1] == {"tickers": "SPY"}  # agent-1.22.2: never the full-market snapshot for pricing
+
+
+def test_spark_falls_back_to_broker_prices_when_tiingo_refuses(tmp_path):
+    (tmp_path / "tiingo_token.txt").write_text("tok\n")
+    calls = []
+
+    def raw_get(url, params=None, headers=None, timeout=None):
+        calls.append(url)
+        return Resp({"detail": "monthly bandwidth"}, 429)
+    bq = {"VWRP.L": {"price": 110.5, "t": NOW - 60}, "FIVN": {"price": 29.1, "t": NOW - 30},
+          "GBPUSD=X": {"price": 1.31, "t": NOW - 30}}
+    h = datasrc.Honest(tmp_path, lambda: bq, clock=lambda: NOW, raw_get=raw_get)
+    d = h.get(feeds.SPARK, {"symbols": "FIVN,SPY,GBPUSD=X,VWRP.L"})
+    assert d["FIVN"]["close"] == [29.1] and d["GBPUSD=X"]["close"] == [1.31] and d["VWRP.L"]["close"] == [110.5]
+    assert "SPY" not in d  # not held: no honest price, UNVERIFIED
+    n = len(calls)
+    h.get(feeds.SPARK, {"symbols": "FIVN,SPY"})
+    assert len(calls) == n  # a failed IEX call is not retried for 15 minutes
+
+
+def test_monthly_bandwidth_429_trips_a_breaker_until_the_next_probe(tmp_path):
+    (tmp_path / "tiingo_token.txt").write_text("tok\n")
+    calls, clock = [], {"t": NOW}
+
+    def raw_get(url, params=None, headers=None, timeout=None):
+        calls.append(url)
+        return Resp({"detail": "Your monthly bandwidth limit has been reached"}, 429)
+    h = datasrc.Honest(tmp_path, lambda: {}, clock=lambda: clock["t"], raw_get=raw_get)
+    with pytest.raises(datasrc.TiingoDown):
+        h.tiingo("/tiingo/daily/a/prices")
+    for _ in range(5):
+        with pytest.raises(datasrc.TiingoDown) as e:
+            h.tiingo("/tiingo/daily/b/prices")
+    assert len(calls) == 1 and isinstance(e.value, datasrc.BudgetError)   # no call while the breaker is open
+    clock["t"] += datasrc.DOWN_PROBE_S + 1
+    with pytest.raises(datasrc.TiingoDown):
+        h.tiingo("/tiingo/daily/c/prices")
+    assert len(calls) == 2                                                  # one probe, still refused
+
+
+# ---------------------------------------------------------------- agent-1.24: Yahoo first, honest User-Agent
+def _spark_body(**px):
+    return {s: {"timestamp": [int(NOW) - 120, int(NOW) - 60], "close": [p * 0.99, p], "previousClose": p * 0.98}
+            for s, p in px.items()}
+
+
+def _chart_body(closes):
+    ts = [int(NOW) - 86400 * (len(closes) - i) for i in range(len(closes))]
+    return {"chart": {"result": [{"timestamp": ts, "meta": {"currency": "USD"},
+                                  "indicators": {"quote": [{"close": closes, "open": closes, "high": closes,
+                                                            "low": closes, "volume": [1] * len(closes)}],
+                                                 "adjclose": [{"adjclose": closes}]}}]}}
+
+
+def test_yahoo_prices_everything_first_with_an_honest_user_agent(tmp_path):
+    h, calls = make(tmp_path, {"/v8/finance/spark": lambda p: _spark_body(
+        **{s: 100.0 for s in p["symbols"].split(",") if s != "ZZZZ"})}, yahoo=True)
+    d = h.get(feeds.SPARK, {"symbols": "SPY,VUSA.L,GBPUSD=X,^VIX", "range": "1d", "interval": "5m"})
+    assert d["VUSA.L"]["close"] == [100.0]  # a London line nobody holds is now priced (it was UNVERIFIED)
+    assert d["SPY"]["previousClose"] == 98.0 and set(d) == {"SPY", "VUSA.L", "GBPUSD=X", "^VIX"}
+    assert len(calls) == 1 and "tiingo" not in calls[0][0]
+    ua = calls[0][2]["User-Agent"]
+    assert "python-requests" not in ua and "Mozilla" not in ua and "GreensideComps/agent-skills" in ua
+
+
+def test_a_symbol_yahoo_misses_falls_back_to_the_old_sources(tmp_path):
+    h, calls = make(tmp_path, {"/v8/finance/spark": _spark_body(SPY=600.0),
+                               "/iex/": [{"ticker": "QQQ", "tngoLast": 500.0,
+                                          "timestamp": "2026-11-09T14:59:58+00:00"}]}, yahoo=True)
+    d = h.get(feeds.SPARK, {"symbols": "SPY,QQQ"})
+    assert d["SPY"]["close"] == [600.0] and d["QQQ"]["close"] == [500.0]
+    assert calls[1][1]["tickers"] == "QQQ"  # Tiingo is asked only for what Yahoo missed
+
+
+def test_a_yahoo_refusal_backs_off_for_every_process_and_uses_the_fallback(tmp_path):
+    seen = []
+
+    def spark(p):
+        seen.append(1)
+        return {}
+    h, calls = make(tmp_path, {"/iex/": [{"ticker": "SPY", "tngoLast": 600.5,
+                                          "timestamp": "2026-11-09T14:59:58+00:00"}]}, yahoo=True)
+    # no Yahoo route: the fake answers 404, which is a failure like a 429
+    d = h.get(feeds.SPARK, {"symbols": "SPY"})
+    assert d["SPY"]["close"] == [600.5]
+    down = json.loads((tmp_path / "yahoo_down.json").read_text())
+    assert down["until"] == NOW + datasrc.YAHOO_RETRY_S and "HTTP 404" in down["why"]
+    h2, calls2 = make(tmp_path, {"/iex/": [{"ticker": "SPY", "tngoLast": 601.0,
+                                            "timestamp": "2026-11-09T14:59:58+00:00"}]}, yahoo=True)
+    h2.get(feeds.SPARK, {"symbols": "SPY"})
+    assert not any("yahoo" in c[0] for c in calls2)  # a new agent process honours the back-off too
+    later, calls3 = make(tmp_path, {"/v8/finance/spark": _spark_body(SPY=602.0)}, yahoo=True,
+                         clock=lambda: NOW + datasrc.YAHOO_RETRY_S + 1)
+    assert later.get(feeds.SPARK, {"symbols": "SPY"})["SPY"]["close"] == [602.0]
+    assert not (tmp_path / "yahoo_down.json").exists()  # a success clears the back-off
+
+
+def test_a_429_backs_off_longer(tmp_path):
+    h, _ = make(tmp_path, {}, yahoo=True)
+    h.raw_get = lambda url, params=None, headers=None, timeout=None: Resp({}, 429)
+    with pytest.raises(feeds.FeedError):
+        h.yahoo(feeds.SPARK, {"symbols": "SPY"})
+    assert json.loads((tmp_path / "yahoo_down.json").read_text())["until"] == NOW + datasrc.YAHOO_BACKOFF_S[429]
+
+
+def test_yahoo_daily_bars_are_cached_and_cover_london_lines(tmp_path):
+    h, calls = make(tmp_path, {"/v8/finance/chart/": _chart_body([140.0, 141.0, 142.8])}, yahoo=True)
+    a = h.get(datasrc.CHART_PREFIX + "VWRP.L", {"range": "1mo", "interval": "1d"})
+    b = h.get(datasrc.CHART_PREFIX + "VWRP.L", {"range": "1mo", "interval": "1d"})
+    assert a == b and a["chart"]["result"][0]["indicators"]["quote"][0]["close"][-1] == 142.8
+    assert len(calls) == 1 and calls[0][1]["interval"] == "1d"
+
+
+def test_an_empty_yahoo_chart_is_not_trusted(tmp_path):
+    h, calls = make(tmp_path, {"/v8/finance/chart/": {"chart": {"result": [{"timestamp": [], "indicators": {}}]}}},
+                    yahoo=True)
+    with pytest.raises(feeds.FeedError):
+        h.get(datasrc.CHART_PREFIX + "VWRP.L", {"range": "1mo", "interval": "1d"})  # no fallback for London bars
+
+
+def test_an_empty_history_is_missing_data_not_a_crash():
+    get = lambda url, params: {"chart": {"result": [{"indicators": {"quote": [{"close": [None], "volume": [0]}]}}]}}  # noqa: E731
+    with pytest.raises(feeds.FeedError):
+        review.history("SPY", get)

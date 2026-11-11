@@ -1,0 +1,53 @@
+# Runs every test suite on every push and pull request.
+#
+# Why: until 11 Nov 2026 this repository had no automatic testing. The research suite then sat broken for twelve
+# days (the registry tests) without anyone seeing it, and the hosted agent's own end-to-end test was never collected
+# by any runner. Each suite runs as its own step so one failure does not hide another.
+name: tests
+on:
+  push:
+    branches-ignore:
+      - market-agent-state        # encrypted agent state snapshots, no code
+  pull_request:
+permissions:
+  contents: read
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: .github/requirements-tests.txt
+      - name: Install dependencies
+        run: python -m pip install --quiet -r .github/requirements-tests.txt
+      - name: Market agent (stops, self-check, strategies, rules page)
+        run: python -m pytest agent/tests -q
+      - name: The rules page matches the live config
+        if: always()
+        run: cd agent && python -m market_agent rules --check ../docs/agent/RULES.md
+      - name: Hosted-agent controller (end to end, local git, no broker)
+        if: always()
+        run: |
+          git config --global user.email "ci@example.invalid"
+          git config --global user.name "ci"
+          git config --global init.defaultBranch master
+          python -m pytest ops/market-agent-host -q
+      - name: Research (registry, statistics, scoreboard, backtest engine)
+        if: always()
+        run: python -m pytest research/tests -q
+      - name: Equity pipeline
+        if: always()
+        run: python -m pytest equity/tests -q
+      - name: Office
+        if: always()
+        run: python -m pytest office/tests -q
+      - name: Trading
+        if: always()
+        run: python -m pytest trading/tests -q

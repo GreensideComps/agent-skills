@@ -1,0 +1,9 @@
+# What the test suites import. Unpinned on purpose: the suites must keep passing on current releases, and the
+# research versions of record are declared in research/requirements-research.txt.
+pytest
+requests
+cryptography
+numpy
+pandas
+scipy
+statsmodels
