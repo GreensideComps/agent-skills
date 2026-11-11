@@ -172,7 +172,9 @@ def test_the_kill_file_halts_a_trading_run_under_masters_strategy_before_any_ord
     from t212bot.journal import Journal
     from t212bot.market import Quote
     lqq3 = {"ticker": "LQQ3l_EQ", "currencyCode": "GBX", "workingScheduleId": 70, "type": "ETF", "name": "LQQ3"}
-    now = datetime.now(timezone.utc)
+    # a fixed weekday inside the fake 07:00-15:30Z session: with the wall clock this test failed whenever CI ran
+    # after 15:30 UTC ("market closed", so the control run placed no order)
+    now = datetime(2026, 11, 10, 10, 0, tzinfo=timezone.utc)
 
     class Quotes:
         def quote(self, s): return Quote(s, 4.0, "GBP", now, "test")
