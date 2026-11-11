@@ -1,6 +1,6 @@
 # What the demo agent buys and sells, and why
 
-Generated from `agent/market_agent/config.json` (agent-1.24.0) by `python3 -m market_agent rules`. Do not edit by hand: change the config or `rules.py`, then run `python3 -m market_agent rules --write docs/agent/RULES.md`. The tests fail if this page is out of date.
+Generated from `agent/market_agent/config.json` (agent-1.24.1) by `python3 -m market_agent rules`. Do not edit by hand: change the config or `rules.py`, then run `python3 -m market_agent rules --write docs/agent/RULES.md`. The tests fail if this page is out of date.
 
 Demo account only. No strategy here has passed the go-live rule; each is a small forward test.
 
@@ -9,7 +9,7 @@ Demo account only. No strategy here has passed the go-live rule; each is a small
 - Core: everything not in a strategy is held in VWRP. Spare cash above £20 is put into VWRP.
 - Listed exits: INTC, BE, TEM, IBTA are sold in full whenever held.
 - Single-name cap: 5% of the book (VWRP exempt).
-- Order limits: at most £600 an order, 60 orders and £3000 of trading a day. Buys only from the approved list of 64 tickers.
+- Order limits: at most £600 an order, 60 orders and £3000 of trading a day. Buys only from the approved list of 65 tickers.
 - Short-term sleeve brakes: no new short-term buys for the day after a loss of 3% of the book in one day; frozen for good if the sleeve loses 25% of its £239 start.
 - Cash kept back: 10% of the book while short-term strategies are on.
 - Self-check: on every broker pass the agent tests nine promises about the whole book (every holding that needs a stop has one resting at the broker, nothing is held without a rule that will sell it, no overdue exits, no unknown orders or positions, no oversized or unpriced holdings) and raises an alert when one stays broken. `python3 -m market_agent audit` prints the latest result.
@@ -27,6 +27,7 @@ Demo account only. No strategy here has passed the go-live rule; each is a small
 | value_timing | on | 2% of the book | passed its long-history test (1920s to 2022) but weak since 2007 and outside the US: low confidence |
 | momentum_timing | on | 2% of the book | passed its long-history test (1920s to 2022) but weak since 2007 and outside the US: low confidence |
 | january_small | on | 2% of the book | passed its long-history test but has lost money since 2007: low confidence |
+| quality_tilt | on | 2% of the book | gate-v3 pass (Q246: +1.16% a year vs the US market 1963-2022, confirmed 2000-22 at +1.52% a year), but a published idea: forward test |
 | stock_screen | on | 2% per name, 12 names now | tested and failed (Q199, +3.4% a year, not significant): a low-confidence forward test |
 | buyback_value | on | 2% per name, at most 10 names | tested, positive but not significant (Q206, +3.0% a year): unproven forward test |
 | gap_rebound | on | 2% per name, at most 8 names | not a registered test result (Q205 idea; Q218b high-fear version +4.5% a trade): unproven |
@@ -175,6 +176,20 @@ Buys when:
 Sells when (whichever comes first):
 
 - calendar: sold at the first London open after the holding month ends
+- crash stop: a stop resting at the broker 50% below the buy price (a safety net, not a tested rule)
+- kill rule: after 30 closed trades or 24 months from its first buy, whichever is first, if it has not beaten VWRP it is switched off and everything it holds is sold
+
+## quality_tilt
+
+Status: on. Size: 2% of the book.
+
+Buys when:
+
+- always: hold US quality (iShares Edge MSCI USA Quality Factor, IUQA) as one fixed 2% line; gate-v3 pass, forward test
+
+Sells when (whichever comes first):
+
+- no signal exit: held continuously until the review the kill rule sets
 - crash stop: a stop resting at the broker 50% below the buy price (a safety net, not a tested rule)
 - kill rule: after 30 closed trades or 24 months from its first buy, whichever is first, if it has not beaten VWRP it is switched off and everything it holds is sold
 

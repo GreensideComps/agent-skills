@@ -473,3 +473,23 @@ Found in the 11 Nov second-pass audit, from the agent's own event log (26 Oct to
   every restart after the check window logged them all as missed, and a restart inside it checked them twice. It is
   now kept in `state/gap_done.json`.
 - **review.** An empty daily history raised IndexError in `review.factors`; it is now missing data (FeedError).
+
+## agent-1.24.1 (11 Nov 2026): quality_tilt, the first gate-v3 forward test
+
+Research Q246 (`research/always_on/results/Q246.md`) is the first strategy to pass gate v3: US firms in the top 30%
+by operating profitability (Ken French, value-weighted, June rebalance) beat the US market by +1.16%/yr over
+1963-2022 (tracking error 3.4%), and the 2000-22 confirmation gave +1.52%/yr (p 0.033), positive with costs x2 and a
+one-month lag. The prereg's caveat stands: the idea is published and earlier trials saw related series. GATE_V3 step
+5 calls for a labelled forward test, so:
+
+- **quality_tilt** is a calendar entry in `active.timing` that lists every month, so `calendar_signal` always names
+  iShares Edge MSCI USA Quality Factor (Acc, `IUQAl_EQ`, USD; Yahoo `IUQA.L`). One fixed 2% line, bought once, never
+  switched; each month end only re-records the target. Label "gate-v3 pass, forward test", carried in the buy reason
+  and the rules page.
+- Approximation: the ETF tracks MSCI USA Sector Neutral Quality (ROE, earnings stability, low leverage), not the KF
+  operating-profitability sort; it is the nearest UCITS line T212 offers.
+- Scoring: the usual timing kill rule, with the line marked at its current value against VWRP: after 730 days
+  (the 24-month review the research thread asked for; 30 closed trades will never come first) it is switched off and
+  sold if it has not beaten VWRP. -50% disaster stop only. Registered in `research/always_on/scoreboard.py`.
+- Sector check: 2% of a US quality fund adds well under 1 point to any sector versus VWRP's look-through, inside the
+  +-10pt limit.
