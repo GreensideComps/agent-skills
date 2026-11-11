@@ -299,7 +299,9 @@ class Agent:
         """Score every watched name and open trade on short, medium and long horizons (review.py) and log it."""
         rc = self.cfg["active"]["review"]
         now = self.clock()
-        names = sorted(set(self._watch()) | {e["ticker"] for e in active.open_trades(self.s.intents())})
+        held = sorted({e["ticker"] for e in active.open_trades(self.s.intents())})
+        names = held + sorted(set(self._watch()) - set(held))  # agent-1.22.4: held lines first, so a data cap
+        # (Tiingo 45/h) starves watchlist names, never the review of what we own
         self._earnings_sec(names, rc["earnings_block_days"], now)
         rows = []
         for t in names:

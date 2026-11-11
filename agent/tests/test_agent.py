@@ -1171,3 +1171,21 @@ def test_value_timing_skips_price_calls_once_the_month_is_recorded(tmp_path):
     clock.t = ts(2026, 11, 9, 9)
     ag.refresh_value_timing()
     assert calls == []
+
+
+def test_review_scores_held_lines_before_the_watchlist(tmp_path, monkeypatch):
+    from market_agent import swing
+    ag, b, st, clock = make(tmp_path, active_on=True, prices={"VWRP.L": 140.0, "GBPUSD=X": 1.25})
+    asked = []
+
+    def ohlcv(sym, get):
+        asked.append(sym)
+        raise RuntimeError("tiingo: request budget used")  # every call refused: only the order matters here
+    monkeypatch.setattr(swing, "ohlcv", ohlcv)
+    ag._watch = lambda: ["AAPL_US_EQ", "ZZZ_US_EQ"]
+    held = {"id": "e1", "ticker": "ZZZ_US_EQ", "status": "filled", "t": 0.0,
+            "signal": {"type": "active_entry", "strategy": "stock_screen", "entry_px": 10.0, "stop": None}}
+    ag.s.intents = lambda: [held]
+    ag.sleep = lambda s: None
+    ag.refresh_review()
+    assert asked[0] == "ZZZ" and len(asked) == 2  # agent-1.22.4: what we own is reviewed first
