@@ -111,3 +111,19 @@ def test_power_is_far_above_the_old_gate_for_the_same_edge():
     assert old < 0.03 and new > 0.3
     assert "RUN" in gate.power_line(0.05, 0.10, 438, 276, k=3)
     assert "REDESIGN" in gate.power_line(0.03, 0.10, 60, 36, k=3)
+
+
+def test_a_stock_panel_edge_must_beat_the_survivorship_bound():
+    import gate
+    b = gate.Batch("S", ("a",), ("2011-01", "2016-12"), ("2017-01", "2022-12"), data="panel_weak")
+    assert not b.problems()
+    small = gate.confirmation(b, ["a"], {"a": {"p": 0.001, "mean": 0.001}},
+                              {"a": {"costs_x2_mean": 0.001, "lag1_mean": 0.001}})["a"]
+    assert small["checks"]["survivorship"] is False and not small["pass"]  # 1.2%/yr < 1.7%/yr worst-case bias
+    big = gate.confirmation(b, ["a"], {"a": {"p": 0.001, "mean": 0.002}},
+                            {"a": {"costs_x2_mean": 0.001, "lag1_mean": 0.001}})["a"]
+    assert big["pass"]
+    plain = gate.Batch("F", ("a",), ("1963-07", "1999-12"), ("2000-01", "2022-12"))
+    assert "survivorship" not in gate.confirmation(plain, ["a"], {"a": {"p": 0.001, "mean": 0.0001}},
+                                                   {"a": {"costs_x2_mean": 1, "lag1_mean": 1}})["a"]["checks"]
+    assert gate.Batch("X", ("a",), ("2011-01", "2016-12"), ("2017-01", "2022-12"), data="bogus").problems()

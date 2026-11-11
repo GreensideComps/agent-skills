@@ -39,6 +39,10 @@ DEFAULT_Q = 0.10
 DEFAULT_ALPHA = 0.05
 HOLDOUT_FROM = "2023-01"      # no window may reach the 2023-26 holdout
 MIN_MONTHS = 36               # each window needs at least three years of monthly data
+# Survivorship (research/SURVIVORSHIP.md, 11 Nov 2026): the stock panel holds almost none of the companies that stopped
+# filing, so a long-only stock-panel result can be flattered by up to this much a year (worst case). A stock-panel
+# batch must clear it on the confirmation window; long-history index or factor data (Ken French, AQR) declare 0.
+SURVIVORSHIP_PP = {"none": 0.0, "panel": 1.0, "panel_weak": 1.7}
 _ND = statistics.NormalDist()
 
 
@@ -52,6 +56,7 @@ class Batch:
     q: float = DEFAULT_Q
     alpha: float = DEFAULT_ALPHA
     notes: str = ""
+    data: str = "none"      # "panel" for the 2011-2022 stock panel, "panel_weak" if it selects weak-health companies
 
     def problems(self) -> list[str]:
         out = []
@@ -68,6 +73,8 @@ class Batch:
                 out.append(f"{name} window has {months_between(a, b)} months, fewer than {MIN_MONTHS}")
         if not out and not (self.discovery[1] < self.confirmation[0] or self.confirmation[1] < self.discovery[0]):
             out.append("the discovery and confirmation windows overlap")
+        if self.data not in SURVIVORSHIP_PP:
+            out.append(f"data must be one of {sorted(SURVIVORSHIP_PP)}")
         if not 0 < self.q <= 0.2 or not 0 < self.alpha <= 0.05:
             out.append("q must be in (0, 0.2] and alpha in (0, 0.05]")
         return out
@@ -116,11 +123,14 @@ def confirmation(batch: Batch, found: list[str], conf: dict[str, dict], robust: 
     'costs_x2_mean' and 'lag1_mean' (confirmation-window mean monthly excess under each stress)."""
     out = {}
     cut = batch.alpha / max(len(found), 1)
+    surv = SURVIVORSHIP_PP.get(batch.data, 0.0) / 100 / 12   # monthly
     for i in found:
         c, r = conf.get(i) or {}, robust.get(i) or {}
         checks = {"confirmed": c.get("p", 1.0) <= cut and (c.get("mean") or 0) > 0,
                   "costs_x2": (r.get("costs_x2_mean") or 0) > 0,
                   "lag1": (r.get("lag1_mean") or 0) > 0}
+        if surv:
+            checks["survivorship"] = (c.get("mean") or 0) > surv
         out[i] = {"alpha_used": cut, "p": c.get("p"), "t": c.get("t"), "checks": checks, "pass": all(checks.values())}
     return out
 

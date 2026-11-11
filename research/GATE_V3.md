@@ -36,6 +36,10 @@ trial is run (the power check), instead of after.
 4. **Stage 2, confirmation.** Each configuration stage 1 kept is tested once on the confirmation window at one-sided
    alpha = 0.05 / (number kept), and must also stay positive there with costs doubled and with a one-month lag.
    Configurations stage 1 dropped are never scored on the confirmation window.
+   A stock-panel batch (`data="panel"`, or `"panel_weak"` when it selects companies with negative free cash flow or
+   falling revenue) must also beat the worst-case survivorship bias on the confirmation window: a mean excess above
+   1.0 (panel) or 1.7 (panel_weak) percentage points a year (`research/SURVIVORSHIP.md`). Added 11 Nov 2026, before
+   the gate took effect.
 5. **Pass** = stage 2 holds. A pass goes to the office thread as a labelled demo forward test (2% a trade, the
    30-trade kill rule). Real money still needs every check in GO_LIVE_RULE.md, which is unchanged.
 6. **Still reported, no longer the gate:** the deflated Sharpe at the current N, the post-2007 sign, the six robustness
