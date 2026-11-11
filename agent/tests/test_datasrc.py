@@ -24,6 +24,8 @@ class Resp:
 
 
 def make(tmp_path, routes, clock=lambda: NOW, **kw):
+    """The pre-1.24 tests exercise the fallback sources, so Yahoo is off unless a test turns it on."""
+    kw.setdefault("yahoo", False)
     (tmp_path / "tiingo_token.txt").write_text("tok\n")
     calls = []
 
@@ -174,3 +176,89 @@ def test_monthly_bandwidth_429_trips_a_breaker_until_the_next_probe(tmp_path):
     with pytest.raises(datasrc.TiingoDown):
         h.tiingo("/tiingo/daily/c/prices")
     assert len(calls) == 2                                                  # one probe, still refused
+
+
+# ---------------------------------------------------------------- agent-1.24: Yahoo first, honest User-Agent
+def _spark_body(**px):
+    return {s: {"timestamp": [int(NOW) - 120, int(NOW) - 60], "close": [p * 0.99, p], "previousClose": p * 0.98}
+            for s, p in px.items()}
+
+
+def _chart_body(closes):
+    ts = [int(NOW) - 86400 * (len(closes) - i) for i in range(len(closes))]
+    return {"chart": {"result": [{"timestamp": ts, "meta": {"currency": "USD"},
+                                  "indicators": {"quote": [{"close": closes, "open": closes, "high": closes,
+                                                            "low": closes, "volume": [1] * len(closes)}],
+                                                 "adjclose": [{"adjclose": closes}]}}]}}
+
+
+def test_yahoo_prices_everything_first_with_an_honest_user_agent(tmp_path):
+    h, calls = make(tmp_path, {"/v8/finance/spark": lambda p: _spark_body(
+        **{s: 100.0 for s in p["symbols"].split(",") if s != "ZZZZ"})}, yahoo=True)
+    d = h.get(feeds.SPARK, {"symbols": "SPY,VUSA.L,GBPUSD=X,^VIX", "range": "1d", "interval": "5m"})
+    assert d["VUSA.L"]["close"] == [100.0]  # a London line nobody holds is now priced (it was UNVERIFIED)
+    assert d["SPY"]["previousClose"] == 98.0 and set(d) == {"SPY", "VUSA.L", "GBPUSD=X", "^VIX"}
+    assert len(calls) == 1 and "tiingo" not in calls[0][0]
+    ua = calls[0][2]["User-Agent"]
+    assert "python-requests" not in ua and "Mozilla" not in ua and "GreensideComps/agent-skills" in ua
+
+
+def test_a_symbol_yahoo_misses_falls_back_to_the_old_sources(tmp_path):
+    h, calls = make(tmp_path, {"/v8/finance/spark": _spark_body(SPY=600.0),
+                               "/iex/": [{"ticker": "QQQ", "tngoLast": 500.0,
+                                          "timestamp": "2026-11-09T14:59:58+00:00"}]}, yahoo=True)
+    d = h.get(feeds.SPARK, {"symbols": "SPY,QQQ"})
+    assert d["SPY"]["close"] == [600.0] and d["QQQ"]["close"] == [500.0]
+    assert calls[1][1]["tickers"] == "QQQ"  # Tiingo is asked only for what Yahoo missed
+
+
+def test_a_yahoo_refusal_backs_off_for_every_process_and_uses_the_fallback(tmp_path):
+    seen = []
+
+    def spark(p):
+        seen.append(1)
+        return {}
+    h, calls = make(tmp_path, {"/iex/": [{"ticker": "SPY", "tngoLast": 600.5,
+                                          "timestamp": "2026-11-09T14:59:58+00:00"}]}, yahoo=True)
+    # no Yahoo route: the fake answers 404, which is a failure like a 429
+    d = h.get(feeds.SPARK, {"symbols": "SPY"})
+    assert d["SPY"]["close"] == [600.5]
+    down = json.loads((tmp_path / "yahoo_down.json").read_text())
+    assert down["until"] == NOW + datasrc.YAHOO_RETRY_S and "HTTP 404" in down["why"]
+    h2, calls2 = make(tmp_path, {"/iex/": [{"ticker": "SPY", "tngoLast": 601.0,
+                                            "timestamp": "2026-11-09T14:59:58+00:00"}]}, yahoo=True)
+    h2.get(feeds.SPARK, {"symbols": "SPY"})
+    assert not any("yahoo" in c[0] for c in calls2)  # a new agent process honours the back-off too
+    later, calls3 = make(tmp_path, {"/v8/finance/spark": _spark_body(SPY=602.0)}, yahoo=True,
+                         clock=lambda: NOW + datasrc.YAHOO_RETRY_S + 1)
+    assert later.get(feeds.SPARK, {"symbols": "SPY"})["SPY"]["close"] == [602.0]
+    assert not (tmp_path / "yahoo_down.json").exists()  # a success clears the back-off
+
+
+def test_a_429_backs_off_longer(tmp_path):
+    h, _ = make(tmp_path, {}, yahoo=True)
+    h.raw_get = lambda url, params=None, headers=None, timeout=None: Resp({}, 429)
+    with pytest.raises(feeds.FeedError):
+        h.yahoo(feeds.SPARK, {"symbols": "SPY"})
+    assert json.loads((tmp_path / "yahoo_down.json").read_text())["until"] == NOW + datasrc.YAHOO_BACKOFF_S[429]
+
+
+def test_yahoo_daily_bars_are_cached_and_cover_london_lines(tmp_path):
+    h, calls = make(tmp_path, {"/v8/finance/chart/": _chart_body([140.0, 141.0, 142.8])}, yahoo=True)
+    a = h.get(datasrc.CHART_PREFIX + "VWRP.L", {"range": "1mo", "interval": "1d"})
+    b = h.get(datasrc.CHART_PREFIX + "VWRP.L", {"range": "1mo", "interval": "1d"})
+    assert a == b and a["chart"]["result"][0]["indicators"]["quote"][0]["close"][-1] == 142.8
+    assert len(calls) == 1 and calls[0][1]["interval"] == "1d"
+
+
+def test_an_empty_yahoo_chart_is_not_trusted(tmp_path):
+    h, calls = make(tmp_path, {"/v8/finance/chart/": {"chart": {"result": [{"timestamp": [], "indicators": {}}]}}},
+                    yahoo=True)
+    with pytest.raises(feeds.FeedError):
+        h.get(datasrc.CHART_PREFIX + "VWRP.L", {"range": "1mo", "interval": "1d"})  # no fallback for London bars
+
+
+def test_an_empty_history_is_missing_data_not_a_crash():
+    get = lambda url, params: {"chart": {"result": [{"indicators": {"quote": [{"close": [None], "volume": [0]}]}}]}}  # noqa: E731
+    with pytest.raises(feeds.FeedError):
+        review.history("SPY", get)

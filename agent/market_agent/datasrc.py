@@ -8,6 +8,13 @@ honest client:
 - CBOE's public delayed VIX quote and history;
 - the broker's own position prices for London lines (T212 currentPrice), which no free honest source covers.
 
+agent-1.24 (11 Nov 2026): Yahoo is back, FIRST, with an honest User-Agent (`YAHOO_UA`: the agent's name and this
+repository, no browser disguise). The 7 Nov finding "Yahoo refuses an honest client" was wrong: Yahoo answers 429 to
+any User-Agent carrying the `python-requests` library token, and 200 to the same honest name without it (tested
+11 Nov on spark and chart). The owner approved Yahoo with an honest UA on 11 Nov. Yahoo covers what Tiingo's free
+plan could not: London lines (VWRP.L), FX, VIX, any US name's daily bars, with no monthly symbol cap. Tiingo, CBOE and
+the broker's prices stay as the fallback, in the same order as before, whenever Yahoo fails or is backing off.
+
 Anything else fails with FeedError, which the agent already treats as UNVERIFIED (no trade). Tiingo's free plan
 allows 50 requests an hour and 1,000 a day: calls are counted in state/tiingo_usage.json and refused above
 `hour_cap`/`day_cap`, and daily bars are cached on disk for `bars_ttl_s`.
@@ -47,6 +54,10 @@ class TiingoDown(BudgetError):
 
 
 DOWN_PROBE_S = 3 * 3600
+YAHOO_UA = {"User-Agent": "market-agent/1.24 (https://github.com/GreensideComps/agent-skills; demo research)"}
+YAHOO_BACKOFF_S = {429: 900}      # seconds Yahoo is left alone after a refusal; any other failure: YAHOO_RETRY_S
+YAHOO_RETRY_S = 300
+YAHOO_INTRADAY_TTL_S = 60
 
 
 def us_hours(now: float) -> bool:
@@ -75,7 +86,8 @@ def _body(r):
 
 class Honest:
     def __init__(self, root: str | Path, positions_fn: Callable[[], dict], clock: Callable[[], float] = time.time,
-                 hour_cap: int = 45, day_cap: int = 900, bars_ttl_s: float = 900, raw_get=None, quote_reserve: int = 20):
+                 hour_cap: int = 45, day_cap: int = 900, bars_ttl_s: float = 900, raw_get=None, quote_reserve: int = 20,
+                 yahoo: bool = True):
         self.root = Path(root)
         self.positions_fn = positions_fn
         self.clock = clock
@@ -84,6 +96,7 @@ class Honest:
         self._fx: dict | None = None
         self._snap: dict = {"at": -1e18, "rows": {}}
         self._q: dict = {"at": -1e18, "want": [], "rows": {}}
+        self.yahoo_on = yahoo
 
     # ------------------------------------------------------------ entry point (Yahoo-shaped answers)
     def get(self, url: str, params: dict) -> dict:
@@ -96,6 +109,84 @@ class Honest:
         if "yahoo.com" in url or "nasdaq.com" in url:
             raise feeds.FeedError(f"{url.split('/')[2]}: refuses an honest client; no replacement (UNVERIFIED)")
         return feeds.http_get(url, params)
+
+    # ------------------------------------------------------------ Yahoo, honest User-Agent, with a back-off
+    def _yahoo_down_until(self) -> float:
+        try:
+            return float(json.loads((self.root / "yahoo_down.json").read_text()).get("until", 0))
+        except (OSError, ValueError, TypeError):
+            return 0.0
+
+    def yahoo(self, url: str, params: dict, timeout: float = 20.0) -> dict:
+        """One Yahoo call. A refusal or failure is recorded in state/yahoo_down.json so every duty (and the next
+        agent process) leaves Yahoo alone for a while and uses the fallback sources instead of hammering it."""
+        if not self.yahoo_on:
+            raise feeds.FeedError("yahoo: off")
+        now = self.clock()
+        until = self._yahoo_down_until()
+        if now < until:
+            raise feeds.FeedError(f"yahoo: backing off until {feeds_iso(until)}")
+        try:
+            r = self.raw_get(url, params=params, headers=YAHOO_UA, timeout=timeout)
+            code = r.status_code
+            body = r.json() if code == 200 else None
+        except (requests.RequestException, ValueError) as e:
+            code, body = None, None
+            err = f"yahoo {url.rsplit('/', 1)[-1]}: {type(e).__name__}"
+        else:
+            err = f"yahoo {url.rsplit('/', 1)[-1]}: HTTP {code}"
+        if code == 200 and isinstance(body, dict):
+            if until:
+                (self.root / "yahoo_down.json").unlink(missing_ok=True)
+            return body
+        back = YAHOO_BACKOFF_S.get(code, YAHOO_RETRY_S)
+        try:
+            (self.root / "yahoo_down.json").write_text(json.dumps({"until": now + back, "since": feeds_iso(now),
+                                                                    "why": err}))
+        except OSError:
+            pass
+        raise feeds.FeedError(err)
+
+    def _yahoo_spark(self, symbols: list[str]) -> dict:
+        """{sym: spark row} for every symbol Yahoo priced; missing or empty symbols are simply absent."""
+        out: dict[str, dict] = {}
+        for i in range(0, len(symbols), 20):
+            chunk = symbols[i:i + 20]
+            d = self.yahoo(feeds.SPARK, {"symbols": ",".join(chunk), "range": "1d", "interval": "5m"})
+            for s in chunk:
+                v = d.get(s)
+                if not isinstance(v, dict):
+                    continue
+                last = next(((t, c) for t, c in zip(reversed(v.get("timestamp") or []), reversed(v.get("close") or []))
+                             if c is not None and t is not None), None)
+                if last and isinstance(last[1], (int, float)) and last[1] > 0:
+                    out[s] = _spark_row(float(last[0]), float(last[1]), v.get("previousClose"))
+        return out
+
+    def _yahoo_chart(self, sym: str, rng: str, interval: str) -> dict:
+        """Yahoo's own chart answer (the shape every caller parses), cached on disk: daily bars until the next US
+        close or `bars_ttl_s`, intraday bars for a minute."""
+        d = self.root / "bars_cache"
+        d.mkdir(exist_ok=True)
+        p = d / f"yahoo_{sym.replace('/', '_').replace('^', 'idx_')}_{rng}_{interval}.json"
+        now = self.clock()
+        try:
+            c = json.loads(p.read_text())
+            fresh = (now - c["at"] < YAHOO_INTRADAY_TTL_S) if interval != "1d" else \
+                (c["at"] >= last_eod(now) or now - c["at"] < self.bars_ttl_s)
+            if fresh:
+                return c["body"]
+        except (OSError, ValueError, KeyError):
+            pass
+        body = self.yahoo(CHART_PREFIX + sym, {"range": rng, "interval": interval, "events": "div,split"})
+        res = ((body.get("chart") or {}).get("result") or [None])[0]
+        closes = (((res or {}).get("indicators") or {}).get("quote") or [{}])[0].get("close") or []
+        if not res or not res.get("timestamp") or not any(c is not None for c in closes):
+            raise feeds.FeedError(f"yahoo chart {sym}: no bars")
+        tmp = p.with_suffix(".tmp")
+        tmp.write_text(json.dumps({"at": now, "body": body}))
+        tmp.replace(p)
+        return body
 
     # ------------------------------------------------------------ Tiingo with a request budget
     def _token(self) -> str:
@@ -150,7 +241,13 @@ class Honest:
         hours), not the full-market snapshot, which ran the free plan's monthly bandwidth out on 10 Nov 2026. When
         Tiingo fails (bandwidth, budget, outage) a held line falls back to the broker's own position price, and
         GBPUSD to the rate implied by the broker's USD positions; anything else stays UNVERIFIED."""
-        out: dict[str, dict] = {}
+        try:
+            out = self._yahoo_spark(symbols)  # agent-1.24: Yahoo first, the sources below fill only what it missed
+        except feeds.FeedError:
+            out = {}
+        symbols = [s for s in symbols if s not in out]
+        if not symbols:
+            return out
         bq = self.positions_fn() or {}
         us = [s for s in symbols if not s.endswith((".L", "=X")) and not s.startswith("^")]
         if us:
@@ -301,6 +398,10 @@ class Honest:
 
     # ------------------------------------------------------------ bars
     def chart(self, sym: str, rng: str, interval: str) -> dict:
+        try:
+            return self._yahoo_chart(sym, rng, interval)  # agent-1.24: Yahoo first
+        except feeds.FeedError:
+            pass
         if interval != "1d":
             return self._intraday(sym, interval)
         if sym == "^VIX":

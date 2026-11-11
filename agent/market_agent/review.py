@@ -17,6 +17,8 @@ import time
 from datetime import date, timedelta
 from typing import Callable
 
+from . import feeds
+
 CHART = "https://query1.finance.yahoo.com/v8/finance/chart/{s}"
 EARNINGS = "https://api.nasdaq.com/api/calendar/earnings"
 WEIGHTS = {"short": 0.40, "medium": 0.35, "long": 0.25}
@@ -31,6 +33,8 @@ def history(sym: str, get: Callable) -> tuple[list[float], list[float]]:
     r = get(CHART.format(s=sym), {"range": "1y", "interval": "1d"})["chart"]["result"][0]
     q = r["indicators"]["quote"][0]
     rows = [(c, v) for c, v in zip(q.get("close") or [], q.get("volume") or []) if c is not None]
+    if not rows:  # agent-1.24: an empty history is missing data, not a crash in factors()
+        raise feeds.FeedError(f"{sym}: no daily closes")
     return [c for c, _ in rows], [float(v or 0) for _, v in rows]
 
 
