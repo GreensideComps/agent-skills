@@ -13,6 +13,8 @@ import numpy as np
 import pandas as pd
 import pytest
 
+import conftest
+
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import edge_b5 as b5  # noqa: E402
 import edge_b5_addendum3  # noqa: E402
@@ -242,6 +244,11 @@ def test_before_run_2_d31_authorised_manifest_3_and_the_gate_stayed_shut_until_p
     assert edge_registry.sharpe_list(ev, "portfolio_excess_vs_vwrp") == []
     with pytest.raises(PermissionError, match="not open"):
         edge_registry.b5_run_open(verify_files=True)
+    if not conftest.b5_inputs_intact():
+        with pytest.raises((ValueError, OSError), match=refusal("")):
+            pre(e)                      # without the run's exact input data, preflight refuses and takes no lock
+        assert not e["lock"].exists()
+        pytest.skip(conftest.NO_B5_INPUTS)
     pre(e)
     assert json.loads(e["lock"].read_text()) == {"owner_message": RUN_2_OWNER_MESSAGE, "manifest": MANIFEST_3_SHA256}
     assert e["lock"].read_bytes() == RUN_2_LOCK.read_bytes()  # the same lock run 2 took
@@ -501,7 +508,7 @@ def test_re_authorising_spent_d31_cannot_start_a_second_run(tmp_path, monkeypatc
         pre(e)
     with monkeypatch.context() as m:
         m.setattr(edge_registry, "B5_SPENT_AUTHORISATIONS", PRE_RUN_2_SPENT)
-        with pytest.raises(ValueError, match="already run"):
+        with pytest.raises((ValueError, OSError), match=refusal("already run")):
             pre(dict(e, repo=manifest_3_repo(tmp_path)))
     assert not e["lock"].exists() and reg.read_bytes() == edge_registry.PATH.read_bytes()
     point_gate(monkeypatch, e)
@@ -665,7 +672,10 @@ def test_the_real_manifest_matches_the_files_it_names():
             p = Path(path) if Path(path).is_absolute() else REPO / path
             if path == "research/edge_registry.py":
                 assert h == MANIFEST_3_EDGE_REGISTRY_SHA256 and sha(p) != h
-            elif p.exists():  # the shared research data is absent on some machines
+            elif Path(path).is_absolute():  # shared research data: absent on some machines, and rebuilt weekly
+                if conftest.b5_inputs_intact():  # since 6 Nov 2026 (then the run-2 bytes are no longer there)
+                    assert sha(p) == h, path
+            elif p.exists():
                 assert sha(p) == h, path
     run_2_edge_registry_bytes()
 
@@ -708,7 +718,7 @@ def test_the_real_gate_refuses_manifest_3_on_its_files_even_with_a_fresh_authori
     monkeypatch.setattr(edge_registry, "STATUS", status)
     monkeypatch.setattr(edge_registry, "B5_LOCK", lock)
     assert edge_registry.b5_run_open(verify_files=False) == "cmsg_FRESH"  # every other control passes
-    with pytest.raises(PermissionError, match="edge_registry.py does not match"):
+    with pytest.raises(PermissionError, match=refusal("edge_registry.py does not match")):
         edge_registry.b5_run_open(verify_files=True)
 
 
@@ -723,6 +733,19 @@ HISTORICAL_SHA256 = {
     "equity/reports/research/edge/b5_trials.md": RUN_2_REPORT_SHA256,  # a4a07d7; status history run 2 outcome
     "docs/edge/B5_RUN_MANIFEST_3.json": MANIFEST_3_SHA256,  # bb9ea44; registry event B5-V3-RUN-MANIFEST-3 (D30)
 }
+
+
+def refusal(expected: str) -> str:
+    """The message a refused run carries. The inputs are checked first, so on a machine without run 2's exact input
+    data (see conftest) the run is refused there, before the control the test names (a changed file is a ValueError
+    or PermissionError, an absent one a FileNotFoundError); with the data, at that control."""
+    return expected if conftest.b5_inputs_intact() else r"inputs file .* does not match|No such file or directory"
+
+
+def historical(path: str) -> Path:
+    """Where a pinned artefact is read from. The registry is append-only and has grown since run 2, so its pinned
+    bytes are its first 252 lines (conftest.run_2_registry_bytes, read here through the snapshot path)."""
+    return edge_registry.PATH if path == "research/edge/trials.jsonl" else REPO / path
 
 
 def pinned_ok(p: Path, h: str) -> bool:
@@ -760,7 +783,7 @@ def test_preflight_refuses_manifest_3_on_its_files_even_with_a_fresh_authorisati
                                                    "manifest_id": run.MANIFEST_ID, "manifest_sha256": MANIFEST_3_SHA256}}))
     assert edge_registry.b5_authorisation(status)["owner_message"] == "cmsg_FRESH"
     e = {"registry": reg, "status": status, "manifest": run.MANIFEST, "repo": REPO, "lock": tmp_path / "b5.lock"}
-    with pytest.raises(ValueError, match="research/edge_registry.py does not match the manifest"):
+    with pytest.raises((ValueError, OSError), match=refusal("research/edge_registry.py does not match the manifest")):
         pre(e)
     assert not e["lock"].exists() and reg.read_bytes() == edge_registry.PATH.read_bytes()
     assert sha(run.MANIFEST) == MANIFEST_3_SHA256
@@ -770,13 +793,13 @@ def test_preflight_refuses_manifest_3_on_its_files_even_with_a_fresh_authorisati
 def test_historical_evidence_is_byte_identical_to_its_pinned_hash(path):
     """D33/D34: the registry, status history, both archived locks, run 2's report and MANIFEST-3 keep the exact
     bytes recorded when they were written (pinned sha256, no git history needed)."""
-    assert pinned_ok(REPO / path, HISTORICAL_SHA256[path])
+    assert pinned_ok(historical(path), HISTORICAL_SHA256[path])
 
 
 @pytest.mark.parametrize("path", sorted(HISTORICAL_SHA256) + ["fixture"])
 def test_the_pins_detect_an_altered_or_missing_copy(path, tmp_path):
     """Any one-byte change, truncation or deletion of a pinned artefact (or of the run-2 fixture) fails its pin."""
-    src, h = (RUN_2_EDGE_REGISTRY, MANIFEST_3_EDGE_REGISTRY_SHA256) if path == "fixture" else (REPO / path,
+    src, h = (RUN_2_EDGE_REGISTRY, MANIFEST_3_EDGE_REGISTRY_SHA256) if path == "fixture" else (historical(path),
                                                                                               HISTORICAL_SHA256[path])
     data = src.read_bytes()
     c = tmp_path / "copy"
