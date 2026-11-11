@@ -179,8 +179,13 @@ def test_a_book_wide_limit_one_strategy_applied_and_another_did_not():
     rep = invariants.check(now=NOW, cfg=cfg, positions=positions, pending=[{"id": 1, "ticker": "CROX_US_EQ"},
                                                                          {"id": 2, "ticker": "SPB_US_EQ"}],
                            records=recs, stops=stops, market_open=lambda t: True, quote_ok=lambda t: True, total=1000.0)
-    assert codes(rep) == [("limit_bypassed", "CROX_US_EQ", "warn")]
-    assert "buyback_value" in rep["violations"][0]["text"]
+    assert codes(rep) == [("limit_bypassed", "CROX_US_EQ", "info")]              # recorded, never an alert
+    assert "buyback_value" in rep["violations"][0]["text"] and rep["ok"]
+    later = invariants.check(now=NOW + 40 * 86400, cfg=cfg, positions=positions, pending=[{"id": 1, "ticker": "CROX_US_EQ"},
+                                                                                        {"id": 2, "ticker": "SPB_US_EQ"}],
+                             records=recs, stops=stops, market_open=lambda t: True, quote_ok=lambda t: True,
+                             total=1000.0, seen=rep["seen"])
+    assert codes(later) == [("limit_bypassed", "CROX_US_EQ", "info")] and later["ok"]   # however long it lasts
     positions.pop("CROX_US_EQ")                                                  # sold: the promise holds again
     rep = invariants.check(now=NOW, cfg=cfg, positions=positions, pending=[{"id": 2, "ticker": "SPB_US_EQ"}],
                            records=recs[1:], stops={"b": stops["b"]}, market_open=lambda t: True,

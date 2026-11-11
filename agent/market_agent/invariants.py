@@ -1,4 +1,4 @@
-"""agent-1.23 self-check: ten standing promises about the book, tested on every broker pass.
+"""agent-1.23 self-check: nine standing promises about the book (and one recorded note), tested on every broker pass.
 
 Why this exists: on 11 Nov 2026 the owner, not the system, noticed that six holdings had no stop. Each feature had its
 own tests, but nothing checked the book as a whole against what the system says about itself. This module does. It
@@ -17,8 +17,10 @@ The promises (code: meaning):
   overdue_refresh  no stock_screen name is held past its 12-month hold plus a month's grace
   weight_cap       no single name is more than 1.25x the single-name cap
   unpriced         every holding has a validated price while its market is open
-  limit_bypassed   no strategy holds a name another strategy left out for a book-wide limit (the sector limit):
-                   the limit is about the whole book, so it must not depend on which strategy asks
+  limit_bypassed   (recorded only, never an alert) a strategy holds a name the screener left out for its sector limit.
+                   The owner's limit is on the whole book (+-10 points active against VWRP look-through), and one
+                   2% line does not breach it, so this is a note for the reader, not a breach. It becomes a real
+                   check when the agent has a sector for every ticker and can measure the book's active weights.
 
 Severity grows with how long a breach has lasted while something could have been done about it (market-open time for
 the checks that need an open market, wall-clock time for the rest), so the few minutes between a fill and its stop
@@ -48,7 +50,7 @@ GRACE = {                   # code -> (clock, seconds before `warn`)
     "overdue_refresh": ("wall", 0.0),
     "weight_cap": ("wall", 3600.0),
     "unpriced": ("open", 1800.0),
-    "limit_bypassed": ("wall", 0.0),
+    "limit_bypassed": ("wall", float("inf")),   # recorded only, never an alert: see the note where it is raised
 }
 CRITICAL_AT_WARN = {"unprotected"}   # these are critical as soon as their grace has passed
 # Strategies whose exit is a rule in code rather than a stop or a time limit on the trade itself.

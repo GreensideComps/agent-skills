@@ -425,7 +425,7 @@ and tested (`agent/tests/test_stop_lifecycle.py`, `agent/tests/test_invariants.p
 | A resting stop locks the shares, so December's equal-weight trims would have silently done nothing, and a refused top-up was still marked done. | Trims and exits free the shares first, but only after a dry run of the risk gate says the sell will go out. The month is marked done only when the order was placed. |
 | A stop cancelled for an exit that never went out was never restored. | It is put back after 30 minutes (`EXIT_GRACE_S`). |
 | No stop resting (refused, lost, market shut) meant no protection at all for the four strategies without their own stop. | The agent sells at the same 30% level itself (`disaster_stop` exit) whenever no broker stop is resting. |
-| Nothing checked the book as a whole. | `invariants.py` tests ten promises on every broker pass and writes `state/invariants.json`; see below. |
+| Nothing checked the book as a whole. | `invariants.py` tests nine promises on every broker pass (and records one note) and writes `state/invariants.json`; see below. |
 
 ### The self-check
 
@@ -443,7 +443,7 @@ and tested (`agent/tests/test_stop_lifecycle.py`, `agent/tests/test_invariants.p
 | overdue_refresh | no stock_screen name is held past 12 months plus a month | none |
 | weight_cap | no name is over 1.25x the single-name cap | 1 h |
 | unpriced | every holding has a validated price while its market is open | 30 min of market time |
-| limit_bypassed | no strategy holds a name another strategy left out for a book-wide limit (the sector limit) | none |
+| limit_bypassed | a strategy holds a name the screener left out for its sector limit | recorded only, never an alert: the owner's limit is on the whole book, and the agent cannot yet measure sector weights |
 
 A breach inside its grace period is recorded as `info` and raises nothing, so the minutes between a fill and its stop
 are quiet. Past the grace it is `warn` (an `invariant:<code>:<ticker>` alert); an unprotected holding past its grace,
