@@ -76,10 +76,16 @@ def strategy_scores(records: list[dict]) -> dict[str, dict]:
     return out
 
 
-def exit_orders(records, positions, quote_of, now, vwrp_px, review_why=None) -> list[tuple]:
+def exit_orders(records, positions, quote_of, now, vwrp_px, review_why=None, disaster=None,
+                live_stops=None) -> list[tuple]:
     """Stop-loss, take-profit and time-stop exits for open trades whose price is validated, plus an early exit when
     `review_why(ticker, strategy)` names one (agent-1.5: the multi-horizon review turned against the trade; agent-1.6:
-    a social_trend brand's attention faded)."""
+    a social_trend brand's attention faded).
+
+    agent-1.23: a trade protected only by the broker-held disaster stop (`disaster`, see `stop_level`) is sold here
+    with reason `disaster_stop` once it is that far below entry and its entry id is not in `live_stops` (the entry ids
+    with a stop resting at the broker). So the safety net holds even when the broker refuses or loses the stop."""
+    live_stops = live_stops or set()
     out = []
     for t in trades(records):
         if t["exit"]:
@@ -94,7 +100,9 @@ def exit_orders(records, positions, quote_of, now, vwrp_px, review_why=None) -> 
         if avail <= 0 or not q:
             continue
         ret = q["price"] / sig["entry_px"] - 1
+        level, is_disaster = stop_level(sig, disaster)
         why = ("stop" if sig["stop"] is not None and ret <= -sig["stop"]
+               else "disaster_stop" if is_disaster and ret <= -level and e["id"] not in live_stops
                else "take_profit" if sig["take_profit"] is not None and ret >= sig["take_profit"]
                else "time" if sig["time_stop_s"] is not None and now - e.get("t", now) >= sig["time_stop_s"]
                else (review_why(tk, sig["strategy"]) if review_why else None))
@@ -211,30 +219,140 @@ def open_trades(records: list[dict]) -> list[dict]:
     return [t["entry"] for t in trades(records) if not t["exit"]]
 
 
-def stops_needed(records: list[dict], positions: dict, stops: dict, disaster: dict | None = None) -> list[dict]:
-    """Open trades still held with no live stop: [{entry_id, ticker, qty, stop_px, strategy}].
+STOP_RETRY_S = 1800        # first wait after a broker refusal, cancellation or loss; doubles per attempt
+STOP_RETRY_MAX_S = 6 * 3600
+EXIT_GRACE_S = 1800        # a stop the agent cancelled for an exit or trim is put back if that never happened
+QTY_TOL = 1e-6
+
+
+def stop_level(sig: dict, disaster: dict | None) -> tuple[float | None, bool]:
+    """(stop distance below entry as a fraction, is it the disaster stop). The trade's own stop wins; a strategy with
+    none gets the disaster stop when it is listed in `disaster` ({enabled, pct, strategies}); else (None, False)."""
+    if sig.get("stop") is not None:
+        return sig["stop"], False
+    if disaster and disaster.get("enabled") and any(
+            str(sig.get("strategy") or "").startswith(x) for x in disaster.get("strategies", [])):
+        return disaster["pct"], True
+    return None, False
+
+
+def _ts(v) -> float:
+    """Epoch seconds from a number or an ISO 'YYYY-MM-DDTHH:MM:SSZ' string; 0 when unreadable (treated as long ago)."""
+    if isinstance(v, (int, float)) and not isinstance(v, bool):
+        return float(v)
+    try:
+        import calendar  # noqa: PLC0415
+        import time  # noqa: PLC0415
+        return float(calendar.timegm(time.strptime(str(v), "%Y-%m-%dT%H:%M:%SZ")))
+    except (ValueError, TypeError):
+        return 0.0
+
+
+def _backoff(attempts: int) -> float:
+    return 0.0 if attempts <= 0 else min(STOP_RETRY_S * 2 ** (attempts - 1), STOP_RETRY_MAX_S)
+
+
+def stop_action(prev: dict | None, qty: float, now: float) -> str:
+    """What to do about one open trade's broker stop, from its stops.json record `prev` and the position's quantity:
+
+    place    no record, or an earlier failure whose retry is due
+    live     a stop rests at the broker for the whole position
+    resize   a stop rests but for a different quantity (a top-up or partial sale): cancel it, then place again
+    replace  the stop is gone while the trade is still held: the broker cancelled, rejected or lost it, it was
+             cancelled for a resize, or the agent cancelled it for an exit or trim that has not closed the trade
+    wait     a retry or the exit grace period is still running
+    done     the stop filled (the trade is being closed from the broker's record)
+
+    Every state other than `live` and `done` leaves the holding without a broker stop; `wait` is the only one that
+    does nothing about it this pass, and it always ends."""
+    if not prev:
+        return "place"
+    if prev.get("filled"):
+        return "done"
+    if prev.get("order_id"):
+        if prev.get("qty") is None:
+            return "live"  # a record from before quantities were kept: taken as covering the position
+        return "live" if abs(float(prev["qty"]) - qty) <= QTY_TOL + 1e-4 * abs(qty) else "resize"
+    attempts = int(prev.get("attempts") or 0)
+    if prev.get("why"):  # the agent's own cancel ahead of an exit or trim
+        since = _ts(prev.get("cancelled"))
+        changed = abs(float(prev.get("qty") or 0) - qty) > QTY_TOL + 1e-4 * abs(qty)
+        return "replace" if changed or now - since >= EXIT_GRACE_S else "wait"
+    if prev.get("resized"):
+        return "replace"
+    for k in ("cancelled", "rejected", "lost"):
+        if prev.get(k):
+            lost_t = _ts(prev[k])
+            if lost_t - _ts(prev.get("t") or prev.get("ts")) >= 86400:
+                attempts = 0  # it had rested for a day or more: a first loss, replaced at once
+            return "replace" if now - lost_t >= _backoff(attempts) else "wait"
+    if prev.get("failed"):
+        if too_far(prev["failed"]) and not prev.get("clamp_tried"):
+            return "place"  # the clamp ladder has not been tried yet
+        return "place" if now - _ts(prev.get("t") or prev.get("ts")) >= _backoff(max(attempts, 1)) else "wait"
+    return "place"
+
+
+def stops_needed(records: list[dict], positions: dict, stops: dict, disaster: dict | None = None,
+                 now: float | None = None) -> list[dict]:
+    """Open trades still held whose broker stop needs action this pass:
+    [{entry_id, ticker, qty, stop_px, strategy, px, disaster, replace, resize, cancel, attempts, ladder_only}].
 
     agent-1.22.3: a trade whose strategy has no stop of its own gets the disaster stop (`disaster`: {enabled, pct,
     strategies}) below its entry price, a broker-held safety net for crashes and agent outages (unproven, under test).
-    A stop the broker cancelled while the position is still held is placed again (the stop never silently lapses)."""
-    dis = disaster if disaster and disaster.get("enabled") else None
+    agent-1.23: the stop never lapses silently. A stop the broker cancelled, rejected or lost, a placement that
+    failed for any reason, and a stop the agent cancelled for an exit that did not happen are all placed again (with
+    a doubling wait between attempts, see `stop_action`); a stop for the wrong quantity is resized."""
+    import time as _time  # noqa: PLC0415
+    now = _time.time() if now is None else now
     out = []
     for e in open_trades(records):
         p = positions.get(e["ticker"])
         sig = e["signal"]
-        stop = sig.get("stop")
-        if stop is None and dis and any(sig.get("strategy", "").startswith(x) for x in dis.get("strategies", [])):
-            stop = dis["pct"]
-        prev = stops.get(e["id"])
-        retry = bool(prev) and too_far(prev.get("failed")) and not prev.get("clamp_tried")
-        lapsed = bool(prev) and not prev.get("order_id") and bool(prev.get("cancelled")) and not prev.get("filled") \
-            and not prev.get("why")  # "why" marks the agent's own cancel ahead of an exit: never re-place that one
-        if (prev and not retry and not lapsed) or not p or float(p.get("quantity") or 0) <= 0 or stop is None:
+        stop, is_disaster = stop_level(sig, disaster)
+        qty = float((p or {}).get("quantity") or 0)
+        if not p or qty <= 0 or stop is None:
             continue
-        out.append({"entry_id": e["id"], "ticker": e["ticker"], "qty": float(p["quantity"]),
+        prev = stops.get(e["id"])
+        act = stop_action(prev, qty, now)
+        if act in ("live", "wait", "done"):
+            continue
+        fresh = prev and now - _ts(prev.get("t") or prev.get("ts")) < 86400
+        out.append({"entry_id": e["id"], "ticker": e["ticker"], "qty": qty,
                     "stop_px": round(sig["entry_px"] * (1 - stop), 2), "strategy": sig["strategy"],
-                    "px": float(p.get("currentPrice") or 0), "disaster": sig.get("stop") is None,
-                    "replace": lapsed})
+                    "px": float(p.get("currentPrice") or 0), "disaster": is_disaster,
+                    "replace": act == "replace", "resize": act == "resize",
+                    "cancel": prev.get("order_id") if act == "resize" else None,
+                    "attempts": int((prev or {}).get("attempts") or 0) + 1 if fresh else 0,
+                    "ladder_only": bool(prev) and too_far(prev.get("failed")) and not prev.get("clamp_tried")})
+    return out
+
+
+def unprotected(records: list[dict], positions: dict, stops: dict, live_ids: set, disaster: dict | None = None
+                ) -> list[dict]:
+    """Open trades held with a stop rule but no stop actually resting at the broker for the whole position:
+    [{entry_id, ticker, strategy, qty, covered, why}]. `live_ids` are the broker's pending order ids. This is the
+    ground truth the invariants check uses: it trusts the broker's order book, not stops.json."""
+    out = []
+    for e in open_trades(records):
+        p = positions.get(e["ticker"])
+        qty = float((p or {}).get("quantity") or 0)
+        level, _ = stop_level(e["signal"], disaster)
+        if not p or qty <= 0 or level is None:
+            continue
+        prev = stops.get(e["id"]) or {}
+        oid = prev.get("order_id")
+        covered = float(prev["qty"] if prev.get("qty") is not None else qty) if oid and oid in live_ids else 0.0
+        if covered + QTY_TOL + 1e-4 * qty >= qty:
+            continue
+        why = ("no stop was ever placed" if not prev else
+               f"stop covers {covered:g} of {qty:g}" if covered else
+               "stops.json names an order the broker does not show" if oid else
+               f"placement failed: {str(prev['failed'])[:80]}" if prev.get("failed") else
+               f"cancelled by the agent for: {prev['why']}" if prev.get("why") else
+               next((f"{k} by the broker" for k in ("cancelled", "rejected", "lost") if prev.get(k)), "no live stop"))
+        out.append({"entry_id": e["id"], "ticker": e["ticker"], "strategy": e["signal"].get("strategy"), "qty": qty,
+                    "covered": covered, "why": why})
     return out
 
 

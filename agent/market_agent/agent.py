@@ -22,6 +22,7 @@ from . import (
     execution,
     feeds,
     gap_rebound,
+    invariants,
     merger,
     news_shock,
     slippage,
@@ -65,6 +66,8 @@ class Agent:
         self.started = clock()
         self.last_ok: dict[str, float] = {}
         self.need_decide = False
+        self.need_check = False
+        self.inv: dict = {}                  # last invariants report (agent-1.23)
         self.reviews: dict[str, dict] = {}   # agent-1.5 multi-horizon review per T212 ticker
         self.attn: dict[str, float] = {}     # last Wikipedia attention z per T212 ticker
         self.earn: dict[str, str] = {}
@@ -147,6 +150,9 @@ class Agent:
         if self.need_decide:  # decisions use this pass's positions and the prices fetched after them
             self.need_decide = False
             self._run_once("decide", self.decide)
+        if self.need_check:  # agent-1.23: the self-check sees what this pass actually left at the broker
+            self.need_check = False
+            self._run_once("invariants", self.check_invariants)
         self._run("news", self.refresh_news)
         self._run("heartbeat", self.write_heartbeat)
 
@@ -212,6 +218,7 @@ class Agent:
             self.positions = {(p.get("instrument") or {}).get("ticker"): p for p in self.c.positions()}
         self.snapshot()
         self.need_decide = True
+        self.need_check = True
         self.due["prices"] = 0  # price the current holdings before deciding
 
     def broker_quotes(self) -> dict[str, dict]:
@@ -1335,8 +1342,9 @@ class Agent:
             if order is None:
                 order = self._active_entry(recs, day, vwrp_px, notes)
         acted = [self._order(*order, day)] if order else []
-        if order and (order[6] or {}).get("type") in ("active_trim", "active_topup"):
-            self._ew_mark(order[0])
+        if order and (order[6] or {}).get("type") in ("active_trim", "active_topup") \
+                and acted[0] and acted[0].get("status") == "placed":
+            self._ew_mark(order[0])  # agent-1.23: a refused trim or top-up is not counted as done
         self.s.event("decision", orders=[a for a in acted if a],
                      no_trade=not any(a and a.get("status") == "placed" for a in acted), notes=notes)
 
@@ -1348,7 +1356,8 @@ class Agent:
             return [], []  # only a complete basket is re-weighted
         fxq = self.quotes.get(self.cfg["benchmark"]["fx"])
         state = self.s.read("stock_screen.json") or {}
-        trims, tops, n = stock_screen.ew_orders(sc, recs, self.positions, self._quote, fxq["price"] if fxq else None,
+        stops, resting = self._resting()
+        trims, tops, n = stock_screen.ew_orders(sc, recs, self._pos_free(resting), self._quote, fxq["price"] if fxq else None,
                                                 self.clock(), vwrp_px, state, self.market_open,
                                                 self.s.read("precision.json") or {}, sc.get("qty_decimals", 3))
         notes += n
@@ -1358,7 +1367,7 @@ class Agent:
                 and not trims and not tops and not n and len(self.positions):
             self.s._replace("stock_screen.json", {**state, "ew_month": month})
             self.s.event("ew_rebalance_done", strategy=stock_screen.NAME, month=month)
-        return trims, tops
+        return self._free_shares(trims, stops, resting), tops
 
     def _ew_mark(self, ticker: str) -> None:
         state = self.s.read("stock_screen.json") or {}
@@ -1432,46 +1441,89 @@ class Agent:
                       | {e["ticker"] for e in active.open_trades(self.s.intents())
                          if e["signal"].get("strategy") == gap_rebound.NAME})
 
-    def _active_exits(self, recs, vwrp_px) -> list[tuple]:
-        if not self._watch():
-            return []
+    def _resting(self) -> tuple[dict, dict]:
+        """(stops.json, {ticker: (entry id, record)} for every stop believed to rest at the broker)."""
         stops = self.s.read("stops.json") or {}
-        resting = {v["ticker"]: (k, v) for k, v in stops.items() if v.get("order_id")}
-        # a resting sell stop holds the shares, so the trade's whole quantity counts as available to exit
-        pos = {t: ({**p, "quantityAvailableForTrading": p.get("quantity")} if t in resting else p)
-               for t, p in self.positions.items()}
+        return stops, {v["ticker"]: (k, v) for k, v in stops.items() if v.get("order_id")}
+
+    def _pos_free(self, resting: dict) -> dict:
+        """Positions with the shares held by our own resting stop counted as available: cancelling the stop frees
+        them, which `_free_shares` does before any sell goes out."""
+        return {t: ({**p, "quantityAvailableForTrading": p.get("quantity")} if t in resting else p)
+                for t, p in self.positions.items()}
+
+    def _free_shares(self, orders: list[tuple], stops: dict, resting: dict) -> list[tuple]:
+        """Sell orders that can go now. A resting broker stop holds the shares, so for a name that has one the stop
+        is cancelled first and the sell goes out on a later pass, once the broker shows it gone. If the sell then
+        never closes the trade, `active.stop_action` puts the stop back after EXIT_GRACE_S."""
         out = []
-        rv = self._review_why if (self.cfg["active"].get("review") or {}).get("enabled") else None
-        for o in active.exit_orders(recs, pos, self._quote, self.clock(), vwrp_px, rv):
+        for o in orders:
             if o[0] not in resting:
                 out.append(o)
                 continue
             k, v = resting[o[0]]
-            if not self.market_open(o[0]) or self.s.control().get("trading_enabled") is not True:
-                continue  # keep the protection until the exit could actually be sent
-            try:  # cancel the broker stop first; the exit goes out on a later pass once the broker shows it gone
+            why = (o[6] or {}).get("why") or (o[6] or {}).get("type") or "sell"
+            blocked = execution.risk_check(
+                {"ticker": o[0], "quantity": o[1], "value_gbp": abs(o[2])}, control=self.s.control(),
+                records=self.s.intents(), pending=[p for p in self.pending if execution._hid(p) != v["order_id"]],
+                positions=self._pos_free(resting), limits=self.cfg["limits"], day=feeds_ts(self.clock())[:10],
+                consecutive_errors=self.ex.consecutive_errors, quote_ok=o[4], market_open=self.market_open(o[0]))
+            if blocked:  # keep the protection until the sell could actually be sent
+                if self.market_open(o[0]):
+                    self.alert("warn", f"sell_blocked:{o[0]}", f"{o[0]}: sell ({why}) is wanted but the risk gate "
+                               f"would refuse it ({'; '.join(blocked)[:160]}); its broker stop stays in place")
+                continue
+            try:
                 self.c.cancel_order(v["order_id"])
-                self.s._replace("stops.json", {**stops, k: {**v, "order_id": None, "cancelled": feeds_ts(self.clock()),
-                                                             "why": o[6]["why"]}})
-                self.s.event("stop_cancelled", entry=k, ticker=o[0], order_id=v["order_id"], for_exit=o[6]["why"])
+                stops = {**stops, k: {**v, "order_id": None, "cancelled": feeds_ts(self.clock()), "why": why,
+                                      "t": self.clock()}}
+                self.s._replace("stops.json", stops)
+                self.s.event("stop_cancelled", entry=k, ticker=o[0], order_id=v["order_id"], for_exit=why)
             except Exception as e:  # noqa: BLE001 - it may have just filled; the next sync reads the broker's record
                 self.s.event("stop_cancel_failed", entry=k, ticker=o[0], error=str(e)[:300])
             self.due["broker"] = 0
         return out
 
+    def _active_exits(self, recs, vwrp_px) -> list[tuple]:
+        if not self._watch():
+            return []
+        stops, resting = self._resting()
+        live = {execution._hid(p) for p in self.pending}
+        covered = {k for k, v in stops.items() if v.get("order_id") and v["order_id"] in live}
+        rv = self._review_why if (self.cfg["active"].get("review") or {}).get("enabled") else None
+        orders = active.exit_orders(recs, self._pos_free(resting), self._quote, self.clock(), vwrp_px, rv,
+                                    self.cfg["active"].get("disaster_stop"), covered)
+        return self._free_shares(orders, stops, resting)
+
     def _place_stops(self, recs, notes) -> None:
-        """Give every open active trade a resting broker stop at its own stop-loss level (kill switch respected)."""
+        """Give every open active trade a resting broker stop at its own stop-loss level (kill switch respected).
+        agent-1.23: any stop that is missing, failed, lost or the wrong size is acted on (active.stop_action), so a
+        holding with a stop rule is never left without one for longer than a retry wait."""
         if not self._watch() or self.s.control().get("trading_enabled") is not True:
             return
         stops = self.s.read("stops.json") or {}
-        for n in active.stops_needed(recs, self.positions, stops, self.cfg["active"].get("disaster_stop")):
+        now = self.clock()
+        for n in active.stops_needed(recs, self.positions, stops, self.cfg["active"].get("disaster_stop"), now):
             if not self.market_open(n["ticker"]):
                 continue  # placed during the market's own hours, when the broker accepts and works it
-            if n.get("replace"):
-                self.alert("warn", f"stop_lapsed:{n['ticker']}", f"broker stop for {n['ticker']} was cancelled while "
+            prev = stops.get(n["entry_id"]) or {}
+            if n["resize"]:  # cancel now; the right-sized stop goes in on the next pass, once the shares are free
+                try:
+                    self.c.cancel_order(n["cancel"])
+                except Exception as e:  # noqa: BLE001 - the next sync reads what the broker did with it
+                    self.s.event("stop_cancel_failed", entry=n["entry_id"], ticker=n["ticker"], error=str(e)[:300])
+                    continue
+                stops[n["entry_id"]] = {**prev, "order_id": None, "cancelled": feeds_ts(now), "resized": True, "t": now}
+                self.s._replace("stops.json", stops)
+                self.s.event("stop_resized", entry=n["entry_id"], ticker=n["ticker"], order_id=n["cancel"],
+                             from_qty=prev.get("qty"), to_qty=n["qty"])
+                notes.append(f"broker stop for {n['ticker']} resized: {prev.get('qty')} -> {n['qty']}")
+                self.due["broker"] = 0
+                continue
+            if n["replace"] and not prev.get("resized"):
+                self.alert("warn", f"stop_lapsed:{n['ticker']}", f"broker stop for {n['ticker']} was gone while "
                            "still held: placing it again")
-            retry = n["entry_id"] in stops and not n.get("replace")  # "too far" before: straight to the clamp ladder
-            tries = ([] if retry else [n["stop_px"]]) + active.clamp_ladder(n["stop_px"], n.get("px") or 0)
+            tries = ([] if n["ladder_only"] else [n["stop_px"]]) + active.clamp_ladder(n["stop_px"], n.get("px") or 0)
             err, ack, px = None, None, None
             for px in tries:
                 try:
@@ -1484,46 +1536,73 @@ class Agent:
                         break
             if tries and err is None:
                 stops[n["entry_id"]] = {"order_id": (ack or {}).get("id"), "ticker": n["ticker"], "qty": n["qty"],
-                                        "stop_px": px, "ts": feeds_ts(self.clock()), "ack": ack}
+                                        "stop_px": px, "ts": feeds_ts(now), "t": now, "ack": ack,
+                                        "attempts": n["attempts"]}
                 if px != n["stop_px"]:
                     stops[n["entry_id"]]["clamped_from"] = n["stop_px"]
                 self.s.event("stop_placed", entry=n["entry_id"], ticker=n["ticker"], qty=n["qty"], stop_px=px,
                              rule_stop_px=n["stop_px"], order_id=stops[n["entry_id"]]["order_id"],
-                             disaster=n.get("disaster", False))
+                             disaster=n.get("disaster", False), replaced=n["replace"])
                 notes.append(f"broker stop placed: {n['ticker']} {n['qty']} at {px}"
                              + (f" (clamped from {n['stop_px']})" if px != n["stop_px"] else ""))
-            else:  # recorded once; the agent's own stop still watches while it runs
+            else:  # retried with a doubling wait (active.stop_action); the software stop watches meanwhile
                 msg = str(err)[:300] if err else "no stop price inside the broker's band"
-                stops[n["entry_id"]] = {"order_id": None, "ticker": n["ticker"], "failed": msg,
-                                        "ts": feeds_ts(self.clock()), "clamp_tried": True}
-                self.s.event("stop_failed", entry=n["entry_id"], ticker=n["ticker"], error=msg, tried=tries)
+                att = max(1, n["attempts"])
+                stops[n["entry_id"]] = {"order_id": None, "ticker": n["ticker"], "qty": n["qty"], "failed": msg,
+                                        "ts": feeds_ts(now), "t": now, "clamp_tried": True, "attempts": att}
+                self.s.event("stop_failed", entry=n["entry_id"], ticker=n["ticker"], error=msg, tried=tries,
+                             attempt=att, retry_in_s=active._backoff(att))
                 self.alert("warn", f"stop_failed:{n['ticker']}", f"broker stop for {n['ticker']} refused: {msg[:150]}")
             self.s._replace("stops.json", stops)
 
     def _sync_stops(self) -> None:
-        """Record a broker stop that filled as the trade's exit; forget one the broker cancelled or rejected."""
+        """Record a broker stop that filled as the trade's exit; mark one the broker cancelled, rejected or no
+        longer shows (lost) so that `_place_stops` puts it back while the trade is still held."""
         stops = self.s.read("stops.json") or {}
         live = {execution._hid(p) for p in self.pending}
         entries = {e["id"]: e for e in active.open_trades(self.s.intents())}
+        now = self.clock()
         changed = False
         for k, v in list(stops.items()):
             oid = v.get("order_id")
-            if not oid or oid in live:
+            if not oid:
+                continue
+            if oid in live:
+                if v.get("missing"):
+                    stops[k] = {x: y for x, y in v.items() if x != "missing"}
+                    changed = True
                 continue
             h = next((x for x in self.c.history_orders(ticker=v["ticker"], limit=20, max_pages=1)
                       if execution._hid(x) == oid), None)
             st = execution._hist_status(h) if h else None
-            if st == "filled" and k in entries:
-                vw = self.quotes.get(self.cfg["benchmark"]["yahoo"])
-                rec = self.s.intent(id=uuid.uuid4().hex, **active.stop_exit_record(entries[k], v, h,
-                                                                                    vw["price"] if vw else None))
-                self.s.event("order_outcome", intent=rec["id"], status="filled", broker=h, via="broker_stop")
-                self.alert("info", f"stop_filled:{v['ticker']}", f"broker stop filled: {v['ticker']} at {v['stop_px']}")
-                stops[k] = {**v, "order_id": None, "filled": feeds_ts(self.clock())}
+            if st == "filled":
+                if k in entries:
+                    vw = self.quotes.get(self.cfg["benchmark"]["yahoo"])
+                    rec = self.s.intent(id=uuid.uuid4().hex, **active.stop_exit_record(entries[k], v, h,
+                                                                                        vw["price"] if vw else None))
+                    self.s.event("order_outcome", intent=rec["id"], status="filled", broker=h, via="broker_stop")
+                    self.alert("info", f"stop_filled:{v['ticker']}", f"broker stop filled: {v['ticker']} at {v['stop_px']}")
+                stops[k] = {**v, "order_id": None, "filled": feeds_ts(now)}
                 changed = True
             elif st in ("cancelled", "rejected"):
-                stops[k] = {**v, "order_id": None, st: feeds_ts(self.clock())}
+                stops[k] = {**v, "order_id": None, st: feeds_ts(now)}
                 self.s.event(f"stop_{st}", entry=k, ticker=v["ticker"], order_id=oid)
+                changed = True
+            else:  # agent-1.23: neither resting nor in the broker's history. Three passes, then ask for it by id
+                miss = int(v.get("missing") or 0) + 1
+                gone = False
+                if miss >= 3:
+                    try:
+                        gone = not self.c.get_order(oid)
+                    except Exception:  # noqa: BLE001 - a 404: the broker no longer knows the order
+                        gone = True
+                if gone:
+                    stops[k] = {x: y for x, y in v.items() if x != "missing"} | {"order_id": None, "lost": feeds_ts(now)}
+                    self.s.event("stop_lost", entry=k, ticker=v["ticker"], order_id=oid)
+                    self.alert("warn", f"stop_lost:{v['ticker']}", f"broker stop for {v['ticker']} is neither resting "
+                               "nor in the order history: treated as gone")
+                else:
+                    stops[k] = {**v, "missing": 0 if miss >= 3 else miss}
                 changed = True
         if changed:
             self.s._replace("stops.json", stops)
@@ -1801,8 +1880,12 @@ class Agent:
             limits = {**limits, "buy_whitelist": [*limits["buy_whitelist"], ticker]}  # a signal that passed every filter
         if (signal or {}).get("strategy") == buyback_value.NAME and signal.get("type") == "active_entry":
             limits = {**limits, "buy_whitelist": [*limits["buy_whitelist"], ticker]}  # a pick from the month's file
+        pending = self.pending
+        if qty > 0:  # agent-1.23: our own protective stop on a name does not block a top-up of it
+            own = {v.get("order_id") for v in (self.s.read("stops.json") or {}).values() if v.get("order_id")}
+            pending = [p for p in pending if execution._hid(p) not in own]
         refusals = execution.risk_check(order, control=self.s.control(), records=self.s.intents(),
-                                        pending=self.pending, positions=self.positions, limits=limits,
+                                        pending=pending, positions=self.positions, limits=limits,
                                         day=day, consecutive_errors=self.ex.consecutive_errors, quote_ok=quote_ok,
                                         market_open=self.market_open(ticker))
         key = f"{ticker}:{qty}:{';'.join(refusals)}"
@@ -1831,6 +1914,34 @@ class Agent:
         self.alerted.add(key)
         self.s.event("alert", level=level, code=code, text=text)
 
+    def check_invariants(self) -> None:
+        """agent-1.23 self-check, after every broker pass: the standing promises about the book (invariants.py),
+        tested against the broker's own positions and order book. The report goes to state/invariants.json; a
+        change, and at least one report an hour, goes to the event log; warnings and critical breaches alert."""
+        now = self.clock()
+        prev = self.s.read("invariants.json") or {}
+        total = float((self.summary or {}).get("totalValue") or 0)
+        stops = self.s.read("stops.json") or {}
+        book = {execution._hid(p) for p in self.pending}
+        # a stop placed since the order book was read is resting too: the broker acknowledged it this pass
+        fresh = [{"id": v["order_id"], "ticker": v.get("ticker")} for v in stops.values()
+                 if v.get("order_id") and v["order_id"] not in book and float(v.get("t") or 0) >= self.broker_t]
+        rep = invariants.check(now=now, cfg=self.cfg, positions=self.positions, pending=[*self.pending, *fresh],
+                               records=self.s.intents(), stops=stops,
+                               market_open=self.market_open, quote_ok=lambda t: self._quote(t) is not None,
+                               total=total, seen=prev.get("seen") or {}, watch=set(self._watch()))
+        rep["version"] = self.cfg["version"]
+        self.s._replace("invariants.json", rep)
+        sig = sorted((v["code"], v.get("ticker") or "", v["severity"]) for v in rep["violations"])
+        if sig != self.inv.get("sig") or now - self.inv.get("t", 0) >= 3600:
+            self.inv = {"sig": sig, "t": now}
+            self.s.event("invariants", ok=rep["ok"], counts=rep["counts"], checked=rep["checked"],
+                         violations=[{k: v[k] for k in ("code", "severity", "ticker", "text")} for v in rep["violations"]])
+        for v in rep["violations"]:
+            if v["severity"] in ("warn", "critical"):
+                self.alert(v["severity"], f"invariant:{v['code']}:{v.get('ticker') or ''}", v["text"])
+        self.inv["counts"] = rep["counts"]
+
     def write_heartbeat(self) -> None:
         now = self.clock()
         ages = {k: round(now - v) for k, v in self.last_ok.items()}
@@ -1840,7 +1951,8 @@ class Agent:
                           "invalid_quotes": bad, "positions": len(self.positions),
                           "total_gbp": (self.summary or {}).get("totalValue"), "control": self.s.control(),
                           "unresolved_orders": len(execution.unresolved(self.s.intents())),
-                          "consecutive_order_errors": self.ex.consecutive_errors})
+                          "consecutive_order_errors": self.ex.consecutive_errors,
+                          "invariants": self.inv.get("counts")})
         self.s.event("heartbeat", loops=self.loops, up_s=round(now - self.started), duty_age_s=ages)
 
     def _t212_of(self, sym: str) -> str | None:
