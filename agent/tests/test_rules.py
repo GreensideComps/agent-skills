@@ -62,3 +62,19 @@ def test_config_prose_does_not_contradict_the_switches():
     ss = load_config()["active"]["stock_screen"]
     if ss.get("swap_on_dropout") is False:
         assert "except an extra swap" not in ss["rebalance"]
+
+
+def test_the_rules_command_needs_no_state_directory(tmp_path, capsys):
+    """CI and a fresh checkout have no state directory; the first CI run failed on exactly this."""
+    from market_agent.__main__ import main
+    missing = tmp_path / "no" / "such" / "state"
+    assert main(["--state", str(missing), "rules", "--check", str(PAGE)]) == 0
+    assert "up to date" in capsys.readouterr().out and not missing.exists()
+    stale = tmp_path / "old.md"
+    stale.write_text("old")
+    assert main(["--state", str(missing), "rules", "--check", str(stale)]) == 1
+    assert main(["--state", str(missing), "rules"]) == 0 and "## stock_screen" in capsys.readouterr().out
+    (tmp_path / "st").mkdir()
+    (tmp_path / "st" / "strategies.json").write_text('{"gap_go": {"why": "kill rule"}}')
+    assert main(["--state", str(tmp_path / "st"), "rules"]) == 0
+    assert "switched off by the system (kill rule)" in capsys.readouterr().out

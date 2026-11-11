@@ -73,6 +73,23 @@ def main(argv: list[str] | None = None) -> int:
     sr.add_argument("--month", help="YYYY-MM: apply the one-scheduled-swap-a-month budget from screen_refresh.json")
     sr.add_argument("--record", action="store_true", help="record this month's swap as used (after the config edit)")
     a = ap.parse_args(argv)
+    if a.cmd == "rules":  # needs no state directory (CI and fresh checkouts have none), so it runs before the store opens
+        from . import rules  # noqa: PLC0415
+        from .agent import load_config  # noqa: PLC0415
+        cfg = load_config()
+        text = rules.render(cfg)  # the saved page is built from config alone, so it is the same on every machine
+        if a.check:
+            ok = Path(a.check).exists() and Path(a.check).read_text() == text
+            print("up to date" if ok else f"{a.check} is out of date: run python3 -m market_agent rules --write {a.check}")
+            return 0 if ok else 1
+        if a.write:
+            Path(a.write).write_text(text)
+        else:  # printed live: also shows what the kill rule or the office has switched off (state/strategies.json)
+            killed = None
+            if (Path(a.state) / "strategies.json").exists():
+                killed = json.loads((Path(a.state) / "strategies.json").read_text())
+            print(rules.render(cfg, killed))
+        return 0
     from .store import LeaseHeld, Store
     store = Store(Path(a.state))
     if a.cmd == "status":
@@ -86,20 +103,6 @@ def main(argv: list[str] | None = None) -> int:
         code, line = invariants.verdict(rep, time.time(), a.max_age)
         print(json.dumps({"verdict": line, "report": {k: v for k, v in (rep or {}).items() if k != "seen"}}, indent=1))
         return code
-    if a.cmd == "rules":
-        from . import rules  # noqa: PLC0415
-        from .agent import load_config  # noqa: PLC0415
-        cfg = load_config()
-        text = rules.render(cfg)  # the saved page is built from config alone, so it is the same on every machine
-        if a.check:
-            ok = Path(a.check).exists() and Path(a.check).read_text() == text
-            print("up to date" if ok else f"{a.check} is out of date: run python3 -m market_agent rules --write {a.check}")
-            return 0 if ok else 1
-        if a.write:
-            Path(a.write).write_text(text)
-        else:  # printed live: also shows what the kill rule or the office has switched off (state/strategies.json)
-            print(rules.render(cfg, store.read("strategies.json")))
-        return 0
     if a.cmd == "uptime":
         print(json.dumps(uptime(store, time.time(), a.hours), indent=1))
         return 0
