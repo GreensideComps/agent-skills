@@ -1195,3 +1195,48 @@ def test_review_scores_held_lines_before_the_watchlist(tmp_path, monkeypatch):
     ag.sleep = lambda s: None
     ag.refresh_review()
     assert asked[0] == "ZZZ" and len(asked) == 2  # agent-1.22.4: what we own is reviewed first
+
+
+def test_symbols_come_from_the_broker_short_name_not_the_ticker(tmp_path):
+    """agent-1.24: T212 tickers are often old symbols. Prices are asked for by the current symbol, SEC and screen
+    symbols become tickers through it, and an old symbol now used by another company is never matched."""
+    ag, b, st, clock = make(tmp_path)
+    ag._learn_symbols([
+        {"ticker": "GPS_US_EQ", "shortName": "GAP"}, {"ticker": "FB_US_EQ", "shortName": "META"},
+        {"ticker": "RTP_US_EQ", "shortName": "JOBY"}, {"ticker": "SNDK1_US_EQ", "shortName": "SNDK"},
+        {"ticker": "BRK.B_US_EQ", "shortName": "BRK.B"}, {"ticker": "MSFT_US_EQ", "shortName": "MSFT"},
+        {"ticker": "NVRI_US_EQ", "shortName": "NVRI"}, {"ticker": "NVRI1_US_EQ", "shortName": "NVRI"},
+        {"ticker": "VWRPl_EQ", "shortName": "VWRP"}])
+    ov = ag._ov()
+    assert feeds.yahoo_symbol("GPS_US_EQ", ov) == "GAP" and feeds.yahoo_symbol("FB_US_EQ", ov) == "META"
+    assert feeds.yahoo_symbol("MSFT_US_EQ", ov) == "MSFT" and feeds.yahoo_symbol("BRK.B_US_EQ", ov) == "BRK-B"
+    assert feeds.yahoo_symbol("VWRPl_EQ", ov) == "VWRP.L"  # London lines are untouched
+    assert ag._us("SNDK") == "SNDK1_US_EQ" and ag._us("JOBY") == "RTP_US_EQ" and ag._us("meta") == "FB_US_EQ"
+    assert ag._us("RTP") is None and ag._us("FB") is None  # an old symbol is not today's company
+    assert ag._us("NVRI") is None  # two instruments claim it: no guess
+    assert ag._us_tradeable("GAP") == "GPS_US_EQ" and ag._sym_of("GPS_US_EQ") == "GAP"
+    ag.cfg["yahoo_overrides"] = {"GPS_US_EQ": "GAP.X"}
+    assert feeds.yahoo_symbol("GPS_US_EQ", ag._ov()) == "GAP.X"  # config.json still wins
+
+
+def test_without_short_names_the_old_mapping_still_works(tmp_path):
+    ag, b, st, clock = make(tmp_path)
+    ag.learn_schedules()  # the fake broker's instruments carry no shortName
+    assert ag._us("MSFT") == "MSFT_US_EQ" and ag._us("ZZZZ") is None
+
+
+def test_a_restarted_agent_does_not_re_log_names_an_earlier_process_checked(tmp_path):
+    """agent-1.24: the checked-today list is in state, so a new process after the window logs nothing as missed."""
+    ag, b, st, clock = make(tmp_path, active_on=True, prices={"VWRP.L": 140.0, "GBPUSD=X": 1.25})
+    _active_book(b)
+    st._replace("gap_done.json", {"JPM_US_EQ": "2026-10-27", "UBER_US_EQ": "2026-10-27", "OLD_US_EQ": "2026-10-26"})
+    advance(ag, clock, 2, by=30)
+    assert not [e for e in st.events("2026-10-27") if e["kind"] in ("gap_go_missed", "gap_check", "gap_scan")]
+    assert "OLD_US_EQ" not in ag.gap_done  # yesterday's entries are dropped
+
+
+def test_the_missed_list_is_saved_for_the_next_process(tmp_path):
+    ag, b, st, clock = make(tmp_path, active_on=True, prices={"VWRP.L": 140.0, "GBPUSD=X": 1.25})
+    _active_book(b)
+    advance(ag, clock, 1, by=30)
+    assert st.read("gap_done.json") == {"JPM_US_EQ": "2026-10-27", "UBER_US_EQ": "2026-10-27"}

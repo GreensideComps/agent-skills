@@ -192,8 +192,46 @@ class Agent:
         for a ticker it does not know (the endpoint allows one call a minute)."""
         want = set(self.positions) | {self.cfg["benchmark"]["t212"]} | set(self.cfg["exits"]["tickers"]) | set(self._watch())
         if want - set(self.schedule_of):
-            self.schedule_of = {i["ticker"]: i["workingScheduleId"] for i in self.c.instruments()
+            ins = self.c.instruments()
+            self.schedule_of = {i["ticker"]: i["workingScheduleId"] for i in ins
                                 if i.get("ticker") and i.get("workingScheduleId") is not None}
+            self._learn_symbols(ins)
+
+    def _learn_symbols(self, ins: list[dict]) -> None:
+        """agent-1.24: a T212 US ticker is often NOT the stock's exchange symbol. 1,472 of 6,907 US instruments
+        differed on 11 Nov 2026 (GPS_US_EQ is Gap, now GAP; FB_US_EQ is Meta; RTP_US_EQ is Joby; SNDK1_US_EQ is
+        Sandisk), and some old symbols now belong to other companies (Yahoo's FB is a different security). The
+        broker's shortName is the current exchange symbol, so prices are asked for by it and SEC/screen symbols are
+        turned into tickers through it, never by adding or stripping '_US_EQ'. A symbol two instruments share is
+        left out (no guess)."""
+        short, seen, dup = {}, {}, set()
+        for i in ins:
+            t, sn = i.get("ticker") or "", (i.get("shortName") or "").strip().upper()
+            if not t.endswith("_US_EQ") or not sn:
+                continue
+            short[t] = sn
+            if sn in seen and seen[sn] != t:
+                dup.add(sn)
+            seen[sn] = t
+        self.short_of = short
+        self.us_of = {sn: t for sn, t in seen.items() if sn not in dup}
+        self.ysym_auto = {t: sn.replace(".", "-") for t, sn in short.items() if t != f"{sn}_US_EQ"}
+
+    def _ov(self) -> dict:
+        """Yahoo symbol overrides: the broker's current symbols (agent-1.24), then config.json's, which win."""
+        return {**getattr(self, "ysym_auto", {}), **(self.cfg.get("yahoo_overrides") or {})}
+
+    def _us(self, sym: str) -> str | None:
+        """The T212 ticker for a US exchange symbol (from SEC filings or a screen), or None if T212 has none."""
+        us_of = getattr(self, "us_of", None)
+        if us_of:
+            return us_of.get(sym.upper())
+        t = f"{sym}_US_EQ"
+        return t if t in self.schedule_of else None
+
+    def _sym_of(self, t212: str) -> str:
+        """The exchange symbol for a US T212 ticker."""
+        return getattr(self, "short_of", {}).get(t212) or t212[:-len("_US_EQ")]
 
     def market_open(self, t212: str) -> bool:
         sid = self.schedule_of.get(t212)
@@ -226,7 +264,7 @@ class Agent:
         no free source serves LSE quotes to an honest client. agent-1.22.2: every held line has one (US lines use it
         only when Tiingo fails), plus GBPUSD=X implied by the broker's USD positions (median of quantity x price /
         GBP value). Lines not held stay UNVERIFIED."""
-        ov = self.cfg["yahoo_overrides"]
+        ov = self._ov()
         out, fx = {}, []
         for t, p in self.positions.items():
             sym = feeds.yahoo_symbol(t, ov)
@@ -242,7 +280,7 @@ class Agent:
         return out
 
     def refresh_prices(self) -> None:
-        ov = self.cfg["yahoo_overrides"]
+        ov = self._ov()
         syms = {feeds.yahoo_symbol(t, ov) for t in self.positions} | {self.cfg["benchmark"]["yahoo"],
                                                                         self.cfg["benchmark"]["fx"]}
         syms |= set(self.cfg["extra_symbols"]) | {feeds.yahoo_symbol(t, ov) for t in self._watch()}
@@ -267,7 +305,7 @@ class Agent:
         self.check_moves()
 
     def refresh_news(self) -> None:
-        tickers = sorted({feeds.yahoo_symbol(t, self.cfg["yahoo_overrides"]) for t in self.positions} - {None})
+        tickers = sorted({feeds.yahoo_symbol(t, self._ov()) for t in self.positions} - {None})
         fresh = []
         for sym in tickers:
             for n in feeds.fetch_news(sym, get=self.get):
@@ -301,7 +339,7 @@ class Agent:
             if err:
                 rows.append({"ticker": t, "error": err})
                 continue
-            q = self.quotes.get(feeds.yahoo_symbol(t, self.cfg["yahoo_overrides"]) or "")
+            q = self.quotes.get(feeds.yahoo_symbol(t, self._ov()) or "")
             rows.append({"ticker": t, **(z or {}), "px": q and q["price"],
                          "move": q and q.get("prev_close") and round(q["price"] / q["prev_close"] - 1, 4)})
         self.attn = {r["ticker"]: r["z"] for r in rows if r.get("z") is not None}
@@ -320,7 +358,7 @@ class Agent:
         self._earnings_sec(names, rc["earnings_block_days"], now)
         rows = []
         for t in names:
-            sym = feeds.yahoo_symbol(t, self.cfg["yahoo_overrides"])
+            sym = feeds.yahoo_symbol(t, self._ov())
             try:
                 bars = swing.ohlcv(sym, self.get)
                 closes, vols = bars["c"], bars["v"]
@@ -391,7 +429,7 @@ class Agent:
                 row["error"] = str(e)[:120]
             if "error" not in row:
                 try:
-                    closes, _ = review.history(feeds.yahoo_symbol(t, self.cfg["yahoo_overrides"]), self.get)
+                    closes, _ = review.history(feeds.yahoo_symbol(t, self._ov()), self.get)
                     r = social.run_up(closes)
                     row["ret20"] = r if r is None else round(r, 4)
                 except Exception as e:  # noqa: BLE001
@@ -441,11 +479,9 @@ class Agent:
             except Exception as e:  # noqa: BLE001 - an unreadable filing confirms nothing
                 docs[h["id"]] = {"error": str(e)[:120], "price": None, "mixed": False, "hostile": False,
                                  "agreement": False, "close": None}
-        known = self.schedule_of
 
         def tradeable(tk):
-            t = f"{tk}_US_EQ"
-            return t if t in known else None
+            return self._us(tk)
         deals = merger.build_deals(hits, docs, tradeable)
         recs = self.s.intents()
         vw = self.quotes.get(self.cfg["benchmark"]["yahoo"])
@@ -490,6 +526,12 @@ class Agent:
         now = self.clock()
         day = feeds_ts(now)[:10]
         self.gaps = {t: g for t, g in self.gaps.items() if g["day"] == day}
+        # agent-1.24: which names were checked today survives a restart (the hosted agent restarts several times a
+        # day). Before, a process started after the window logged every name as missed although an earlier process
+        # had checked it, and one started inside the window checked the names a second time.
+        saved = self.s.read("gap_done.json") or {}
+        self.gap_done = {t: d for t, d in {**saved, **self.gap_done}.items() if d == day}
+        before = dict(self.gap_done)
         rows = []  # one gap_scan event per run that checked anything: [{ticker, gap, held, signal, why}]
         for t in self.cfg["active"]["watchlist"]:
             if self.gap_done.get(t) == day:
@@ -511,7 +553,7 @@ class Agent:
                              "why": f"up {q['price'] / q['prev_close'] - 1:+.1%}: cannot be a held gap"})
                 continue  # no intraday fetch
             try:
-                bars = swing.ohlcv(feeds.yahoo_symbol(t, self.cfg["yahoo_overrides"]), self.get, "1d", "1m")
+                bars = swing.ohlcv(feeds.yahoo_symbol(t, self._ov()), self.get, "1d", "1m")
             except Exception as e:  # noqa: BLE001 - no bars, no signal
                 self.s.event("gap_check", strategy=swing.GAP, ticker=t, signal=False, why=f"no data: {str(e)[:100]}")
                 rows.append({"ticker": t, "gap": None, "held": None, "signal": False, "why": f"no data: {str(e)[:100]}"})
@@ -523,6 +565,8 @@ class Agent:
             rows.append({"ticker": t, "gap": g.get("gap"), "held": g.get("held"), "signal": g["signal"], "why": g["why"]})
             if g["signal"]:
                 self.gaps[t] = {**g, "day": day}
+        if self.gap_done != before:
+            self.s._replace("gap_done.json", self.gap_done)
         if rows:
             self.s.event("gap_scan", strategy=swing.GAP, rows=rows)
 
@@ -698,8 +742,7 @@ class Agent:
         return buyback_value.load_picks(bc["picks_dir"], self.clock(), bc["max_picks_age_days"]) if bc else None
 
     def _us_tradeable(self, sym: str) -> str | None:
-        t = f"{sym}_US_EQ"
-        return t if t in self.schedule_of else None
+        return self._us(sym)
 
     def _gap_rebound(self) -> dict | None:
         a = self.cfg.get("active") or {}
@@ -727,7 +770,7 @@ class Agent:
             if d0 not in st["queue"]:  # agent-1.21: results 8-Ks from SEC (Nasdaq's calendar refuses honest clients)
                 rows = self._efts_8k(complete, d0, earnings=True)
                 st["queue"][d0] = self._liquid_enough(sorted({r["symbol"] for r in rows if r["symbol"].isalpha()
-                                                              and f"{r['symbol']}_US_EQ" in self.schedule_of}),
+                                                              and self._us(r["symbol"])}),
                                                       gc["min_dollar_vol"])
         n = 0
         self._vix_bars = None
@@ -795,7 +838,7 @@ class Agent:
             if day > today or (day == today and nyd.hour < 17) or st["skip"].get(rec["id"], 0) >= 3:
                 continue
             kind = (sc.get("ref_kind") or {}).get(sig["strategy"], sc.get("default_kind", "close"))
-            sym = feeds.yahoo_symbol(rec["ticker"], self.cfg.get("yahoo_overrides") or {})
+            sym = feeds.yahoo_symbol(rec["ticker"], self._ov())
             if not sym:
                 continue
             if sym not in cache:
@@ -833,7 +876,7 @@ class Agent:
         for tk, sig in st["signals"].items():  # agent-1.21.2: signals logged before the cap floor get checked once
             if "cap_ok" not in sig and nc.get("min_mcap"):
                 try:
-                    sig["cap_ok"] = bool(self._liquid_enough([tk[:-len("_US_EQ")]], 0, nc["min_mcap"], news_shock.NAME))
+                    sig["cap_ok"] = bool(self._liquid_enough([self._sym_of(tk)], 0, nc["min_mcap"], news_shock.NAME))
                 except feeds.FeedError:
                     continue  # no price or share data yet: checked again next run
                 if not sig["cap_ok"] and sig.get("eligible"):
@@ -862,7 +905,7 @@ class Agent:
                 continue
             items: dict[str, list] = {}
             for x in rows:
-                if f"{x['symbol']}_US_EQ" in self.schedule_of:
+                if self._us(x["symbol"]):
                     items[x["symbol"]] = sorted(set(items.get(x["symbol"], [])) | set(x["items"]))
             st["queue"][d0] = {"vix": round(vix[d0], 2), "items": items,
                                "todo": self._liquid_enough(sorted(items), nc["min_dollar_vol"])}
@@ -891,7 +934,7 @@ class Agent:
                     continue
                 if not m or m["ear"] > nc["ear_max"] or m["median_dollar_vol"] < nc["min_dollar_vol"]:
                     continue
-                tk = f"{sym}_US_EQ"
+                tk = self._us(sym) or f"{sym}_US_EQ"
                 rep = news_shock.recent(st["signals"], sym, d0, days, nc["no_repeat_days"])
                 sig = {**m, "symbol": sym, "items": q["items"].get(sym, []), "vix": q["vix"], "buy_day": buy, "cap_ok": True,
                        "eligible": bool(buy) and not rep, "why": "repeat within 10 sessions" if rep else "signal"}
@@ -938,7 +981,7 @@ class Agent:
                 self._vix_bars = []
                 self.s.event("gap_rebound_skip", strategy=gap_rebound.NAME, symbol="^VIX", error=str(e)[:200])
         vix, variant = gap_rebound.vix_tag(self._vix_bars, m["day0"], gc.get("vix_hi", 25.0))
-        tk = f"{sym}_US_EQ"
+        tk = self._us(sym) or f"{sym}_US_EQ"
         sig = {**m, "symbol": sym, "ticker": tk, "health": h, "eligible": h.get("weak") is True,
                "vix": vix, "variant": variant,
                "buy_day": gap_rebound.exit_day(m["day_p1"], 1), "ts": feeds_ts(self.clock())}
@@ -1077,7 +1120,7 @@ class Agent:
         name. A failed check marks the name UNVERIFIED, which blocks its entries."""
         today = gap_rebound.ny_now(now).date().isoformat()
         for t in names:
-            sym = feeds.yahoo_symbol(t, self.cfg["yahoo_overrides"])
+            sym = feeds.yahoo_symbol(t, self._ov())
             if not sym or not t.endswith("_US_EQ") or self.earn_day.get(t) == today:
                 continue
             try:
@@ -1170,13 +1213,13 @@ class Agent:
             if not got:
                 raise feeds.FeedError("SEC share counts unavailable for the market-cap check (retried)")
             self._shares, self._shares_day = shares, today.isoformat()
-        cik = self._sec_cik(f"{sym}_US_EQ")
+        cik = self._sec_cik(self._us(sym) or f"{sym}_US_EQ")
         n = self._shares.get(cik) if cik else None
         return n * px if n else None
 
     def _sec_cik(self, t212: str) -> int | None:
         """CIK for a US T212 ticker from SEC company_tickers.json (fetched once per process); None if unknown."""
-        sym = feeds.yahoo_symbol(t212, self.cfg.get("yahoo_overrides") or {})
+        sym = feeds.yahoo_symbol(t212, self._ov())
         if not sym:
             return None
         if self.sec_get is None:
@@ -1385,7 +1428,7 @@ class Agent:
         self.s._replace("stock_screen.json", {**state, "ew_done": done})
 
     def _quote(self, t212: str) -> dict | None:
-        sym = feeds.yahoo_symbol(t212, self.cfg["yahoo_overrides"])
+        sym = feeds.yahoo_symbol(t212, self._ov())
         return self.quotes.get(sym) if self.quote_state.get(sym) == "ok" else None
 
     def _value(self, p: dict) -> float:
@@ -1964,7 +2007,7 @@ class Agent:
         self.s.event("heartbeat", loops=self.loops, up_s=round(now - self.started), duty_age_s=ages)
 
     def _t212_of(self, sym: str) -> str | None:
-        ov = self.cfg["yahoo_overrides"]
+        ov = self._ov()
         for t in list(self.positions) + [self.cfg["benchmark"]["t212"]] + self._watch():
             if feeds.yahoo_symbol(t, ov) == sym:
                 return t

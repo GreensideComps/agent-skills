@@ -1,4 +1,4 @@
-# Always-on demo market agent (agent-1.23)
+# Always-on demo market agent (agent-1.24)
 
 **What it buys and sells, in plain English:** [RULES.md](RULES.md), generated from the live config and checked by the tests. Read that page for strategy rules; this page covers how the agent runs.
 
@@ -448,3 +448,28 @@ and tested (`agent/tests/test_stop_lifecycle.py`, `agent/tests/test_invariants.p
 A breach inside its grace period is recorded as `info` and raises nothing, so the minutes between a fill and its stop
 are quiet. Past the grace it is `warn` (an `invariant:<code>:<ticker>` alert); an unprotected holding past its grace,
 or any breach that lasts a further day, is `critical`. Agent downtime does not count as breach time.
+
+## agent-1.24 (11 Nov 2026): Yahoo first again, and tickers mapped by the broker's current symbol
+
+Found in the 11 Nov second-pass audit, from the agent's own event log (26 Oct to 11 Nov):
+
+- **Prices.** 174 `prices` failures (Tiingo HTTP 429), 76 more duties failing on the Tiingo budget, merger_arb holding
+  ten eligible deals but never buying ("no validated quote"), gap_go never able to check a name ("no validated quote"),
+  and the core VWRP buy waiting for a VWRP.L price. The 7 Nov finding that Yahoo refuses an honest client was wrong:
+  Yahoo answers 429 to any User-Agent containing the `python-requests` token and 200 to the same honest name without
+  it. `datasrc.Honest` now asks Yahoo first (`YAHOO_UA`: the agent's name and this repository) for quotes (spark) and
+  bars (chart: US, London, FX, VIX, any name, no symbol cap), and fills anything Yahoo missed from the old sources
+  (Tiingo, CBOE, the broker's own position prices). A Yahoo refusal or failure is written to `state/yahoo_down.json`
+  (15 min after a 429, 5 min after anything else), so every duty and the next process use the fallback meanwhile.
+  The owner approved Yahoo with an honest User-Agent on 11 Nov.
+- **Ticker mapping.** 1,472 of T212's 6,907 US instruments have a ticker that is not the stock's current exchange
+  symbol (GPS_US_EQ is Gap, now GAP; FB_US_EQ is Meta; VSCO_US_EQ trades as VSXY; RTP_US_EQ is Joby; SNDK1_US_EQ is
+  Sandisk). The agent made tickers by appending `_US_EQ` and priced them by stripping it, so held names such as
+  GPS and VSCO had no market price, and an old symbol reused by another company could be priced or bought as the
+  wrong stock (Yahoo's FB is a different security at about $44). The broker's `shortName` is now the symbol used for
+  prices (`_ov`), and SEC or screen symbols become tickers only through it (`_us`); a symbol two instruments share is
+  left out. `config.json` `yahoo_overrides` still win.
+- **gap_go "missed".** 285 `gap_go_missed` events were false: the list of names checked today lived in memory, so
+  every restart after the check window logged them all as missed, and a restart inside it checked them twice. It is
+  now kept in `state/gap_done.json`.
+- **review.** An empty daily history raised IndexError in `review.factors`; it is now missing data (FeedError).
