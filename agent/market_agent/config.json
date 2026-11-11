@@ -1,5 +1,5 @@
 {
-  "version": "agent-1.22.2",
+  "version": "agent-1.22.3",
   "note": "Always-on demo market agent. Demo account only (the client refuses any other host). Owner mandate: cmsg_01U4KMvkBYNknqm4HRVie8uvK9gRYqGXBK4bQP49dBz49i (26 Oct 2026).",
   "intervals_s": {
     "loop": 15,
@@ -484,6 +484,7 @@
       "kill_after_trades": 30,
       "kill_after_days": 730
     },
+    "disaster_stop": {"enabled": true, "pct": 0.3, "strategies": ["stock_screen", "buyback_value", "gap_rebound", "news_shock"], "label": "unproven", "rule": "agent-1.22.3 (owner 11 Nov 2026 asked why big fallers are still held): every trade whose strategy has no stop of its own gets a resting broker stop 30% below its entry price, as a safety net for crashes and agent outages. Not a tested edge: research Q221/Q242 found tighter and trailing stops cost money; a fixed -30% stop is under test. T212 refuses stops far from the price, so a refused one is clamped up to 30/20/15/10% below the current price."},
     "exit_review": {
       "enabled": true,
       "rule": "agent-1.19 (owner 6 Nov 14:39Z cmsg_01U4KMvkBYNknqm4HRVie8uv3hDyNfMR4r18MaefWEF2yi): every open trade gets a recorded hold-or-sell decision (exit_review event) once a day and whenever its verdict changes, naming why it is held and what will sell it. Added sell rules beside each strategy's own tested exits: hard SEC events for buyback and gap names; buyback thesis broken (shares outstanding up y/y in a filing after entry); profit lock (after +25%, sell at half the best gain). Both new rules are unproven priors under test by the research loop; screener picks keep no profit lock because Q200/Q201 found interim selling worse than holding.",
@@ -508,21 +509,8 @@
         "keep": 0.5,
         "edge": "unproven prior, research test requested 6 Nov"
       },
-      "sell_rules": {
-        "stock_screen": ["drops out of the weekly top 15 (one scheduled swap a month)", "SEC hard event: bankruptcy, delisting, auditor change, restatement, merger or tender", "strategy killed: trails VWRP after 30 trades"],
-        "buyback_value": ["strategy killed: trails VWRP after 30 trades"],
-        "gap_rebound": ["strategy killed: trails VWRP after 30 trades"],
-        "momentum_timing": ["month-end signal switches fund", "momentum off-switch blocks new buys only"],
-        "value_timing": ["month-end signal switches fund"]
-      },
-      "hold_rules": {
-        "stock_screen": "screener pick: held while it stays in the weekly top 15 and its filings are clean (Q214)",
-        "buyback_value": "buyback pick: held 6 months, the tested holding period (Q206); 9 months for entries from 9 Nov 2026 (Q238 bench, unproven)",
-        "gap_rebound": "gap rebound: held 60 trading days, the tested holding period (Q218b)",
-        "momentum_timing": "ETF timing: held until the month-end signal names the other fund",
-        "value_timing": "ETF timing: held until the month-end signal names the other fund",
-        "news_shock_vix_hi": "news shock in fear: held 5 trading days, the tested holding period (Q222)"
-      }
+      "sell_rules": {"stock_screen": ["held 12 months (drop-out swaps off since agent-1.22)", "SEC hard event: bankruptcy, delisting, auditor change, restatement, merger or tender", "disaster stop: broker stop 30% below entry", "strategy killed: trails VWRP after 30 trades"], "buyback_value": ["disaster stop: broker stop 30% below entry", "strategy killed: trails VWRP after 30 trades"], "gap_rebound": ["disaster stop: broker stop 30% below entry", "strategy killed: trails VWRP after 30 trades"], "momentum_timing": ["month-end signal switches fund", "momentum off-switch blocks new buys only"], "value_timing": ["month-end signal switches fund"]},
+      "hold_rules": {"stock_screen": "screener pick: held 12 months, then the oldest name is replaced at the monthly refresh; sold at once on a hard SEC event (Q214, Q237a)", "buyback_value": "buyback pick: held 6 months, the tested holding period (Q206); 9 months for entries from 9 Nov 2026 (Q238 bench, unproven)", "gap_rebound": "gap rebound: held 60 trading days, the tested holding period (Q218b)", "momentum_timing": "ETF timing: held until the month-end signal names the other fund", "value_timing": "ETF timing: held until the month-end signal names the other fund", "news_shock_vix_hi": "news shock in fear: held 5 trading days, the tested holding period (Q222)"}
     },
     "buyback_value": {
       "enabled": true,

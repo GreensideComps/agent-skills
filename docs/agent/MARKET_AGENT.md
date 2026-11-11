@@ -390,3 +390,14 @@ Q222 failed the go-live rule (DSR 0.000). 142 of its 197 trades fell in 2020.
   pre-filter and bars store, at most every 30 min. A failed call backs off (15 min per-ticker, 30 min snapshot).
 - When Tiingo fails, a held line is priced from the broker's own position price and GBPUSD from the rate implied by
   the broker's USD positions. Names not held stay UNVERIFIED, so new US entries wait until Tiingo is back.
+
+## agent-1.22.3 (11 Nov 2026): safety-net stop and stop self-check
+
+- **Disaster stop (unproven).** stock_screen, buyback_value, gap_rebound and news_shock have no stop of their own
+  (research Q200/Q201/Q221/Q242: stops cost money on these). From 1.22.3 each such line also gets a resting broker
+  STOP 30% below its entry price (`active.disaster_stop`), placed while its market is open, with the usual
+  30/20/15/10% clamp ladder if T212 refuses the level. It is a tail guard, not an edge; research tests it.
+- **Lapsed-stop self-check.** Every pass, a broker stop the broker cancelled while the position is still held is
+  placed again and raises a `stop_lapsed:{ticker}` warning. A stop the agent itself cancelled ahead of an exit
+  (marked with `why`) is never re-placed.
+- Strategies with their own stop (e.g. momentum_timing 50%) keep it unchanged.

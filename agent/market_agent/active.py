@@ -211,19 +211,30 @@ def open_trades(records: list[dict]) -> list[dict]:
     return [t["entry"] for t in trades(records) if not t["exit"]]
 
 
-def stops_needed(records: list[dict], positions: dict, stops: dict) -> list[dict]:
-    """Open trades still held with no stop on record: [{entry_id, ticker, qty, stop_px, strategy}]."""
+def stops_needed(records: list[dict], positions: dict, stops: dict, disaster: dict | None = None) -> list[dict]:
+    """Open trades still held with no live stop: [{entry_id, ticker, qty, stop_px, strategy}].
+
+    agent-1.22.3: a trade whose strategy has no stop of its own gets the disaster stop (`disaster`: {enabled, pct,
+    strategies}) below its entry price, a broker-held safety net for crashes and agent outages (unproven, under test).
+    A stop the broker cancelled while the position is still held is placed again (the stop never silently lapses)."""
+    dis = disaster if disaster and disaster.get("enabled") else None
     out = []
     for e in open_trades(records):
         p = positions.get(e["ticker"])
         sig = e["signal"]
+        stop = sig.get("stop")
+        if stop is None and dis and any(sig.get("strategy", "").startswith(x) for x in dis.get("strategies", [])):
+            stop = dis["pct"]
         prev = stops.get(e["id"])
         retry = bool(prev) and too_far(prev.get("failed")) and not prev.get("clamp_tried")
-        if (prev and not retry) or not p or float(p.get("quantity") or 0) <= 0 or sig.get("stop") is None:
-            continue  # stock_screen trades carry no stop by rule
+        lapsed = bool(prev) and not prev.get("order_id") and bool(prev.get("cancelled")) and not prev.get("filled") \
+            and not prev.get("why")  # "why" marks the agent's own cancel ahead of an exit: never re-place that one
+        if (prev and not retry and not lapsed) or not p or float(p.get("quantity") or 0) <= 0 or stop is None:
+            continue
         out.append({"entry_id": e["id"], "ticker": e["ticker"], "qty": float(p["quantity"]),
-                    "stop_px": round(sig["entry_px"] * (1 - sig["stop"]), 2), "strategy": sig["strategy"],
-                    "px": float(p.get("currentPrice") or 0)})
+                    "stop_px": round(sig["entry_px"] * (1 - stop), 2), "strategy": sig["strategy"],
+                    "px": float(p.get("currentPrice") or 0), "disaster": sig.get("stop") is None,
+                    "replace": lapsed})
     return out
 
 

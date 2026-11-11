@@ -100,3 +100,36 @@ def test_closed_result_counts_trims_and_top_ups():
          "adj": [rec("active_trim", 2.0, 0.01), rec("active_topup", 1.0)]}
     r = s.active.closed_result(t)
     assert abs(r["pnl_gbp"] - (11 + 2 - 1 - 10 - 0.01)) < 1e-9 and abs(r["ret"] - r["pnl_gbp"] / 11) < 1e-9
+
+
+def _entry(eid, ticker, strategy, stop, px=100.0):
+    return {"id": eid, "t": 1.0, "status": "filled", "ticker": ticker,
+            "signal": {"type": "active_entry", "strategy": strategy, "entry_px": px, "stop": stop}}
+
+
+def test_disaster_stop_covers_strategies_without_their_own_stop():
+    from market_agent import active
+    recs = [_entry("a", "MU_US_EQ", "stock_screen", None), _entry("b", "IUMOl_EQ", "momentum_timing", 0.5, 20.0),
+            _entry("c", "FIVN_US_EQ", "news_shock_vix_hi", None, 30.0), _entry("d", "X_US_EQ", "other", None)]
+    pos = {t: {"quantity": 1.0, "currentPrice": 90.0} for t in ("MU_US_EQ", "IUMOl_EQ", "FIVN_US_EQ", "X_US_EQ")}
+    dis = {"enabled": True, "pct": 0.3, "strategies": ["stock_screen", "news_shock"]}
+    got = {n["ticker"]: n for n in active.stops_needed(recs, pos, {}, dis)}
+    assert got["MU_US_EQ"]["stop_px"] == 70.0 and got["MU_US_EQ"]["disaster"]
+    assert got["FIVN_US_EQ"]["stop_px"] == 21.0
+    assert got["IUMOl_EQ"]["stop_px"] == 10.0 and not got["IUMOl_EQ"]["disaster"]  # its own rule stop wins
+    assert "X_US_EQ" not in got  # a strategy not listed keeps no stop
+    assert {n["ticker"] for n in active.stops_needed(recs, pos, {})} == {"IUMOl_EQ"}  # off: as before
+
+
+def test_a_cancelled_stop_on_a_held_position_is_placed_again():
+    from market_agent import active
+    recs = [_entry("b", "IUMOl_EQ", "momentum_timing", 0.5, 20.0)]
+    pos = {"IUMOl_EQ": {"quantity": 1.0, "currentPrice": 19.0}}
+    live = {"b": {"order_id": 7, "ticker": "IUMOl_EQ"}}
+    assert active.stops_needed(recs, pos, live) == []
+    lapsed = {"b": {"order_id": None, "ticker": "IUMOl_EQ", "cancelled": "2026-11-10T10:00:00Z"}}
+    n = active.stops_needed(recs, pos, lapsed)
+    assert len(n) == 1 and n[0]["replace"]
+    filled = {"b": {"order_id": None, "ticker": "IUMOl_EQ", "cancelled": "x", "filled": "y"}}
+    assert active.stops_needed(recs, pos, filled) == []
+    assert active.stops_needed(recs, {}, lapsed) == []  # sold: nothing to protect

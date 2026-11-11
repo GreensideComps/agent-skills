@@ -1446,10 +1446,13 @@ class Agent:
         if not self._watch() or self.s.control().get("trading_enabled") is not True:
             return
         stops = self.s.read("stops.json") or {}
-        for n in active.stops_needed(recs, self.positions, stops):
+        for n in active.stops_needed(recs, self.positions, stops, self.cfg["active"].get("disaster_stop")):
             if not self.market_open(n["ticker"]):
                 continue  # placed during the market's own hours, when the broker accepts and works it
-            retry = n["entry_id"] in stops  # an earlier "price too far" refusal: go straight to the clamped ladder
+            if n.get("replace"):
+                self.alert("warn", f"stop_lapsed:{n['ticker']}", f"broker stop for {n['ticker']} was cancelled while "
+                           "still held: placing it again")
+            retry = n["entry_id"] in stops and not n.get("replace")  # "too far" before: straight to the clamp ladder
             tries = ([] if retry else [n["stop_px"]]) + active.clamp_ladder(n["stop_px"], n.get("px") or 0)
             err, ack, px = None, None, None
             for px in tries:
@@ -1467,7 +1470,8 @@ class Agent:
                 if px != n["stop_px"]:
                     stops[n["entry_id"]]["clamped_from"] = n["stop_px"]
                 self.s.event("stop_placed", entry=n["entry_id"], ticker=n["ticker"], qty=n["qty"], stop_px=px,
-                             rule_stop_px=n["stop_px"], order_id=stops[n["entry_id"]]["order_id"])
+                             rule_stop_px=n["stop_px"], order_id=stops[n["entry_id"]]["order_id"],
+                             disaster=n.get("disaster", False))
                 notes.append(f"broker stop placed: {n['ticker']} {n['qty']} at {px}"
                              + (f" (clamped from {n['stop_px']})" if px != n["stop_px"] else ""))
             else:  # recorded once; the agent's own stop still watches while it runs

@@ -1109,7 +1109,10 @@ def test_stock_screen_funds_from_vwrp_buys_each_pick_and_exits_on_the_yearly_reb
         b.pos.append(pos(o[0], o[1], o[1], 0, 18.0, 18.0))
     b.cash -= 36.0
     advance(ag, clock, 3, by=301)
-    assert not [p for p in b.pending if p["ticker"] in ("MU_US_EQ", "TDC_US_EQ")]  # no broker stop by rule
+    ds = [p for p in b.pending if p["ticker"] in ("MU_US_EQ", "TDC_US_EQ")]      # agent-1.22.3: 30% safety-net stop
+    assert [(p["ticker"], p["type"]) for p in ds] == [("MU_US_EQ", "STOP"), ("TDC_US_EQ", "STOP")]
+    assert ds[0]["quantity"] == -buys[0][1]
+    assert [e["disaster"] for e in st.events(iso(clock())[:10]) if e["kind"] == "stop_placed"][-2:] == [True, True]
     assert len([o for o in b.orders if o[0] in ("MU_US_EQ", "TDC_US_EQ")]) == 2   # held
     q = ag._quote
     ag._quote = lambda t: {"price": 70.0} if t == "MU_US_EQ" else q(t)             # MU -30% from entry
