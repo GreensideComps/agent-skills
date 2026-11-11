@@ -345,6 +345,14 @@ class Agent:
         if scan.get("friday") != fri:
             scan = {"friday": fri, "started": feeds_ts(now), "valid_until": social.valid_until(fri, sc["valid_days"]),
                     "confirmation": social.CONFIRMATION, "rows": {}}
+        if sc.get("vix_min") is not None and scan.get("vix") is None:  # the bench gate reads the Friday's VIX close
+            try:
+                vb = [(d, c) for d, c, _ in gap_rebound.bars("^VIX", self.get) if d <= fri]
+                if vb and vb[-1][0] == fri:
+                    scan["vix"] = round(vb[-1][1], 2)
+                    self.s._replace("social.json", scan)
+            except Exception as e:  # noqa: BLE001 - unread VIX: UNVERIFIED, so no social entry
+                self.s.event("social_vix_unread", strategy=social.NAME, friday=fri, error=str(e)[:200])
         todo = [t for t in sorted(sc["universe"])
                 if t not in scan["rows"] or (scan["rows"][t].get("error") and scan["rows"][t].get("tries", 1) < 3)]
         if not todo:

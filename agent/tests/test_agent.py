@@ -687,7 +687,13 @@ def test_social_trend_scans_on_the_weekend_buys_monday_and_exits_when_attention_
     assert "unavailable" in scan["confirmation"]
     assert not [o for o in b.orders if o[0] == "CROX_US_EQ"]                 # markets shut at the weekend
     clock.t = dt.datetime(2026, 11, 2, 15, 0, tzinfo=dt.timezone.utc).timestamp()    # Monday, NASDAQ open
+    st._replace("social.json", {**st.read("social.json"), "vix": 18.0})            # calm Friday: bench gate shut
     advance(ag, clock, 1, by=30)
+    assert not [o for o in b.orders if o[0] == "CROX_US_EQ"]
+    dec = [e for e in st.events(iso(clock())[:10]) if e["kind"] == "decision"]
+    assert any("VIX 18.00 < 25.0" in n for e in dec for n in e["notes"])
+    st._replace("social.json", {**st.read("social.json"), "vix": 27.5})            # fearful Friday (Q226 bench)
+    advance(ag, clock, 2, by=301)
     buys = [o for o in b.orders if o[0] == "CROX_US_EQ"]
     assert len(buys) == 1 and buys[0][1] > 0
     rec = next(r for r in execution.latest_intents(st.intents()).values() if r["ticker"] == "CROX_US_EQ")

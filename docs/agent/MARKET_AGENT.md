@@ -403,3 +403,5 @@ Q222 failed the go-live rule (DSR 0.000). 142 of its 197 trades fell in 2020.
 - Strategies with their own stop (e.g. momentum_timing 50%) keep it unchanged.
 - **1.22.4:** the score review now fetches held lines before watchlist names, so the free Tiingo hourly cap
   (45 calls/h) can starve the watchlist but never the review of what we own (11 Nov: 6 held names had no review).
+- **1.22.5:** social_trend benched per research Q226 (FAIL overall, t 0.15): it buys only when the signal Friday's VIX
+  close is >= 25 (`active.social.vix_min`), labelled unproven; an unread VIX counts as UNVERIFIED and blocks entries.

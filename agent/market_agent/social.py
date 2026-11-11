@@ -80,6 +80,13 @@ def entry_orders(cfg, records, positions, quote_of, fx, total, cash, now, vwrp_p
     notes: list[str] = []
     if NAME in disabled or not scan or now > scan.get("valid_until", 0):
         return [], notes
+    vmin = sc.get("vix_min")  # agent-1.22.5 bench (Q226): trade only when the signal Friday's VIX close >= vix_min
+    if vmin is not None and (scan.get("vix") is None or scan["vix"] < vmin):
+        if any(r.get("candidate") for r in scan.get("rows", {}).values()):
+            v = scan.get("vix")
+            notes.append(f"{NAME}: candidates held back: VIX {'UNVERIFIED' if v is None else f'{v:.2f}'} < {vmin} "
+                         f"(bench, Q226)")
+        return [], notes
     open_tk = {e["ticker"] for e in active.open_trades(records)}
     tried = {r["ticker"] for r in execution.latest_intents(records).values()
              if (r.get("signal") or {}).get("strategy") == NAME and r["signal"].get("friday") == scan["friday"]}

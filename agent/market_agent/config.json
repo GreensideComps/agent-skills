@@ -1,5 +1,5 @@
 {
-  "version": "agent-1.22.4",
+  "version": "agent-1.22.5",
   "note": "Always-on demo market agent. Demo account only (the client refuses any other host). Owner mandate: cmsg_01U4KMvkBYNknqm4HRVie8uvK9gRYqGXBK4bQP49dBz49i (26 Oct 2026).",
   "intervals_s": {
     "loop": 15,
@@ -284,6 +284,8 @@
       },
       "z_entry": 3.0,
       "z_exit": 1.0,
+      "vix_min": 25.0,
+      "bench": "research Q226 (11 Nov 2026): FAIL overall (+0.23%/trade, t 0.15, DSR 0.007); pre-registered bench holds (VIX >= 25 on the signal day +1.92%/trade, 13 trades, vs -0.45% for the rest). Trades only when the signal Friday's VIX close >= vix_min; unproven, counted in N=444.",
       "max_run_up": 0.15,
       "stop_loss": 0.12,
       "take_profit": 0.25,
