@@ -1,7 +1,10 @@
-"""python3 -m market_agent run | status | uptime [--hours H] | halt REASON | resume REASON
+"""python3 -m market_agent run | status | audit | rules | uptime [--hours H] | halt REASON | resume REASON
 
 run     start the loop (one instance per state directory, enforced by a lease)
 status  print the heartbeat and a health verdict; exit 0 healthy, 1 degraded, 2 down
+audit   print the last self-check (state/invariants.json): exit 0 every promise holds, 1 warnings, 2 critical or stale
+rules   print every strategy's live buy and sell rules in plain English, built from config.json and the code
+        (--write FILE saves it, --check FILE exits 1 if FILE is out of date)
 uptime  measured from the event log: the share of minutes in the window with a heartbeat, and every gap over 3 min
 halt    kill switch: stop all order sending at once (the loop keeps monitoring)
 resume  allow order sending again
@@ -27,8 +30,10 @@ def health(hb: dict | None, now: float) -> tuple[int, str]:
         return 2, f"down: last heartbeat {age:.0f} s ago"
     ages = hb.get("duty_age_s") or {}
     stale = [k for k, lim in (("prices", 600), ("broker", 1200)) if ages.get(k, 10 ** 9) > lim]
-    if stale or hb.get("duty_failures") or hb.get("consecutive_order_errors"):
-        return 1, f"degraded: stale {stale}, failures {hb.get('duty_failures')}"
+    inv = hb.get("invariants") or {}
+    if stale or hb.get("duty_failures") or hb.get("consecutive_order_errors") or inv.get("critical"):
+        return 1, (f"degraded: stale {stale}, failures {hb.get('duty_failures')}, "
+                   f"self-check critical {inv.get('critical', 0)}")
     return 0, f"healthy: heartbeat {age:.0f} s ago, up {hb.get('up_s')} s, {hb.get('loops')} loops"
 
 
@@ -56,6 +61,10 @@ def main(argv: list[str] | None = None) -> int:
     sub = ap.add_subparsers(dest="cmd", required=True)
     sub.add_parser("run")
     sub.add_parser("status")
+    sub.add_parser("audit").add_argument("--max-age", type=float, default=1800.0)
+    ru = sub.add_parser("rules")
+    ru.add_argument("--write")
+    ru.add_argument("--check")
     sub.add_parser("uptime").add_argument("--hours", type=float, default=24.0)
     for c in ("halt", "resume"):
         sub.add_parser(c).add_argument("reason")
@@ -71,6 +80,26 @@ def main(argv: list[str] | None = None) -> int:
         code, text = health(hb, time.time())
         print(json.dumps({"verdict": text, "heartbeat": hb}, indent=1, default=str))
         return code
+    if a.cmd == "audit":
+        from . import invariants  # noqa: PLC0415
+        rep = store.read("invariants.json")
+        code, line = invariants.verdict(rep, time.time(), a.max_age)
+        print(json.dumps({"verdict": line, "report": {k: v for k, v in (rep or {}).items() if k != "seen"}}, indent=1))
+        return code
+    if a.cmd == "rules":
+        from . import rules  # noqa: PLC0415
+        from .agent import load_config  # noqa: PLC0415
+        cfg = load_config()
+        text = rules.render(cfg)  # the saved page is built from config alone, so it is the same on every machine
+        if a.check:
+            ok = Path(a.check).exists() and Path(a.check).read_text() == text
+            print("up to date" if ok else f"{a.check} is out of date: run python3 -m market_agent rules --write {a.check}")
+            return 0 if ok else 1
+        if a.write:
+            Path(a.write).write_text(text)
+        else:  # printed live: also shows what the kill rule or the office has switched off (state/strategies.json)
+            print(rules.render(cfg, store.read("strategies.json")))
+        return 0
     if a.cmd == "uptime":
         print(json.dumps(uptime(store, time.time(), a.hours), indent=1))
         return 0

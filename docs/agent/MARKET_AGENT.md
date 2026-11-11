@@ -1,4 +1,6 @@
-# Always-on demo market agent (agent-1.18)
+# Always-on demo market agent (agent-1.23)
+
+**What it buys and sells, in plain English:** [RULES.md](RULES.md), generated from the live config and checked by the tests. Read that page for strategy rules; this page covers how the agent runs.
 
 **Mandate:** the owner's 26 Oct 2026 handoff (`cmsg_01U4KMvkBYNknqm4HRVie8uvK9gRYqGXBK4bQP49dBz49i`), covering
 the demo account only. The Trading 212 client refuses any host but `demo.trading212.com`, and `load_credentials`
@@ -408,3 +410,40 @@ Q222 failed the go-live rule (DSR 0.000). 142 of its 197 trades fell in 2020.
 - **1.22.6:** Tiingo circuit breaker. A 429 writes `tiingo_down.json` and no Tiingo call is sent until the next
   probe (3 h for monthly bandwidth, 1 h otherwise); duties that need Tiingo log one `duty_skipped` per probe window
   instead of failing every retry. Held lines keep their broker prices meanwhile.
+
+## agent-1.23 (11 Nov 2026): stops that always converge, and a self-check of the whole book
+
+Why: on 11 Nov the owner, not the system, noticed holdings with no stop. 1.22.3 added the safety-net stop; an audit
+then found five ways a holding could still end up unprotected or a rule could silently not run. All five are fixed
+and tested (`agent/tests/test_stop_lifecycle.py`, `agent/tests/test_invariants.py`).
+
+| Before | Now |
+|---|---|
+| A stop the broker rejected, or that failed for any reason but "too far", was never tried again. | Every stop follows one state machine (`active.stop_action`): place, live, resize, replace, wait, done. Failures retry with a backoff from 30 min to 6 h, and the count resets once a stop has rested a day. |
+| If the broker lost a stop, stops.json still said it was live. | A stop missing from the broker's order book for three passes is looked up; if gone it is marked lost and placed again. |
+| The stop quantity never followed the position (a top-up left shares uncovered, a trim left a stop the broker would reject). | A stop whose quantity differs from the position is cancelled and re-placed at the new quantity. |
+| A resting stop locks the shares, so December's equal-weight trims would have silently done nothing, and a refused top-up was still marked done. | Trims and exits free the shares first, but only after a dry run of the risk gate says the sell will go out. The month is marked done only when the order was placed. |
+| A stop cancelled for an exit that never went out was never restored. | It is put back after 30 minutes (`EXIT_GRACE_S`). |
+| No stop resting (refused, lost, market shut) meant no protection at all for the four strategies without their own stop. | The agent sells at the same 30% level itself (`disaster_stop` exit) whenever no broker stop is resting. |
+| Nothing checked the book as a whole. | `invariants.py` tests nine promises on every broker pass and writes `state/invariants.json`; see below. |
+
+### The self-check
+
+`python3 -m market_agent audit` prints the last report and exits 0 (every promise holds), 1 (warnings) or 2
+(critical, missing or stale). The heartbeat carries the counts, and `status` reports degraded on any critical breach.
+
+| Code | Promise | Grace before it alerts |
+|---|---|---|
+| unprotected | every trade with a stop rule has a stop resting at the broker for its whole position (the broker's order book is the evidence) | 30 min of market time, then critical |
+| orphan_position | every holding is the core, a listed exit or part of an open trade | 1 h of market time |
+| ghost_trade | every open trade has a position at the broker | 30 min (2 days for a merger cash-out) |
+| stray_order | every resting order is one the agent knows | 15 min |
+| overdue_exit | no trade is still held an hour of market time past its time limit | 1 h of market time |
+| no_exit_rule | every open trade has a stop, a time limit or a named strategy exit | none |
+| overdue_refresh | no stock_screen name is held past 12 months plus a month | none |
+| weight_cap | no name is over 1.25x the single-name cap | 1 h |
+| unpriced | every holding has a validated price while its market is open | 30 min of market time |
+
+A breach inside its grace period is recorded as `info` and raises nothing, so the minutes between a fill and its stop
+are quiet. Past the grace it is `warn` (an `invariant:<code>:<ticker>` alert); an unprotected holding past its grace,
+or any breach that lasts a further day, is `critical`. Agent downtime does not count as breach time.
