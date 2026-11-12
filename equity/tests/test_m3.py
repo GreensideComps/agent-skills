@@ -157,6 +157,29 @@ def test_price_parsing_and_idempotent_ledger(store):
     assert bad["written"] == 0 and bad["failed"]
 
 
+def test_price_appends_are_batched_and_flushed_on_interrupt(store):
+    # Regression (2026-11-12): one ledger append per security re-read the whole prices file each time,
+    # so the step grew quadratically and the nightly run was killed past 45 minutes.
+    secs = [{"t212_ticker": f"T{i}_US_EQ", "company_id": f"SEC:{i}", "symbol": f"T{i}"} for i in range(7)]
+    calls, real = [], store.prices.append
+    store.prices.append = lambda recs: calls.append(len(recs)) or real(recs)
+    res = update_prices(store, secs, get=lambda url: chart(10.0), sleep=lambda x: None, batch=3)
+    assert res["written"] == 7 and calls == [3, 3, 1]
+    assert {p["company_id"] for p in store.prices.read()} == {f"SEC:{i}" for i in range(7)}
+
+    calls.clear()
+    more = [{"t212_ticker": f"U{i}_US_EQ", "company_id": f"SEC:U{i}", "symbol": f"U{i}"} for i in range(5)]
+
+    def get(url):
+        if "U3" in url:
+            raise KeyboardInterrupt
+        return chart(11.0)
+    with pytest.raises(KeyboardInterrupt):
+        update_prices(store, more, get=get, sleep=lambda x: None, batch=10)
+    assert calls == [3]  # the fetches made before the interruption are kept
+    assert {"SEC:U0", "SEC:U1", "SEC:U2"} <= {p["company_id"] for p in store.prices.read()}
+
+
 def test_weights_are_the_owner_baseline():
     assert CFG["weights"] == {"fcf_per_share": 30, "quality": 25, "growth": 20, "valuation": 20, "risk_fit": 5}
     for name, spec in CFG["components"].items():

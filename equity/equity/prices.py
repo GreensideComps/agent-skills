@@ -68,15 +68,34 @@ def fetch_price(security: dict, get=_get) -> dict:
             "source": SOURCE, "retrieved_utc": utc_now(), **p}
 
 
-def update_prices(store: Store, securities: list[dict], get=_get, pause: float = 0.3, sleep=time.sleep) -> dict:
-    written, failed = 0, []
-    for i, s in enumerate(securities):
-        if i:
-            sleep(pause)
-        try:
-            written += store.prices.append(fetch_price(s, get))
-        except (PriceError, OSError, ValueError, KeyError) as e:
-            failed.append(f"{s['symbol']}: {e}")
+def update_prices(store: Store, securities: list[dict], get=_get, pause: float = 0.3, sleep=time.sleep,
+                  batch: int = 250) -> dict:
+    """Fetch each security's latest close and append it to the prices ledger.
+
+    Records are appended in batches: every ledger append re-reads the whole file to de-duplicate,
+    so appending one record per security made the step quadratic (42 minutes for 3,333 companies on
+    2026-11-11, and killed past 45 minutes on 2026-11-12). A batch is flushed every `batch` records and
+    at the end, including when the run is interrupted, so at most one batch of fetches is lost.
+    """
+    written, failed, pending = 0, [], []
+
+    def flush() -> int:
+        n = store.prices.append(pending) if pending else 0
+        pending.clear()
+        return n
+
+    try:
+        for i, s in enumerate(securities):
+            if i:
+                sleep(pause)
+            try:
+                pending.append(fetch_price(s, get))
+            except (PriceError, OSError, ValueError, KeyError) as e:
+                failed.append(f"{s['symbol']}: {e}")
+            if len(pending) >= batch:
+                written += flush()
+    finally:
+        written += flush()
     return {"requested": len(securities), "written": written, "failed": failed}
 
 
