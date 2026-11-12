@@ -1,6 +1,6 @@
 # What the demo agent buys and sells, and why
 
-Generated from `agent/market_agent/config.json` (agent-1.24.2) by `python3 -m market_agent rules`. Do not edit by hand: change the config or `rules.py`, then run `python3 -m market_agent rules --write docs/agent/RULES.md`. The tests fail if this page is out of date.
+Generated from `agent/market_agent/config.json` (agent-1.24.3) by `python3 -m market_agent rules`. Do not edit by hand: change the config or `rules.py`, then run `python3 -m market_agent rules --write docs/agent/RULES.md`. The tests fail if this page is out of date.
 
 Demo account only. No strategy here has passed the go-live rule; each is a small forward test.
 

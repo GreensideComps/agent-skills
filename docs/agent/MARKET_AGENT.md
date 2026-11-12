@@ -500,3 +500,11 @@ The first IUQA buy (08:19Z) raised the self-check's `unpriced` warning from 09:4
 USD line on the LSE was 25-60 minutes old, past the 1,500 s limit, so its stops and exits had no validated price.
 `Honest.spark` now uses the broker's own position price for a held London line whenever it is newer than Yahoo's
 row (Yahoo's previous close is kept for the move check). Lines nobody holds are unchanged.
+
+## agent-1.24.3 (12 Nov 2026): Tiingo bandwidth meter
+
+The 10 Nov Tiingo outage was the free plan's monthly bandwidth cap, while the agent only counted request times over
+24 hours. `Honest.tiingo` now adds every response to this month's totals in `state/tiingo_usage.json`:
+`"calls": {"YYYY-MM": n}` and `"bytes": {"YYYY-MM": n}` (the response body size). The 24-hour `"t"` list and the
+request budget are unchanged, and the budget now keeps the meters when it rewrites the file.
+`research/improve/tiingo_meter.py` reads them through the mirror; a bandwidth cap waits for a December baseline.
