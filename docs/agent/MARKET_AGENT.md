@@ -493,3 +493,10 @@ one-month lag. The prereg's caveat stands: the idea is published and earlier tri
   sold if it has not beaten VWRP. -50% disaster stop only. Registered in `research/always_on/scoreboard.py`.
 - Sector check: 2% of a US quality fund adds well under 1 point to any sector versus VWRP's look-through, inside the
   +-10pt limit.
+
+## agent-1.24.2 (12 Nov 2026): thin London lines keep a price
+
+The first IUQA buy (08:19Z) raised the self-check's `unpriced` warning from 09:45Z: Yahoo's last trade for the thin
+USD line on the LSE was 25-60 minutes old, past the 1,500 s limit, so its stops and exits had no validated price.
+`Honest.spark` now uses the broker's own position price for a held London line whenever it is newer than Yahoo's
+row (Yahoo's previous close is kept for the move check). Lines nobody holds are unchanged.

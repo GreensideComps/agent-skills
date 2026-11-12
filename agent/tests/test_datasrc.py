@@ -203,6 +203,19 @@ def test_yahoo_prices_everything_first_with_an_honest_user_agent(tmp_path):
     assert "python-requests" not in ua and "Mozilla" not in ua and "GreensideComps/agent-skills" in ua
 
 
+def test_a_thin_london_line_uses_the_brokers_newer_price(tmp_path):
+    """agent-1.24.2: IUQA.L's last Yahoo trade was 25-60 min old while held (12 Nov 2026), so its stops lost their
+    price. The broker's price for a held London line is used whenever it is newer; Yahoo's previous close stays."""
+    old = {"VWRP.L": {"timestamp": [int(NOW) - 3600], "close": [109.0], "previousClose": 108.0}}
+    h, _ = make(tmp_path, {"/v8/finance/spark": old}, yahoo=True)
+    d = h.get(feeds.SPARK, {"symbols": "VWRP.L"})
+    assert d["VWRP.L"]["close"] == [110.5] and d["VWRP.L"]["timestamp"] == [NOW - 60]
+    assert d["VWRP.L"]["previousClose"] == 108.0
+    fresh = {"VWRP.L": {"timestamp": [int(NOW) - 30], "close": [109.0], "previousClose": 108.0}}
+    h, _ = make(tmp_path, {"/v8/finance/spark": fresh}, yahoo=True)
+    assert h.get(feeds.SPARK, {"symbols": "VWRP.L"})["VWRP.L"]["close"] == [109.0]  # Yahoo newer: kept
+
+
 def test_a_symbol_yahoo_misses_falls_back_to_the_old_sources(tmp_path):
     h, calls = make(tmp_path, {"/v8/finance/spark": _spark_body(SPY=600.0),
                                "/iex/": [{"ticker": "QQQ", "tngoLast": 500.0,
