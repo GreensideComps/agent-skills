@@ -10,6 +10,8 @@ them never share a position.
 - momentum_timing (Q50a, results/Q49_Q52.md): MSCI USA Momentum (MTUM) vs Russell 1000 (IWB); IUMO or VUAG. The test
   compared the winners decile with the losers decile, which has no ETF: momentum vs the market is a deliberate
   approximation.
+- quality_tilt (Q246, results/Q246.md, the first gate-v3 pass): a calendar entry listing every month, so it holds US
+  quality (iShares Edge MSCI USA Quality Factor, IUQA) continuously as a labelled forward test.
 
 Kill rule: off after `kill_after_trades` closed trades or `kill_after_days` from the first entry, whichever comes
 first, if its compounded return has not beaten VWRP's over the same time. Missing or short data means no new signal:
@@ -25,7 +27,7 @@ from typing import Callable
 from . import active, execution, review
 
 NAME = "value_timing"
-NAMES = ("value_timing", "momentum_timing", "january_small")
+NAMES = ("value_timing", "momentum_timing", "january_small", "quality_tilt")
 
 
 def adjusted(sym: str, get: Callable) -> list[tuple[float, float]]:
@@ -88,8 +90,10 @@ def calendar_signal(now: float, vc: dict) -> dict:
     """A calendar entry's target for the current UTC month: its ETF in the listed months, else nothing."""
     m = time.strftime("%Y-%m", time.gmtime(now))
     on = int(m[5:]) in vc["months"]
+    why = (f"{m}: {vc['factor']} is held every month ({vc.get('label') or 'forward test'})" if len(set(vc["months"])) == 12
+           else f"{m}: {'inside' if on else 'outside'} the {vc['factor']} season (months {vc['months']})")
     return {"month": m, "hold": vc["factor"] if on else "none", "target": vc["factor_ticker"] if on else None,
-            "why": f"{m}: {'inside' if on else 'outside'} the {vc['factor']} season (months {vc['months']})"}
+            "why": why}
 
 
 def exit_why(state: dict | None, ticker: str) -> str | None:

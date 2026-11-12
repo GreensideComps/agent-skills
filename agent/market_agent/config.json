@@ -1,5 +1,5 @@
 {
-  "version": "agent-1.24.0",
+  "version": "agent-1.24.2",
   "note": "Always-on demo market agent. Demo account only (the client refuses any other host). Owner mandate: cmsg_01U4KMvkBYNknqm4HRVie8uvK9gRYqGXBK4bQP49dBz49i (26 Oct 2026).",
   "intervals_s": {
     "loop": 15,
@@ -129,6 +129,7 @@
       "VRVAl_EQ",
       "VUSAl_EQ",
       "IUMOl_EQ",
+      "IUQAl_EQ",
       "VUAGl_EQ",
       "VRSGl_EQ",
       "SNDK1_US_EQ",
@@ -410,6 +411,27 @@
         "rule": "calendar: hold US small caps (Vanguard Russell 2000, VRSG) from the first LSE open of January to the first open of February; no position otherwise",
         "rationale": "Research loop Q65a passed its pre-registered test 31 Oct 2026 (results/Q61_Q65.md): +3.0%/yr vs the US market 1926-2022, t 5.07. LOW confidence: the classic January effect, -0.8%/yr since 2007 after publication. -50% disaster stop only. Demo only; first trade January 2027; kill after 30 closed trades or 730 days if it does not beat VWRP (the 730 days binds first).",
         "qty_decimals": 2
+            },
+      "quality_tilt": {
+        "enabled": true,
+        "factor": "US quality",
+        "months": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+        "factor_ticker": "IUQAl_EQ",
+        "currency": {
+          "IUQAl_EQ": "USD"
+        },
+        "entry_weight": 0.02,
+        "stop_loss": 0.5,
+        "take_profit": 10.0,
+        "time_stop_days": 3650,
+        "kill_after_trades": 30,
+        "kill_after_days": 730,
+        "label": "gate-v3 pass, forward test",
+        "evidence": "gate-v3 pass (Q246: +1.16% a year vs the US market 1963-2022, confirmed 2000-22 at +1.52% a year), but a published idea: forward test",
+        "rule": "always: hold US quality (iShares Edge MSCI USA Quality Factor, IUQA) as one fixed 2% line; gate-v3 pass, forward test",
+        "rationale": "Research Q246 (results/Q246.md) is the first gate-v3 PASS (relayed by the research thread 11 Nov 2026 20:10Z): US firms in the top 30% by operating profitability (Ken French, value-weighted, June rebalance) vs the US market, +1.16%/yr 1963-2022, tracking error 3.4%; discovery 1963-99 p 0.051 kept by BH; confirmation 2000-22 +1.52%/yr p 0.033, costs x2 and a one-month lag both positive. Caveat in the prereg: the idea is published and earlier trials saw related series. GATE_V3 step 5: labelled forward test. Approximation: MSCI USA Sector Neutral Quality (ROE, earnings variability, leverage) is not the KF operating-profitability sort. A calendar entry with every month listed, so it is held continuously; marked monthly against VWRP by the kill rule, reviewed after 730 days (24 months). -50% disaster stop only. Demo only.",
+        "approximation": "the tested portfolio is the Ken French top-30% operating-profitability sort; the ETF tracks MSCI USA Sector Neutral Quality (ROE, earnings stability, low leverage), the nearest UCITS line on T212",
+        "qty_decimals": 2
       }
     },
     "stock_screen": {
@@ -511,8 +533,8 @@
         "keep": 0.5,
         "edge": "unproven prior, research test requested 6 Nov"
       },
-      "sell_rules": {"stock_screen": ["held 12 months (drop-out swaps off since agent-1.22)", "SEC hard event: bankruptcy, delisting, auditor change, restatement, merger or tender", "disaster stop: broker stop 30% below entry", "strategy killed: trails VWRP after 30 trades"], "buyback_value": ["disaster stop: broker stop 30% below entry", "strategy killed: trails VWRP after 30 trades"], "gap_rebound": ["disaster stop: broker stop 30% below entry", "strategy killed: trails VWRP after 30 trades"], "momentum_timing": ["month-end signal switches fund", "momentum off-switch blocks new buys only"], "value_timing": ["month-end signal switches fund"]},
-      "hold_rules": {"stock_screen": "screener pick: held 12 months, then the oldest name is replaced at the monthly refresh; sold at once on a hard SEC event (Q214, Q237a)", "buyback_value": "buyback pick: held 6 months, the tested holding period (Q206); 9 months for entries from 9 Nov 2026 (Q238 bench, unproven)", "gap_rebound": "gap rebound: held 60 trading days, the tested holding period (Q218b)", "momentum_timing": "ETF timing: held until the month-end signal names the other fund", "value_timing": "ETF timing: held until the month-end signal names the other fund", "news_shock_vix_hi": "news shock in fear: held 5 trading days, the tested holding period (Q222)"}
+      "sell_rules": {"stock_screen": ["held 12 months (drop-out swaps off since agent-1.22)", "SEC hard event: bankruptcy, delisting, auditor change, restatement, merger or tender", "disaster stop: broker stop 30% below entry", "strategy killed: trails VWRP after 30 trades"], "buyback_value": ["disaster stop: broker stop 30% below entry", "strategy killed: trails VWRP after 30 trades"], "gap_rebound": ["disaster stop: broker stop 30% below entry", "strategy killed: trails VWRP after 30 trades"], "momentum_timing": ["month-end signal switches fund", "momentum off-switch blocks new buys only"], "value_timing": ["month-end signal switches fund"], "quality_tilt": ["no signal exit: held until the 24-month review or the kill rule"]},
+      "hold_rules": {"stock_screen": "screener pick: held 12 months, then the oldest name is replaced at the monthly refresh; sold at once on a hard SEC event (Q214, Q237a)", "buyback_value": "buyback pick: held 6 months, the tested holding period (Q206); 9 months for entries from 9 Nov 2026 (Q238 bench, unproven)", "gap_rebound": "gap rebound: held 60 trading days, the tested holding period (Q218b)", "momentum_timing": "ETF timing: held until the month-end signal names the other fund", "value_timing": "ETF timing: held until the month-end signal names the other fund", "news_shock_vix_hi": "news shock in fear: held 5 trading days, the tested holding period (Q222)", "quality_tilt": "quality forward test: one fixed 2% line held continuously (Q246, gate v3)"}
     },
     "buyback_value": {
       "enabled": true,

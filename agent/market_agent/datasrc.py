@@ -245,10 +245,14 @@ class Honest:
             out = self._yahoo_spark(symbols)  # agent-1.24: Yahoo first, the sources below fill only what it missed
         except feeds.FeedError:
             out = {}
+        bq = self.positions_fn() or {}
+        for s, row in out.items():  # agent-1.24.2: a thin London line's last Yahoo trade can be older than the
+            b = bq.get(s) if s.endswith(".L") else None  # freshness limit; the broker's own price for a held line
+            if b and row.get("timestamp") and b["t"] > row["timestamp"][-1]:  # is newer, so use it (keep prev close)
+                out[s] = _spark_row(b["t"], b["price"], row.get("previousClose"))
         symbols = [s for s in symbols if s not in out]
         if not symbols:
             return out
-        bq = self.positions_fn() or {}
         us = [s for s in symbols if not s.endswith((".L", "=X")) and not s.startswith("^")]
         if us:
             try:
