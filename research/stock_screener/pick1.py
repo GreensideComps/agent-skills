@@ -58,6 +58,7 @@ def _extend_partial_month(df: pd.DataFrame) -> pd.DataFrame:
     if newer.empty:
         return df
     base = df[df["month"] == last_m].drop(columns=["ticker", "close_raw", "adjclose", "ret_next", "mcap", "band"])
+    base = _refresh_fundamentals(base)
     add = base.drop(columns=["month"]).merge(newer[["cik", "month", "ticker", "close_raw", "adjclose"]], on="cik")
     shares = add["shares_out"].where(add["shares_out"] > 0, add["shares_diluted"])
     add["mcap"] = shares * add["close_raw"]
@@ -66,6 +67,39 @@ def _extend_partial_month(df: pd.DataFrame) -> pd.DataFrame:
     for b, (lo, hi) in xs.SIZE_BANDS.items():
         add.loc[(add["mcap"] >= lo) & (add["mcap"] < hi), "band"] = b
     return pd.concat([df, add[df.columns]], ignore_index=True)
+
+
+def _refresh_fundamentals(base: pd.DataFrame, today: str | None = None) -> pd.DataFrame:
+    """S20 (12 Nov 2026), live only: the month-end metrics miss results filed since the month-end (most 10-Qs land
+    in the first weeks of a month). Recompute each company's point-in-time metrics as of today from the SEC fact
+    panel with the same function the monthly build uses, so a mid-month screen sees filings up to today. Companies
+    with no fresh row (or a missing facts file) keep the month-end row."""
+    from datetime import date
+    facts = DATA / "sec_facts_panel.csv.gz"
+    if not facts.exists() or base.empty:
+        return base
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "equity"))
+    from equity import monthly, panel  # noqa: E402
+    today = today or date.today().isoformat()
+    ciks = set(int(c) for c in base["cik"])
+    from itertools import groupby
+    fresh = []
+    for cik, grp in groupby(panel.read(facts, ciks), key=lambda r: r["cik"]):
+        recs = monthly.company_months(int(cik), list(grp), [today])
+        fresh += recs
+    if not fresh:
+        return base
+    f = pd.DataFrame(fresh).drop(columns=["month"])
+    cols = [c for c in f.columns if c != "cik" and c in base.columns]
+    for c in cols:
+        if c not in ("last_filed", "ttm_end"):
+            f[c] = pd.to_numeric(f[c], errors="coerce")
+    f["cik"] = f["cik"].astype(int)
+    out = base.set_index("cik")
+    f = f.set_index("cik")
+    hit = out.index.intersection(f.index)
+    out.loc[hit, cols] = f.loc[hit, cols].values
+    return out.reset_index()
 
 
 def universe(m: pd.DataFrame, min_cap=2e9) -> pd.DataFrame:
