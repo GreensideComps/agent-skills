@@ -7,7 +7,7 @@ replaces the champion only after >= 24 scored months AND mean excess vs champion
 New challengers may be added any time (append to VARIANTS with a date); never edit or remove an existing one.
 LEDGER columns (12 Nov 2026, S17): ret_usd is the frozen score (a missing price counts as 0%); n_imputed counts names
 priced by that fallback; n_vanished counts names whose price disappeared this month; ret_usd_delist_adj scores those at
--30% (Shumway 1997) unless an 8-K 1.01/5.01 merger item was filed in the prior 12 months (then 0%). Report both."""
+-30% (Shumway 1997) unless an 8-K shows a change in control (5.01, or 2.01 with 1.01/3.01 same day) in the prior 12 months (then 0%). Report both."""
 from __future__ import annotations
 import sys
 from pathlib import Path
@@ -148,15 +148,17 @@ K8 = Path("/mnt/project-files/research-data/8k_items_large_2013_2026.csv.gz")
 
 
 def _merger_ciks(m_end) -> set:
-    """CIKs with an 8-K merger item (1.01 agreement or 5.01 change in control) in the 12 months to m_end:
-    a vanished price for these is taken as an acquisition and scored at the last price (0% that month)."""
+    """CIKs treated as acquired if their price vanishes: in the 12 months to m_end an 8-K with item 5.01 (change in
+    control), or item 2.01 filed on the same date as 1.01 or 3.01 (closing of the deal). Item 1.01 alone also covers
+    credit facilities and leases, and 3.01 alone is often a distress delisting notice, so neither counts by itself (S19)."""
     if not K8.exists():
         return set()
     k = pd.read_csv(K8, dtype={"items": str})
     k["date"] = pd.to_datetime(k["date"], errors="coerce")
     k = k[(k["date"] <= m_end) & (k["date"] > m_end - pd.DateOffset(months=12))]
-    hit = k["items"].fillna("").str.contains(r"(?:^|,)(?:1\.01|5\.01)(?:,|$)")
-    return set(k.loc[hit, "cik"])
+    items = k.groupby(["cik", "date"])["items"].apply(lambda x: set(",".join(x.fillna("")).split(",")))
+    hit = items.apply(lambda it: "5.01" in it or ("2.01" in it and ("1.01" in it or "3.01" in it)))
+    return set(items[hit].index.get_level_values("cik"))
 
 
 def main(month: str):
