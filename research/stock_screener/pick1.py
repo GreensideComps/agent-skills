@@ -19,7 +19,51 @@ N_EXTRA = 94 + 8  # regime track C7 + owner timing batch, not in trials.jsonl
 TOP, PER_SIC = 15, 3
 
 
+_CACHE_INPUTS = ("monthly_metrics.csv.gz", "prices_monthly.csv.gz", "sec_facts_panel.csv.gz", "sec_companies.csv.gz")
+
+
+def _cache_key(today: str | None = None) -> str:
+    """E14: key = size+mtime of every input file, of this module and of xsection.py, plus today's date (the S20
+    fundamentals refresh is as of today, so a new day always rebuilds)."""
+    import hashlib, os
+    from datetime import date
+    parts = [today or date.today().isoformat()]
+    for f in [DATA / n for n in _CACHE_INPUTS] + [Path(__file__), Path(xs.__file__)]:
+        try:
+            st = os.stat(f)
+            parts.append(f"{f.name}|{st.st_size}|{int(st.st_mtime)}")
+        except OSError:
+            parts.append(f"{f.name}|missing")
+    return hashlib.sha1("||".join(parts).encode()).hexdigest()[:16]
+
+
 def load() -> pd.DataFrame:
+    """Cached wrapper (E14, 13 Nov 2026): the S20 refresh made a full build take ~60 s. The built frame is pickled to
+    a local cache dir (DATACACHE, default /tmp/claude-0/datacache) and reused while the key matches. PICK1_NOCACHE=1
+    forces a rebuild."""
+    import os
+    cdir = Path(os.environ.get("DATACACHE", "/tmp/claude-0/datacache"))
+    pkl = cdir / f"pick1_load.{_cache_key()}.pkl"
+    if os.environ.get("PICK1_NOCACHE") != "1" and pkl.exists():
+        try:
+            return pd.read_pickle(pkl)
+        except Exception:
+            pass
+    df = _load_uncached()
+    try:
+        cdir.mkdir(parents=True, exist_ok=True)
+        for old in cdir.glob("pick1_load.*.pkl"):
+            if old != pkl:
+                old.unlink(missing_ok=True)
+        tmp = pkl.with_suffix(".tmp")
+        df.to_pickle(tmp)
+        tmp.replace(pkl)
+    except OSError:
+        pass
+    return df
+
+
+def _load_uncached() -> pd.DataFrame:
     df = xs.load()
     df = _extend_partial_month(df)
     co = pd.read_csv(DATA / "sec_companies.csv.gz", usecols=["cik", "sic"])
