@@ -207,7 +207,7 @@ class Agent:
         short, seen, dup = {}, {}, set()
         for i in ins:
             t, sn = i.get("ticker") or "", (i.get("shortName") or "").strip().upper()
-            if not t.endswith("_US_EQ") or not sn:
+            if not feeds.is_us(t) or not sn:
                 continue
             short[t] = sn
             if sn in seen and seen[sn] != t:
@@ -231,7 +231,7 @@ class Agent:
 
     def _sym_of(self, t212: str) -> str:
         """The exchange symbol for a US T212 ticker."""
-        return getattr(self, "short_of", {}).get(t212) or t212[:-len("_US_EQ")]
+        return getattr(self, "short_of", {}).get(t212) or t212[:-len("_US_EQ")]  # both US suffixes are 6 long
 
     def market_open(self, t212: str) -> bool:
         sid = self.schedule_of.get(t212)
@@ -379,7 +379,7 @@ class Agent:
             q = self._quote(t)
             f = review.factors(closes, vols, q["price"] if q else None)
             rev = {"t": now, "ticker": t, "factors": f, "scores": review.score(f, self.attn.get(t)),
-                   "earnings": self.earn.get(sym, "UNVERIFIED (results check not run)") if t.endswith("_US_EQ")
+                   "earnings": self.earn.get(sym, "UNVERIFIED (results check not run)") if feeds.is_us(t)
                    else None}
             self.reviews[t] = rev
             rows.append({k: v for k, v in rev.items() if k != "t"})
@@ -1121,7 +1121,7 @@ class Agent:
         today = gap_rebound.ny_now(now).date().isoformat()
         for t in names:
             sym = feeds.yahoo_symbol(t, self._ov())
-            if not sym or not t.endswith("_US_EQ") or self.earn_day.get(t) == today:
+            if not sym or not feeds.is_us(t) or self.earn_day.get(t) == today:
                 continue
             try:
                 cik = self._sec_cik(t)

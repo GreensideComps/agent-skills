@@ -199,15 +199,41 @@ class Honest:
         p = self.root / "tiingo_usage.json"
         now = self.clock()
         try:
-            ts = [t for t in json.loads(p.read_text()).get("t", []) if now - t < 86400]
+            doc = json.loads(p.read_text())
+            doc = doc if isinstance(doc, dict) else {}
         except (OSError, ValueError):
-            ts = []
+            doc = {}
+        ts = [t for t in doc.get("t", []) if now - t < 86400]
         cap = self.hour_cap if kind == "quotes" else self.hour_cap - self.quote_reserve  # prices never starve
         if sum(1 for t in ts if now - t < 3600) >= cap or len(ts) >= self.day_cap - (kind != "quotes") * 100:
             raise BudgetError(f"tiingo: request budget used ({self.hour_cap}/h, {self.day_cap}/day)")
         ts.append(now)
+        doc["t"] = ts  # the monthly "calls"/"bytes" meters ride along untouched
         tmp = p.with_suffix(".tmp")
-        tmp.write_text(json.dumps({"t": ts}))
+        tmp.write_text(json.dumps(doc))
+        tmp.replace(p)
+
+    def _meter(self, r) -> None:
+        """agent-1.24.3: Tiingo's free plan is capped on monthly bandwidth (the 10 Nov outage), not only on
+        requests, so every response adds 1 call and its byte size to this month's totals in tiingo_usage.json
+        ("calls"/"bytes": {"YYYY-MM": n}); research/improve/tiingo_meter.py reads them through the mirror."""
+        p = self.root / "tiingo_usage.json"
+        try:
+            doc = json.loads(p.read_text())
+            doc = doc if isinstance(doc, dict) else {}
+        except (OSError, ValueError):
+            doc = {}
+        month = time.strftime("%Y-%m", time.gmtime(self.clock()))
+        try:
+            size = len(r.content or b"")
+        except (AttributeError, TypeError):
+            size = len((getattr(r, "text", "") or "").encode())
+        for key, n in (("calls", 1), ("bytes", size)):
+            m = doc.get(key) if isinstance(doc.get(key), dict) else {}
+            m[month] = int(m.get(month, 0)) + n
+            doc[key] = m
+        tmp = p.with_suffix(".tmp")
+        tmp.write_text(json.dumps(doc))
         tmp.replace(p)
 
     def _down_until(self) -> float:
@@ -223,6 +249,7 @@ class Honest:
         self._budget(kind)
         r = self.raw_get(TIINGO + path, params=params or {}, timeout=timeout,
                          headers={**feeds.UA, "Authorization": f"Token {self._token()}"})
+        self._meter(r)
         if r.status_code == 429:  # monthly bandwidth: probe every 3 h; any other 429 (hourly limit): back off 1 h
             bw = "bandwidth" in (getattr(r, "text", "") or str(_body(r))).lower()
             until = self.clock() + (DOWN_PROBE_S if bw else 3600)
@@ -245,10 +272,14 @@ class Honest:
             out = self._yahoo_spark(symbols)  # agent-1.24: Yahoo first, the sources below fill only what it missed
         except feeds.FeedError:
             out = {}
+        bq = self.positions_fn() or {}
+        for s, row in out.items():  # agent-1.24.2: a thin London line's last Yahoo trade can be older than the
+            b = bq.get(s) if s.endswith(".L") else None  # freshness limit; the broker's own price for a held line
+            if b and row.get("timestamp") and b["t"] > row["timestamp"][-1]:  # is newer, so use it (keep prev close)
+                out[s] = _spark_row(b["t"], b["price"], row.get("previousClose"))
         symbols = [s for s in symbols if s not in out]
         if not symbols:
             return out
-        bq = self.positions_fn() or {}
         us = [s for s in symbols if not s.endswith((".L", "=X")) and not s.startswith("^")]
         if us:
             try:

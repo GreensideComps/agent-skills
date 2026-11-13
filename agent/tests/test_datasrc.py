@@ -89,6 +89,19 @@ def test_budget_refuses_above_the_hourly_cap(tmp_path):
     assert len(json.loads((tmp_path / "tiingo_usage.json").read_text())["t"]) == 3
 
 
+def test_tiingo_meters_monthly_calls_and_bytes_and_keeps_them_through_the_budget(tmp_path):
+    h, _ = make(tmp_path, {"/tiingo/daily/": [{"close": 1.0}]})
+    (tmp_path / "tiingo_usage.json").write_text(json.dumps({"t": [], "calls": {"2026-10": 7}, "bytes": {"2026-10": 99}}))
+    h.raw_get = lambda url, params=None, headers=None, timeout=None: type(
+        "R", (), {"status_code": 200, "content": b"x" * 120, "json": lambda self: []})()
+    h.tiingo("/tiingo/daily/a/prices")
+    h.tiingo("/tiingo/daily/b/prices")
+    doc = json.loads((tmp_path / "tiingo_usage.json").read_text())
+    assert doc["calls"] == {"2026-10": 7, "2026-11": 2}  # October survives; November counts both calls
+    assert doc["bytes"] == {"2026-10": 99, "2026-11": 240}
+    assert len(doc["t"]) == 2  # the 24 h request list is unchanged
+
+
 def test_vix_history_takes_the_finished_session_from_the_quote(tmp_path):
     h, _ = make(tmp_path, {
         "quotes/_VIX.json": {"data": {"current_price": 25.64, "close": 25.64, "open": 26.4, "high": 26.6, "low": 23.5,
@@ -201,6 +214,19 @@ def test_yahoo_prices_everything_first_with_an_honest_user_agent(tmp_path):
     assert len(calls) == 1 and "tiingo" not in calls[0][0]
     ua = calls[0][2]["User-Agent"]
     assert "python-requests" not in ua and "Mozilla" not in ua and "GreensideComps/agent-skills" in ua
+
+
+def test_a_thin_london_line_uses_the_brokers_newer_price(tmp_path):
+    """agent-1.24.2: IUQA.L's last Yahoo trade was 25-60 min old while held (12 Nov 2026), so its stops lost their
+    price. The broker's price for a held London line is used whenever it is newer; Yahoo's previous close stays."""
+    old = {"VWRP.L": {"timestamp": [int(NOW) - 3600], "close": [109.0], "previousClose": 108.0}}
+    h, _ = make(tmp_path, {"/v8/finance/spark": old}, yahoo=True)
+    d = h.get(feeds.SPARK, {"symbols": "VWRP.L"})
+    assert d["VWRP.L"]["close"] == [110.5] and d["VWRP.L"]["timestamp"] == [NOW - 60]
+    assert d["VWRP.L"]["previousClose"] == 108.0
+    fresh = {"VWRP.L": {"timestamp": [int(NOW) - 30], "close": [109.0], "previousClose": 108.0}}
+    h, _ = make(tmp_path, {"/v8/finance/spark": fresh}, yahoo=True)
+    assert h.get(feeds.SPARK, {"symbols": "VWRP.L"})["VWRP.L"]["close"] == [109.0]  # Yahoo newer: kept
 
 
 def test_a_symbol_yahoo_misses_falls_back_to_the_old_sources(tmp_path):

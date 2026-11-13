@@ -144,7 +144,11 @@ def strategies(cfg: dict, killed: dict | None = None) -> list[dict]:
                _kill(gp, a)])
 
     for name, vc in (a.get("timing") or {}).items():
-        if vc.get("months"):
+        if vc.get("months") and len(set(vc["months"])) == 12:
+            buys = [vc["rule"]]
+            sells = ["no signal exit: held continuously until the review the kill rule sets"]
+            ev = vc.get("evidence", "forward test")
+        elif vc.get("months"):
             buys = [vc["rule"]]
             sells = ["calendar: sold at the first London open after the holding month ends"]
             ev = "passed its long-history test but has lost money since 2007: low confidence"

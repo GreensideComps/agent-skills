@@ -76,6 +76,7 @@ class FakeBroker:
                 {"ticker": "VWRPl_EQ", "workingScheduleId": 70}, {"ticker": "VRVAl_EQ", "workingScheduleId": 70},
                 {"ticker": "VUSAl_EQ", "workingScheduleId": 70}, {"ticker": "IUMOl_EQ", "workingScheduleId": 70},
                 {"ticker": "VUAGl_EQ", "workingScheduleId": 70}, {"ticker": "VRSGl_EQ", "workingScheduleId": 70},
+                {"ticker": "IUQAl_EQ", "workingScheduleId": 70},
                 {"ticker": "MU_US_EQ", "workingScheduleId": 71}, {"ticker": "TDC_US_EQ", "workingScheduleId": 71}]
 
     def place_market_order(self, ticker, quantity):
@@ -176,6 +177,7 @@ def make(tmp_path, enabled=True, prices=None, satellite=False, active_on=False):
     cfg["active"]["buyback_value"]["enabled"] = False  # needs a picks file; its own test turns it on
     cfg["active"]["exit_review"]["enabled"] = False
     cfg["active"]["news_shock"]["enabled"] = False
+    cfg["active"]["timing"]["quality_tilt"]["enabled"] = False  # always holds a line; its own test turns it on
     cfg["slippage"]["enabled"] = False  # test_news_shock covers it  # needs SEC full-text search; test_news_shock covers it  # needs SEC facts; test_exits covers it
     ag = agent_mod.Agent(st, b, cfg, ambiguous_exc=Ambiguous, api_exc=ApiErr,
                          get=fake_get(clock, prices), clock=clock, sleep=lambda s: None, sec_get=fake_sec(clock))
@@ -1056,6 +1058,35 @@ def test_momentum_off_switch_blocks_momentum_entries_only_q219(tmp_path):
     assert active.momentum_off(up[:5], [("2026-11-02", 18.0)], "2026-11-03")[0] is None   # UNVERIFIED: blocks
 
 
+def test_quality_tilt_holds_one_fixed_line_through_month_ends(tmp_path):
+    """Q246 (gate-v3 pass): one 2% IUQA line, bought once, kept across a month end, never re-bought while held."""
+    from market_agent import value_timing as vt
+    qc = agent_mod.load_config()["active"]["timing"]["quality_tilt"]
+    nov = dt.datetime(2026, 11, 12, 9, 0, tzinfo=dt.timezone.utc).timestamp()
+    dec = dt.datetime(2026, 12, 1, 9, 0, tzinfo=dt.timezone.utc).timestamp()
+    for t in (nov, dec):
+        sig = vt.calendar_signal(t, {**qc, "name": "quality_tilt"})
+        assert sig["target"] == "IUQAl_EQ" and "gate-v3 pass, forward test" in sig["why"]
+    ag, b, st, clock = make(tmp_path, active_on=True, prices={"VWRP.L": 140.0, "GBPUSD=X": 1.25, "IUQA.L": 15.0})
+    _active_book(b)
+    for k in ("value_timing", "momentum_timing", "january_small"):
+        ag.cfg["active"]["timing"][k]["enabled"] = False
+    ag.cfg["active"]["timing"]["quality_tilt"]["enabled"] = True
+    ag.cfg["active"]["social"]["enabled"] = False
+    clock.t = nov
+    advance(ag, clock, 2, by=30)
+    buys = [o for o in b.orders if o[0] == "IUQAl_EQ"]
+    assert len(buys) == 1 and buys[0][1] > 0
+    rec = next(r for r in execution.latest_intents(st.intents()).values() if r["ticker"] == "IUQAl_EQ")
+    assert rec["signal"]["strategy"] == "quality_tilt" and "gate-v3 pass, forward test" in rec["reason"]
+    b.pos.append(pos("IUQAl_EQ", buys[0][1], buys[0][1], 0, rec["value_gbp"], rec["value_gbp"], ccy="USD"))
+    advance(ag, clock, 2, by=301)
+    clock.t = dec
+    advance(ag, clock, 3, by=301)
+    assert [o for o in b.orders if o[0] == "IUQAl_EQ"] == buys                # held across the month end, no sale
+    assert vt.exit_why(st.read("quality_tilt.json"), "IUQAl_EQ") is None
+
+
 def test_january_small_holds_small_caps_through_january_only(tmp_path):
     from market_agent import value_timing as vt
     jc = agent_mod.load_config()["active"]["timing"]["january_small"]
@@ -1064,7 +1095,7 @@ def test_january_small_holds_small_caps_through_january_only(tmp_path):
     assert vt.calendar_signal(jan, jc)["target"] == "VRSGl_EQ" and vt.calendar_signal(feb, jc)["target"] is None
     ag, b, st, clock = make(tmp_path, active_on=True, prices={"VWRP.L": 140.0, "GBPUSD=X": 1.25, "VRSG.L": 50.0})
     _active_book(b)
-    for k in ("value_timing", "momentum_timing"):
+    for k in ("value_timing", "momentum_timing", "quality_tilt"):
         ag.cfg["active"]["timing"][k]["enabled"] = False
     ag.cfg["active"]["social"]["enabled"] = False
     advance(ag, clock, 2, by=150)                                              # October: nothing held
@@ -1206,7 +1237,7 @@ def test_symbols_come_from_the_broker_short_name_not_the_ticker(tmp_path):
         {"ticker": "RTP_US_EQ", "shortName": "JOBY"}, {"ticker": "SNDK1_US_EQ", "shortName": "SNDK"},
         {"ticker": "BRK.B_US_EQ", "shortName": "BRK.B"}, {"ticker": "MSFT_US_EQ", "shortName": "MSFT"},
         {"ticker": "NVRI_US_EQ", "shortName": "NVRI"}, {"ticker": "NVRI1_US_EQ", "shortName": "NVRI"},
-        {"ticker": "VWRPl_EQ", "shortName": "VWRP"}])
+        {"ticker": "VWRPl_EQ", "shortName": "VWRP"}, {"ticker": "TPR_EQ_US", "shortName": "TPR"}])
     ov = ag._ov()
     assert feeds.yahoo_symbol("GPS_US_EQ", ov) == "GAP" and feeds.yahoo_symbol("FB_US_EQ", ov) == "META"
     assert feeds.yahoo_symbol("MSFT_US_EQ", ov) == "MSFT" and feeds.yahoo_symbol("BRK.B_US_EQ", ov) == "BRK-B"
@@ -1214,6 +1245,8 @@ def test_symbols_come_from_the_broker_short_name_not_the_ticker(tmp_path):
     assert ag._us("SNDK") == "SNDK1_US_EQ" and ag._us("JOBY") == "RTP_US_EQ" and ag._us("meta") == "FB_US_EQ"
     assert ag._us("RTP") is None and ag._us("FB") is None  # an old symbol is not today's company
     assert ag._us("NVRI") is None  # two instruments claim it: no guess
+    assert ag._us("TPR") == "TPR_EQ_US" and feeds.yahoo_symbol("TPR_EQ_US", ov) == "TPR"  # agent-1.24.4: odd suffix
+    assert ag._sym_of("TPR_EQ_US") == "TPR" and feeds.is_us("TPR_EQ_US") and not feeds.is_us("VWRPl_EQ")
     assert ag._us_tradeable("GAP") == "GPS_US_EQ" and ag._sym_of("GPS_US_EQ") == "GAP"
     ag.cfg["yahoo_overrides"] = {"GPS_US_EQ": "GAP.X"}
     assert feeds.yahoo_symbol("GPS_US_EQ", ag._ov()) == "GAP.X"  # config.json still wins

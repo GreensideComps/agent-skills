@@ -56,10 +56,10 @@ def test_thirty_trades_opened_in_two_weeks_are_two_bets_not_thirty():
 def test_kill_rule_and_the_count_of_strategies_are_unchanged():
     trades = [trade(i, T0 + i * 4 * DAY, -0.01) for i in range(30)]
     summary, k = sb.summarise(trades, T0 + 130 * DAY)
-    assert k == len(sb.REGISTERED) == 14
+    assert k == len(sb.REGISTERED) == 15
     assert row(summary)["kill_rule"].startswith("KILL") and not row(summary)["go_live_eligible"]
     # a tag the list does not know still counts towards the multiple-testing adjustment
-    assert sb.summarise([{**t, "strategy": "new_idea"} for t in trades], T0 + 130 * DAY)[1] == 15
+    assert sb.summarise([{**t, "strategy": "new_idea"} for t in trades], T0 + 130 * DAY)[1] == 16
 
 
 def _state(tmp_path):
@@ -98,7 +98,7 @@ def test_the_script_runs_isolated_with_no_environment_and_writes_both_files(tmp_
     r = subprocess.run([sys.executable, "-I", str(ROOT / "research" / "always_on" / "scoreboard.py"), "--state", str(st),
                         "--out", str(out)], capture_output=True, text=True, env={"PATH": "/usr/bin:/bin"}, timeout=60)
     assert r.returncode == 0, r.stderr
-    assert "2 trades, 14 strategies, eligible: none" in r.stdout
+    assert "2 trades, 15 strategies, eligible: none" in r.stdout
     d = json.loads((out / "SCOREBOARD.json").read_text())
     assert {s["strategy"] for s in d["strategies"]} >= set(sb.REGISTERED)
     assert "counting trades opened in the same week as one bet" in (out / "SCOREBOARD.md").read_text()
