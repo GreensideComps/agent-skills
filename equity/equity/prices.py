@@ -15,6 +15,7 @@ import json
 import time
 import urllib.error
 import urllib.request
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 
 from .store import Store, utc_now
@@ -69,13 +70,16 @@ def fetch_price(security: dict, get=_get) -> dict:
 
 
 def update_prices(store: Store, securities: list[dict], get=_get, pause: float = 0.3, sleep=time.sleep,
-                  batch: int = 250) -> dict:
+                  batch: int = 250, workers: int = 4) -> dict:
     """Fetch each security's latest close and append it to the prices ledger.
 
     Records are appended in batches: every ledger append re-reads the whole file to de-duplicate,
-    so appending one record per security made the step quadratic (42 minutes for 3,333 companies on
-    2026-11-11, and killed past 45 minutes on 2026-11-12). A batch is flushed every `batch` records and
-    at the end, including when the run is interrupted, so at most one batch of fetches is lost.
+    so appending one record per security made the step quadratic. A batch is flushed every `batch`
+    records and at the end, including when the run is interrupted, so at most one batch is lost.
+
+    Fetches run on `workers` threads, each pausing `pause` seconds between its own requests (about
+    workers/(pause + latency) requests a second in all). One thread took 38 minutes for 3,650 companies
+    on 2026-11-12, close to the session's 45-minute limit, and the universe grows by ~170 a day.
     """
     written, failed, pending = 0, [], []
 
@@ -84,17 +88,28 @@ def update_prices(store: Store, securities: list[dict], get=_get, pause: float =
         pending.clear()
         return n
 
+    def one(s: dict, first: bool):
+        if not first:
+            sleep(pause)
+        try:
+            return fetch_price(s, get), None
+        except (PriceError, OSError, ValueError, KeyError) as e:
+            return None, f"{s['symbol']}: {e}"
+
+    workers = max(1, min(workers, len(securities) or 1))
+    pool = ThreadPoolExecutor(max_workers=workers)
     try:
-        for i, s in enumerate(securities):
-            if i:
-                sleep(pause)
-            try:
-                pending.append(fetch_price(s, get))
-            except (PriceError, OSError, ValueError, KeyError) as e:
-                failed.append(f"{s['symbol']}: {e}")
+        futures = [pool.submit(one, s, i < workers) for i, s in enumerate(securities)]
+        for f in futures:  # in submission order, so batches and failures are deterministic
+            rec, err = f.result()
+            if err:
+                failed.append(err)
+            else:
+                pending.append(rec)
             if len(pending) >= batch:
                 written += flush()
     finally:
+        pool.shutdown(wait=True, cancel_futures=True)
         written += flush()
     return {"requested": len(securities), "written": written, "failed": failed}
 

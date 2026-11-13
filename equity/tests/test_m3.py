@@ -10,7 +10,7 @@ from conftest import INSTRUMENTS, SEC_TICKERS, make_facts
 from equity import screener
 from equity.fundamentals import analyse, shares_outstanding
 from equity.ingest import ingest_company, last_snapshot, resolve
-from equity.prices import latest_prices, parse_chart, update_prices
+from equity.prices import PriceError, latest_prices, parse_chart, update_prices
 from equity.sec import FACTS_URL
 from equity.universe import sync_security_master
 
@@ -175,9 +175,29 @@ def test_price_appends_are_batched_and_flushed_on_interrupt(store):
             raise KeyboardInterrupt
         return chart(11.0)
     with pytest.raises(KeyboardInterrupt):
-        update_prices(store, more, get=get, sleep=lambda x: None, batch=10)
+        update_prices(store, more, get=get, sleep=lambda x: None, batch=10, workers=1)
     assert calls == [3]  # the fetches made before the interruption are kept
     assert {"SEC:U0", "SEC:U1", "SEC:U2"} <= {p["company_id"] for p in store.prices.read()}
+
+
+def test_price_fetches_run_in_parallel_and_keep_order(store):
+    import threading
+    import time as _t
+    secs = [{"t212_ticker": f"P{i}_US_EQ", "company_id": f"SEC:P{i}", "symbol": f"P{i}"} for i in range(8)]
+    live, peak, lock = [0], [0], threading.Lock()
+
+    def get(url):
+        with lock:
+            live[0] += 1
+            peak[0] = max(peak[0], live[0])
+        _t.sleep(0.02)
+        with lock:
+            live[0] -= 1
+        if "P5" in url:
+            raise PriceError("HTTP 404")
+        return chart(10.0)
+    res = update_prices(store, secs, get=get, sleep=lambda x: None, workers=4)
+    assert peak[0] > 1 and res["written"] == 7 and res["failed"] == ["P5: HTTP 404"]
 
 
 def test_weights_are_the_owner_baseline():
