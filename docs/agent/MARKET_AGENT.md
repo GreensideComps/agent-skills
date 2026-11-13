@@ -508,3 +508,12 @@ The 10 Nov Tiingo outage was the free plan's monthly bandwidth cap, while the ag
 `"calls": {"YYYY-MM": n}` and `"bytes": {"YYYY-MM": n}` (the response body size). The 24-hour `"t"` list and the
 request budget are unchanged, and the budget now keeps the meters when it rewrites the file.
 `research/improve/tiingo_meter.py` reads them through the mirror; a bandwidth cap waits for a December baseline.
+
+## agent-1.24.4 (13 Nov 2026): US tickers with the odd suffix
+
+A few T212 US listings end `_EQ_US` instead of `_US_EQ` (Tapestry is `TPR_EQ_US`, a held stock_screen name). The
+shortName symbol map, the results-date check and the review's earnings field only accepted `_US_EQ`, so TPR was
+missing from the map (it priced only through a config override) and was never checked for results days.
+`feeds.is_us` accepts both suffixes and is used in all three places. The improvement track's
+`research/stock-screener/t212_map_2026-11.csv` (from `research/improve/t212_map.py`) is the checked symbol map
+for screen refreshes: a new pick's T212 ticker comes from its `t212_ticker` column.
