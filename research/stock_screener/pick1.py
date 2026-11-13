@@ -39,10 +39,11 @@ def _cache_key(today: str | None = None) -> str:
 
 def load() -> pd.DataFrame:
     """Cached wrapper (E14, 13 Nov 2026): the S20 refresh made a full build take ~60 s. The built frame is pickled to
-    a local cache dir (DATACACHE, default /tmp/claude-0/datacache) and reused while the key matches. PICK1_NOCACHE=1
+    the shared cache dir (PICK1_CACHE, default /mnt/project-files/research-data/.cache, so routines in other
+    session containers reuse it; E16) and reused while the key matches; only the newest pickle is kept. PICK1_NOCACHE=1
     forces a rebuild."""
     import os
-    cdir = Path(os.environ.get("DATACACHE", "/tmp/claude-0/datacache"))
+    cdir = Path(os.environ.get("PICK1_CACHE", "/mnt/project-files/research-data/.cache"))
     pkl = cdir / f"pick1_load.{_cache_key()}.pkl"
     if os.environ.get("PICK1_NOCACHE") != "1" and pkl.exists():
         try:
@@ -55,7 +56,7 @@ def load() -> pd.DataFrame:
         for old in cdir.glob("pick1_load.*.pkl"):
             if old != pkl:
                 old.unlink(missing_ok=True)
-        tmp = pkl.with_suffix(".tmp")
+        tmp = pkl.with_suffix(f".{os.getpid()}.tmp")  # unique per process: shared mount, concurrent sessions
         df.to_pickle(tmp)
         tmp.replace(pkl)
     except OSError:
