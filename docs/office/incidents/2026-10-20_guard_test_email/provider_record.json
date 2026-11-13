@@ -1,0 +1,31 @@
+{
+ "provider": "resend",
+ "id": "01a15831-ad1e-755b-895d-85520f14c216",
+ "created_at": "2026-10-20 07:23:33.240000+00",
+ "last_event": "delivered",
+ "subject": "[T212 demo] Daily report 2026-10-20 - \u00a31227.55, gain \u00a3-72.45 - warnings",
+ "to_count": 1,
+ "to_equals_REPORT_EMAIL_TO": true,
+ "to_sha256": "f018f3e5b1bdac9e302dc6fcdf97f1fcfd0b61f6552e16892fc73695b83ece71",
+ "from_equals_REPORT_EMAIL_FROM": true,
+ "cc": null,
+ "bcc": null,
+ "html_sha256": "7701678166a879b468b19848ae70ee7a7381e231275e8f54c2a472eb5511105c",
+ "text_present": true,
+ "keys_returned": [
+  "bcc",
+  "cc",
+  "created_at",
+  "from",
+  "html",
+  "id",
+  "last_event",
+  "message_id",
+  "object",
+  "reply_to",
+  "scheduled_at",
+  "subject",
+  "text",
+  "to"
+ ]
+}

@@ -77,12 +77,19 @@ class StrategyConfig:
     signal: dict | None = None
     # "rules": targets come from `targets` / the signal. "discretionary": targets come from
     # config/discretionary_targets.json, set by `t212bot decide` (owner override 2026-10-14).
+    # "retired": no strategy is active (owner decision O10, 2026-10-19). Runs stay read-only: they snapshot and
+    # reconcile, then halt without planning an order; `decide` refuses; targets must be empty.
     mode: str = "rules"
     decision_limits: dict = field(default_factory=dict)
+    retired: dict | None = None  # provenance of a retirement (mode "retired")
 
     def __post_init__(self):
-        if self.mode not in ("rules", "discretionary"):
+        if self.mode not in ("rules", "discretionary", "retired"):
             raise SafetyError(f"unknown mode {self.mode!r}")
+        if self.mode == "retired":
+            if self.targets or self.signal is not None:
+                raise SafetyError("a retired strategy must have no targets and no signal")
+            return
         sets = [self.targets]
         if self.signal is not None:
             if self.signal.get("type") != "sma_trend":

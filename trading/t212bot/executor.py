@@ -100,7 +100,13 @@ class Bot:
         return out
 
     # ------------------------------------------------------------ order flow
+    def _refuse_if_retired(self) -> None:
+        """Last line of defence under run()'s own check: no order is ever sent while the strategy is retired (O10)."""
+        if self.cfg.mode == "retired":
+            raise SafetyError("strategy retired (owner decision O10): order submission refused")
+
     def _place(self, ticker: str, qty: float, ref: dict, reason: str, state: dict) -> dict | None:
+        self._refuse_if_retired()
         decs = state.setdefault("qty_decimals", {})
         d0 = decs.get(ticker, self.cfg.default_qty_decimals)
         sign = 1 if qty > 0 else -1
@@ -186,6 +192,7 @@ class Bot:
         return min(q, fit), cash
 
     def _retry_buy_with_fresh_cash(self, ticker, q, d, ref, reason, first_err, state=None):
+        self._refuse_if_retired()
         state = state if state is not None else {}
         self.j.event("order_rejected", ticker=ticker, quantity=q, status=first_err.status,
                      body=first_err.body[:500], will_retry_with_fresh_cash=True)
@@ -316,6 +323,11 @@ class Bot:
             state["inception"] = {"ts_utc": snap["ts_utc"], "total_value_gbp": snap["total_value_gbp"]}
 
         recon = self.reconcile()
+
+        if self.cfg.mode == "retired":
+            j.event("run_halted", reason="strategy retired (owner decision O10); no orders are planned")
+            j.save_state(state)
+            return {"status": "halted", "reason": "strategy retired"}
 
         kill = self._kill()
         if kill:

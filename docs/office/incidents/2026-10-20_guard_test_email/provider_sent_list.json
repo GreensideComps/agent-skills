@@ -1,0 +1,23 @@
+[
+ {
+  "id": "01a15831-ad1e-755b-895d-85520f14c216",
+  "created_at": "2026-10-20 07:23:33.240000+00",
+  "last_event": "delivered",
+  "subject": "[T212 demo] Daily report 2026-10-20 - \u00a31227.55, gain \u00a3-72.45 - warnings",
+  "to_count": 1
+ },
+ {
+  "id": "01a13584-a89b-7ad2-82e8-27b2a8100ee5",
+  "created_at": "2026-10-13 13:47:29.024000+00",
+  "last_event": "delivered",
+  "subject": "[T212 demo] Daily report 2026-10-13 - \u00a399.55, gain \u00a3-0.45 - OK",
+  "to_count": 1
+ },
+ {
+  "id": "01a13580-cacb-7d70-9da9-2313ee27ab89",
+  "created_at": "2026-10-13 13:43:15.598000+00",
+  "last_event": "delivered",
+  "subject": "[T212 demo] key check",
+  "to_count": 1
+ }
+]

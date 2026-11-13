@@ -1,5 +1,8 @@
 # Promotion gate: how a research idea can change live (demo) trading
 
+> **Retired 2026-10-19 (owner decision O10).** Stage 4 promotion into `trading/config/strategy.json` no longer applies;
+> research never changes trading configuration. Kept for the record of past decisions.
+
 The research loop runs unattended. This gate keeps it from turning noise into
 trades. Every condition must hold, and the evidence must be committed, before
 `trading/config/strategy.json` changes.

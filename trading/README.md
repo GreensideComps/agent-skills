@@ -12,7 +12,7 @@ scheduled cloud routines (see [`RUNBOOK.md`](RUNBOOK.md)).
 
 | | |
 |---|---|
-| Strategy | `discretionary_intraday_v1` (owner override, 2026-10-14): Claude trades the whole Practice account intraday within `decision_limits` in `config/strategy.json` (universe LQQ3, EQQQ, VUAG, SGLN, 3LGO; at most 8 decisions a day; 10% daily loss stop; long-only, no borrowing, no inverse products) |
+| Strategy | **Retired 2026-10-19 (O10): no active strategy, runs halt read-only.** Previously `discretionary_intraday_v1` (owner override, 2026-10-14): Claude trades the whole Practice account intraday within `decision_limits` in `config/strategy.json` (universe LQQ3, EQQQ, VUAG, SGLN, 3LGO; at most 8 decisions a day; 10% daily loss stop; long-only, no borrowing, no inverse products) |
 | Why | Owner instruction. The repository's research rejected every intraday approach it tested (E008, E010, E011, E012, E014), so this mode is not backed by the backtests. |
 | Risk | **High.** 3x daily leveraged ETPs can lose most of their value quickly, and intraday decisions add trading costs. |
 | Trading | Hourly decisions at :57 past the hour, 07–20 London, weekdays, plus the weekday ops run |
