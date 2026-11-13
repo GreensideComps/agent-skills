@@ -9,7 +9,9 @@ State branch `market-agent-state` (one orphan commit, force-pushed with a lease,
   snapshot.tar.gz.enc  hosted -> everyone. market-agent/state/** (events: last KEEP_EVENT_DAYS days) and the agent's
                        forward log research/always-on/forward/Q205.csv. Encrypted (the repo is public).
   inputs.tar.gz.enc    session -> hosted. Research files the agent reads (forward/ picks, stock-screener picks).
-  owner.json           plaintext. {"host": "github-actions" | "session"}: the ONLY place that decides who may trade.
+  owner.json           plaintext. {"host": "github-actions" | "vm" | "session"}: the ONLY place that decides who may
+                       trade. "vm" is an always-on server (Oracle Cloud free tier) running `hostctl run --host-name vm`
+                       under systemd (ops/market-agent-host/vm/).
   control.json         plaintext kill switch, copied into the hosted agent's state on every sync.
   hosted.json          plaintext runner status: run id, phase, last sync time, agent commit, health verdict.
 
@@ -19,11 +21,11 @@ data key wrapped for every registered key, so the hosts need not share a secret.
 any host that can already read the state runs `reseal`. Nothing secret is ever printed (Actions logs are public).
 
 One trader at a time:
-  * the hosted runner starts the agent only while owner.json says github-actions, and stops within one sync interval
+  * a hosted runner starts the agent only while owner.json names its own host (--host-name), and stops within one sync interval
     (SYNC_S) after it changes;
   * the runner waits for a previous run's hosted.json to be stopped or stale before it claims the branch, and claims it
     with a compare-and-swap push;
-  * a Claude session must not start its own agent while owner.json says github-actions; `handover --to session` waits
+  * a Claude session must not start its own agent while owner.json names a hosted host (github-actions or vm); `handover --to session` waits
     for the hosted run to stop and mirrors its state first. `seed` refuses while a local agent holds its lease.
 
 Commands (run from any clone of the repo with push rights):
@@ -32,7 +34,7 @@ Commands (run from any clone of the repo with push rights):
   status                                         owner, hosted run, last sync age (exit 0 ok, 1 stale, 2 not seeded)
   mirror   --root /mnt/project-files             copy the hosted snapshot over local files (read-only replica)
   push-inputs --root /mnt/project-files          send fresh research inputs to the hosted agent
-  handover --to session|github-actions --reason TEXT [--root DIR]
+  handover --to session|github-actions|vm --reason TEXT [--root DIR]
   halt REASON | resume REASON                    kill switch, applied by the hosted agent within SYNC_S
   run      --root DIR --agent-ref BRANCH ...     the hosted runner (used by the workflow)
 """
@@ -66,6 +68,7 @@ LOCAL_LEASE_TTL_S = 180  # store.LEASE_TTL_S in the agent
 SNAPSHOT_GLOBS = [f"{STATE_REL}/*", "research/always-on/forward/Q205.csv"]
 INPUT_GLOBS = ["research/always-on/forward/*", "research/stock-screener/picks_*.csv"]
 INPUT_EXCLUDE = ["research/always-on/forward/Q205.csv"]
+HOSTED = ("github-actions", "vm")  # hosts that run `hostctl run`; "session" is a Claude session
 SNAPSHOT_EXCLUDE = [f"{STATE_REL}/.*", f"{STATE_REL}/*/.*"]
 
 
@@ -368,7 +371,7 @@ def _status(b: Branch) -> tuple[int, dict]:
            "hosted": hosted, "hosted_age_s": round(age)}
     running = hosted.get("phase") in ("starting", "running")
     out["hosted_live"] = running and age < STALE_S
-    code = 0 if (out["hosted_live"] or out["owner"].get("host") != "github-actions") else 1
+    code = 0 if (out["hosted_live"] or out["owner"].get("host") not in HOSTED) else 1
     return code, out
 
 
@@ -432,7 +435,7 @@ def cmd_control(b: Branch, a) -> int:
 
 
 def cmd_handover(b: Branch, a) -> int:
-    if a.to == "github-actions" and a.root:
+    if a.to in HOSTED and a.root:
         held = local_lease_live(Path(a.root))
         if held:
             print(f"stop the local agent first ({held})", file=sys.stderr)
@@ -461,7 +464,8 @@ class Runner:
         self.root = Path(a.root)
         self.state = self.root / STATE_REL
         self.code = Path(a.code_dir).resolve()
-        self.run_id = os.environ.get("GITHUB_RUN_ID", f"local-{os.getpid()}")
+        self.host = a.host_name
+        self.run_id = os.environ.get("GITHUB_RUN_ID") or f"{self.host}-{os.uname().nodename}-{os.getpid()}"
         self.proc: subprocess.Popen | None = None
         self.agent_sha: str | None = None
         self.control_applied: bytes | None = None
@@ -499,7 +503,7 @@ class Runner:
                 log(f"control.json applied: trading_enabled={json.loads(ctl).get('trading_enabled')}")
             files = {"hosted.json": self.hosted()}
             if self.phase != "starting":
-                keys = with_my_key(self.b.read_json(head, "keys.json"), "github-actions")
+                keys = with_my_key(self.b.read_json(head, "keys.json"), self.host)
                 files["snapshot.tar.gz.enc"] = pack(self.root, SNAPSHOT_GLOBS, SNAPSHOT_EXCLUDE, pubs_of(keys))
             if self.b.write(head, files, f"{'final' if final else 'sync'} {self.run_id} {utc()}"):
                 return owner
@@ -527,7 +531,7 @@ class Runner:
         with open(self.state / "logs" / "supervisor.log", "a") as f:
             f.write(f"{utc()} hosted runner {self.run_id}: starting agent {self.agent_sha[:7]}\n")
         out = open(self.state / "logs" / "agent.out", "a")
-        env = {**os.environ, "MARKET_AGENT_STATE": str(self.state), "MARKET_AGENT_HOST": f"github-actions:{self.run_id}"}
+        env = {**os.environ, "MARKET_AGENT_STATE": str(self.state), "MARKET_AGENT_HOST": f"{self.host}:{self.run_id}"}
         self.proc = subprocess.Popen(cmd, cwd=self.code / "agent", stdout=out, stderr=subprocess.STDOUT, env=env)
         log(f"agent started at {self.agent_sha[:7]} (pid {self.proc.pid})")
 
@@ -571,7 +575,7 @@ class Runner:
         signal.signal(signal.SIGTERM, self._on_term)
         signal.signal(signal.SIGINT, self._on_term)
         t0 = time.time()
-        deadline = t0 + self.a.budget_min * 60
+        deadline = t0 + self.a.budget_min * 60 if self.a.budget_min > 0 else float("inf")  # 0 = until stopped (vm)
         if self.a.until:
             hh, mm = map(int, self.a.until.split(":"))
             g = time.gmtime(t0)
@@ -584,7 +588,7 @@ class Runner:
             if k in os.environ:
                 os.environ[k] = os.environ[k].strip()
         if not os.environ.get("T212_API_KEY") or not os.environ.get("T212_API_SECRET"):
-            log("::warning::T212_API_KEY / T212_API_SECRET repository secrets are not set; the hosted agent cannot run")
+            log("::warning::T212_API_KEY / T212_API_SECRET are not set (repository secrets, or the vm env file); the hosted agent cannot run")
             return 0
         log(f"state key id {key_id()}")
         # wait for the previous run to hand over, then claim the branch
@@ -595,12 +599,12 @@ class Runner:
                 return 0
             keys = self.b.read_json(head, "keys.json")
             if key_id() not in keys:  # register even on standby, so the next seed or reseal includes this host
-                if self.b.write(head, {"keys.json": jdump(with_my_key(keys, "github-actions"))},
+                if self.b.write(head, {"keys.json": jdump(with_my_key(keys, self.host))},
                                 f"register key {key_id()}"):
                     log(f"registered this host's key {key_id()}")
                 continue
             owner = self.b.read_json(head, "owner.json")
-            if owner.get("host") != "github-actions":
+            if owner.get("host") != self.host:
                 log(f"standby: owner.json says host={owner.get('host')!r}")
                 return 0
             snap0 = self.b.read(head, "snapshot.tar.gz.enc")
@@ -659,7 +663,7 @@ class Runner:
                 if now - last_sync >= self.a.sync_s:
                     last_sync = now
                     owner = self.sync()
-                    if owner.get("host") != "github-actions":
+                    if owner.get("host") != self.host:
                         log(f"handover: owner.json now says host={owner.get('host')!r}")
                         break
                 if now - last_code >= CODE_CHECK_S:
@@ -704,7 +708,7 @@ def main(argv: list[str] | None = None) -> int:
     for c in ("mirror", "push-inputs"):
         sub.add_parser(c).add_argument("--root", default="/mnt/project-files")
     h = sub.add_parser("handover")
-    h.add_argument("--to", required=True, choices=["session", "github-actions"])
+    h.add_argument("--to", required=True, choices=["session", *HOSTED])
     h.add_argument("--reason", required=True)
     h.add_argument("--root", default=None, help="session: mirror into this root after the hosted run stops")
     h.add_argument("--wait-s", type=int, default=SYNC_S * 3 + 120)
@@ -714,7 +718,8 @@ def main(argv: list[str] | None = None) -> int:
     r.add_argument("--root", default="/mnt/project-files")
     r.add_argument("--agent-ref", required=True)
     r.add_argument("--code-dir", default="ma-code")
-    r.add_argument("--budget-min", type=float, default=330)
+    r.add_argument("--budget-min", type=float, default=330, help="0 = run until stopped (systemd on a vm)")
+    r.add_argument("--host-name", default="github-actions", choices=HOSTED, help="which owner.json host this runner is")
     r.add_argument("--until", default=None, help="HH:MM UTC: stop at this time today")
     r.add_argument("--tick-s", type=float, default=10)
     r.add_argument("--sync-s", type=float, default=SYNC_S)

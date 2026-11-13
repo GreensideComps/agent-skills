@@ -117,6 +117,31 @@ def run_test(tmp: Path):
     r = sh(*hc, "run", "--root", str(host), "--agent-ref", "agent-branch", "--code-dir", str(tmp / "code"),
            "--budget-min", "1", env={**renv, "GITHUB_RUN_ID": "r2"})
     assert "standby" in r.stdout, r.stdout
+    # an always-on vm host (Oracle free tier): registers its own key, waits for a reseal, then runs until the owner
+    # hands back; a GitHub run stands by while the vm owns the branch
+    venv = {k: v for k, v in env.items() if k != "GITHUB_RUN_ID"}
+    venv.update(T212_API_SECRET="vm-key-differs", MA_STATE_KEY="vm-state-key")
+    vmc = ["run", "--host-name", "vm", "--root", str(tmp / "vmroot"), "--agent-ref", "agent-branch",
+           "--code-dir", str(tmp / "vmcode"), "--tick-s", "0.5", "--sync-s", "3",
+           "--agent-cmd", f"{sys.executable} fake_agent.py"]
+    sh(*hc, "handover", "--to", "vm", "--reason", "test vm", env=env)
+    r = sh(*hc, *vmc, "--budget-min", "1", env=venv)
+    assert "registered this host's key" in r.stdout and "hostctl reseal" in r.stdout, r.stdout
+    sh(*hc, "reseal", env=env)
+    r = sh(*hc, "run", "--root", str(host), "--agent-ref", "agent-branch", "--code-dir", str(tmp / "code"),
+           "--budget-min", "1", env={**renv, "GITHUB_RUN_ID": "r3"})
+    assert "standby" in r.stdout, r.stdout
+    vm = subprocess.Popen(hc + vmc + ["--budget-min", "0"], env=venv, stdout=subprocess.PIPE,
+                          stderr=subprocess.STDOUT, text=True)
+    time.sleep(8)
+    st = json.loads(sh(*hc, "status", env=env).stdout)
+    assert st["hosted_live"] and st["hosted"]["run_id"].startswith("vm-"), st
+    assert (tmp / "vmroot/research/always-on/forward/Q206_picks_2026-11.csv").exists()
+    sh(*hc, "handover", "--to", "github-actions", "--reason", "back to github", env=env)
+    out, _ = vm.communicate(timeout=60)
+    assert vm.returncode == 0 and "handover: owner.json now says host='github-actions'" in out, out
+    st = json.loads(sh(*hc, "status", env=env, check=False).stdout)
+    assert st["hosted"]["phase"] == "stopped" and st["owner"]["host"] == "github-actions", st
     # wrong secret cannot decrypt
     bad = sh(*hc, "mirror", "--root", str(tmp / "m2"), env={**env, "T212_API_SECRET": "nope"}, check=False)
     assert bad.returncode != 0

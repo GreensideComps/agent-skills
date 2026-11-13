@@ -56,6 +56,27 @@ python3 $H handover --to github-actions --reason "..." --root /mnt/project-files
 
 * `research/always-on/scoreboard.py`: the agent skips it when the file is absent; run it in a session after `mirror`.
 
+## Always-on server instead of Actions (`host = vm`)
+
+GitHub's terms say Actions is for building, testing and deploying a repository's software, so the agent can also run
+on an always-free cloud server (Oracle Cloud). The same runner is used: `hostctl run --host-name vm --budget-min 0` under
+systemd, with its own random `MA_STATE_KEY`. Files: `vm/ORACLE_GUIDE.md` (owner steps), `vm/setup.sh` (one command
+on the server), `vm/test_setup.sh` (full install test on a throwaway Ubuntu box).
+
+Cutover, from a Claude session, once the owner says the server is ready (`setup.sh` leaves it registered and on
+standby):
+
+```sh
+python3 $H status                                   # keys.json now lists a "vm" key; hosted run is still GitHub
+python3 $H reseal                                   # seal the state for the vm's key too
+python3 $H handover --to vm --reason "move to Oracle free server"
+python3 $H status                                   # within ~5 min: hosted.run_id starts with "vm-", hosted_live true
+```
+
+The GitHub run stops within 2 min of the handover; any queued or cron run then stands by within seconds. After a day
+of healthy running, remove the `schedule:` block from `market-agent.yml` so GitHub stops starting standby runs. To go back:
+`handover --to github-actions` and run the workflow once ("Run workflow"). The vm stands by on its own.
+
 ## Caveat
 
 GitHub's terms say Actions is for building, testing and deploying a repository's software, and long-running service use
