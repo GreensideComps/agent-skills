@@ -1,0 +1,1290 @@
+{
+ "label": "Check 4 frame coverage: reasons for missing scores (no imputation, no rule change)",
+ "provenance": {
+  "commit": "a4a07d7d6a3242d2fd06dd5fb133262f28172b9f",
+  "manifest": "docs/edge/B5_RUN_MANIFEST_3.json",
+  "manifest_sha256": "f3f4fd71bae5ddf4932211c1983edac7dcb1d6d152d8d087c73550409a4b9671",
+  "files": {
+   "/mnt/project-files/research-data/monthly_metrics.csv.gz": "ae5429b661bd060d040109138d35cb4ea22356d4a549056c8616c3a2a7e87561",
+   "/mnt/project-files/research-data/prices_monthly.csv.gz": "505115711f7ef59c8df417671f8afecf77dd2240e13a2a3bdff453721b3d801a",
+   "/mnt/project-files/research-data/sec_companies.csv.gz": "acf5e3f746c355aa2c0aa2b76c0c3f55413daf5e927524672537d0389d214a90",
+   "/mnt/project-files/research-data/sec_facts_panel.csv.gz": "2a56736fdea7825485233697705b63c0c0d4fbb6c47fcd905b8bfe6183765453",
+   "/mnt/project-files/research-data/edge/exec_prices_to_2022.csv.gz": "dd6608f62ae2676fd4fd5b3b256105d5f52eb720ba3a10a2965cf504e17d47dc",
+   "/mnt/project-files/research-data/edge/gbpusd_daily_to_2022.csv.gz": "fd9f8e7dc921465732460a507225778ea9d14437dfd5026f4b37f3dd54310d65",
+   "/mnt/project-files/research-data/edge/benchmarks_daily_gbp_to_2022.csv.gz": "0ec17f8631a17cc6f7cc3ca7e1f8054437371e2012739926d4ccfffa0b1f6fc6",
+   "research/edge/factors/F-F_Research_Data_5_Factors_2x3_to_2022.csv": "0b49e5f01fd42ef82413bfcd1a6fcf0da9c454f30406d608c2b9bf361aa7007c",
+   "research/edge/factors/F-F_Momentum_Factor_to_2022.csv": "2ea2bc33229be0ee9ec1b61ab07650abb4b5f14715d2eac2d79bb633fb7d8a5c",
+   "equity/reports/research/edge/exec_prices_audit_moves.csv": "2d3221010ebb4edc2ed9ae04056ca1ed49f6fd6c7d35dc970486eef9479a6edb",
+   "research/edge_b5_run.py": "61e2bb62d745a713a87ab54e59ad03046e98e429fb69716ef1193b3613081b59",
+   "research/edge_b5.py": "fd3618382dd6faea4828eefd1a20bd8b8f9b6952d3c1b9a93ffcd2ccd7779752",
+   "research/edge_b5_inputs.py": "7a37fa077237986e5a684e5018d8835ca759d7230069d7db6d1369d969185cf3",
+   "research/edge_b5_stats.py": "3fc03c3dbdfa2176598c513a0fa01ec89d17ead0532b5893031b175b333b1fbc",
+   "research/edge_backtest.py": "d61e8026b997cf53f2165647ac8f188f5df88a9b81ffc67daf080c179ec64af3",
+   "research/edge_rules.py": "9f6aeb7fe22effdbd93ff0738520c7a88ed2d52e5323451a27e28984e78f41e9",
+   "research/edge_registry.py": "e56f49aa862eaaf8048494272e1de1e3d363a0490282562b080f63dae5405c5c",
+   "research/edge_split.py": "f0f32dc8f47b8d512c18689bf97feb2c228b3dc26351017596861bee017fa147",
+   "research/xsection.py": "a4f265ce6c1308f51b18800c915973240af2f226a13f8c3fb6c06cce76937f16",
+   "research/stage2.py": "4491915168676581e9b263cd7e3a92a90fa991d4bd11ba238e9ced11d52436bc",
+   "research/edge_exec_prices.py": "14a4f1d8b655e8be28c09882227cd1ecefede23921b09949dc536f30f8982802",
+   "research/data_sources.py": "dcdbdf26db3d07ec847fab238400056391b937e3f0250ccc9e3c8176e9b5b8e4",
+   "equity/equity/__init__.py": "aa8bf8bca2a55423e3b73a212c9894a5a776cad8ed7f612af65edeeef6823bf0",
+   "equity/equity/panel.py": "5586a431ff03b1aa4aecee75eaa7cc84672ae4e03d1d018760de70de356a5d9a",
+   "equity/equity/fundamentals.py": "d8c4bab78dc0b12de3e506fd12fc2df77e6d21a938052f9a0b3bb0a28cdb9aef",
+   "equity/equity/industry.py": "f8122eba16de5f751c606ab4bba5cf787f15772bd811eeaa7bcb1acc30d5a8f0"
+  }
+ },
+ "trials": {
+  "B5-H1-FCFPS-ACCEL-V3": {
+   "total": 8924,
+   "by_reason": {
+    "no_ocf_or_capex": {
+     "rows": 1761,
+     "companies": 98,
+     "kind": "data",
+     "meaning": "operating cash flow or capital expenditure not found in the SEC facts",
+     "top_companies": [
+      {
+       "cik": 8670,
+       "name": "AUTOMATIC DATA PROCESSING INC",
+       "rows": 95
+      },
+      {
+       "cik": 16875,
+       "name": "CANADIAN PACIFIC KANSAS CITY LTD/CN",
+       "rows": 95
+      },
+      {
+       "cik": 59478,
+       "name": "ELI LILLY & Co",
+       "rows": 95
+      },
+      {
+       "cik": 753308,
+       "name": "NEXTERA ENERGY INC",
+       "rows": 95
+      },
+      {
+       "cik": 895728,
+       "name": "ENBRIDGE INC",
+       "rows": 95
+      },
+      {
+       "cik": 936340,
+       "name": "DTE ENERGY CO",
+       "rows": 95
+      },
+      {
+       "cik": 1045810,
+       "name": "NVIDIA CORP",
+       "rows": 95
+      },
+      {
+       "cik": 1534701,
+       "name": "Phillips 66",
+       "rows": 95
+      }
+     ],
+     "by_group": {
+      "transport_utilities_telecom": 636,
+      "other_manufacturing": 356,
+      "software_it": 220,
+      "chemicals_pharma": 212,
+      "electronics_semis": 120,
+      "services": 70,
+      "instruments_medtech": 57,
+      "trade_retail": 50,
+      "mining_energy": 17,
+      "construction": 12,
+      "computers": 7,
+      "agri": 4
+     }
+    },
+    "fcf_stale": {
+     "rows": 257,
+     "companies": 25,
+     "kind": "rule",
+     "meaning": "the TTM FCF period ended more than 183 days before the month-end",
+     "top_companies": [
+      {
+       "cik": 1413447,
+       "name": "NXP Semiconductors N.V.",
+       "rows": 37
+      },
+      {
+       "cik": 1650372,
+       "name": "Atlassian Corp",
+       "rows": 32
+      },
+      {
+       "cik": 1635327,
+       "name": "Flutter Entertainment plc",
+       "rows": 26
+      },
+      {
+       "cik": 818686,
+       "name": "TEVA PHARMACEUTICAL INDUSTRIES LTD",
+       "rows": 22
+      },
+      {
+       "cik": 1159152,
+       "name": "James Hardie Industries plc",
+       "rows": 18
+      },
+      {
+       "cik": 849395,
+       "name": "CRH PUBLIC LTD CO",
+       "rows": 13
+      },
+      {
+       "cik": 1567094,
+       "name": "CNH Industrial N.V.",
+       "rows": 13
+      },
+      {
+       "cik": 1123360,
+       "name": "GLOBAL PAYMENTS INC",
+       "rows": 12
+      }
+     ],
+     "by_group": {
+      "software_it": 69,
+      "other_manufacturing": 57,
+      "chemicals_pharma": 45,
+      "electronics_semis": 38,
+      "services": 12,
+      "instruments_medtech": 11,
+      "transport_utilities_telecom": 9,
+      "mining_energy": 8,
+      "trade_retail": 8
+     }
+    },
+    "identity_rule": {
+     "rows": 59,
+     "companies": 9,
+     "kind": "rule",
+     "meaning": "ADDENDUM_2 rule C: CIK 1635327, or mcap > 100x total assets",
+     "top_companies": [
+      {
+       "cik": 1540684,
+       "name": "Atlas Lithium Corp",
+       "rows": 16
+      },
+      {
+       "cik": 1635327,
+       "name": "Flutter Entertainment plc",
+       "rows": 13
+      },
+      {
+       "cik": 1517681,
+       "name": "Propanc Biopharma, Inc.",
+       "rows": 10
+      },
+      {
+       "cik": 1784970,
+       "name": "Next Technology Holding Inc.",
+       "rows": 5
+      },
+      {
+       "cik": 1084267,
+       "name": "Mobiquity Technologies, Inc.",
+       "rows": 4
+      },
+      {
+       "cik": 1108205,
+       "name": "CURIS INC",
+       "rows": 4
+      },
+      {
+       "cik": 1651308,
+       "name": "BeOne Medicines Ltd.",
+       "rows": 4
+      },
+      {
+       "cik": 788611,
+       "name": "NextTrip, Inc.",
+       "rows": 2
+      }
+     ],
+     "by_group": {
+      "chemicals_pharma": 19,
+      "software_it": 18,
+      "mining_energy": 16,
+      "services": 4,
+      "transport_utilities_telecom": 2
+     }
+    },
+    "restated_flag": {
+     "rows": 940,
+     "companies": 148,
+     "kind": "rule",
+     "meaning": "OCF or capex TTM mixes bases (T2 restated flag true or missing: fail closed)",
+     "top_companies": [
+      {
+       "cik": 40545,
+       "name": "GENERAL ELECTRIC CO",
+       "rows": 35
+      },
+      {
+       "cik": 1466258,
+       "name": "Trane Technologies plc",
+       "rows": 22
+      },
+      {
+       "cik": 107263,
+       "name": "WILLIAMS COMPANIES, INC.",
+       "rows": 18
+      },
+      {
+       "cik": 1090012,
+       "name": "DEVON ENERGY CORP/DE",
+       "rows": 18
+      },
+      {
+       "cik": 2969,
+       "name": "Air Products & Chemicals, Inc.",
+       "rows": 17
+      },
+      {
+       "cik": 1385157,
+       "name": "TE Connectivity plc",
+       "rows": 17
+      },
+      {
+       "cik": 37785,
+       "name": "FMC CORP",
+       "rows": 16
+      },
+      {
+       "cik": 65984,
+       "name": "ENTERGY CORP /DE/",
+       "rows": 15
+      }
+     ],
+     "by_group": {
+      "other_manufacturing": 251,
+      "chemicals_pharma": 114,
+      "trade_retail": 104,
+      "transport_utilities_telecom": 93,
+      "services": 88,
+      "instruments_medtech": 74,
+      "electronics_semis": 65,
+      "mining_energy": 61,
+      "software_it": 52,
+      "computers": 27,
+      "construction": 11
+     }
+    },
+    "no_row_12m_earlier": {
+     "rows": 239,
+     "companies": 49,
+     "kind": "rule",
+     "meaning": "the company has no row 12 months earlier (not in the monthly data then)",
+     "top_companies": [
+      {
+       "cik": 1645590,
+       "name": "Hewlett Packard Enterprise Co",
+       "rows": 12
+      },
+      {
+       "cik": 1757898,
+       "name": "STERIS plc",
+       "rows": 12
+      },
+      {
+       "cik": 1321655,
+       "name": "Palantir Technologies Inc.",
+       "rows": 9
+      },
+      {
+       "cik": 1640147,
+       "name": "Snowflake Inc.",
+       "rows": 9
+      },
+      {
+       "cik": 1666700,
+       "name": "DuPont de Nemours, Inc.",
+       "rows": 9
+      },
+      {
+       "cik": 1031308,
+       "name": "BENTLEY SYSTEMS INC",
+       "rows": 8
+      },
+      {
+       "cik": 1613103,
+       "name": "Medtronic plc",
+       "rows": 8
+      },
+      {
+       "cik": 1673358,
+       "name": "Yum China Holdings, Inc.",
+       "rows": 8
+      }
+     ],
+     "by_group": {
+      "software_it": 83,
+      "services": 32,
+      "instruments_medtech": 28,
+      "chemicals_pharma": 25,
+      "other_manufacturing": 17,
+      "computers": 15,
+      "electronics_semis": 12,
+      "transport_utilities_telecom": 11,
+      "trade_retail": 10,
+      "agri": 3,
+      "mining_energy": 3
+     }
+    },
+    "fcf_12m_earlier_unavailable": {
+     "rows": 1498,
+     "companies": 235,
+     "kind": "inherits",
+     "meaning": "FCF 12 months earlier unavailable (any of the reasons above, then)",
+     "inherited_from": {
+      "restated_flag": 981,
+      "no_ocf_or_capex": 397,
+      "fcf_stale": 96,
+      "identity_rule": 24
+     },
+     "top_companies": [
+      {
+       "cik": 40545,
+       "name": "GENERAL ELECTRIC CO",
+       "rows": 24
+      },
+      {
+       "cik": 1466258,
+       "name": "Trane Technologies plc",
+       "rows": 22
+      },
+      {
+       "cik": 1571996,
+       "name": "Dell Technologies Inc.",
+       "rows": 21
+      },
+      {
+       "cik": 1585364,
+       "name": "PERRIGO Co plc",
+       "rows": 19
+      },
+      {
+       "cik": 1090012,
+       "name": "DEVON ENERGY CORP/DE",
+       "rows": 18
+      },
+      {
+       "cik": 37785,
+       "name": "FMC CORP",
+       "rows": 17
+      },
+      {
+       "cik": 1385157,
+       "name": "TE Connectivity plc",
+       "rows": 17
+      },
+      {
+       "cik": 833444,
+       "name": "Johnson Controls International plc",
+       "rows": 16
+      }
+     ],
+     "by_group": {
+      "other_manufacturing": 334,
+      "chemicals_pharma": 194,
+      "transport_utilities_telecom": 179,
+      "software_it": 154,
+      "trade_retail": 142,
+      "services": 133,
+      "instruments_medtech": 127,
+      "electronics_semis": 101,
+      "mining_energy": 71,
+      "computers": 39,
+      "construction": 15,
+      "agri": 9
+     }
+    },
+    "share_or_split_undefined": {
+     "rows": 210,
+     "companies": 27,
+     "kind": "data",
+     "meaning": "shares or split factor at t-12 undefined (missing prices or shares)",
+     "top_companies": [
+      {
+       "cik": 1570585,
+       "name": "Liberty Global Ltd.",
+       "rows": 21
+      },
+      {
+       "cik": 1441816,
+       "name": "MongoDB, Inc.",
+       "rows": 12
+      },
+      {
+       "cik": 1447669,
+       "name": "TWILIO INC",
+       "rows": 12
+      },
+      {
+       "cik": 1477333,
+       "name": "Cloudflare, Inc.",
+       "rows": 12
+      },
+      {
+       "cik": 1506293,
+       "name": "PINTEREST, INC.",
+       "rows": 12
+      },
+      {
+       "cik": 1535527,
+       "name": "CrowdStrike Holdings, Inc.",
+       "rows": 12
+      },
+      {
+       "cik": 1616707,
+       "name": "Wayfair Inc.",
+       "rows": 12
+      },
+      {
+       "cik": 1660134,
+       "name": "Okta, Inc.",
+       "rows": 12
+      }
+     ],
+     "by_group": {
+      "software_it": 103,
+      "transport_utilities_telecom": 34,
+      "trade_retail": 25,
+      "other_manufacturing": 14,
+      "services": 11,
+      "computers": 9,
+      "instruments_medtech": 9,
+      "chemicals_pharma": 4,
+      "mining_energy": 1
+     }
+    },
+    "share_guard": {
+     "rows": 46,
+     "companies": 16,
+     "kind": "rule",
+     "meaning": "|ln q| > ln 3: share count changed more than 3x (merger, spin-off or share error)",
+     "top_companies": [
+      {
+       "cik": 1004980,
+       "name": "PG&E Corp",
+       "rows": 12
+      },
+      {
+       "cik": 1411579,
+       "name": "AMC ENTERTAINMENT HOLDINGS, INC.",
+       "rows": 9
+      },
+      {
+       "cik": 47217,
+       "name": "HP INC",
+       "rows": 3
+      },
+      {
+       "cik": 320193,
+       "name": "Apple Inc.",
+       "rows": 3
+      },
+      {
+       "cik": 1561550,
+       "name": "Datadog, Inc.",
+       "rows": 3
+      },
+      {
+       "cik": 943819,
+       "name": "RESMED INC",
+       "rows": 2
+      },
+      {
+       "cik": 1099800,
+       "name": "Edwards Lifesciences Corp",
+       "rows": 2
+      },
+      {
+       "cik": 1318605,
+       "name": "Tesla, Inc.",
+       "rows": 2
+      }
+     ],
+     "by_group": {
+      "transport_utilities_telecom": 14,
+      "services": 11,
+      "computers": 8,
+      "other_manufacturing": 4,
+      "software_it": 4,
+      "instruments_medtech": 4,
+      "trade_retail": 1
+     }
+    },
+    "fcf_periods_not_a_year_apart": {
+     "rows": 1317,
+     "companies": 341,
+     "kind": "rule",
+     "meaning": "TTM periods at t and t-12 not 350-380 days apart",
+     "top_companies": [
+      {
+       "cik": 1001838,
+       "name": "SOUTHERN COPPER CORP/",
+       "rows": 18
+      },
+      {
+       "cik": 875320,
+       "name": "VERTEX PHARMACEUTICALS INC / MA",
+       "rows": 12
+      },
+      {
+       "cik": 884887,
+       "name": "ROYAL CARIBBEAN CRUISES LTD",
+       "rows": 12
+      },
+      {
+       "cik": 1048477,
+       "name": "BIOMARIN PHARMACEUTICAL INC",
+       "rows": 12
+      },
+      {
+       "cik": 2488,
+       "name": "ADVANCED MICRO DEVICES INC",
+       "rows": 11
+      },
+      {
+       "cik": 92380,
+       "name": "SOUTHWEST AIRLINES CO",
+       "rows": 11
+      },
+      {
+       "cik": 920148,
+       "name": "LABCORP HOLDINGS INC.",
+       "rows": 11
+      },
+      {
+       "cik": 1110803,
+       "name": "ILLUMINA, INC.",
+       "rows": 11
+      }
+     ],
+     "by_group": {
+      "other_manufacturing": 245,
+      "transport_utilities_telecom": 223,
+      "services": 178,
+      "trade_retail": 143,
+      "chemicals_pharma": 133,
+      "instruments_medtech": 133,
+      "software_it": 93,
+      "electronics_semis": 78,
+      "computers": 41,
+      "mining_energy": 40,
+      "construction": 10
+     }
+    },
+    "no_row_24m_earlier_or_G_12m_earlier": {
+     "rows": 2597,
+     "companies": 419,
+     "kind": "inherits",
+     "meaning": "G 12 months earlier unavailable (history or inputs then)",
+     "inherited_from": {
+      "fcf_12m_earlier_unavailable": 1350,
+      "fcf_periods_not_a_year_apart": 845,
+      "no_row_12m_earlier": 217,
+      "share_or_split_undefined": 136,
+      "share_guard": 49
+     },
+     "top_companies": [
+      {
+       "cik": 1645590,
+       "name": "Hewlett Packard Enterprise Co",
+       "rows": 21
+      },
+      {
+       "cik": 1283699,
+       "name": "T-Mobile US, Inc.",
+       "rows": 20
+      },
+      {
+       "cik": 833444,
+       "name": "Johnson Controls International plc",
+       "rows": 19
+      },
+      {
+       "cik": 1570585,
+       "name": "Liberty Global Ltd.",
+       "rows": 19
+      },
+      {
+       "cik": 1489393,
+       "name": "LyondellBasell Industries N.V.",
+       "rows": 18
+      },
+      {
+       "cik": 1585689,
+       "name": "Hilton Worldwide Holdings Inc.",
+       "rows": 18
+      },
+      {
+       "cik": 1637459,
+       "name": "Kraft Heinz Co",
+       "rows": 18
+      },
+      {
+       "cik": 29905,
+       "name": "DOVER Corp",
+       "rows": 17
+      }
+     ],
+     "by_group": {
+      "other_manufacturing": 516,
+      "transport_utilities_telecom": 386,
+      "software_it": 316,
+      "chemicals_pharma": 295,
+      "trade_retail": 251,
+      "services": 251,
+      "instruments_medtech": 241,
+      "electronics_semis": 129,
+      "computers": 88,
+      "mining_energy": 74,
+      "construction": 38,
+      "agri": 12
+     }
+    }
+   },
+   "by_kind": {
+    "rule": 2858,
+    "data": 1971,
+    "inherits": 4095
+   },
+   "by_year": {
+    "2015": {
+     "no_row_24m_earlier_or_G_12m_earlier": 281,
+     "fcf_12m_earlier_unavailable": 162,
+     "no_ocf_or_capex": 149,
+     "fcf_periods_not_a_year_apart": 107,
+     "restated_flag": 95,
+     "fcf_stale": 30,
+     "no_row_12m_earlier": 16,
+     "identity_rule": 12,
+     "share_or_split_undefined": 10,
+     "share_guard": 3
+    },
+    "2016": {
+     "no_row_24m_earlier_or_G_12m_earlier": 214,
+     "no_ocf_or_capex": 163,
+     "restated_flag": 125,
+     "fcf_12m_earlier_unavailable": 122,
+     "fcf_periods_not_a_year_apart": 112,
+     "fcf_stale": 23,
+     "no_row_12m_earlier": 17,
+     "identity_rule": 9,
+     "share_or_split_undefined": 4,
+     "share_guard": 1
+    },
+    "2017": {
+     "restated_flag": 245,
+     "no_row_24m_earlier_or_G_12m_earlier": 207,
+     "fcf_12m_earlier_unavailable": 186,
+     "no_ocf_or_capex": 144,
+     "fcf_periods_not_a_year_apart": 129,
+     "fcf_stale": 45,
+     "no_row_12m_earlier": 19,
+     "identity_rule": 2,
+     "share_or_split_undefined": 1,
+     "share_guard": 1
+    },
+    "2018": {
+     "fcf_12m_earlier_unavailable": 290,
+     "no_row_24m_earlier_or_G_12m_earlier": 279,
+     "no_ocf_or_capex": 192,
+     "restated_flag": 183,
+     "fcf_periods_not_a_year_apart": 133,
+     "fcf_stale": 30,
+     "no_row_12m_earlier": 21,
+     "identity_rule": 6,
+     "share_or_split_undefined": 5,
+     "share_guard": 3
+    },
+    "2019": {
+     "no_row_24m_earlier_or_G_12m_earlier": 371,
+     "fcf_12m_earlier_unavailable": 244,
+     "no_ocf_or_capex": 202,
+     "fcf_periods_not_a_year_apart": 181,
+     "restated_flag": 87,
+     "fcf_stale": 32,
+     "no_row_12m_earlier": 29,
+     "share_or_split_undefined": 23,
+     "identity_rule": 8,
+     "share_guard": 2
+    },
+    "2020": {
+     "no_row_24m_earlier_or_G_12m_earlier": 399,
+     "no_ocf_or_capex": 252,
+     "fcf_periods_not_a_year_apart": 239,
+     "fcf_12m_earlier_unavailable": 170,
+     "restated_flag": 71,
+     "no_row_12m_earlier": 37,
+     "fcf_stale": 32,
+     "share_or_split_undefined": 14,
+     "share_guard": 9,
+     "identity_rule": 5
+    },
+    "2021": {
+     "no_row_24m_earlier_or_G_12m_earlier": 443,
+     "no_ocf_or_capex": 369,
+     "fcf_periods_not_a_year_apart": 246,
+     "fcf_12m_earlier_unavailable": 182,
+     "share_or_split_undefined": 93,
+     "restated_flag": 89,
+     "no_row_12m_earlier": 70,
+     "fcf_stale": 38,
+     "share_guard": 22,
+     "identity_rule": 8
+    },
+    "2022": {
+     "no_row_24m_earlier_or_G_12m_earlier": 403,
+     "no_ocf_or_capex": 290,
+     "fcf_periods_not_a_year_apart": 170,
+     "fcf_12m_earlier_unavailable": 142,
+     "share_or_split_undefined": 60,
+     "restated_flag": 45,
+     "no_row_12m_earlier": 30,
+     "fcf_stale": 27,
+     "identity_rule": 9,
+     "share_guard": 5
+    }
+   },
+   "scored": 25176,
+   "unscored_share": 0.2617,
+   "per_month_unscored_mean": 93.9,
+   "companies_unscored_at_least_once": 540,
+   "companies_never_scored_in_window": 101,
+   "by_group": {
+    "other_manufacturing": 1794,
+    "transport_utilities_telecom": 1587,
+    "software_it": 1112,
+    "chemicals_pharma": 1041,
+    "services": 790,
+    "trade_retail": 734,
+    "instruments_medtech": 684,
+    "electronics_semis": 543,
+    "mining_energy": 291,
+    "computers": 234,
+    "construction": 86,
+    "agri": 28
+   }
+  },
+  "B5-S2A-GP-12M-V3": {
+   "total": 10422,
+   "by_reason": {
+    "identity_rule": {
+     "rows": 128,
+     "companies": 16,
+     "kind": "rule",
+     "meaning": "ADDENDUM_2 rule C: CIK 1635327, or mcap > 100x total assets",
+     "top_companies": [
+      {
+       "cik": 1635327,
+       "name": "Flutter Entertainment plc",
+       "rows": 39
+      },
+      {
+       "cik": 1540684,
+       "name": "Atlas Lithium Corp",
+       "rows": 27
+      },
+      {
+       "cik": 1517681,
+       "name": "Propanc Biopharma, Inc.",
+       "rows": 22
+      },
+      {
+       "cik": 1084267,
+       "name": "Mobiquity Technologies, Inc.",
+       "rows": 12
+      },
+      {
+       "cik": 1784970,
+       "name": "Next Technology Holding Inc.",
+       "rows": 5
+      },
+      {
+       "cik": 1108205,
+       "name": "CURIS INC",
+       "rows": 4
+      },
+      {
+       "cik": 1613103,
+       "name": "Medtronic plc",
+       "rows": 4
+      },
+      {
+       "cik": 1651308,
+       "name": "BeOne Medicines Ltd.",
+       "rows": 4
+      }
+     ],
+     "by_group": {
+      "software_it": 46,
+      "chemicals_pharma": 36,
+      "mining_energy": 27,
+      "services": 13,
+      "instruments_medtech": 4,
+      "transport_utilities_telecom": 2
+     }
+    },
+    "no_total_assets": {
+     "rows": 365,
+     "companies": 10,
+     "kind": "data",
+     "meaning": "total assets missing or not positive",
+     "top_companies": [
+      {
+       "cik": 16875,
+       "name": "CANADIAN PACIFIC KANSAS CITY LTD/CN",
+       "rows": 95
+      },
+      {
+       "cik": 895728,
+       "name": "ENBRIDGE INC",
+       "rows": 95
+      },
+      {
+       "cik": 49938,
+       "name": "IMPERIAL OIL LTD",
+       "rows": 92
+      },
+      {
+       "cik": 849395,
+       "name": "CRH PUBLIC LTD CO",
+       "rows": 36
+      },
+      {
+       "cik": 16868,
+       "name": "CANADIAN NATIONAL RAILWAY CO",
+       "rows": 22
+      },
+      {
+       "cik": 1762303,
+       "name": "AVITA Medical, Inc.",
+       "rows": 9
+      },
+      {
+       "cik": 1737927,
+       "name": "Canopy Growth Corp",
+       "rows": 8
+      },
+      {
+       "cik": 1611747,
+       "name": "Scinai Immunotherapeutics Ltd.",
+       "rows": 4
+      }
+     ],
+     "by_group": {
+      "transport_utilities_telecom": 215,
+      "other_manufacturing": 128,
+      "chemicals_pharma": 13,
+      "instruments_medtech": 9
+     }
+    },
+    "no_gp_and_no_revenue_cost": {
+     "rows": 6303,
+     "companies": 160,
+     "kind": "data",
+     "meaning": "neither gross profit nor both revenue and cost of revenue found",
+     "top_companies": [
+      {
+       "cik": 4904,
+       "name": "AMERICAN ELECTRIC POWER CO INC",
+       "rows": 95
+      },
+      {
+       "cik": 27904,
+       "name": "DELTA AIR LINES, INC.",
+       "rows": 95
+      },
+      {
+       "cik": 63908,
+       "name": "MCDONALDS CORP",
+       "rows": 95
+      },
+      {
+       "cik": 65984,
+       "name": "ENTERGY CORP /DE/",
+       "rows": 95
+      },
+      {
+       "cik": 72741,
+       "name": "EVERSOURCE ENERGY",
+       "rows": 95
+      },
+      {
+       "cik": 75362,
+       "name": "PACCAR INC",
+       "rows": 95
+      },
+      {
+       "cik": 92122,
+       "name": "SOUTHERN CO",
+       "rows": 95
+      },
+      {
+       "cik": 92380,
+       "name": "SOUTHWEST AIRLINES CO",
+       "rows": 95
+      }
+     ],
+     "by_group": {
+      "transport_utilities_telecom": 3187,
+      "services": 1287,
+      "other_manufacturing": 427,
+      "mining_energy": 425,
+      "trade_retail": 243,
+      "chemicals_pharma": 234,
+      "construction": 220,
+      "software_it": 191,
+      "electronics_semis": 49,
+      "instruments_medtech": 29,
+      "computers": 7,
+      "agri": 4
+     }
+    },
+    "gp_and_revenue_cost_stale": {
+     "rows": 485,
+     "companies": 29,
+     "kind": "rule",
+     "meaning": "every available gross-profit route ended more than 183 days before",
+     "top_companies": [
+      {
+       "cik": 746515,
+       "name": "EXPEDITORS INTERNATIONAL OF WASHINGTON INC",
+       "rows": 69
+      },
+      {
+       "cik": 1567094,
+       "name": "CNH Industrial N.V.",
+       "rows": 45
+      },
+      {
+       "cik": 723254,
+       "name": "CINTAS CORP",
+       "rows": 44
+      },
+      {
+       "cik": 1413447,
+       "name": "NXP Semiconductors N.V.",
+       "rows": 37
+      },
+      {
+       "cik": 72903,
+       "name": "XCEL ENERGY INC",
+       "rows": 32
+      },
+      {
+       "cik": 1650372,
+       "name": "Atlassian Corp",
+       "rows": 32
+      },
+      {
+       "cik": 1219601,
+       "name": "CROWN HOLDINGS, INC.",
+       "rows": 27
+      },
+      {
+       "cik": 815097,
+       "name": "Carnival Corp Ltd.",
+       "rows": 24
+      }
+     ],
+     "by_group": {
+      "other_manufacturing": 160,
+      "transport_utilities_telecom": 151,
+      "software_it": 43,
+      "electronics_semis": 38,
+      "chemicals_pharma": 36,
+      "trade_retail": 21,
+      "mining_energy": 18,
+      "instruments_medtech": 11,
+      "services": 7
+     }
+    },
+    "gp_restated_and_no_fallback": {
+     "rows": 125,
+     "companies": 23,
+     "kind": "rule",
+     "meaning": "GrossProfit TTM mixes bases (T2) and revenue - cost is unavailable",
+     "top_companies": [
+      {
+       "cik": 936468,
+       "name": "LOCKHEED MARTIN CORP",
+       "rows": 14
+      },
+      {
+       "cik": 789019,
+       "name": "MICROSOFT CORP",
+       "rows": 10
+      },
+      {
+       "cik": 1699150,
+       "name": "Ingersoll Rand Inc.",
+       "rows": 10
+      },
+      {
+       "cik": 833444,
+       "name": "Johnson Controls International plc",
+       "rows": 9
+      },
+      {
+       "cik": 849399,
+       "name": "Gen Digital Inc.",
+       "rows": 9
+      },
+      {
+       "cik": 1418135,
+       "name": "Keurig Dr Pepper Inc.",
+       "rows": 9
+      },
+      {
+       "cik": 29905,
+       "name": "DOVER Corp",
+       "rows": 8
+      },
+      {
+       "cik": 37785,
+       "name": "FMC CORP",
+       "rows": 8
+      }
+     ],
+     "by_group": {
+      "other_manufacturing": 57,
+      "software_it": 19,
+      "trade_retail": 15,
+      "chemicals_pharma": 9,
+      "services": 8,
+      "electronics_semis": 7,
+      "instruments_medtech": 7,
+      "computers": 3
+     }
+    },
+    "revenue_cost_period_ends_differ": {
+     "rows": 2435,
+     "companies": 79,
+     "kind": "rule",
+     "meaning": "no fresh GP; revenue and cost of revenue periods end differently",
+     "top_companies": [
+      {
+       "cik": 107263,
+       "name": "WILLIAMS COMPANIES, INC.",
+       "rows": 95
+      },
+      {
+       "cik": 1175454,
+       "name": "CORPAY, INC.",
+       "rows": 86
+      },
+      {
+       "cik": 1327811,
+       "name": "Workday, Inc.",
+       "rows": 86
+      },
+      {
+       "cik": 732717,
+       "name": "AT&T INC.",
+       "rows": 85
+      },
+      {
+       "cik": 813672,
+       "name": "CADENCE DESIGN SYSTEMS INC",
+       "rows": 65
+      },
+      {
+       "cik": 9389,
+       "name": "BALL Corp",
+       "rows": 58
+      },
+      {
+       "cik": 1478242,
+       "name": "IQVIA HOLDINGS INC.",
+       "rows": 55
+      },
+      {
+       "cik": 56873,
+       "name": "KROGER CO",
+       "rows": 54
+      }
+     ],
+     "by_group": {
+      "transport_utilities_telecom": 713,
+      "other_manufacturing": 397,
+      "services": 346,
+      "software_it": 295,
+      "trade_retail": 207,
+      "instruments_medtech": 178,
+      "mining_energy": 125,
+      "chemicals_pharma": 92,
+      "computers": 45,
+      "electronics_semis": 29,
+      "construction": 8
+     }
+    },
+    "revenue_conflict_or_cost_restated": {
+     "rows": 581,
+     "companies": 63,
+     "kind": "rule",
+     "meaning": "no fresh GP; revenue fails T0-T2 or cost of revenue mixes bases",
+     "top_companies": [
+      {
+       "cik": 1551182,
+       "name": "Eaton Corp plc",
+       "rows": 37
+      },
+      {
+       "cik": 1060391,
+       "name": "REPUBLIC SERVICES, INC.",
+       "rows": 36
+      },
+      {
+       "cik": 23217,
+       "name": "CONAGRA BRANDS INC.",
+       "rows": 30
+      },
+      {
+       "cik": 8670,
+       "name": "AUTOMATIC DATA PROCESSING INC",
+       "rows": 25
+      },
+      {
+       "cik": 1090872,
+       "name": "AGILENT TECHNOLOGIES, INC.",
+       "rows": 23
+      },
+      {
+       "cik": 46080,
+       "name": "HASBRO, INC.",
+       "rows": 20
+      },
+      {
+       "cik": 40545,
+       "name": "GENERAL ELECTRIC CO",
+       "rows": 19
+      },
+      {
+       "cik": 40533,
+       "name": "GENERAL DYNAMICS CORP",
+       "rows": 18
+      }
+     ],
+     "by_group": {
+      "other_manufacturing": 206,
+      "transport_utilities_telecom": 90,
+      "instruments_medtech": 74,
+      "chemicals_pharma": 61,
+      "software_it": 56,
+      "mining_energy": 38,
+      "electronics_semis": 20,
+      "trade_retail": 18,
+      "computers": 15,
+      "agri": 3
+     }
+    }
+   },
+   "by_kind": {
+    "rule": 3754,
+    "data": 6668,
+    "inherits": 0
+   },
+   "by_year": {
+    "2015": {
+     "no_gp_and_no_revenue_cost": 802,
+     "revenue_conflict_or_cost_restated": 99,
+     "revenue_cost_period_ends_differ": 67,
+     "no_total_assets": 36,
+     "gp_and_revenue_cost_stale": 35,
+     "identity_rule": 20,
+     "gp_restated_and_no_fallback": 15
+    },
+    "2016": {
+     "no_gp_and_no_revenue_cost": 792,
+     "revenue_conflict_or_cost_restated": 81,
+     "revenue_cost_period_ends_differ": 65,
+     "gp_and_revenue_cost_stale": 45,
+     "no_total_assets": 36,
+     "gp_restated_and_no_fallback": 14,
+     "identity_rule": 9
+    },
+    "2017": {
+     "no_gp_and_no_revenue_cost": 814,
+     "revenue_conflict_or_cost_restated": 93,
+     "revenue_cost_period_ends_differ": 73,
+     "gp_and_revenue_cost_stale": 71,
+     "no_total_assets": 36,
+     "gp_restated_and_no_fallback": 17,
+     "identity_rule": 3
+    },
+    "2018": {
+     "no_gp_and_no_revenue_cost": 850,
+     "revenue_cost_period_ends_differ": 201,
+     "gp_and_revenue_cost_stale": 83,
+     "revenue_conflict_or_cost_restated": 81,
+     "no_total_assets": 46,
+     "gp_restated_and_no_fallback": 33,
+     "identity_rule": 18
+    },
+    "2019": {
+     "no_gp_and_no_revenue_cost": 721,
+     "revenue_cost_period_ends_differ": 428,
+     "revenue_conflict_or_cost_restated": 85,
+     "no_total_assets": 53,
+     "gp_and_revenue_cost_stale": 50,
+     "identity_rule": 23,
+     "gp_restated_and_no_fallback": 22
+    },
+    "2020": {
+     "no_gp_and_no_revenue_cost": 676,
+     "revenue_cost_period_ends_differ": 451,
+     "revenue_conflict_or_cost_restated": 63,
+     "gp_and_revenue_cost_stale": 57,
+     "no_total_assets": 57,
+     "identity_rule": 15,
+     "gp_restated_and_no_fallback": 8
+    },
+    "2021": {
+     "no_gp_and_no_revenue_cost": 912,
+     "revenue_cost_period_ends_differ": 555,
+     "gp_and_revenue_cost_stale": 83,
+     "no_total_assets": 53,
+     "revenue_conflict_or_cost_restated": 40,
+     "identity_rule": 22,
+     "gp_restated_and_no_fallback": 13
+    },
+    "2022": {
+     "no_gp_and_no_revenue_cost": 736,
+     "revenue_cost_period_ends_differ": 595,
+     "gp_and_revenue_cost_stale": 61,
+     "no_total_assets": 48,
+     "revenue_conflict_or_cost_restated": 39,
+     "identity_rule": 18,
+     "gp_restated_and_no_fallback": 3
+    }
+   },
+   "scored": 23678,
+   "unscored_share": 0.3056,
+   "per_month_unscored_mean": 109.7,
+   "companies_unscored_at_least_once": 321,
+   "companies_never_scored_in_window": 144,
+   "by_group": {
+    "transport_utilities_telecom": 4358,
+    "services": 1661,
+    "other_manufacturing": 1375,
+    "software_it": 650,
+    "mining_energy": 633,
+    "trade_retail": 504,
+    "chemicals_pharma": 481,
+    "instruments_medtech": 312,
+    "construction": 228,
+    "electronics_semis": 143,
+    "computers": 70,
+    "agri": 7
+   }
+  }
+ }
+}
