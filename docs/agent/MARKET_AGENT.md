@@ -517,3 +517,17 @@ missing from the map (it priced only through a config override) and was never ch
 `feeds.is_us` accepts both suffixes and is used in all three places. The improvement track's
 `research/stock-screener/t212_map_2026-11.csv` (from `research/improve/t212_map.py`) is the checked symbol map
 for screen refreshes: a new pick's T212 ticker comes from its `t212_ticker` column.
+
+## agent-1.25 (13 Nov 2026): a screener name that still qualifies after 12 months is kept
+
+Found in the sell-rule review (docs/agent/SELL_RULES.md). With drop-out swaps off (9 Nov), `monthly_refresh` sold the
+longest-held name once it reached 12 months and bought the best name not held, even when the sold name was still in
+the top 15. The tested rule (Q199 yearly, Q214 monthly sleeves) re-picks the top list at each anniversary, so a name
+that still qualifies stays. The live code would have sold a name the screen still ranks, to buy one it ranks lower,
+and paid a round trip for it. No trade was affected: the oldest entry is 3 Nov 2026.
+
+Now `monthly_refresh` returns `renew: [tickers]` for names that are 12 months old and still in the top list (action
+`renew` when nothing else trades). Whoever applies the refresh adds each to `active.stock_screen.renewed` in
+config.json as `{ticker: YYYY-MM-DD}`; `stock_screen.hold_since` and the `overdue_refresh` self-check then count the
+12 months from that day. A renewal is not a trade and does not use the month's one scheduled swap. A 12-month-old name
+outside the top list is sold as before. Tests: `test_stock_screen_refresh.py`, `test_invariants.py`.

@@ -191,3 +191,20 @@ def test_a_book_wide_limit_one_strategy_applied_and_another_did_not():
                            records=recs[1:], stops={"b": stops["b"]}, market_open=lambda t: True,
                            quote_ok=lambda t: True, total=1000.0)
     assert rep["ok"]
+
+
+def test_a_renewed_screen_hold_is_not_overdue_until_12_months_after_the_renewal(monkeypatch):
+    day = 86400.0
+    recs = [entry("s", "OLD_US_EQ", "stock_screen", age_s=500 * day)]
+    positions = {"OLD_US_EQ": pos()}
+    stops = {"s": {"order_id": 1, "ticker": "OLD_US_EQ", "qty": 1.0}}
+    pend = [{"id": 1, "ticker": "OLD_US_EQ"}]
+    assert codes(run(recs, positions, stops, pend)) == [("overdue_refresh", "OLD_US_EQ", "warn")]
+    import time as _t
+    cfg = {**CFG, "active": {**CFG["active"], "stock_screen": {
+        **(CFG["active"].get("stock_screen") or {}),
+        "renewed": {"OLD_US_EQ": _t.strftime("%Y-%m-%d", _t.gmtime(NOW - 100 * day))}}}}
+    monkeypatch.setitem(globals(), "CFG", cfg)
+    assert codes(run(recs, positions, stops, pend)) == []
+    cfg["active"]["stock_screen"]["renewed"]["OLD_US_EQ"] = _t.strftime("%Y-%m-%d", _t.gmtime(NOW - 410 * day))
+    assert codes(run(recs, positions, stops, pend)) == [("overdue_refresh", "OLD_US_EQ", "warn")]

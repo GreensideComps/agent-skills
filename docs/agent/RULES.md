@@ -1,6 +1,6 @@
 # What the demo agent buys and sells, and why
 
-Generated from `agent/market_agent/config.json` (agent-1.24.4) by `python3 -m market_agent rules`. Do not edit by hand: change the config or `rules.py`, then run `python3 -m market_agent rules --write docs/agent/RULES.md`. The tests fail if this page is out of date.
+Generated from `agent/market_agent/config.json` (agent-1.25) by `python3 -m market_agent rules`. Do not edit by hand: change the config or `rules.py`, then run `python3 -m market_agent rules --write docs/agent/RULES.md`. The tests fail if this page is out of date.
 
 Demo account only. No strategy here has passed the go-live rule; each is a small forward test.
 
@@ -204,7 +204,7 @@ Buys when:
 
 Sells when (whichever comes first):
 
-- 12-month hold: after the weekly data rebuild, the longest-held name is replaced once it has been held 12 months, at most one replacement a month
+- 12-month review: once a name has been held 12 months it is replaced by the best name not held, at most one replacement a month, unless it is still in the top list, in which case it is kept and its 12 months start again (the tested rule; selling a name the screen would still pick was a drift from it)
 - a name that merely drops out of the top list is NOT sold early (that rule tested worse than holding and is off)
 - SEC hard event: sold at once on a bankruptcy, delisting, auditor change, restatement, merger or tender filing
 - safety-net stop: a stop resting at the broker 30% below the buy price; if the broker refuses or loses it, the agent sells at the same level itself and keeps trying to put the stop back (unproven: tighter stops tested worse than holding)

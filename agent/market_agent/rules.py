@@ -169,8 +169,9 @@ def strategies(cfg: dict, killed: dict | None = None) -> list[dict]:
               "yield, momentum, low debt, buybacks), skipping any that would break the sector limit or put more than "
               f"{ss['max_per_sic2']} names in one industry group",
               "a new name is bought only to replace one that was sold"],
-        sells=["12-month hold: after the weekly data rebuild, the longest-held name is replaced once it has been held "
-               "12 months, at most one replacement a month",
+        sells=["12-month review: once a name has been held 12 months it is replaced by the best name not held, at most "
+               "one replacement a month, unless it is still in the top list, in which case it is kept and its 12 months "
+               "start again (the tested rule; selling a name the screen would still pick was a drift from it)",
                "a name that merely drops out of the top list is " + ("replaced early" if ss.get("swap_on_dropout", True)
                                                                     else "NOT sold early (that rule tested worse than holding and is off)"),
                "SEC hard event: sold at once on a bankruptcy, delisting, auditor change, restatement, merger or tender filing",

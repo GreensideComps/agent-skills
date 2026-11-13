@@ -34,6 +34,8 @@ never raise an alarm, and a breach that persists always does:
 """
 from __future__ import annotations
 
+import calendar
+
 import time
 
 from . import active, execution
@@ -135,6 +137,9 @@ def check(*, now: float, cfg: dict, positions: dict, pending: list, records: lis
         if level is None and ts is None and strat not in RULE_EXIT:
             add("no_exit_rule", t, f"{t} ({strat}) has no stop, no time limit and no strategy exit: nothing would "
                 "ever sell it", entry_id=e["id"])
+        renewed = str((((cfg.get("active") or {}).get("stock_screen") or {}).get("renewed") or {}).get(t, ""))
+        if strat == "stock_screen" and renewed:   # a hold renewed at its anniversary runs 12 months from that day
+            age = min(age, now - calendar.timegm(time.strptime(renewed[:10], "%Y-%m-%d")))
         if strat == "stock_screen" and age > SCREEN_HOLD_S + SCREEN_GRACE_S:
             add("overdue_refresh", t, f"{t} (stock_screen) has been held {age / DAY_S:.0f} days: the monthly refresh "
                 "that replaces names after 12 months has not run", entry_id=e["id"])
