@@ -160,3 +160,15 @@ def test_a_cancelled_stop_on_a_held_position_is_placed_again():
     filled = {"b": {"order_id": None, "ticker": "IUMOl_EQ", "cancelled": "x", "filled": "y"}}
     assert active.stops_needed(recs, pos, filled) == []
     assert active.stops_needed(recs, {}, lapsed) == []  # sold: nothing to protect
+
+
+def test_renewal_uses_the_sic2_capped_top_list(monkeypatch):
+    """agent-1.26.2 (improvement track S28): a held name at raw rank top_n+1 is inside the capped top list when a
+    higher name is blocked by a full SIC2 group, so it renews instead of being sold and rebought."""
+    sc = {**SC, "swap_on_dropout": False}
+    rows = [row(7, 9, "7372"), row(8, 8, "7372"), row(1, 7, "7372"), row(9, 6, "7372"), row(3, 5, "2834"),
+            row(2, 4, "3571")]  # 9 is SIC 73's fourth name: capped top 4 = 7, 8, A, C, so raw rank 5 (C) is in
+    held(monkeypatch, {"A_US_EQ": "2026-11-03", "B_US_EQ": "2026-11-03", "C_US_EQ": "2020-01-02"})
+    assert s.capped_top(rows, 4, 3) == {7, 8, 1, 3}
+    r = s.monthly_refresh(sc, rows, [], top_n=4, max_per_sic2=3)
+    assert r["action"] == "renew" and r["renew"] == ["C_US_EQ"] and r["sell"] is None

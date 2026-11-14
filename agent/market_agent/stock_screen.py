@@ -204,6 +204,23 @@ def hold_since(sc: dict | None, entry: dict) -> str:
     return max((entry.get("ts") or "")[:10], str(((sc or {}).get("renewed") or {}).get(entry["ticker"], "")))
 
 
+def capped_top(rows: list[dict], top_n: int, max_per_sic2: int) -> set[int]:
+    """agent-1.26.2: the top list the way pick1 (and Q199/Q214) builds it: walk by score, skip a name whose SIC
+    two-digit group already has `max_per_sic2` names, stop at `top_n`. A raw top-N would let names that cannot be bought
+    (group full) push a held name out, so it would fail renewal and be rebought: a pointless round trip."""
+    top: set[int] = set()
+    groups: dict[str, int] = {}
+    for r in rows:
+        if len(top) >= top_n:
+            break
+        g = str(r.get("sic") or "")[:2]
+        if groups.get(g, 0) >= max_per_sic2:
+            continue
+        groups[g] = groups.get(g, 0) + 1
+        top.add(int(float(r["cik"])))
+    return top
+
+
 def monthly_refresh(sc: dict, scored: list[dict], records, top_n: int = 15, max_per_sic2: int = 3,
                     swapped_this_month: bool = False) -> dict:
     """Q214's monthly 1/12 refresh. `scored` is that month's pick1.py live output (ticker, cik, sic, score).
@@ -214,7 +231,7 @@ def monthly_refresh(sc: dict, scored: list[dict], records, top_n: int = 15, max_
     and the T212 ticker of each buy are done when the config is edited."""
     rows = sorted((r for r in scored if str(r.get("cik") or "").strip()), key=lambda r: -float(r["score"]))
     score = {int(float(r["cik"])): float(r["score"]) for r in rows}
-    top = {int(float(r["cik"])) for r in rows[:top_n]}
+    top = capped_top(rows, top_n, max_per_sic2)
     ciks = sc.get("ciks") or {}
     held = {e["ticker"]: e for e in active.open_trades(records) if e["signal"].get("strategy") == NAME}
     hard = set((sc.get("_state") or {}).get("exit") or {})

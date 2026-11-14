@@ -518,6 +518,14 @@ missing from the map (it priced only through a config override) and was never ch
 `research/stock-screener/t212_map_2026-11.csv` (from `research/improve/t212_map.py`) is the checked symbol map
 for screen refreshes: a new pick's T212 ticker comes from its `t212_ticker` column.
 
+## agent-1.26.2 (14 Nov 2026): renewal and drop-out use the SIC2-capped top list
+
+`monthly_refresh` built its top list as the raw top N, while the buy side and pick1 (the rule Q199/Q214 tested) cap
+each SIC two-digit group at `max_per_sic2`. Names that cannot be bought (a full group, e.g. SIC 73) took raw slots,
+so a held name inside the capped top 15 (LULU, raw rank 18 on 14 Nov) would fail its 12-month renewal and be sold,
+then rebought. `capped_top()` now builds the list the same way as the buy side. No trade was affected (first renewal
+about Nov 2027). Test: `test_renewal_uses_the_sic2_capped_top_list`.
+
 ## agent-1.26.1 (14 Nov 2026): research pauses reach the hosted state with the deploy
 
 The hosted state (state/strategies.json on the encrypted branch) cannot be edited by hand. `office_pauses` in
