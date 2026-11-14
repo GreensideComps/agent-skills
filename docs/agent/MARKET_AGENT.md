@@ -518,6 +518,17 @@ missing from the map (it priced only through a config override) and was never ch
 `research/stock-screener/t212_map_2026-11.csv` (from `research/improve/t212_map.py`) is the checked symbol map
 for screen refreshes: a new pick's T212 ticker comes from its `t212_ticker` column.
 
+## agent-1.25.1 (14 Nov 2026): thin held names keep a price between trades
+
+Yahoo's quote time is the last trade. A thinly traded holding (OPY) can go a few seconds to a minute past
+`freshness_s.market_open` (600 s) between trades, so its quote flapped stale 100-157 times a day and the
+`invariant:unpriced` alert fired although the price was fine. Now, when a held line's Yahoo quote is stale only by
+age during market hours, the agent uses the broker's own position price instead, if that read is fresher than the
+same limit and within `quote_fallback.max_gap` (3%) of the last Yahoo trade. The quote is marked `src: broker` and
+the `quote_state` event carries `broker_fallback`. Names that are not held have no broker price and stay invalid, and
+a broker price that disagrees with the last trade is not used. Test:
+`test_thin_held_name_with_stale_last_trade_uses_a_fresh_agreeing_broker_price`.
+
 ## agent-1.25 (13 Nov 2026): a screener name that still qualifies after 12 months is kept
 
 Found in the sell-rule review (docs/agent/SELL_RULES.md). With drop-out swaps off (9 Nov), `monthly_refresh` sold the

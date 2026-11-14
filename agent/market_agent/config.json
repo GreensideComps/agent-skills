@@ -1,5 +1,5 @@
 {
-  "version": "agent-1.25",
+  "version": "agent-1.25.1",
   "note": "Always-on demo market agent. Demo account only (the client refuses any other host). Owner mandate: cmsg_01U4KMvkBYNknqm4HRVie8uvK9gRYqGXBK4bQP49dBz49i (26 Oct 2026).",
   "intervals_s": {
     "loop": 15,
@@ -59,6 +59,11 @@
     "note": "agent-1.21: London lines are priced from the broker's position price (refreshed every 5 minutes), so they keep the delayed limit."
   },
   "abnormal_move": 0.25,
+  "quote_fallback": {
+    "enabled": true,
+    "max_gap": 0.03,
+    "note": "agent-1.25.1: a held line whose Yahoo last trade is older than freshness_s.market_open is priced from the broker position price when that read is fresh and within max_gap of the last trade (thin names such as OPY)."
+  },
   "exits": {
     "tickers": [
       "INTC_US_EQ",

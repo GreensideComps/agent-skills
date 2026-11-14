@@ -279,6 +279,22 @@ class Agent:
             out[self.cfg["benchmark"]["fx"]] = {"price": fx[len(fx) // 2], "t": self.broker_t}
         return out
 
+    def _broker_fallback(self, sym: str, q: dict | None, now: float) -> dict | None:
+        """agent-1.25.1: a thinly traded held name (OPY) can go more than freshness_s.market_open without a trade, so
+        its Yahoo quote (time of last trade) flaps stale for minutes at a time and stops that need a price cannot
+        fire. Use the broker's own position price instead when that read is itself fresh and agrees with the last
+        Yahoo trade within quote_fallback.max_gap. Only held lines have a broker price; anything else stays invalid."""
+        fb = self.cfg.get("quote_fallback") or {}
+        if not fb.get("enabled", True) or not q or not isinstance(q.get("price"), (int, float)) or q["price"] <= 0:
+            return None
+        b = self.broker_quotes().get(sym)
+        if not b or not b.get("t") or now - b["t"] > self.cfg["freshness_s"]["market_open"]:
+            return None
+        if abs(b["price"] / q["price"] - 1) > fb.get("max_gap", 0.03):
+            return None
+        return {"price": b["price"], "t": b["t"], "prev_close": q.get("prev_close"), "src": "broker",
+                "yahoo_t": q.get("t")}
+
     def refresh_prices(self) -> None:
         ov = self._ov()
         syms = {feeds.yahoo_symbol(t, ov) for t in self.positions} | {self.cfg["benchmark"]["yahoo"],
@@ -292,10 +308,16 @@ class Agent:
             t212 = self._t212_of(sym)
             ok, why = feeds.validate(sym, raw.get(sym), now, self.market_open(t212) if t212 else False,
                                      self.cfg["freshness_s"], self.cfg["abnormal_move"], self.quotes.get(sym))
+            fallback = None
             if ok:
                 self.quotes[sym] = raw[sym]
+            elif why.startswith("stale") and t212 and self.market_open(t212):
+                fallback = self._broker_fallback(sym, raw.get(sym), now)
+                if fallback:
+                    self.quotes[sym], ok, why = fallback, True, "ok"
             if (self.quote_state.get(sym) or "").split(":")[0] != why.split(":")[0]:
-                self.s.event("quote_state", symbol=sym, ok=ok, why=why, quote=raw.get(sym))  # on change only
+                self.s.event("quote_state", symbol=sym, ok=ok, why=why, quote=raw.get(sym),
+                             **({"broker_fallback": fallback} if fallback else {}))  # on change only
             self.quote_state[sym] = why
             if not ok:
                 bad.append(sym)

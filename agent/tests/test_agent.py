@@ -1273,3 +1273,25 @@ def test_the_missed_list_is_saved_for_the_next_process(tmp_path):
     _active_book(b)
     advance(ag, clock, 1, by=30)
     assert st.read("gap_done.json") == {"JPM_US_EQ": "2026-10-27", "UBER_US_EQ": "2026-10-27"}
+
+
+def test_thin_held_name_with_stale_last_trade_uses_a_fresh_agreeing_broker_price(tmp_path, monkeypatch):
+    """agent-1.25.1: OPY's Yahoo last trade goes 600-660 s old between trades; the held line keeps a valid price
+    from the broker's fresh position price when the two agree, and stays invalid when they do not."""
+    ag, b, st, clock = make(tmp_path)
+    ag.refresh_broker()
+    ag.market_open = lambda t: True
+    sym = feeds.yahoo_symbol("INTC_US_EQ", ag._ov())
+    stale = {"price": 10.1, "t": clock() - 640, "prev_close": 10.0}
+    monkeypatch.setattr(feeds, "fetch_quotes", lambda syms, get=None: {s: dict(stale) for s in syms})
+    ag.refresh_prices()
+    assert ag.quote_state[sym] == "ok" and ag.quotes[sym]["src"] == "broker" and ag.quotes[sym]["price"] == 10.0
+    assert ag._broker_fallback("ZZZZ", stale, clock()) is None  # not held: no broker price, no fallback
+    clock.t += 700  # the broker read is now old too
+    ag.refresh_prices()
+    assert ag.quote_state[sym].startswith("stale")
+    ag.refresh_broker()
+    monkeypatch.setattr(feeds, "fetch_quotes", lambda syms, get=None: {s: {**stale, "price": 12.0, "t": clock() - 640}
+                                                                         for s in syms})
+    ag.refresh_prices()
+    assert ag.quote_state[sym].startswith("stale")  # broker 10.0 vs last trade 12.0: too far apart to trust
