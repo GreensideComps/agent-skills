@@ -44,20 +44,21 @@ def load() -> pd.DataFrame:
     forces a rebuild."""
     import os
     cdir = Path(os.environ.get("PICK1_CACHE", "/mnt/project-files/research-data/.cache"))
-    pkl = cdir / f"pick1_load.{_cache_key()}.pkl"
+    # R21 (14 Nov): the project mount drops files over ~500 MB; the raw pickle was 566 MB, so it is gzip level 1
+    pkl = cdir / f"pick1_load.{_cache_key()}.pkl.gz"
     if os.environ.get("PICK1_NOCACHE") != "1" and pkl.exists():
         try:
-            return pd.read_pickle(pkl)
+            return pd.read_pickle(pkl, compression="gzip")
         except Exception:
             pass
     df = _load_uncached()
     try:
         cdir.mkdir(parents=True, exist_ok=True)
-        for old in cdir.glob("pick1_load.*.pkl"):
+        for old in list(cdir.glob("pick1_load.*.pkl")) + list(cdir.glob("pick1_load.*.pkl.gz")):
             if old != pkl:
                 old.unlink(missing_ok=True)
         tmp = pkl.with_suffix(f".{os.getpid()}.tmp")  # unique per process: shared mount, concurrent sessions
-        df.to_pickle(tmp)
+        df.to_pickle(tmp, compression={"method": "gzip", "compresslevel": 1})
         tmp.replace(pkl)
     except OSError:
         pass
