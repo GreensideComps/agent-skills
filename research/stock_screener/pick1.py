@@ -19,7 +19,52 @@ N_EXTRA = 94 + 8  # regime track C7 + owner timing batch, not in trials.jsonl
 TOP, PER_SIC = 15, 3
 
 
+_CACHE_INPUTS = ("monthly_metrics.csv.gz", "prices_monthly.csv.gz", "sec_facts_panel.csv.gz", "sec_companies.csv.gz")
+
+
+def _cache_key(today: str | None = None) -> str:
+    """E14: key = size+mtime of every input file, of this module and of xsection.py, plus today's date (the S20
+    fundamentals refresh is as of today, so a new day always rebuilds)."""
+    import hashlib, os
+    from datetime import date
+    parts = [today or date.today().isoformat()]
+    for f in [DATA / n for n in _CACHE_INPUTS] + [Path(__file__), Path(xs.__file__)]:
+        try:
+            st = os.stat(f)
+            parts.append(f"{f.name}|{st.st_size}|{int(st.st_mtime)}")
+        except OSError:
+            parts.append(f"{f.name}|missing")
+    return hashlib.sha1("||".join(parts).encode()).hexdigest()[:16]
+
+
 def load() -> pd.DataFrame:
+    """Cached wrapper (E14, 13 Nov 2026): the S20 refresh made a full build take ~60 s. The built frame is pickled to
+    the shared cache dir (PICK1_CACHE, default /mnt/project-files/research-data/.cache, so routines in other
+    session containers reuse it; E16) and reused while the key matches; only the newest pickle is kept. PICK1_NOCACHE=1
+    forces a rebuild."""
+    import os
+    cdir = Path(os.environ.get("PICK1_CACHE", "/mnt/project-files/research-data/.cache"))
+    pkl = cdir / f"pick1_load.{_cache_key()}.pkl"
+    if os.environ.get("PICK1_NOCACHE") != "1" and pkl.exists():
+        try:
+            return pd.read_pickle(pkl)
+        except Exception:
+            pass
+    df = _load_uncached()
+    try:
+        cdir.mkdir(parents=True, exist_ok=True)
+        for old in cdir.glob("pick1_load.*.pkl"):
+            if old != pkl:
+                old.unlink(missing_ok=True)
+        tmp = pkl.with_suffix(f".{os.getpid()}.tmp")  # unique per process: shared mount, concurrent sessions
+        df.to_pickle(tmp)
+        tmp.replace(pkl)
+    except OSError:
+        pass
+    return df
+
+
+def _load_uncached() -> pd.DataFrame:
     df = xs.load()
     df = _extend_partial_month(df)
     co = pd.read_csv(DATA / "sec_companies.csv.gz", usecols=["cik", "sic"])
@@ -58,6 +103,7 @@ def _extend_partial_month(df: pd.DataFrame) -> pd.DataFrame:
     if newer.empty:
         return df
     base = df[df["month"] == last_m].drop(columns=["ticker", "close_raw", "adjclose", "ret_next", "mcap", "band"])
+    base = _refresh_fundamentals(base)
     add = base.drop(columns=["month"]).merge(newer[["cik", "month", "ticker", "close_raw", "adjclose"]], on="cik")
     shares = add["shares_out"].where(add["shares_out"] > 0, add["shares_diluted"])
     add["mcap"] = shares * add["close_raw"]
@@ -66,6 +112,39 @@ def _extend_partial_month(df: pd.DataFrame) -> pd.DataFrame:
     for b, (lo, hi) in xs.SIZE_BANDS.items():
         add.loc[(add["mcap"] >= lo) & (add["mcap"] < hi), "band"] = b
     return pd.concat([df, add[df.columns]], ignore_index=True)
+
+
+def _refresh_fundamentals(base: pd.DataFrame, today: str | None = None) -> pd.DataFrame:
+    """S20 (12 Nov 2026), live only: the month-end metrics miss results filed since the month-end (most 10-Qs land
+    in the first weeks of a month). Recompute each company's point-in-time metrics as of today from the SEC fact
+    panel with the same function the monthly build uses, so a mid-month screen sees filings up to today. Companies
+    with no fresh row (or a missing facts file) keep the month-end row."""
+    from datetime import date
+    facts = DATA / "sec_facts_panel.csv.gz"
+    if not facts.exists() or base.empty:
+        return base
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "equity"))
+    from equity import monthly, panel  # noqa: E402
+    today = today or date.today().isoformat()
+    ciks = set(int(c) for c in base["cik"])
+    from itertools import groupby
+    fresh = []
+    for cik, grp in groupby(panel.read(facts, ciks), key=lambda r: r["cik"]):
+        recs = monthly.company_months(int(cik), list(grp), [today])
+        fresh += recs
+    if not fresh:
+        return base
+    f = pd.DataFrame(fresh).drop(columns=["month"])
+    cols = [c for c in f.columns if c != "cik" and c in base.columns]
+    for c in cols:
+        if c not in ("last_filed", "ttm_end"):
+            f[c] = pd.to_numeric(f[c], errors="coerce")
+    f["cik"] = f["cik"].astype(int)
+    out = base.set_index("cik")
+    f = f.set_index("cik")
+    hit = out.index.intersection(f.index)
+    out.loc[hit, cols] = f.loc[hit, cols].values
+    return out.reset_index()
 
 
 def universe(m: pd.DataFrame, min_cap=2e9) -> pd.DataFrame:

@@ -1237,7 +1237,7 @@ def test_symbols_come_from_the_broker_short_name_not_the_ticker(tmp_path):
         {"ticker": "RTP_US_EQ", "shortName": "JOBY"}, {"ticker": "SNDK1_US_EQ", "shortName": "SNDK"},
         {"ticker": "BRK.B_US_EQ", "shortName": "BRK.B"}, {"ticker": "MSFT_US_EQ", "shortName": "MSFT"},
         {"ticker": "NVRI_US_EQ", "shortName": "NVRI"}, {"ticker": "NVRI1_US_EQ", "shortName": "NVRI"},
-        {"ticker": "VWRPl_EQ", "shortName": "VWRP"}])
+        {"ticker": "VWRPl_EQ", "shortName": "VWRP"}, {"ticker": "TPR_EQ_US", "shortName": "TPR"}])
     ov = ag._ov()
     assert feeds.yahoo_symbol("GPS_US_EQ", ov) == "GAP" and feeds.yahoo_symbol("FB_US_EQ", ov) == "META"
     assert feeds.yahoo_symbol("MSFT_US_EQ", ov) == "MSFT" and feeds.yahoo_symbol("BRK.B_US_EQ", ov) == "BRK-B"
@@ -1245,6 +1245,8 @@ def test_symbols_come_from_the_broker_short_name_not_the_ticker(tmp_path):
     assert ag._us("SNDK") == "SNDK1_US_EQ" and ag._us("JOBY") == "RTP_US_EQ" and ag._us("meta") == "FB_US_EQ"
     assert ag._us("RTP") is None and ag._us("FB") is None  # an old symbol is not today's company
     assert ag._us("NVRI") is None  # two instruments claim it: no guess
+    assert ag._us("TPR") == "TPR_EQ_US" and feeds.yahoo_symbol("TPR_EQ_US", ov) == "TPR"  # agent-1.24.4: odd suffix
+    assert ag._sym_of("TPR_EQ_US") == "TPR" and feeds.is_us("TPR_EQ_US") and not feeds.is_us("VWRPl_EQ")
     assert ag._us_tradeable("GAP") == "GPS_US_EQ" and ag._sym_of("GPS_US_EQ") == "GAP"
     ag.cfg["yahoo_overrides"] = {"GPS_US_EQ": "GAP.X"}
     assert feeds.yahoo_symbol("GPS_US_EQ", ag._ov()) == "GAP.X"  # config.json still wins

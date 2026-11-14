@@ -1,5 +1,7 @@
 """Q185 cross-asset ETF trend (pre-registered: prereg/Q185.md). Tiingo, data truncated at 2022-12-31."""
 import os, sys, urllib.request, io, numpy as np, pandas as pd
+sys.path.insert(0, '/mnt/project-files/research/improve')
+from tiingo_meter import record  # E10: shared monthly Tiingo bandwidth meter
 from statistics import NormalDist
 D = '/mnt/project-files/research-data/tiingo_etf/'; os.makedirs(D, exist_ok=True)
 TOK = open('/mnt/project-files/market-agent/state/tiingo_token.txt').read().strip()
@@ -8,7 +10,8 @@ def get(t):
     f = D + t + '.csv'
     if not os.path.exists(f):
         u = f'https://api.tiingo.com/tiingo/daily/{t}/prices?startDate=2006-01-01&endDate=2022-12-31&format=csv&columns=date,adjClose'
-        open(f, 'wb').write(urllib.request.urlopen(urllib.request.Request(u, headers={'Authorization': 'Token ' + TOK}), timeout=60).read())
+        b = urllib.request.urlopen(urllib.request.Request(u, headers={'Authorization': 'Token ' + TOK}), timeout=60).read()
+        record(len(b)); open(f, 'wb').write(b)
     s = pd.read_csv(f, parse_dates=['date']).set_index('date').adjClose
     return s[s.index <= '2022-12-31'].resample('ME').last()
 P = pd.DataFrame({t: get(t) for t in ETF}).dropna(); r = P.pct_change()

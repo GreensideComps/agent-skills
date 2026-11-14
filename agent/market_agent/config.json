@@ -1,5 +1,5 @@
 {
-  "version": "agent-1.24.2",
+  "version": "agent-1.26",
   "note": "Always-on demo market agent. Demo account only (the client refuses any other host). Owner mandate: cmsg_01U4KMvkBYNknqm4HRVie8uvK9gRYqGXBK4bQP49dBz49i (26 Oct 2026).",
   "intervals_s": {
     "loop": 15,
@@ -205,6 +205,8 @@
       },
       "breakout_momentum": {
         "rule": "a watchlist name up 5% or more on the day: buy 2% of the book, expecting continuation",
+        "evidence": "tested and failed (Q253b, 14 Nov 2026): 1996-2022 the rule lost 9.0% a year against the same stocks held equally, no edge before fees and about 290 trades a year of fees",
+        "paused_note": "new buys paused since 14 Nov 2026 (research Q253b: the live rule lost money in every third of 1996-2022); the pause itself is held in state/strategies.json, open trades keep their exits. Bench rule if it is ever switched back on (Q251b, unproven): keep the 5% stop, drop the target and the 5-day limit, sell below the 10-day low",
         "trigger_move": 0.05,
         "stop_loss": 0.05,
         "take_profit": 0.1,
@@ -320,6 +322,8 @@
     "swing": {
       "rationale": "Decision C9 (owner 30 Oct 11:35Z, cmsg_01U4KMvkBYNknqm4HRVie8uvRPwS2yiiKExfRMKcoE5PHU), spec research/strategies/C9_SQUEEZE_AND_GAP.md. Forward-only on the C6 watchlist; C6 sizing, sleeve stops and the 30-trade kill rule apply. Missing data means no signal.",
       "squeeze": {
+        "evidence": "tested and failed (Q253a, 14 Nov 2026): 1996-2022 the rule lost 2.0% a year against the same stocks held equally; a trailing exit (Q251a) and a volatility stop (Q252a) were no better",
+        "paused_note": "new buys paused since 14 Nov 2026 (research Q253a: negative after costs in the discovery window and worse since 2010); the pause itself is held in state/strategies.json, open trades keep their exits",
         "enabled": true,
         "rule": "20-day Bollinger bandwidth in the lowest 10% of 250 days, then a close above the 20-day high on >=1.5x volume above the 200-day average: buy next session",
         "squeeze_pct": 0.1,
@@ -444,7 +448,7 @@
       "skipped": {"CROX_US_EQ": "consumer discretionary cap (6 Nov refresh): all four new top-15 names (CROX, COLM, LRN, SIG) are consumer discretionary; a 7th discretionary name puts the basket at about +10.5pt active vs VWRP look-through, over the +-10pt limit (UNVERIFIED VWRP sector weight)", "COLM_US_EQ": "consumer discretionary cap (see CROX_US_EQ)", "ELY_US_EQ": "consumer discretionary cap (see CROX_US_EQ); CALY on Yahoo", "LRN_US_EQ": "consumer discretionary cap (see CROX_US_EQ)", "SIG_US_EQ": "consumer discretionary cap (see CROX_US_EQ)", "SN_US_EQ": "consumer discretionary cap (see CROX_US_EQ)", "SPB_US_EQ": "9 Nov: dropped out of the gated list (extra swap); replaced by ENS (EnerSys, gated rank 27), the first name that is neither consumer discretionary (CROX, LRN, COLM, SIG, SN, PVH, BBY skipped) nor SIC 73 (FIVN, NTCT, RHI, ADBE, TENB, PEGA, DOCU, TEAM skipped)", "NTCT_US_EQ": "SIC 73 group cap (TDC, CART, CARG held); RHI, ADBE, FIVN, TENB likewise"},
       "entry_weight": 0.02,
       "qty_decimals": 3,
-      "swap_on_dropout": false,
+      "swap_on_dropout": false, "renewed": {}, "renewed_note": "agent-1.25 (13 Nov 2026, sell-rule review): {ticker: YYYY-MM-DD}. When the refresh reports `renew` for a name (12 months held and still in the top list), add it here with that day's date: its 12-month clock restarts and it is not sold.",
       "ew_rebalance": {"enabled": true, "from": "2026-12", "min_trade_gbp": 1.0, "label": "unproven", "rule": "Q237b bench (9 Nov 2026, DSR 0.03, t 1.1, +0.06%/month): once a month reset each held name to the basket's equal weight, trims first, top-ups paid from them; trades under GBP 1 skipped; review after 12 months of demo data"},
       "fund_from_vwrp": true,
       "kill_after_trades": 30,
