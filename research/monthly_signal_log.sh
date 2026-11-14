@@ -12,6 +12,8 @@ export RESEARCH_DATA="${RESEARCH_DATA:-/mnt/project-files/research-data}"
 
 git fetch -q origin "$BRANCH" && git checkout -q "$BRANCH" && git pull -q --rebase origin "$BRANCH" || {
   echo "SIGNALS: could not sync $BRANCH"; exit 3; }
+# A fresh cloud container may lack pytest; install it once rather than skip the tests.
+python3 -c "import pytest" 2>/dev/null || python3 -m pip install -q pytest >/dev/null 2>&1 || { echo "SIGNALS: pytest missing and could not be installed, nothing run"; exit 4; }
 (cd research && python3 -m pytest -q tests) || { echo "SIGNALS: tests failed, nothing run"; exit 4; }
 (cd equity && python3 -m equity research-data --out "$RESEARCH_DATA" --refresh) || { echo "SIGNALS: data build failed"; exit 5; }
 cd research

@@ -17,6 +17,8 @@ git fetch -q origin "$BRANCH" && git checkout -q "$BRANCH" && git pull -q --reba
   echo "EQUITY: could not sync $BRANCH"; exit 3; }
 
 cd equity
+# A fresh cloud container may lack pytest; install it once rather than skip the tests.
+python3 -c "import pytest" 2>/dev/null || python3 -m pip install -q pytest >/dev/null 2>&1 || { echo "EQUITY: pytest missing and could not be installed, nothing run"; exit 4; }
 python3 -m pytest -q tests || { echo "EQUITY: tests failed, nothing run"; exit 4; }
 FAILED=""
 # Per-company ingest failures (e.g. SEC has no companyfacts) are expected and recorded in the job ledger.
