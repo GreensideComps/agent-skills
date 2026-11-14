@@ -357,20 +357,26 @@ def main() -> None:
            "Q252b": ("breakout", "atr"), "Q253a": ("squeeze", None), "Q253b": ("breakout", None)}
     n_at = {"Q251a": 493, "Q251b": 494, "Q252a": 495, "Q252b": 496, "Q253a": 497, "Q253b": 498}
     rep = {"prereg": "prereg/Q251.md", "universe": len(bars), "signals": {k: len(v) for k, v in sig.items()},
-           "trades": trades, "gate": {}, "configs": {}}
+           "trades": trades, "gates": {}, "configs": {}}
     for bid in ("Q251", "Q252", "Q253"):
         ids = tuple(i for i in cfg if i.startswith(bid))
         batch = gate.Batch(id=bid, configs=ids, discovery=DISCOVERY, confirmation=CONFIRMATION, data="panel")
         ins = {i: inputs(*cfg[i]) for i in ids}
-        rep["gate"][bid] = gate.verdict(batch, ins)
+        rep["gates"][bid] = gate.verdict(batch, ins)
         for i in ids:
             rep["configs"][i] = {**describe(ins[i]["excess"], n_at[i]),
                                  "disc_costs_x2_ann_pct": statistics.fmean(gate.window(ins[i]["costs_x2"], DISCOVERY)) * 1200,
                                  "disc_lag1_ann_pct": statistics.fmean(gate.window(ins[i]["lag1"], DISCOVERY)) * 1200,
-                                 "passed": i in rep["gate"][bid]["passed"],
-                                 "bench": bid != "Q253" and i not in rep["gate"][bid]["passed"]
+                                 "passed": i in rep["gates"][bid]["passed"],
+                                 "bench": bid != "Q253" and i not in rep["gates"][bid]["passed"]
                                  and bench_decision(ins[i]["excess"], ins[i]["costs_x2"], ins[i]["lag1"])}
+    # the registry lint (L5) reads results/<Q>.json["gate"] for each Q id: one file per batch, the full report in Q251
+    rep["gate"] = rep["gates"]["Q251"]
     json.dump(rep, open(OUT, "w"), indent=1, default=str)
+    for bid in ("Q252", "Q253"):
+        json.dump({"prereg": rep["prereg"], "full_report": "Q251.json", "gate": rep["gates"][bid],
+                   "configs": {k: v for k, v in rep["configs"].items() if k.startswith(bid)}},
+                  open(OUT.replace("Q251", bid), "w"), indent=1, default=str)
     print(json.dumps(rep, indent=1, default=str))
 
 
