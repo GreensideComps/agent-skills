@@ -1,6 +1,6 @@
 # What the demo agent buys and sells, and why
 
-Generated from `agent/market_agent/config.json` (agent-1.25) by `python3 -m market_agent rules`. Do not edit by hand: change the config or `rules.py`, then run `python3 -m market_agent rules --write docs/agent/RULES.md`. The tests fail if this page is out of date.
+Generated from `agent/market_agent/config.json` (agent-1.26) by `python3 -m market_agent rules`. Do not edit by hand: change the config or `rules.py`, then run `python3 -m market_agent rules --write docs/agent/RULES.md`. The tests fail if this page is out of date.
 
 Demo account only. No strategy here has passed the go-live rule; each is a small forward test.
 
@@ -19,10 +19,10 @@ Demo account only. No strategy here has passed the go-live rule; each is a small
 | Strategy | Status | Size | Evidence |
 |---|---|---|---|
 | drop_rebound | new buys paused since 7 Nov 2026 (research Q223: the closest backtest lost money); the pause itself is held in state/strategies.json, open trades keep their exits | 2% of the book per trade | no tested edge: a cheap forward test under the kill rule |
-| breakout_momentum | on | 2% of the book per trade | no tested edge: a cheap forward test under the kill rule |
+| breakout_momentum | new buys paused since 14 Nov 2026 (research Q253b: the live rule lost money in every third of 1996-2022); the pause itself is held in state/strategies.json, open trades keep their exits. Bench rule if it is ever switched back on (Q251b, unproven): keep the 5% stop, drop the target and the 5-day limit, sell below the 10-day low | 2% of the book per trade | tested and failed (Q253b, 14 Nov 2026): 1996-2022 the rule lost 9.0% a year against the same stocks held equally, no edge before fees and about 290 trades a year of fees |
 | social_trend | on | 2% of the book per trade | tested and failed overall (Q226); trades only in the one condition that held up, unproven |
 | merger_arb | on | 2% per deal, at most 3 deals | a known premium for deal risk, not tested here: forward test |
-| vol_squeeze | on | 2% of the book per trade | no tested edge: forward test under the kill rule |
+| vol_squeeze | new buys paused since 14 Nov 2026 (research Q253a: negative after costs in the discovery window and worse since 2010); the pause itself is held in state/strategies.json, open trades keep their exits | 2% of the book per trade | tested and failed (Q253a, 14 Nov 2026): 1996-2022 the rule lost 2.0% a year against the same stocks held equally; a trailing exit (Q251a) and a volatility stop (Q252a) were no better |
 | gap_go | on | 2% of the book per trade | no tested edge: forward test under the kill rule |
 | value_timing | on | 2% of the book | passed its long-history test (1920s to 2022) but weak since 2007 and outside the US: low confidence |
 | momentum_timing | on | 2% of the book | passed its long-history test (1920s to 2022) but weak since 2007 and outside the US: low confidence |
@@ -52,7 +52,7 @@ Sells when (whichever comes first):
 
 ## breakout_momentum
 
-Status: on. Size: 2% of the book per trade.
+Status: new buys paused since 14 Nov 2026 (research Q253b: the live rule lost money in every third of 1996-2022); the pause itself is held in state/strategies.json, open trades keep their exits. Bench rule if it is ever switched back on (Q251b, unproven): keep the 5% stop, drop the target and the 5-day limit, sell below the 10-day low. Size: 2% of the book per trade.
 
 Buys when:
 
@@ -105,7 +105,7 @@ Sells when (whichever comes first):
 
 ## vol_squeeze
 
-Status: on. Size: 2% of the book per trade.
+Status: new buys paused since 14 Nov 2026 (research Q253a: negative after costs in the discovery window and worse since 2010); the pause itself is held in state/strategies.json, open trades keep their exits. Size: 2% of the book per trade.
 
 Buys when:
 
