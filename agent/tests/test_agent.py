@@ -1295,3 +1295,14 @@ def test_thin_held_name_with_stale_last_trade_uses_a_fresh_agreeing_broker_price
                                                                          for s in syms})
     ag.refresh_prices()
     assert ag.quote_state[sym].startswith("stale")  # broker 10.0 vs last trade 12.0: too far apart to trust
+
+
+def test_office_pauses_reach_the_state_once_and_never_overwrite(tmp_path):
+    ag, b, st, clock = make(tmp_path)
+    st._replace("strategies.json", {"drop_rebound": {"why": "Q223", "by": "office"},
+                                    "vol_squeeze": {"why": "earlier kill rule", "by": "kill"}})
+    assert ag.apply_office_pauses() == ["breakout_momentum"]
+    s = st.read("strategies.json")
+    assert s["vol_squeeze"]["by"] == "kill" and s["drop_rebound"]["why"] == "Q223"
+    assert "Q253b" in s["breakout_momentum"]["why"]
+    assert ag.apply_office_pauses() == []

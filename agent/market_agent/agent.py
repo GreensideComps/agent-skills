@@ -156,6 +156,18 @@ class Agent:
         self._run("news", self.refresh_news)
         self._run("heartbeat", self.write_heartbeat)
 
+    def apply_office_pauses(self) -> list[str]:
+        """agent-1.26.1: config office_pauses -> state/strategies.json, so a research-driven pause reaches the hosted
+        state with the deploy. Only adds; an existing entry (kill rule or earlier pause) is never overwritten."""
+        disabled = self.s.read("strategies.json") or {}
+        new = {k: v for k, v in (self.cfg.get("office_pauses") or {}).items()
+               if isinstance(v, dict) and k not in disabled}
+        if new:
+            self.s._replace("strategies.json", {**disabled, **new})
+            for k, v in new.items():
+                self.s.event("strategy_disabled", strategy=k, **v)
+        return sorted(new)
+
     def run_forever(self) -> None:
         import signal
 
@@ -164,6 +176,7 @@ class Agent:
         signal.signal(signal.SIGTERM, _term)
         self.s.acquire_lease()
         self.s.event("agent_started", version=self.cfg["version"], control=self.s.control())
+        self.apply_office_pauses()
         try:
             while True:
                 t0 = self.clock()

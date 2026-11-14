@@ -53,8 +53,8 @@ will sell it. Nothing is held without a rule that will sell it (the self-check e
 | buyback_value | cheap company buying back shares | 9 months | value fund's holding period | Yes. 3 months tested much worse, 9 and 12 better than 6 |
 | stock_screen | top 15 on quality, value and momentum | a 12-month review, a hard SEC event (bankruptcy, delisting, restatement, takeover) | fundamental fund: re-check the thesis, sell on a broken one | Mostly. One flaw found and fixed today (below) |
 | social_trend | attention spike in a consumer brand | attention back to normal, -12%, +25%, 84 days | thesis exit (the reason for buying has gone) | Yes |
-| vol_squeeze | breakout from a tight range | -8% or the 20-day low, 28 days, a trailing stop only after +10% | trend trade | **Questionable**: a trend trade with a short time limit. Under test (Q251a, Q252a) |
-| breakout_momentum | up 5% in a day | -5%, +10% target, 5 days | trend trade | **Questionable**: a momentum trade that caps its winners at +10% and leaves after five days is the opposite of how trend traders exit. Under test (Q251b, Q252b) |
+| vol_squeeze | breakout from a tight range | -8% or the 20-day low, 28 days, a trailing stop only after +10% | trend trade | **Paused 14 Nov.** Tested: the rule lost 2.0% a year against the same stocks held equally (Q253a). A trailing exit and a volatility stop were no better (Q251a, Q252a) |
+| breakout_momentum | up 5% in a day | -5%, +10% target, 5 days | trend trade | **Paused 14 Nov.** Tested: the rule lost 9.0% a year (Q253b). Letting winners run was better by 7.9% a year but still not profitable (Q251b) |
 | gap_go | morning gap that holds | first-30-minute low, +6%, end of day | day trade | Standard for the style; untested |
 | drop_rebound | down 5% in a day | -8%, +6%, 10 days | bounce trade | Paused since 7 Nov (its closest test lost money) |
 | everything with no stop of its own | | a broker stop 30% below the buy price | catastrophe stop | A safety net, not an edge: every tighter stop tested cost money |
@@ -65,12 +65,12 @@ will sell it. Nothing is held without a rule that will sell it (the self-check e
 
 **Mostly yes, and more than the "time exit" label suggests.** For the rebound and value strategies the exit is the
 holding period the idea was tested with, which is exactly what an event or value fund does. The system's record on
-this is unusually thorough: 36 alternative sell rules were tested between 3 and 11 Nov (profit targets, profit
+this is unusually thorough: 42 alternative sell rules were tested between 3 and 14 Nov (profit targets, profit
 locks, thesis-broken exits, trailing and volatility stops, momentum and relative-strength exits, drop-out swaps,
 drawdown switches, volatility sizing, trims, averaging down, sell-when-expensive). None beat holding. That matches
 finding 1 and 2 above: these are buy-weakness strategies, and every rule that sells weakness sells the rebound.
 
-**Three things did not make sense. Two are fixed, one is being tested.**
+**Three things did not make sense. All three are now dealt with.**
 
 1. *Fixed 9 Nov:* the screener used to sell a name as soon as it slipped out of the top 15. That was the worst rule
    tested (-2.5% a name-year against holding) and is off.
@@ -79,12 +79,20 @@ finding 1 and 2 above: these are buy-weakness strategies, and every rule that se
    that is still in the top list at 12 months is kept and its clock restarts; only a name that no longer qualifies is
    replaced. This is the professional "would I buy it again today?" test. Nothing had been sold under the old code
    (the oldest holding is from 3 Nov 2026).
-3. *Under test (Q251 to Q253, pre-registered 13 Nov before any data was read):* the two trend strategies,
-   vol_squeeze and breakout_momentum, were never backtested, and their exits are the least professional in the book.
-   Six tests on 1995 to 2022 daily prices ask: does a trailing exit that lets winners run beat the live exits; does a
-   volatility-sized stop beat the fixed-percentage stop; and do the two entry rules have any edge at all. Outcomes
-   are fixed in advance (research/always_on/prereg/Q251.md): a pass replaces the live exit, a strategy with a
-   negative result is paused.
+3. *Tested and switched off 14 Nov (Q251 to Q253, pre-registered 13 Nov before any data was read):* the two trend
+   strategies, vol_squeeze and breakout_momentum, had never been backtested and their exits were the least
+   professional in the book. Six tests on 1996 to 2022 daily prices (449 US stocks) found:
+   - **The exits were not the real problem. The entries have no edge.** breakout_momentum lost 9.0% a year against
+     simply holding the same stocks (t -3.8, negative in every third of the sample): a stock up 5% in a day earns
+     nothing extra over the next few days, and about 290 trades a year of fees do the rest. vol_squeeze lost 2.0% a
+     year. Both are paused for new buys; open trades keep their exits.
+   - **Letting winners run did help the breakout trade**, as the trend-following research says: dropping the +10%
+     target and the 5-day limit for a trailing exit at the 10-day low was better by 7.9% a year. It was strong in
+     1996 to 2009 and faded after, so it failed the confirmation test (p 0.10), and it only lifts the strategy to
+     about -1% a year. It is recorded as the rule to use if the strategy is ever switched back on.
+   - A volatility-sized stop (3x ATR) instead of a fixed-percentage stop made no difference on the squeeze trade
+     and a small, unconfirmed difference on the breakout trade.
+   Full numbers: research results/Q251.md.
 
 **One honest limit.** The earlier sell tests ran on a price panel with no delisted companies, which flatters holding
 over selling. For large companies the effect is small (most that vanish are taken over at a premium), but rules that
@@ -95,6 +103,5 @@ companies are added (research item Q250, from 1 Dec).
 
 | Item | When |
 |---|---|
-| Q251 to Q253 results, and the exit change or pause they call for | when the price download finishes (Yahoo limits this machine to about 17 symbols an hour) |
 | Thesis-broken and stop rules re-tested with delisted companies included | after Q250, December |
 | Live check of the two benched rules (monthly equal-size reset, 9-month buyback hold) against their shadows | February 2027 (Q241) |

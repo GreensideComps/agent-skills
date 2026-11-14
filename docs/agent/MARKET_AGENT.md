@@ -518,6 +518,15 @@ missing from the map (it priced only through a config override) and was never ch
 `research/stock-screener/t212_map_2026-11.csv` (from `research/improve/t212_map.py`) is the checked symbol map
 for screen refreshes: a new pick's T212 ticker comes from its `t212_ticker` column.
 
+## agent-1.26.1 (14 Nov 2026): research pauses reach the hosted state with the deploy
+
+The hosted state (state/strategies.json on the encrypted branch) cannot be edited by hand. `office_pauses` in
+config.json lists strategies the office has paused on research evidence; at each start-up the agent copies any entry
+whose strategy is not already in strategies.json, with a `strategy_disabled` event. Existing entries are never
+overwritten, and removing a config entry does not resume a strategy. First use: vol_squeeze (Q253a) and
+breakout_momentum (Q253b), new entries off, open trades keep their exits. Test:
+`test_office_pauses_reach_the_state_once_and_never_overwrite`.
+
 ## agent-1.25.1 (14 Nov 2026): thin held names keep a price between trades
 
 Yahoo's quote time is the last trade. A thinly traded holding (OPY) can go a few seconds to a minute past
@@ -542,3 +551,13 @@ Now `monthly_refresh` returns `renew: [tickers]` for names that are 12 months ol
 config.json as `{ticker: YYYY-MM-DD}`; `stock_screen.hold_since` and the `overdue_refresh` self-check then count the
 12 months from that day. A renewal is not a trade and does not use the month's one scheduled swap. A 12-month-old name
 outside the top list is sold as before. Tests: `test_stock_screen_refresh.py`, `test_invariants.py`.
+
+## agent-1.26 (14 Nov 2026): vol_squeeze and breakout_momentum paused after their first backtest
+
+Research Q251 to Q253 (pre-registered 13 Nov, gate v3, 1996 to 2022 daily prices) tested the two trend strategies for
+the first time. Both live rules lost money against the same stocks held equally (vol_squeeze -2.0% a year,
+breakout_momentum -9.0% a year), so the pre-registered outcome applies: new buys are paused, open trades keep their
+exits. The pause is held in `state/strategies.json` (set by the office thread), as for drop_rebound; the config
+carries the `paused_note` and `evidence` text the rules page prints. If breakout_momentum is ever switched back on,
+the bench rule from Q251b applies (5% stop, no target, no 5-day limit, sell below the 10-day low), labelled unproven.
+See [SELL_RULES.md](SELL_RULES.md).
