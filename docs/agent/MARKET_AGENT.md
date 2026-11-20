@@ -569,3 +569,7 @@ exits. The pause is held in `state/strategies.json` (set by the office thread), 
 carries the `paused_note` and `evidence` text the rules page prints. If breakout_momentum is ever switched back on,
 the bench rule from Q251b applies (5% stop, no target, no 5-day limit, sell below the 10-day low), labelled unproven.
 See [SELL_RULES.md](SELL_RULES.md).
+
+## agent-1.27 (20 Nov 2026): no re-buy straight after a safety stop
+
+Sandisk's -30% broker stop sold it on 17 Nov and the screener bought it back on 18 Nov, because the basket refills any empty slot from the month's (now stale) scores. That undid the safety stop. A stock_screen pick whose latest trade was closed by its broker stop in or after the current `picks_month` now leaves its slot empty, like a hard SEC exit (`stock_screen.stopped`). The next monthly refresh lists it as a vacancy: if its fresh score, which includes the fall, still ranks it in the capped top list it may come back, otherwise the best-scored name not held fills the slot. Tests: `test_a_safety_stopped_pick_*`.

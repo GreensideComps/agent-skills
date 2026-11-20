@@ -42,12 +42,40 @@ def exit_why(sc: dict | None, ticker: str, state: dict | None = None) -> str | N
     return None if ticker in sc.get("picks", []) else "rebalance"
 
 
+def _exit_month(rec: dict) -> str:
+    ts = rec.get("ts") or ((rec.get("broker") or {}).get("fill") or {}).get("filledAt") or ""
+    if not ts and rec.get("t"):
+        ts = time.strftime("%Y-%m-%d", time.gmtime(float(rec["t"])))
+    return str(ts)[:7]
+
+
+def stopped(sc: dict, records) -> set[str]:
+    """agent-1.27 (20 Nov 2026): picks whose latest stock_screen trade was closed by its broker (safety) stop in or
+    after the month the current picks were set (`picks_month`), with no open trade now. Owner asked why Sandisk was
+    bought back the day after its -30% stop (17-18 Nov): the basket refilled the empty slot from the same stale score,
+    undoing the stop. Like a hard SEC exit, the slot now waits for the next monthly refresh, whose fresh scores include
+    the fall; if the name still ranks there it may come back (the refresh bumps picks_month)."""
+    pm = str(sc.get("picks_month") or "")
+    last: dict[str, dict] = {}
+    for t in active.trades(records):
+        if t["entry"]["signal"].get("strategy") == NAME:
+            last[t["entry"]["ticker"]] = t
+    out = set()
+    for tk in sc.get("picks", []):
+        t = last.get(tk)
+        if t and t["exit"] and (t["exit"].get("signal") or {}).get("exit_reason") == "broker_stop" \
+                and _exit_month(t["exit"]) >= pm:
+            out.add(tk)
+    return out
+
+
 def missing(sc: dict, records, positions, disabled) -> list[str]:
     """Picks with no open stock_screen trade and no position held by anything else, in score order."""
     if NAME in disabled:
         return []
     held = {e["ticker"] for e in active.open_trades(records) if e["signal"].get("strategy") == NAME}
     sold = set((sc.get("_state") or {}).get("exit") or {})  # a hard-event exit holds the cash until the next monthly refresh
+    sold |= stopped(sc, records)  # so does a safety-stop exit (agent-1.27)
     return [t for t in sc.get("picks", []) if t not in held and t not in positions and t not in sold]
 
 
@@ -235,7 +263,8 @@ def monthly_refresh(sc: dict, scored: list[dict], records, top_n: int = 15, max_
     ciks = sc.get("ciks") or {}
     held = {e["ticker"]: e for e in active.open_trades(records) if e["signal"].get("strategy") == NAME}
     hard = set((sc.get("_state") or {}).get("exit") or {})
-    vacant = [t for t in sc.get("picks", []) if t not in held and t in hard]
+    stop_out = stopped(sc, records) - set(held)
+    vacant = [t for t in sc.get("picks", []) if t not in held and (t in hard or t in stop_out)]
     notes = []
     sell = None
     def key(t):
@@ -283,7 +312,9 @@ def monthly_refresh(sc: dict, scored: list[dict], records, top_n: int = 15, max_
         if int(float(r["cik"])) in keep_ciks:
             g = str(r.get("sic") or "")[:2]
             groups[g] = groups.get(g, 0) + 1
-    gone = {int(ciks[t]) for t in [*vacant, *([sell] if sell else [])] if t in ciks}
+    # a safety-stopped name may be bought again only if the fresh scores still rank it (agent-1.27); a hard-event
+    # exit or the sold name never comes straight back
+    gone = {int(ciks[t]) for t in [*vacant, *([sell] if sell else [])] if t in ciks and t not in stop_out}
     want = len(vacant) + (1 if sell else 0)
     buy = []
     for r in rows:
@@ -300,6 +331,9 @@ def monthly_refresh(sc: dict, scored: list[dict], records, top_n: int = 15, max_
                      f"{score.get(int(ciks.get(sell, 0)), 'not in gated list')}")
     if vacant:
         notes.append("refill " + ", ".join(vacant))
+    if stop_out & set(vacant):
+        notes.append("safety-stopped " + ", ".join(sorted(stop_out & set(vacant)))
+                     + ": may come back only if this month's scores still rank it")
     return {"action": "swap", "sell": sell, "vacant": vacant, "buy": buy, "renew": renew, "notes": notes}
 
 

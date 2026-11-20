@@ -172,3 +172,35 @@ def test_renewal_uses_the_sic2_capped_top_list(monkeypatch):
     assert s.capped_top(rows, 4, 3) == {7, 8, 1, 3}
     r = s.monthly_refresh(sc, rows, [], top_n=4, max_per_sic2=3)
     assert r["action"] == "renew" and r["renew"] == ["C_US_EQ"] and r["sell"] is None
+
+
+# agent-1.27 (20 Nov 2026): a pick sold by its broker (safety) stop is not bought straight back
+def _journal(ticker, exit_why, exit_ts, eid="e1"):
+    entry = {"id": eid, "ticker": ticker, "status": "filled", "t": 1.0, "ts": "2026-11-06T15:00:00Z",
+             "signal": {"type": "active_entry", "strategy": s.NAME}}
+    out = {"id": eid + "x", "ticker": ticker, "status": "filled", "t": 2.0, "ts": exit_ts,
+           "signal": {"type": "active_exit", "entry_id": eid, "strategy": s.NAME, "exit_reason": exit_why}}
+    return [entry, out]
+
+
+def test_a_safety_stopped_pick_is_not_refilled_until_the_next_refresh():
+    sc = {**SC, "picks_month": "2026-11"}
+    recs = _journal("A_US_EQ", "broker_stop", "2026-11-17T14:30:11Z")
+    assert s.stopped(sc, recs) == {"A_US_EQ"}
+    assert "A_US_EQ" not in s.missing(sc, recs, {}, set())
+    # a stop-out before the current picks were set does not block (that refresh already saw the fall)
+    assert "A_US_EQ" in s.missing({**sc, "picks_month": "2026-12"}, recs, {}, set())
+    # other exits (rebalance, time) do not block either
+    assert "A_US_EQ" in s.missing(sc, _journal("A_US_EQ", "rebalance", "2026-11-17T14:30:11Z"), {}, set())
+
+
+def test_a_safety_stopped_pick_returns_only_if_fresh_scores_still_rank_it(monkeypatch):
+    sc = {**SC, "picks_month": "2026-11"}
+    recs = _journal("C_US_EQ", "broker_stop", "2026-11-17T14:30:11Z")
+    monkeypatch.setattr(s.active, "trades", lambda records: [
+        {"entry": recs[0], "exit": recs[1], "adj": []}])
+    held(monkeypatch, {"A_US_EQ": "2026-11-03", "B_US_EQ": "2026-11-03"})
+    r = s.monthly_refresh(sc, [row(3, 9), row(1, 3), row(2, 2), row(7, 1)], recs, top_n=3)
+    assert r["vacant"] == ["C_US_EQ"] and [b["cik"] for b in r["buy"]] == ["3"]  # still ranked: may come back
+    r = s.monthly_refresh(sc, [row(1, 3), row(2, 2), row(7, 1), row(3, 0.1)], recs, top_n=3)
+    assert r["vacant"] == ["C_US_EQ"] and [b["cik"] for b in r["buy"]] == ["7"]  # fell out: refilled with the best
