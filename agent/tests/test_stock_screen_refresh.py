@@ -204,3 +204,20 @@ def test_a_safety_stopped_pick_returns_only_if_fresh_scores_still_rank_it(monkey
     assert r["vacant"] == ["C_US_EQ"] and [b["cik"] for b in r["buy"]] == ["3"]  # still ranked: may come back
     r = s.monthly_refresh(sc, [row(1, 3), row(2, 2), row(7, 1), row(3, 0.1)], recs, top_n=3)
     assert r["vacant"] == ["C_US_EQ"] and [b["cik"] for b in r["buy"]] == ["7"]  # fell out: refilled with the best
+
+
+def test_a_stock_split_scales_the_entry_price_and_does_not_trip_the_disaster_stop():
+    # Sandisk, 20 Nov 2026: bought 0.037 at 804.96, then an 8-for-1 split left 0.296 shares at about 89.9
+    e = {"id": "e1", "ticker": "SNDK1_US_EQ", "status": "filled", "quantity": 0.037, "t": 1.0,
+         "signal": {"type": "active_entry", "strategy": s.NAME, "entry_px": 804.96, "stop": None,
+                    "take_profit": None, "time_stop_s": None}}
+    pos = {"SNDK1_US_EQ": {"quantity": 0.296, "quantityAvailableForTrading": 0.296, "currentPrice": 89.9}}
+    assert s.active.split_factor(e, [e], pos) == 8.0
+    assert abs(s.active.entry_px(e, [e], pos) - 100.62) < 0.01
+    disaster = {"enabled": True, "pct": 0.3, "strategies": [s.NAME]}
+    out = s.active.exit_orders([e], pos, lambda tk: {"price": 89.9}, 2.0, 135.0, disaster=disaster)
+    assert out == []  # -10.7% in split terms: no disaster sale
+    need = s.active.stops_needed([e], pos, {}, disaster, now=2.0)
+    assert need and abs(need[0]["stop_px"] - 70.43) < 0.01 and need[0]["qty"] == 0.296
+    # no split: an ordinary small top-up or rounding difference leaves the price alone
+    assert s.active.split_factor(e, [e], {"SNDK1_US_EQ": {"quantity": 0.0371}}) == 1.0

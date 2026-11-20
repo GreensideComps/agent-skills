@@ -28,6 +28,42 @@ def trades(records: list[dict]) -> list[dict]:
             for e in sorted(entries, key=lambda r: r.get("t", 0))]
 
 
+# ------------------------------------------------------------ stock splits (agent-1.27.1)
+# Sandisk split 8-for-1 on 20 Nov 2026: the broker cancelled its stop and the position went from 0.037 to 0.296
+# shares, but the trade's entry price stayed at the pre-split 804.96, so the agent read -88.8% and sold it as a
+# disaster stop (true loss about -11%). Entry prices are now scaled by the split the broker's share count shows.
+SPLIT_TOL = 0.02
+
+
+def split_factor(entry: dict, records: list[dict], positions: dict) -> float:
+    """Shares held now / shares this trade bought, when it looks like a stock split (a whole ratio 2..50 or its
+    inverse, within 2%) and the trade is the only open one in that ticker; else 1.0."""
+    tk = entry["ticker"]
+    p = positions.get(tk)
+    if not p:
+        return 1.0
+    held = float(p.get("quantity") or 0)
+    mine = [t for t in trades(records) if not t["exit"] and t["entry"]["ticker"] == tk]
+    if len(mine) != 1 or mine[0]["entry"].get("id") != entry.get("id") or held <= 0:
+        return 1.0
+    bought = abs(float(entry.get("quantity") or 0)) + sum(float(a.get("quantity") or 0) for a in mine[0]["adj"])
+    if bought <= 0:
+        return 1.0
+    r = held / bought
+    for n in range(2, 51):
+        if abs(r - n) <= SPLIT_TOL * n:
+            return float(n)
+        if abs(r * n - 1) <= SPLIT_TOL:
+            return 1.0 / n
+    return 1.0
+
+
+def entry_px(entry: dict, records: list[dict], positions: dict) -> float | None:
+    """The trade's entry price in today's share terms (split-adjusted)."""
+    px = (entry.get("signal") or {}).get("entry_px")
+    return px / split_factor(entry, records, positions) if px else px
+
+
 def _fill(rec: dict) -> tuple[float, float]:
     """(net GBP, fees GBP) of a filled intent, from the broker's own fill record."""
     w = ((rec.get("broker") or {}).get("fill") or {}).get("walletImpact") or {}
@@ -109,7 +145,7 @@ def exit_orders(records, positions, quote_of, now, vwrp_px, review_why=None, dis
         q = quote_of(tk)
         if avail <= 0 or not q:
             continue
-        ret = q["price"] / sig["entry_px"] - 1
+        ret = q["price"] / entry_px(e, records, positions) - 1
         level, is_disaster = stop_level(sig, disaster)
         why = ("stop" if sig["stop"] is not None and ret <= -sig["stop"]
                else "disaster_stop" if is_disaster and ret <= -level and e["id"] not in live_stops
@@ -330,7 +366,7 @@ def stops_needed(records: list[dict], positions: dict, stops: dict, disaster: di
             continue
         fresh = prev and now - _ts(prev.get("t") or prev.get("ts")) < 86400
         out.append({"entry_id": e["id"], "ticker": e["ticker"], "qty": qty,
-                    "stop_px": round(sig["entry_px"] * (1 - stop), 2), "strategy": sig["strategy"],
+                    "stop_px": round(entry_px(e, records, positions) * (1 - stop), 2), "strategy": sig["strategy"],
                     "px": float(p.get("currentPrice") or 0), "disaster": is_disaster,
                     "replace": act == "replace", "resize": act == "resize",
                     "cancel": prev.get("order_id") if act == "resize" else None,

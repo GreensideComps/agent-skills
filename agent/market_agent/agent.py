@@ -1298,19 +1298,21 @@ class Agent:
         day = feeds_ts(now)[:10]
         st = self.s.read("exit_review.json") or {}
         peaks, thesis, last = dict(st.get("peak") or {}), dict(st.get("thesis") or {}), dict(st.get("last") or {})
-        opens = active.open_trades(self.s.intents())
+        recs_all = self.s.intents()
+        opens = active.open_trades(recs_all)
         th = xc.get("thesis") or {}
         stops = {v.get("ticker"): v.get("stop_px") for v in (self.s.read("stops.json") or {}).values()
                  if isinstance(v, dict) and v.get("order_id") and not v.get("cancelled") and not v.get("filled")}
         for e in opens:
             tk, sig = e["ticker"], e["signal"]
             q = self._quote(tk)
-            if q and sig.get("entry_px"):
-                ret = q["price"] / sig["entry_px"] - 1
+            px0 = active.entry_px(e, recs_all, self.positions)  # agent-1.27.1: split-adjusted
+            if q and px0:
+                ret = q["price"] / px0 - 1
                 pk = peaks.get(tk)
                 if not pk or pk.get("entry_id") != e["id"]:
-                    pk = {"entry_id": e["id"], "entry_px": sig["entry_px"], "peak": ret}
-                peaks[tk] = {**pk, "peak": max(pk["peak"], ret)}
+                    pk = {"entry_id": e["id"], "entry_px": px0, "peak": ret}
+                peaks[tk] = {**pk, "entry_px": px0, "peak": max(pk["peak"], ret)}
             if th.get("enabled") and sig.get("strategy") in th.get("strategies", []) and (thesis.get(tk) or {}).get("day") != day:
                 try:
                     cik = self._sec_cik(tk)
@@ -1334,7 +1336,8 @@ class Agent:
         for e in opens:
             tk, strat = e["ticker"], e["signal"].get("strategy")
             q = self._quote(tk)
-            ret = q["price"] / e["signal"]["entry_px"] - 1 if q and e["signal"].get("entry_px") else None
+            px0 = active.entry_px(e, recs_all, self.positions)
+            ret = q["price"] / px0 - 1 if q and px0 else None
             why = self._review_why(tk, strat) if q else None
             pk = (peaks.get(tk) or {}).get("peak")
             row = exits.plan(e, ret, pk, now, rules.get(strat), why,

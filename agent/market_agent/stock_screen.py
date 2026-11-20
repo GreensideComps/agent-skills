@@ -63,7 +63,7 @@ def stopped(sc: dict, records) -> set[str]:
     out = set()
     for tk in sc.get("picks", []):
         t = last.get(tk)
-        if t and t["exit"] and (t["exit"].get("signal") or {}).get("exit_reason") == "broker_stop" \
+        if t and t["exit"] and (t["exit"].get("signal") or {}).get("exit_reason") in ("broker_stop", "disaster_stop") \
                 and _exit_month(t["exit"]) >= pm:
             out.add(tk)
     return out
