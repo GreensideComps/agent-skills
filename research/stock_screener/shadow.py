@@ -4,7 +4,10 @@ Champion = pick-1 (live demo stock_screen). Challengers are frozen definitions; 
 It (1) scores last month's baskets with this month's prices into LEDGER.csv and (2) on the first run and every
 December data month writes new baskets. Promotion rule (fixed 4 Nov 2026): at a January rebalance, a challenger
 replaces the champion only after >= 24 scored months AND mean excess vs champion > 2%/yr with t >= 2.
-New challengers may be added any time (append to VARIANTS with a date); never edit or remove an existing one."""
+New challengers may be added any time (append to VARIANTS with a date); never edit or remove an existing one.
+LEDGER columns (12 Nov 2026, S17): ret_usd is the frozen score (a missing price counts as 0%); n_imputed counts names
+priced by that fallback; n_vanished counts names whose price disappeared this month; ret_usd_delist_adj scores those at
+-30% (Shumway 1997) unless an 8-K shows a change in control (5.01, or 2.01 with 1.01/3.01 same day) in the prior 12 months (then 0%). Report both."""
 from __future__ import annotations
 import sys
 from pathlib import Path
@@ -140,6 +143,24 @@ VARIANTS["c8_profit_half"] = VARIANTS["c8_profit_half"][:2] + (
     lambda m: _legs(m, ["z_gpa", "z_fcf_ev", "z_mom"], [0.5, 0.25, 0.25]),)
 
 
+DELIST_RET = -0.30  # Shumway (1997) convention for a price that disappears without a merger
+K8 = Path("/mnt/project-files/research-data/8k_items_large_2013_2026.csv.gz")
+
+
+def _merger_ciks(m_end) -> set:
+    """CIKs treated as acquired if their price vanishes: in the 12 months to m_end an 8-K with item 5.01 (change in
+    control), or item 2.01 filed on the same date as 1.01 or 3.01 (closing of the deal). Item 1.01 alone also covers
+    credit facilities and leases, and 3.01 alone is often a distress delisting notice, so neither counts by itself (S19)."""
+    if not K8.exists():
+        return set()
+    k = pd.read_csv(K8, dtype={"items": str})
+    k["date"] = pd.to_datetime(k["date"], errors="coerce")
+    k = k[(k["date"] <= m_end) & (k["date"] > m_end - pd.DateOffset(months=12))]
+    items = k.groupby(["cik", "date"])["items"].apply(lambda x: set(",".join(x.fillna("")).split(",")))
+    hit = items.apply(lambda it: "5.01" in it or ("2.01" in it and ("1.01" in it or "3.01" in it)))
+    return set(items[hit].index.get_level_values("cik"))
+
+
 def main(month: str):
     OUT.mkdir(parents=True, exist_ok=True)
     df = p1.load()
@@ -148,14 +169,24 @@ def main(month: str):
     now, before = df[df["month"] == m_end], df[df["month"] == prev]
     px_now = dict(zip(now["cik"], now["adjclose"])); px_prev = dict(zip(before["cik"], before["adjclose"]))
     ledger = OUT / "LEDGER.csv"
+    merged = _merger_ciks(m_end)
     rows = []
     for name in VARIANTS:
         bf = OUT / f"{name}_basket.csv"
         if bf.exists():
             b = pd.read_csv(bf)
             if b["formed"].iloc[0] < month:  # score the month just ended
-                r = [(px_now.get(c, px_prev.get(c)) / px_prev[c] - 1) if px_prev.get(c) else 0.0 for c in b["cik"]]
-                rows.append({"month": month, "variant": name, "ret_usd": sum(r) / len(r), "n": len(r)})
+                r, r_adj, n_imp, n_gone = [], [], 0, 0
+                for c in b["cik"]:
+                    if px_prev.get(c) and px_now.get(c):
+                        x = px_now[c] / px_prev[c] - 1; r.append(x); r_adj.append(x); continue
+                    n_imp += 1; r.append(0.0)  # frozen rule: a missing price scores 0% (counts as cash)
+                    if px_prev.get(c) and not px_now.get(c):  # price vanished this month: delisting convention
+                        n_gone += 1; r_adj.append(0.0 if c in merged else DELIST_RET)
+                    else:
+                        r_adj.append(0.0)
+                rows.append({"month": month, "variant": name, "ret_usd": sum(r) / len(r), "n": len(r),
+                             "n_imputed": n_imp, "n_vanished": n_gone, "ret_usd_delist_adj": sum(r_adj) / len(r_adj)})
         if not bf.exists() or m_end.month == 12 or name in MONTHLY:
             b = VARIANTS[name][2](now)[["cik", "ticker", "score"]].copy(); b["formed"] = month
             b.to_csv(bf, index=False)

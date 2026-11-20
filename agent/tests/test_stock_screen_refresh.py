@@ -67,10 +67,37 @@ def test_with_dropout_swaps_off_only_a_12_month_old_name_or_a_vacancy_trades(mon
     rows = [row(9, 5), row(1, 3), row(3, 1), row(8, 0.9)]                  # B left the gated list
     held(monkeypatch, {"A_US_EQ": "2026-11-03", "B_US_EQ": "2026-11-03", "C_US_EQ": "2026-11-03"})
     assert s.monthly_refresh(sc, rows, [], top_n=3)["action"] == "skip"
+    held(monkeypatch, {"A_US_EQ": "2026-11-03", "B_US_EQ": "2020-01-02", "C_US_EQ": "2026-11-03"})
+    r = s.monthly_refresh(sc, rows, [], top_n=3)
+    assert r["sell"] == "B_US_EQ" and [b["cik"] for b in r["buy"]] == ["9"] and r["renew"] == []
+    assert s.monthly_refresh(sc, rows, [], top_n=3, swapped_this_month=True)["action"] == "skip"
+
+
+def test_a_name_still_in_the_top_list_after_12_months_is_renewed_not_sold(monkeypatch):
+    sc = {**SC, "swap_on_dropout": False}
+    rows = [row(9, 5), row(1, 3), row(3, 1), row(8, 0.9)]                  # top 3 = 9, A, C; B left the gated list
     held(monkeypatch, {"A_US_EQ": "2020-01-02", "B_US_EQ": "2026-11-03", "C_US_EQ": "2026-11-03"})
     r = s.monthly_refresh(sc, rows, [], top_n=3)
+    assert r["action"] == "renew" and r["sell"] is None and r["buy"] == [] and r["renew"] == ["A_US_EQ"]
+    assert "still in the top 3" in r["notes"][0]
+    # once the renewal is recorded in config the clock restarts: nothing to do until 12 months after it
+    today = s.time.strftime("%Y-%m-%d", s.time.gmtime())
+    r = s.monthly_refresh({**sc, "renewed": {"A_US_EQ": today}}, rows, [], top_n=3)
+    assert r["action"] == "skip" and r["renew"] == []
+    # an old renewal ages like an entry: 12 months after it the name is reviewed again, and sold if it has dropped out
+    r = s.monthly_refresh({**sc, "renewed": {"A_US_EQ": "2021-01-02"}}, [row(9, 5), row(3, 4), row(8, 3), row(1, 1)], [], top_n=3)
     assert r["sell"] == "A_US_EQ" and [b["cik"] for b in r["buy"]] == ["9"]
-    assert s.monthly_refresh(sc, rows, [], top_n=3, swapped_this_month=True)["action"] == "skip"
+    # a renewal and a sale in the same run: the aged name outside the top list is sold, the one inside is renewed
+    held(monkeypatch, {"A_US_EQ": "2020-01-02", "B_US_EQ": "2020-02-02", "C_US_EQ": "2026-11-03"})
+    r = s.monthly_refresh(sc, rows, [], top_n=3)
+    assert r["action"] == "swap" and r["sell"] == "B_US_EQ" and r["renew"] == ["A_US_EQ"]
+
+
+def test_hold_since_is_the_later_of_entry_and_renewal():
+    e = {"ticker": "A_US_EQ", "ts": "2026-11-03T15:00:00Z"}
+    assert s.hold_since({}, e) == "2026-11-03"
+    assert s.hold_since({"renewed": {"A_US_EQ": "2027-11-05"}}, e) == "2027-11-05"
+    assert s.hold_since({"renewed": {"A_US_EQ": "2025-01-01"}}, e) == "2026-11-03"
 
 
 def test_equal_weight_trims_and_top_ups(monkeypatch):

@@ -89,6 +89,19 @@ def test_budget_refuses_above_the_hourly_cap(tmp_path):
     assert len(json.loads((tmp_path / "tiingo_usage.json").read_text())["t"]) == 3
 
 
+def test_tiingo_meters_monthly_calls_and_bytes_and_keeps_them_through_the_budget(tmp_path):
+    h, _ = make(tmp_path, {"/tiingo/daily/": [{"close": 1.0}]})
+    (tmp_path / "tiingo_usage.json").write_text(json.dumps({"t": [], "calls": {"2026-10": 7}, "bytes": {"2026-10": 99}}))
+    h.raw_get = lambda url, params=None, headers=None, timeout=None: type(
+        "R", (), {"status_code": 200, "content": b"x" * 120, "json": lambda self: []})()
+    h.tiingo("/tiingo/daily/a/prices")
+    h.tiingo("/tiingo/daily/b/prices")
+    doc = json.loads((tmp_path / "tiingo_usage.json").read_text())
+    assert doc["calls"] == {"2026-10": 7, "2026-11": 2}  # October survives; November counts both calls
+    assert doc["bytes"] == {"2026-10": 99, "2026-11": 240}
+    assert len(doc["t"]) == 2  # the 24 h request list is unchanged
+
+
 def test_vix_history_takes_the_finished_session_from_the_quote(tmp_path):
     h, _ = make(tmp_path, {
         "quotes/_VIX.json": {"data": {"current_price": 25.64, "close": 25.64, "open": 26.4, "high": 26.6, "low": 23.5,

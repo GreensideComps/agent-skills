@@ -96,7 +96,7 @@ def strategies(cfg: dict, killed: dict | None = None) -> list[dict]:
     for name, sc in (a.get("strategies") or {}).items():
         up = sc["trigger_move"] > 0
         add(name, sc, on=a.get("enabled"), status=sc.get("paused_note"),
-            evidence="no tested edge: a cheap forward test under the kill rule",
+            evidence=sc.get("evidence") or "no tested edge: a cheap forward test under the kill rule",
             buys=[f"a watchlist stock ({len(a['watchlist'])} large US names) is {'up' if up else 'down'} "
                   f"{_pct(abs(sc['trigger_move']))} or more on the day", review_gate, blocked(name)],
             sells=[*_common_exits(sc), review_exit, _kill(sc, a)])
@@ -125,7 +125,8 @@ def strategies(cfg: dict, killed: dict | None = None) -> list[dict]:
 
     sw = a.get("swing") or {}
     sq, gp = sw.get("squeeze") or {}, sw.get("gap") or {}
-    add("vol_squeeze", sq, on=sq.get("enabled"), evidence="no tested edge: forward test under the kill rule",
+    add("vol_squeeze", sq, on=sq.get("enabled"), status=sq.get("paused_note"),
+        evidence=sq.get("evidence") or "no tested edge: forward test under the kill rule",
         buys=[f"a watchlist stock whose 20-day trading range has been in its narrowest {_pct(sq['squeeze_pct'])} of the "
               f"last 250 days closes above its 20-day high on at least {sq['volume_x']}x normal volume",
               f"bought the next session unless it has already run more than {_pct(sq['max_chase'])} further",
@@ -169,8 +170,9 @@ def strategies(cfg: dict, killed: dict | None = None) -> list[dict]:
               "yield, momentum, low debt, buybacks), skipping any that would break the sector limit or put more than "
               f"{ss['max_per_sic2']} names in one industry group",
               "a new name is bought only to replace one that was sold"],
-        sells=["12-month hold: after the weekly data rebuild, the longest-held name is replaced once it has been held "
-               "12 months, at most one replacement a month",
+        sells=["12-month review: once a name has been held 12 months it is replaced by the best name not held, at most "
+               "one replacement a month, unless it is still in the top list, in which case it is kept and its 12 months "
+               "start again (the tested rule; selling a name the screen would still pick was a drift from it)",
                "a name that merely drops out of the top list is " + ("replaced early" if ss.get("swap_on_dropout", True)
                                                                     else "NOT sold early (that rule tested worse than holding and is off)"),
                "SEC hard event: sold at once on a bankruptcy, delisting, auditor change, restatement, merger or tender filing",

@@ -3,6 +3,8 @@ Free tier: 50 requests/hour, 1000/day, 500 symbols/month -> run once per hourly 
 Data is truncated at 2022-12-31 (holdout 2023-26 is never downloaded here).
 Token is read from /mnt/project-files/market-agent/state/tiingo_token.txt (never committed)."""
 import os, sys, json, time, urllib.request, pandas as pd
+sys.path.insert(0, '/mnt/project-files/research/improve')
+from tiingo_meter import record  # E10: shared monthly Tiingo bandwidth meter
 D = '/mnt/project-files/research-data/'
 OUT = D + 'tiingo_daily/'
 TOK = open('/mnt/project-files/market-agent/state/tiingo_token.txt').read().strip()
@@ -17,7 +19,9 @@ def universe(n=450):
 def fetch(t):
     u = f'https://api.tiingo.com/tiingo/daily/{t.lower().replace(".", "-")}/prices?startDate=2012-06-01&endDate={END}&format=csv&columns=date,close,adjClose,adjOpen,adjVolume,divCash,splitFactor'
     r = urllib.request.Request(u, headers={'Authorization': 'Token ' + TOK})
-    return urllib.request.urlopen(r, timeout=60).read()
+    b = urllib.request.urlopen(r, timeout=60).read()
+    record(len(b))
+    return b
 if __name__ == '__main__':
     lim = int(sys.argv[1]) if len(sys.argv) > 1 else 45
     done = 0; log = open(OUT + 'fetch_log.txt', 'a')

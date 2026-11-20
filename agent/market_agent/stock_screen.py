@@ -198,6 +198,12 @@ def price_alerts(held: dict[str, dict], quote_of, state: dict, drop: float) -> t
     return {**state, "drop_alerted": done}, out
 
 
+def hold_since(sc: dict | None, entry: dict) -> str:
+    """The day a held name's 12-month clock runs from: its entry day, or the day its hold was last renewed
+    (`renewed` in config: {ticker: YYYY-MM-DD}, written when a refresh finds it still in the top list)."""
+    return max((entry.get("ts") or "")[:10], str(((sc or {}).get("renewed") or {}).get(entry["ticker"], "")))
+
+
 def monthly_refresh(sc: dict, scored: list[dict], records, top_n: int = 15, max_per_sic2: int = 3,
                     swapped_this_month: bool = False) -> dict:
     """Q214's monthly 1/12 refresh. `scored` is that month's pick1.py live output (ticker, cik, sic, score).
@@ -216,15 +222,25 @@ def monthly_refresh(sc: dict, scored: list[dict], records, top_n: int = 15, max_
     notes = []
     sell = None
     def key(t):
-        return (held[t]["ts"][:10], score.get(int(ciks.get(t, 0)), float("-inf")))
+        return (hold_since(sc, held[t]), score.get(int(ciks.get(t, 0)), float("-inf")))
+    renew: list[str] = []
     if sc.get("swap_on_dropout", True) is False:
         # Q233b/Q237a (9 Nov 2026): swapping a name out on rank lost to holding, so a name leaves only after the
         # tested 12-month hold (oldest first, one a month) or on a hard SEC event; empty slots are still refilled
-        aged = [t for t in held if held[t]["ts"][:10] <= time.strftime("%Y-%m-%d", time.gmtime(time.time() - 365 * 86400))]
+        cutoff = time.strftime("%Y-%m-%d", time.gmtime(time.time() - 365 * 86400))
+        aged = [t for t in held if hold_since(sc, held[t]) <= cutoff]
+        # agent-1.25 (13 Nov 2026): a name that is still in the top list when its 12 months are up is not sold. The
+        # tested rule (Q199, Q214) re-picks the top list at each anniversary, so a name that still qualifies simply
+        # stays; selling it to buy a lower-ranked one was a drift from that rule and a pointless round trip. Its hold
+        # is renewed for another 12 months (recorded under `renewed` in config when the refresh is applied).
+        renew = sorted(t for t in aged if int(ciks.get(t, 0)) in top)
+        aged = [t for t in aged if t not in renew]
+        if renew:
+            notes.append("renew " + ", ".join(renew) + ": 12 months held and still in the top %d, hold renewed" % top_n)
         sell = min(aged, key=key) if aged and not swapped_this_month else None
         if sell is None and not vacant:
-            return {"action": "skip", "sell": None, "buy": [],
-                    "notes": ["no name has reached its 12-month hold (drop-out swaps off since 9 Nov 2026)"]}
+            return {"action": "renew" if renew else "skip", "sell": None, "buy": [], "renew": renew,
+                    "notes": notes or ["no name has reached its 12-month hold (drop-out swaps off since 9 Nov 2026)"]}
     elif any(int(ciks[t]) not in top for t in held if t in ciks) or not held:
         sell = min(held, key=key) if held else None
     if swapped_this_month and sell:
@@ -267,7 +283,7 @@ def monthly_refresh(sc: dict, scored: list[dict], records, top_n: int = 15, max_
                      f"{score.get(int(ciks.get(sell, 0)), 'not in gated list')}")
     if vacant:
         notes.append("refill " + ", ".join(vacant))
-    return {"action": "swap", "sell": sell, "vacant": vacant, "buy": buy, "notes": notes}
+    return {"action": "swap", "sell": sell, "vacant": vacant, "buy": buy, "renew": renew, "notes": notes}
 
 
 def ew_orders(sc, records, positions, quote_of, fx, now, vwrp_px, state, market_open, precision=None,

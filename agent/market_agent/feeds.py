@@ -31,6 +31,12 @@ def http_get(url: str, params: dict, timeout: float = 20.0) -> dict:
     return r.json()
 
 
+def is_us(t212: str) -> bool:
+    """agent-1.24.4: a T212 US stock ticker. Nearly all end '_US_EQ', but a few old listings end '_EQ_US'
+    (Tapestry is TPR_EQ_US), and a check on the first suffix alone skipped them."""
+    return t212.endswith(("_US_EQ", "_EQ_US"))
+
+
 def yahoo_symbol(t212: str, overrides: dict) -> str | None:
     if t212 in overrides:
         return overrides[t212]
