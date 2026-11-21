@@ -1,0 +1,14 @@
+{
+ "agent_ref": "claude/research-office-plan-sseamv",
+ "agent_running": true,
+ "agent_sha": "c0136293bf71304629b531718362bdf3a16eee12",
+ "duty_failures": [],
+ "heartbeat_age_s": 27,
+ "loops": 583,
+ "phase": "running",
+ "restarts": 0,
+ "run_id": "44880306890",
+ "t": 1795274797.5529633,
+ "ts": "2026-11-21T15:26:37Z",
+ "version": "agent-1.27.1"
+}
