@@ -143,3 +143,14 @@ def test_screens_shard_by_date_keep_order_and_migrate(tmp_path):
     assert [r["rid"] for r in Store(tmp_path).screens.read()] == ["s1", "s2", "s3", "s3b"]
     assert {p.name for p in (tmp_path / "screens").glob("*.jsonl")} == {
         "2026-10-14.jsonl", "2026-11-20.jsonl", "2026-11-23.jsonl"}
+
+
+def test_prices_and_valuations_are_sharded(tmp_path):
+    # valuations.jsonl reached 44 MB (2026-11-23) and prices.jsonl 17 MB; both grow every night.
+    from equity.store import Store
+    st = Store(tmp_path)
+    st.valuations.append({"rid": "v1", "ts_utc": "2026-11-23T23:02:12+00:00"})
+    st.prices.append({"rid": "AAA:2026-11-23", "retrieved_utc": "2026-11-23T22:55:00+00:00"})
+    assert (tmp_path / "valuations" / "2026-11-23.jsonl").exists()
+    assert (tmp_path / "prices" / "2026-11.jsonl").exists()
+    assert st.prices.append({"rid": "AAA:2026-11-23", "retrieved_utc": "2026-12-01T00:00:00+00:00"}) == 0

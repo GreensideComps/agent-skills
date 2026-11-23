@@ -152,6 +152,11 @@ def day_shard(rec: dict) -> str:
     return str(rec.get("as_of") or rec.get("ts_utc") or "unknown")[:10]
 
 
+def fetch_month_shard(rec: dict) -> str:
+    """Prices: ~1 MB a day across the universe, so one file per month of fetches."""
+    return str(rec.get("retrieved_utc") or "unknown")[:7]
+
+
 class Store:
     """The set of ledgers that make up the company database."""
 
@@ -166,10 +171,12 @@ class Store:
         self.scans = Ledger(self.root / "scans.jsonl")                # universe coverage per scan
         self.jobs = ShardedLedger(self.root / "jobs", month_shard, self.root / "jobs.jsonl")  # job runs, by month
         self.methods = Ledger(self.root / "methods.jsonl")            # metric formulas per method version
-        self.prices = Ledger(self.root / "prices.jsonl")              # daily closes used for valuation
+        self.prices = ShardedLedger(self.root / "prices", fetch_month_shard,
+                                    self.root / "prices.jsonl")       # daily closes used for valuation, by fetch month
         self.screens = ShardedLedger(self.root / "screens", day_shard,
                                      self.root / "screens.jsonl")     # screener runs (scores, gates, ranks), by date
-        self.valuations = Ledger(self.root / "valuations.jsonl")      # DCF scenarios, reverse DCF, multiples
+        self.valuations = ShardedLedger(self.root / "valuations", day_shard,
+                                        self.root / "valuations.jsonl")  # DCF scenarios, reverse DCF, multiples, by day
         self.research = Ledger(self.root / "research.jsonl")          # theses and bear cases
         self.alerts = Ledger(self.root / "alerts.jsonl")              # changes between screen runs
         self.recommendations = Ledger(self.root / "recommendations.jsonl")  # paper picks, logged before outcomes
