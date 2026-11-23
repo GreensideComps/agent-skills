@@ -146,6 +146,12 @@ def month_shard(rec: dict) -> str:
     return str(rec.get("ts_utc", "unknown"))[:7]
 
 
+def day_shard(rec: dict) -> str:
+    """One file per screen date: each run is ~3 MB and grows with the universe, so even a month
+    of runs in one file would near GitHub's 100 MB limit."""
+    return str(rec.get("as_of") or rec.get("ts_utc") or "unknown")[:10]
+
+
 class Store:
     """The set of ledgers that make up the company database."""
 
@@ -161,7 +167,8 @@ class Store:
         self.jobs = ShardedLedger(self.root / "jobs", month_shard, self.root / "jobs.jsonl")  # job runs, by month
         self.methods = Ledger(self.root / "methods.jsonl")            # metric formulas per method version
         self.prices = Ledger(self.root / "prices.jsonl")              # daily closes used for valuation
-        self.screens = Ledger(self.root / "screens.jsonl")            # screener runs (scores, gates, ranks)
+        self.screens = ShardedLedger(self.root / "screens", day_shard,
+                                     self.root / "screens.jsonl")     # screener runs (scores, gates, ranks), by date
         self.valuations = Ledger(self.root / "valuations.jsonl")      # DCF scenarios, reverse DCF, multiples
         self.research = Ledger(self.root / "research.jsonl")          # theses and bear cases
         self.alerts = Ledger(self.root / "alerts.jsonl")              # changes between screen runs

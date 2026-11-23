@@ -128,3 +128,18 @@ def test_sharded_ledger_routes_dedupes_and_migrates_legacy(tmp_path):
     assert 1 <= len(shards) <= 3
     st.jobs.append({"rid": "j", "event": "start", "run_id": "j", "job": "x", "ts_utc": "2026-10-14T00:00:00+00:00"})
     assert (tmp_path / "jobs" / "2026-10.jsonl").exists()
+
+
+def test_screens_shard_by_date_keep_order_and_migrate(tmp_path):
+    # Regression (2026-11-23): screens.jsonl reached 70 MB in one file, heading for GitHub's 100 MB limit.
+    from equity.store import Ledger, Store
+    legacy = tmp_path / "screens.jsonl"
+    Ledger(legacy).append([{"rid": "s1", "as_of": "2026-10-14"}, {"rid": "s2", "as_of": "2026-11-20"}])
+    st = Store(tmp_path)
+    st.screens.append({"rid": "s3", "as_of": "2026-11-23"})
+    assert [r["rid"] for r in st.screens.read()] == ["s1", "s2", "s3"]
+    assert st.screens.migrate_legacy() == 2 and not legacy.exists()
+    st.screens.append({"rid": "s3b", "as_of": "2026-11-23"})  # a same-day rerun shares the day's file
+    assert [r["rid"] for r in Store(tmp_path).screens.read()] == ["s1", "s2", "s3", "s3b"]
+    assert {p.name for p in (tmp_path / "screens").glob("*.jsonl")} == {
+        "2026-10-14.jsonl", "2026-11-20.jsonl", "2026-11-23.jsonl"}
