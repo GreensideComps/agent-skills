@@ -1306,3 +1306,31 @@ def test_office_pauses_reach_the_state_once_and_never_overwrite(tmp_path):
     assert s["vol_squeeze"]["by"] == "kill" and s["drop_rebound"]["why"] == "Q223"
     assert "Q253b" in s["breakout_momentum"]["why"]
     assert ag.apply_office_pauses() == []
+
+
+def test_a_precision_refusal_is_learned_and_the_buy_retried_at_fewer_decimals(tmp_path):
+    """agent-1.27.2: Personalis (merger_arb) was refused on 27 Nov for 4 decimals and, being counted as the day's try,
+    would have been re-sent at 4 decimals and refused again every day. The refusal teaches precision.json and the
+    same entry is re-sent at the learned decimals on the next step."""
+    prices = {"VWRP.L": 140.0, "GBPUSD=X": 1.25}
+    ag, b, st, clock = make(tmp_path, active_on=True, prices=prices)
+    _active_book(b)
+    get = fake_get(clock, prices)
+
+    def dropped(url, params):
+        d = get(url, params)
+        if url == feeds.SPARK and "JPM" in d:
+            d["JPM"]["close"] = [94.5, 94.5]
+            d["JPM"]["previousClose"] = 100.0
+        return d
+    ag.get = dropped
+    b.fail_next = ApiErr('/api/v0/equity/orders/market: HTTP 400: {"type":"/api-errors/quantity-precision-mismatch",'
+                         '"detail":"invalid quantity precision 3"}')
+    advance(ag, clock, 1, by=30)
+    assert not [o for o in b.orders if o[0] == "JPM_US_EQ"]                   # the refused try never reached the book
+    dp = (st.read("precision.json") or {})["JPM_US_EQ"]
+    assert dp <= 3
+    advance(ag, clock, 1, by=301)
+    buys = [o for o in b.orders if o[0] == "JPM_US_EQ"]
+    assert len(buys) == 1 and buys[0][1] > 0
+    assert round(buys[0][1] * 10 ** dp, 6) == int(round(buys[0][1] * 10 ** dp))  # within the learned precision

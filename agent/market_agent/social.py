@@ -89,7 +89,8 @@ def entry_orders(cfg, records, positions, quote_of, fx, total, cash, now, vwrp_p
         return [], notes
     open_tk = {e["ticker"] for e in active.open_trades(records)}
     tried = {r["ticker"] for r in execution.latest_intents(records).values()
-             if (r.get("signal") or {}).get("strategy") == NAME and r["signal"].get("friday") == scan["friday"]}
+             if (r.get("signal") or {}).get("strategy") == NAME and r["signal"].get("friday") == scan["friday"]
+             and not execution.precision_reject(r)}
     size = cfg["active"]["entry_weight"] * total
     reserve = 1 + cfg["core"].get("buy_reserve", 0)
     out = []

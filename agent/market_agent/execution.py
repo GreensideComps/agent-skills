@@ -158,3 +158,9 @@ def _same_side(x: dict, q: float) -> bool:
     if side:
         return (side == "BUY") == (q > 0)
     return (float(hq) > 0) == (q > 0)
+
+
+def precision_reject(rec: dict) -> bool:
+    """agent-1.27.2: a buy T212 refused only for too many decimals. The agent learns the line's precision
+    (precision.json) and the next order is floored to it, so such a refusal must not count as today's try."""
+    return rec.get("status") == "rejected" and "quantity-precision-mismatch" in (rec.get("error") or "")

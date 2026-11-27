@@ -142,7 +142,8 @@ def entry_orders(cfg, records, positions, quote_of, fx, total, cash, now, vwrp_p
     tk = state["target"]
     day = time.strftime("%Y-%m-%d", time.gmtime(now))
     if tk in positions or any(r["ticker"] == tk and (r.get("signal") or {}).get("strategy") == NAME
-                              and r.get("ts", "").startswith(day) for r in execution.latest_intents(records).values()):
+                              and r.get("ts", "").startswith(day) and not execution.precision_reject(r)
+                              for r in execution.latest_intents(records).values()):
         return [], notes
     q = quote_of(tk)
     rate = 1.0 if vc["currency"].get(tk) == "GBP" else fx

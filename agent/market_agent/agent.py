@@ -682,7 +682,8 @@ class Agent:
         now = self.clock()
         li = execution.latest_intents(recs).values()
         busy = {e["ticker"] for e in active.open_trades(recs)} | set(self.positions) | {
-            r["ticker"] for r in li if (r.get("signal") or {}).get("type") == "active_entry" and r.get("ts", "").startswith(day)}
+            r["ticker"] for r in li if (r.get("signal") or {}).get("type") == "active_entry" and r.get("ts", "").startswith(day)
+            and not execution.precision_reject(r)}
         size = a["entry_weight"] * total
         reserve = 1 + self.cfg["core"].get("buy_reserve", 0)
         out = []
@@ -1953,6 +1954,12 @@ class Agent:
                 {"type": "core_invest", "quote": q, "cash": cash})
 
     def _order(self, ticker, qty, value, price, quote_ok, reason, signal, day):
+        dp = (self.s.read("precision.json") or {}).get(ticker)
+        if qty > 0 and dp is not None:  # agent-1.27.2: every buy obeys the precision T212 taught us for this line
+            q2 = math.floor(qty * 10 ** dp + 1e-9) / 10 ** dp
+            if q2 <= 0:
+                return None
+            value, qty = value * q2 / qty, q2
         order = {"ticker": ticker, "quantity": qty, "value_gbp": abs(value), "price": price, "reason": reason,
                  "signal": signal}
         total = float((self.summary or {}).get("totalValue") or 0)

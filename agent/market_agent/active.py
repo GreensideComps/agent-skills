@@ -206,7 +206,8 @@ def entry_orders(cfg, records, positions, quote_of, fx, total, cash, day, now, v
         return [], [block]
     open_tk = {t["entry"]["ticker"] for t in trades(records) if not t["exit"]}
     tried = {r["ticker"] for r in execution.latest_intents(records).values()
-             if (r.get("signal") or {}).get("type") == "active_entry" and r.get("ts", "").startswith(day)}
+             if (r.get("signal") or {}).get("type") == "active_entry" and r.get("ts", "").startswith(day)
+             and not execution.precision_reject(r)}
     size = a["entry_weight"] * total
     reserve = 1 + cfg["core"].get("buy_reserve", 0)
     out = []
